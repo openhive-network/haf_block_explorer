@@ -1,11 +1,25 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { ApiContext } from "../context/apiContext";
 import { Card, Row, Col } from "react-bootstrap";
 
 export default function Block_Page({ block_nr }) {
   const { block_data } = useContext(ApiContext);
 
-  const trx = block_data.transactions;
+  const trx = block_data?.transactions;
+
+  //TO DO block counter
+
+  // const [count, setCount] = useState(block_nr);
+  // const handleNextBlock = () => {
+  //   // setCount(count + 1);
+  //   setBlockNumber(block_nr + 1);
+  // };
+  // const handlePreviousBlock = () => {
+  //   // setCount(count - 1);
+  //   setBlockNumber(block_nr - 1);
+  // };
+
+  // console.log(block_nr);
 
   return (
     <div>
@@ -17,7 +31,7 @@ export default function Block_Page({ block_nr }) {
         trx?.map((single) => {
           const trxToJson = JSON.stringify(single, null, 2);
           return (
-            <Row className="justify-content-center">
+            <Row key={single.signatures} className="justify-content-center">
               <Col xs={6}>
                 <Card>
                   <pre>{trxToJson}</pre>

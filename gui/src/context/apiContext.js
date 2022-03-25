@@ -8,15 +8,17 @@ export const ApiContextProvider = ({ children }) => {
   const [head_block_data, setHead_block_data] = useState([]);
   const [block_data, setBlock_data] = useState("");
   const [user_profile_data, setUser_profile_data] = useState([]);
-  const [userProfile, setUserProfile] = useState(""); // used in user Data api call , value changes when clicked on some user and navigates to user profile page
   const [transData, setTransData] = useState("");
   const [witnessData, setWitnessData] = useState("");
 
-  const username = window.location.href.split("/user/").pop();
-  const block = localStorage.getItem("block");
-  const transaction = localStorage.getItem("transaction");
+  // used in  api calls , values changes when clicked on some user/block/trnasaction values and navigates to user/block/transaction  page
+  const [userProfile, setUserProfile] = useState("");
+  const [blockNumber, setBlockNumber] = useState("");
+  const [transactionId, setTransactionId] = useState("");
 
-  //  Acc data from last transaction
+  ////
+
+  //  Get user profile data
   useEffect(() => {
     axios({
       method: "post",
@@ -25,29 +27,18 @@ export const ApiContextProvider = ({ children }) => {
         jsonrpc: "2.0",
         method: "account_history_api.get_account_history",
         params: {
-          account: username,
+          account: userProfile,
           start: -1,
           // limit: 10,
         },
         id: 1,
       },
-    }).then((res) => setUser_profile_data(res?.data.result.history));
-  }, [username]);
-  // console.log(user_profile_data);
-  ///////
+    }).then((res) =>
+      setUser_profile_data(res?.data?.result?.history?.reverse())
+    );
+  }, [userProfile]);
 
-  // axios({
-  //   method: "post",
-  //   url: "http://localhost:3000/rpc/get_account_history",
-  //   data: {
-  //     account: "enotom",
-  //     start: -1,
-  //   },
-  // }).then((res) => setAcc(res));
-  // }
-  // console.log(acc);
-
-  // get head block
+  // Get head block
   useEffect(() => {
     axios({
       method: "post",
@@ -57,11 +48,11 @@ export const ApiContextProvider = ({ children }) => {
         method: "database_api.get_dynamic_global_properties",
         id: 1,
       },
-    }).then((res) => setHead_block(res?.data.result));
+    }).then((res) => setHead_block(res?.data?.result));
   }, []);
   const current_head_block = head_block.head_block_number;
 
-  //get head block data
+  //Get head block data
   useEffect(() => {
     axios({
       method: "post",
@@ -72,9 +63,10 @@ export const ApiContextProvider = ({ children }) => {
         params: { block_num: current_head_block },
         id: 1,
       },
-    }).then((res) => setHead_block_data(res?.data.result.block));
+    }).then((res) => setHead_block_data(res?.data?.result?.block));
   }, [current_head_block]);
 
+  // Get current block data
   useEffect(() => {
     axios({
       method: "post",
@@ -82,12 +74,12 @@ export const ApiContextProvider = ({ children }) => {
       data: {
         jsonrpc: "2.0",
         method: "block_api.get_block",
-        params: { block_num: block },
+        params: { block_num: blockNumber },
         id: 1,
       },
     }).then((res) => setBlock_data(res?.data?.result?.block));
-  }, [block]);
-  /// Transaction Data
+  }, [blockNumber]);
+  /// Get transaction Data
   useEffect(() => {
     axios({
       method: "post",
@@ -95,13 +87,13 @@ export const ApiContextProvider = ({ children }) => {
       data: {
         jsonrpc: "2.0",
         method: "condenser_api.get_transaction",
-        params: [transaction],
+        params: [transactionId],
         id: 1,
       },
-    }).then((res) => setTransData(res?.data.result));
-  }, [transaction]);
+    }).then((res) => setTransData(res?.data?.result));
+  }, [transactionId]);
 
-  // Witnesses data
+  // Get witnesses data
 
   useEffect(() => {
     axios({
@@ -121,13 +113,16 @@ export const ApiContextProvider = ({ children }) => {
       value={{
         head_block: head_block,
         head_block_data: head_block_data,
-        setUserProfile: setUserProfile,
         setUser_profile_data: setUser_profile_data,
         userProfile: userProfile,
         user_profile_data: user_profile_data,
         block_data: block_data,
         transData: transData,
         witnessData: witnessData,
+        setUserProfile: setUserProfile,
+        setBlockNumber: setBlockNumber,
+        setTransactionId: setTransactionId,
+        blockNumber: blockNumber,
       }}
     >
       {children}

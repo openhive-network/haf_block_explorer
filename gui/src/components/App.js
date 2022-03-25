@@ -10,19 +10,17 @@ import { ApiContext } from "../context/apiContext";
 import NavigationBar from "./NavigationBar";
 
 function App() {
-  const { head_block } = useContext(ApiContext);
-  const [transactionId, setTransactionId] = useState("");
+  const { setUserProfile, setBlockNumber, setTransactionId, blockNumber } =
+    useContext(ApiContext);
 
   const user = window.location.href.split("/user/").pop();
-  const block = window.location.href.split("/block/").pop();
+  const block = Number(window.location.href.split("/block/").pop());
   const transaction = window.location.href.split("/transaction/").pop();
 
-  localStorage.setItem("user", user);
-  localStorage.setItem("block", block);
-  localStorage.setItem("transaction", transaction);
-  // console.log(block);
-  // console.log(localStorage.getItem("block"));
-  localStorage.getItem("user", transaction);
+  setUserProfile(user);
+  setBlockNumber(block);
+  setTransactionId(transaction);
+
   return (
     <div className="App">
       <NavigationBar />
@@ -30,7 +28,9 @@ function App() {
         <Route exact path="/" element={<MainPage />} />
         <Route
           path={`block/${block}`}
-          element={<BlockPage block_nr={block} />}
+          element={
+            <BlockPage setBlockNumber={setBlockNumber} block_nr={block} />
+          }
         />
         <Route path={`user/${user}`} element={<UserPage user={user} />} />
         <Route

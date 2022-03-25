@@ -5,35 +5,31 @@ import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
 export default function NavigationBar() {
   const form_value = useRef("");
-  // let history = useHistory();
-  let navigate = useNavigate();
+  const [value, setValue] = useState("");
+  const navigate = useNavigate();
   const [accName, setAccName] = useState("");
   const [isAccountFound, setIsAccountFound] = useState(null);
-  const { setUser_profile_data } = useContext(ApiContext);
+  const { setUser_profile_data, user_profile_data } = useContext(ApiContext);
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    const val = form_value.current.value;
-
-    axios({
-      method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "condenser_api.get_accounts",
-        params: [[val]],
-        id: 1,
-      },
-    })
-      .then((res) => setAccName(res.data.result[0].name))
-      .catch(() => setIsAccountFound(false));
-  }
-  console.log(accName);
   useEffect(() => {
-    if (
-      accName === form_value.current.value &&
-      form_value.current.value !== ""
-    ) {
+    if (value !== "") {
+      axios({
+        method: "post",
+        url: "https://api.hive.blog",
+        data: {
+          jsonrpc: "2.0",
+          method: "condenser_api.get_accounts",
+          params: [[value]],
+          id: 1,
+        },
+      })
+        .then((res) => setAccName(res.data.result[0].name))
+        .catch((err) =>
+          err ? setIsAccountFound(false) : setIsAccountFound(true)
+        );
+    }
+
+    if (value === accName && value !== "") {
       axios({
         method: "post",
         url: "https://api.hive.blog",
@@ -43,18 +39,22 @@ export default function NavigationBar() {
           params: {
             account: accName,
             start: -1,
-            // limit: 10,
           },
           id: 1,
         },
       }).then((res) => setUser_profile_data(res.data.result.history));
 
-      setIsAccountFound(true);
       navigate(`user/${accName}`);
     }
-  }, [accName, form_value]);
+  }, [value, accName]);
 
-  console.log(isAccountFound);
+  function handleSubmit(e) {
+    e.preventDefault();
+    let val = form_value.current.value;
+    setValue(val);
+    form_value.current.value = "";
+  }
+  // console.log(!user_profile_data);
   return (
     <>
       <Navbar bg="light" expand="lg">

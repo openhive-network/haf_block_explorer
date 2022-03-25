@@ -17,7 +17,7 @@ export default function OperationCard({ transaction, k, tr_id }) {
     transaction.value.creator ||
     transaction.value.publisher;
 
-  const { setUserProfile } = useContext(ApiContext);
+  const { setUserProfile, setTransactionId } = useContext(ApiContext);
   const operationInfoJson = JSON.stringify(transaction.value, null, 2);
   const id = tr_id.filter((single_id, index) => index === k && single_id);
 
@@ -39,7 +39,10 @@ export default function OperationCard({ transaction, k, tr_id }) {
               </Card.Title>
               <pre>{operationInfoJson}</pre>
               <Card.Footer>
-                Transaction ID <Link to={`/transaction/${id}`}>{id}</Link>
+                Transaction ID{" "}
+                <Link to={`/transaction/${id}`}>
+                  <p onClick={() => setTransactionId(id)}>{id}</p>
+                </Link>
               </Card.Footer>
             </Card.Body>
           </Card>
