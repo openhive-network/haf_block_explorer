@@ -114,6 +114,7 @@ export const ApiContextProvider = ({ children }) => {
         head_block: head_block,
         head_block_data: head_block_data,
         setUser_profile_data: setUser_profile_data,
+        setBlock_data: setBlock_data,
         userProfile: userProfile,
         user_profile_data: user_profile_data,
         block_data: block_data,

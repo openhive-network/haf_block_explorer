@@ -18,9 +18,7 @@ export default function Block_Page({ block_nr }) {
   //   // setCount(count - 1);
   //   setBlockNumber(block_nr - 1);
   // };
-
-  // console.log(block_nr);
-
+  // console.log(!block_data);
   return (
     <div>
       <p>Block number : {block_nr} </p>

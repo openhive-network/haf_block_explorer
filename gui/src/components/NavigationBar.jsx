@@ -8,8 +8,11 @@ export default function NavigationBar() {
   const [value, setValue] = useState("");
   const navigate = useNavigate();
   const [accName, setAccName] = useState("");
-  const [isAccountFound, setIsAccountFound] = useState(null);
-  const { setUser_profile_data, user_profile_data } = useContext(ApiContext);
+  const [blockNr, setBlockNr] = useState("");
+  const [isAccountFound, setIsAccountFound] = useState(true);
+  // const [isBlockFound, setIsBlockFound] = useState(true);
+  const { setUser_profile_data, setBlock_data, block_data } =
+    useContext(ApiContext);
 
   useEffect(() => {
     if (value !== "") {
@@ -24,12 +27,9 @@ export default function NavigationBar() {
         },
       })
         .then((res) => setAccName(res.data.result[0].name))
-        .catch((err) =>
-          err ? setIsAccountFound(false) : setIsAccountFound(true)
-        );
+        .catch((err) => err && setIsAccountFound(false));
     }
-
-    if (value === accName && value !== "") {
+    if (accName === value && value !== "") {
       axios({
         method: "post",
         url: "https://api.hive.blog",
@@ -43,10 +43,28 @@ export default function NavigationBar() {
           id: 1,
         },
       }).then((res) => setUser_profile_data(res.data.result.history));
-
+      setIsAccountFound(true);
       navigate(`user/${accName}`);
     }
-  }, [value, accName]);
+  }, [value, isAccountFound, accName]);
+
+  useEffect(() => {
+    if (isAccountFound === false) {
+      // setBlockNr(value);
+      axios({
+        method: "post",
+        url: "https://api.hive.blog",
+        data: {
+          jsonrpc: "2.0",
+          method: "block_api.get_block",
+          params: { block_num: value },
+          id: 1,
+        },
+      }).then((res) => setBlock_data(res?.data?.result?.block));
+
+      navigate(`block/${value}`);
+    }
+  }, [value, isAccountFound]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -54,7 +72,7 @@ export default function NavigationBar() {
     setValue(val);
     form_value.current.value = "";
   }
-  // console.log(!user_profile_data);
+
   return (
     <>
       <Navbar bg="light" expand="lg">
@@ -78,7 +96,7 @@ export default function NavigationBar() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      {isAccountFound === false && <p>No Account Found</p>}
+      {/* {isAccountFound === false && <p>No Account Found</p>} */}
     </>
   );
 }
