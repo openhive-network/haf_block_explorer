@@ -8,6 +8,7 @@ import WitnessesPage from "../pages/WitnessesPage";
 import { Routes, Route } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
 import NavigationBar from "./NavigationBar";
+import ErrorPage from "../pages/ErrorPage";
 
 function App() {
   const { setUserProfile, setBlockNumber, setTransactionId, blockNumber } =
@@ -38,6 +39,7 @@ function App() {
           element={<TransactionPage transaction={transaction} />}
         />
         <Route path="witnesses" element={<WitnessesPage />} />
+        <Route path="error" element={<ErrorPage />} />
       </Routes>
     </div>
   );

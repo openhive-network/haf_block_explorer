@@ -4,6 +4,7 @@ import { ApiContext } from "../context/apiContext";
 import { Card, Col, Row } from "react-bootstrap";
 export default function User_Page({ user }) {
   const { user_profile_data } = useContext(ApiContext);
+
   return (
     <div>
       <h1>This is personal page of {user}</h1>

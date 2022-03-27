@@ -1,70 +1,62 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
 import { Navbar, Container, Form, FormControl, Button } from "react-bootstrap";
-import axios from "axios";
+// import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
+import {
+  getAccounts,
+  getAccountHistory,
+  getBlog,
+  getTransaction,
+} from "../functions";
+
 export default function NavigationBar() {
   const form_value = useRef("");
   const [value, setValue] = useState("");
   const navigate = useNavigate();
   const [accName, setAccName] = useState("");
   const [blockNr, setBlockNr] = useState("");
-  const [isAccountFound, setIsAccountFound] = useState(true);
-  // const [isBlockFound, setIsBlockFound] = useState(true);
-  const { setUser_profile_data, setBlock_data, block_data } =
-    useContext(ApiContext);
-
+  const [isAccountFound, setIsAccountFound] = useState(null);
+  const [isBlockFound, setIsBlockFound] = useState(null);
+  const {
+    setUser_profile_data,
+    setBlock_data,
+    block_data,
+    // setTransData,
+    // userProfile,
+    // blockNumber,
+    // transactionId,
+  } = useContext(ApiContext);
+  ///acounts
   useEffect(() => {
     if (value !== "") {
-      axios({
-        method: "post",
-        url: "https://api.hive.blog",
-        data: {
-          jsonrpc: "2.0",
-          method: "condenser_api.get_accounts",
-          params: [[value]],
-          id: 1,
-        },
-      })
-        .then((res) => setAccName(res.data.result[0].name))
-        .catch((err) => err && setIsAccountFound(false));
+      getAccounts(value, setAccName, setIsAccountFound);
     }
     if (accName === value && value !== "") {
-      axios({
-        method: "post",
-        url: "https://api.hive.blog",
-        data: {
-          jsonrpc: "2.0",
-          method: "account_history_api.get_account_history",
-          params: {
-            account: accName,
-            start: -1,
-          },
-          id: 1,
-        },
-      }).then((res) => setUser_profile_data(res.data.result.history));
-      setIsAccountFound(true);
+      getAccountHistory(accName, setUser_profile_data, setIsAccountFound);
       navigate(`user/${accName}`);
     }
   }, [value, isAccountFound, accName]);
-
+  ///blocks
   useEffect(() => {
     if (isAccountFound === false) {
-      // setBlockNr(value);
-      axios({
-        method: "post",
-        url: "https://api.hive.blog",
-        data: {
-          jsonrpc: "2.0",
-          method: "block_api.get_block",
-          params: { block_num: value },
-          id: 1,
-        },
-      }).then((res) => setBlock_data(res?.data?.result?.block));
-
+      getBlog(value, setBlock_data);
+      setIsBlockFound(true);
       navigate(`block/${value}`);
+      if (block_data === undefined || isAccountFound === true) {
+        setIsBlockFound(false);
+        // navigate("/error");
+      }
     }
   }, [value, isAccountFound]);
+  ///transactions
+
+  // useEffect(() => {
+  //   if (value === transactionId) {
+  //     getTransaction(value, setTransData);
+  //     navigate(`transaction/${value}`);
+  //   }
+  // }, [value, transactionId]);
 
   function handleSubmit(e) {
     e.preventDefault();
