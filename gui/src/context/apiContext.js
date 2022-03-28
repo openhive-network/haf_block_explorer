@@ -1,6 +1,5 @@
 import { useState, createContext, useEffect } from "react";
 import axios from "axios";
-import { getAccountHistory } from "../functions";
 
 export const ApiContext = createContext();
 
@@ -12,12 +11,10 @@ export const ApiContextProvider = ({ children }) => {
   const [transData, setTransData] = useState("");
   const [witnessData, setWitnessData] = useState("");
 
-  // used in  api calls , values changes when clicked on some user/block/trnasaction values and navigates to user/block/transaction  page
+  // Used in  api calls , values changes when clicked on some user/block/trnasaction values and navigates to user/block/transaction  page
   const [userProfile, setUserProfile] = useState("");
   const [blockNumber, setBlockNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
-
-  ////
 
   //  Get user profile data
   useEffect(() => {
@@ -87,8 +84,8 @@ export const ApiContextProvider = ({ children }) => {
       url: "https://api.hive.blog",
       data: {
         jsonrpc: "2.0",
-        method: "condenser_api.get_transaction",
-        params: [transactionId],
+        method: "account_history_api.get_transaction",
+        params: { id: transactionId },
         id: 1,
       },
     }).then((res) => setTransData(res?.data?.result));

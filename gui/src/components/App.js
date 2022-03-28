@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import MainPage from "../pages/MainPage";
 import BlockPage from "../pages/BlockPage";

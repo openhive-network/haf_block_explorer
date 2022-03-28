@@ -1,7 +1,6 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
 
-//API CALLS
+///// API CALLS
 
 // Get accounts
 export const getAccounts = (value, setAccName, setIsAccountFound) => {
@@ -16,55 +15,41 @@ export const getAccounts = (value, setAccName, setIsAccountFound) => {
     },
   })
     .then((res) => setAccName(res.data.result[0].name))
+    .then(() => setIsAccountFound(true))
     .catch(() => setIsAccountFound(false));
 };
 
-// Get account history
-export const getAccountHistory = (
-  accName,
-  setUser_profile_data,
-  setIsAccountFound
-) => {
+// Get blog
+export const getBlog = (value, setBlockNr, setIsBlockFound) => {
   axios({
     method: "post",
     url: "https://api.hive.blog",
     data: {
       jsonrpc: "2.0",
-      method: "account_history_api.get_account_history",
-      params: {
-        account: accName,
-        start: -1,
-      },
-      id: 1,
-    },
-  }).then((res) => setUser_profile_data(res.data.result.history));
-  setIsAccountFound(true);
-};
-//Get blog
-export const getBlog = (value, setBlock_data) => {
-  axios({
-    method: "post",
-    url: "https://api.hive.blog",
-    data: {
-      jsonrpc: "2.0",
-      method: "block_api.get_block",
+      method: "account_history_api.get_ops_in_block",
       params: { block_num: value },
       id: 1,
     },
-  }).then((res) => setBlock_data(res?.data?.result?.block));
+  })
+    .then((res) => setBlockNr(res.data.result.ops[0].block))
+    .then(() => setIsBlockFound(true))
+    .catch(() => setIsBlockFound(false));
 };
 
-//Get transaction
+// Get transaction
 
-export const getTransaction = (transactionId, setTransData) => {
+export const getTransaction = (value, setTransNr, setIsTransactionFound) => {
   axios({
     method: "post",
     url: "https://api.hive.blog",
     data: {
       jsonrpc: "2.0",
-      method: "condenser_api.get_transaction",
-      params: [transactionId],
+      method: "account_history_api.get_transaction",
+      params: { id: value },
       id: 1,
     },
-  }).then((res) => setTransData(res?.data?.result));
+  })
+    .then((res) => setTransNr(res.data.result.transaction_id))
+    .then(() => setIsTransactionFound(true))
+    .catch(() => setIsTransactionFound(false));
 };

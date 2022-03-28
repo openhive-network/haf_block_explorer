@@ -1,68 +1,63 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
 import { Navbar, Container, Form, FormControl, Button } from "react-bootstrap";
-// import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
-import {
-  getAccounts,
-  getAccountHistory,
-  getBlog,
-  getTransaction,
-} from "../functions";
+import { getAccounts, getBlog, getTransaction } from "../functions";
 
 export default function NavigationBar() {
+  const navigate = useNavigate();
   const form_value = useRef("");
   const [value, setValue] = useState("");
-  const navigate = useNavigate();
   const [accName, setAccName] = useState("");
   const [blockNr, setBlockNr] = useState("");
+  const [transNr, setTransNr] = useState("");
   const [isAccountFound, setIsAccountFound] = useState(null);
   const [isBlockFound, setIsBlockFound] = useState(null);
-  const {
-    setUser_profile_data,
-    setBlock_data,
-    block_data,
-    // setTransData,
-    // userProfile,
-    // blockNumber,
-    // transactionId,
-  } = useContext(ApiContext);
-  ///acounts
+  const [isTransactionFound, setIsTransactionFound] = useState(null);
+
+  const { setBlockNumber, setUserProfile, setTransactionId } =
+    useContext(ApiContext);
+
+  // Find what user typed into search input and navigate him to correct page
   useEffect(() => {
     if (value !== "") {
       getAccounts(value, setAccName, setIsAccountFound);
-    }
-    if (accName === value && value !== "") {
-      getAccountHistory(accName, setUser_profile_data, setIsAccountFound);
-      navigate(`user/${accName}`);
-    }
-  }, [value, isAccountFound, accName]);
-  ///blocks
-  useEffect(() => {
-    if (isAccountFound === false) {
-      getBlog(value, setBlock_data);
-      setIsBlockFound(true);
-      navigate(`block/${value}`);
-      if (block_data === undefined || isAccountFound === true) {
-        setIsBlockFound(false);
-        // navigate("/error");
+      getBlog(value, setBlockNr, setIsBlockFound);
+      getTransaction(value, setTransNr, setIsTransactionFound);
+      if (isAccountFound === true) {
+        setUserProfile(accName);
+        navigate(`user/${accName}`);
+      }
+      if (isBlockFound === true) {
+        setBlockNumber(blockNr);
+        navigate(`block/${blockNr}`);
+      }
+      if (isTransactionFound === true) {
+        setTransactionId(transNr);
+        navigate(`transaction/${transNr}`);
+      }
+      if (
+        isAccountFound === false &&
+        isBlockFound === false &&
+        isTransactionFound === false
+      ) {
+        navigate("/error");
       }
     }
-  }, [value, isAccountFound]);
-  ///transactions
-
-  // useEffect(() => {
-  //   if (value === transactionId) {
-  //     getTransaction(value, setTransData);
-  //     navigate(`transaction/${value}`);
-  //   }
-  // }, [value, transactionId]);
+  }, [
+    value,
+    accName,
+    blockNr,
+    transNr,
+    isAccountFound,
+    isBlockFound,
+    isTransactionFound,
+  ]);
 
   function handleSubmit(e) {
     e.preventDefault();
     let val = form_value.current.value;
     setValue(val);
-    form_value.current.value = "";
   }
 
   return (
@@ -88,7 +83,6 @@ export default function NavigationBar() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      {/* {isAccountFound === false && <p>No Account Found</p>} */}
     </>
   );
 }
