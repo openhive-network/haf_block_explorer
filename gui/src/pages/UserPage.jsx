@@ -2,9 +2,9 @@ import React, { useContext } from "react";
 import { ApiContext } from "../context/apiContext";
 
 import { Card, Col, Row } from "react-bootstrap";
-export default function User_Page({ user }) {
+export default function User_Page({ user, setTitle }) {
   const { user_profile_data } = useContext(ApiContext);
-
+  setTitle(`HAF | User | ${user}`);
   return (
     <div>
       <h1>This is personal page of {user}</h1>

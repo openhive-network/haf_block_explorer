@@ -2,11 +2,10 @@ import React, { useContext, useState } from "react";
 import { ApiContext } from "../context/apiContext";
 import { Card, Row, Col } from "react-bootstrap";
 
-export default function Block_Page({ block_nr }) {
+export default function Block_Page({ block_nr, setTitle }) {
   const { block_data } = useContext(ApiContext);
-
   const trx = block_data?.transactions;
-
+  setTitle(`HAF | Block | ${block_nr}`);
   //TO DO block counter
 
   // const [count, setCount] = useState(block_nr);

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import MainPage from "../pages/MainPage";
 import BlockPage from "../pages/BlockPage";
@@ -17,6 +17,8 @@ function App() {
   const user = window.location.href.split("/user/").pop();
   const block = Number(window.location.href.split("/block/").pop());
   const transaction = window.location.href.split("/transaction/").pop();
+  const [title, setTitle] = useState("");
+  document.title = title;
 
   setUserProfile(user);
   setBlockNumber(block);
@@ -26,20 +28,32 @@ function App() {
     <div className="App">
       <NavigationBar />
       <Routes>
-        <Route exact path="/" element={<MainPage />} />
+        <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
         <Route
           path={`block/${block}`}
           element={
-            <BlockPage setBlockNumber={setBlockNumber} block_nr={block} />
+            <BlockPage
+              setBlockNumber={setBlockNumber}
+              setTitle={setTitle}
+              block_nr={block}
+            />
           }
         />
-        <Route path={`user/${user}`} element={<UserPage user={user} />} />
+        <Route
+          path={`user/${user}`}
+          element={<UserPage setTitle={setTitle} user={user} />}
+        />
         <Route
           path={`transaction/${transaction}`}
-          element={<TransactionPage transaction={transaction} />}
+          element={
+            <TransactionPage setTitle={setTitle} transaction={transaction} />
+          }
         />
-        <Route path="witnesses" element={<WitnessesPage />} />
-        <Route path="error" element={<ErrorPage />} />
+        <Route
+          path="witnesses"
+          element={<WitnessesPage setTitle={setTitle} />}
+        />
+        <Route path="error" element={<ErrorPage setTitle={setTitle} />} />
       </Routes>
     </div>
   );

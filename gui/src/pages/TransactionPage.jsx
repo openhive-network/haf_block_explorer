@@ -2,7 +2,8 @@ import React, { useContext, useEffect, useState } from "react";
 import { ApiContext } from "../context/apiContext";
 import { Card, Row, Col } from "react-bootstrap";
 
-export default function Transaction_Page({ transaction }) {
+export default function Transaction_Page({ transaction, setTitle }) {
+  setTitle(`HAF | Transaction`);
   const { transData } = useContext(ApiContext);
   const trnasToJson = JSON.stringify(transData, null, 2);
 

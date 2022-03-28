@@ -5,12 +5,10 @@ import { ApiContextProvider } from "./context/apiContext";
 import { BrowserRouter } from "react-router-dom";
 
 ReactDOM.render(
-  <React.StrictMode>
-    <ApiContextProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ApiContextProvider>
-  </React.StrictMode>,
+  <ApiContextProvider>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </ApiContextProvider>,
   document.getElementById("root")
 );

@@ -3,7 +3,7 @@ import { ApiContext } from "../context/apiContext";
 import OperationCard from "../components/OperationCard";
 import { Link } from "react-router-dom";
 
-export default function Main_Page() {
+export default function Main_Page({ setTitle }) {
   const { head_block, head_block_data, setBlockNumber, setUserProfile } =
     useContext(ApiContext);
   const current_head_block = head_block.head_block_number;
@@ -14,7 +14,7 @@ export default function Main_Page() {
 
   const operations_count_per_block = transaction?.length;
   const transactions_ids = head_block_data.transaction_ids;
-
+  setTitle((document.title = "HAF Blocks"));
   return (
     <div className="main">
       <h1>
