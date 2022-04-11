@@ -85,7 +85,7 @@ export const ApiContextProvider = ({ children }) => {
       data: {
         jsonrpc: "2.0",
         method: "account_history_api.get_transaction",
-        params: { id: transactionId },
+        params: { id: transactionId, include_reversible: true },
         id: 1,
       },
     }).then((res) => setTransData(res?.data?.result));

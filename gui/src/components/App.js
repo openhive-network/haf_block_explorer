@@ -35,7 +35,7 @@ function App() {
             <BlockPage
               setBlockNumber={setBlockNumber}
               setTitle={setTitle}
-              block_nr={block}
+              block_nr={blockNumber}
             />
           }
         />

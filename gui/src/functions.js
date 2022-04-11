@@ -27,7 +27,11 @@ export const getBlog = (value, setBlockNr, setIsBlockFound) => {
     data: {
       jsonrpc: "2.0",
       method: "account_history_api.get_ops_in_block",
-      params: { block_num: value },
+      params: {
+        block_num: value,
+        only_virtual: false,
+        include_reversible: true,
+      },
       id: 1,
     },
   })
@@ -45,7 +49,7 @@ export const getTransaction = (value, setTransNr, setIsTransactionFound) => {
     data: {
       jsonrpc: "2.0",
       method: "account_history_api.get_transaction",
-      params: { id: value },
+      params: { id: value,include_reversible: true },
       id: 1,
     },
   })

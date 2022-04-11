@@ -21,9 +21,9 @@ export default function Transaction_Page({ transaction, setTitle }) {
   return (
     <div>
       <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
-      {transData === undefined ? (
+      {/* {transData === undefined ? (
         <p>Transaction will be shown in : {seconds} </p>
-      ) : (
+      ) : ( */}
         <Row className="justify-content-center mt-5">
           <Col xs={6}>
             <Card>
@@ -31,7 +31,7 @@ export default function Transaction_Page({ transaction, setTitle }) {
             </Card>
           </Col>
         </Row>
-      )}
+      {/* )} */}
     </div>
   );
 }

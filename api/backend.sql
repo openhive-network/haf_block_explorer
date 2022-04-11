@@ -68,3 +68,40 @@ $$
   )
 $$
 ;
+--  Check get_block_num method 
+CREATE FUNCTION hafbe_backend.get_block_num(_block_hash BYTEA)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+  BEGIN
+   RETURN json_build_object(
+     "_block_num",(SELECT num AS __block_num FROM hive.blocks WHERE hash=_block_hash)
+   );
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_witnesses_by_vote()
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        
+      """
+      curl -X POST https://api.hive.blog \
+        -H 'Content-Type: application/json' \
+        -d '{"jsonrpc": "2.0", "method": "condenser_api.get_witnesses_by_vote", "params": [null,21], "id": null}'
+      """ 
+      ], shell=True).decode('utf-8')
+    )['result']
+  )
+  $$
+  ;

@@ -15,6 +15,9 @@ export default function Main_Page({ setTitle }) {
   const operations_count_per_block = transaction?.length;
   const transactions_ids = head_block_data.transaction_ids;
   setTitle((document.title = "HAF Blocks"));
+
+
+
   return (
     <div className="main">
       <h1>

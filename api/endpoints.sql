@@ -22,13 +22,13 @@ $$
 ;
 
 CREATE FUNCTION hafbe_endpoints.get_block_num(_block_hash BYTEA)
-RETURNS INT
+RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
   -- TODO: add single line query to return block num by hash to backend and call it here
-  RETURN NULL;
+  RETURN hafbe_backend.get_block_num(_block_hash::BYTEA) ;
 END
 $$
 ;
@@ -40,7 +40,7 @@ AS
 $$
 BEGIN
   -- TODO: add single line query to return last block from haf_block_log db
-  RETURN 0;
+  RETURN (SELECT num FROM hive.blocks_view ORDER BY num DESC LIMIT 1);
 END
 $$
 ;
@@ -66,19 +66,19 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_block(_block_num);
+  RETURN hafbe_backend.get_block(_block_num::INT);
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_transaction(_id TEXT, _include_reversible BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_endpoints.get_transaction( _trx_hash BYTEA, _include_reversible BOOLEAN = FALSE, _is_legacy_style BOOLEAN = FALSE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
   -- TODO: add call to hafah_python schema function that returns transaction data, set __is_legacy_style to FALSE. Example: hafbe_endpoints.get_account_history()
-  RETURN '{}';
+  RETURN  hafah_python.get_transaction_json(_trx_hash,_include_reversible,_is_legacy_style);
 END
 $$
 ;
@@ -90,7 +90,7 @@ AS
 $$
 BEGIN
   -- TODO: add call to "condenser_api.get_witnesses_by_vote" as in hafbe_endpoints.get_block()
-  RETURN '{}';
+  RETURN hafbe_backend.get_witnesses_by_vote();
 END
 $$
 ;

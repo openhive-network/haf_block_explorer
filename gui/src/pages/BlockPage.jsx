@@ -10,14 +10,14 @@ export default function Block_Page({ block_nr, setTitle }) {
 
   // const [count, setCount] = useState(block_nr);
   // const handleNextBlock = () => {
-  //   // setCount(count + 1);
-  //   setBlockNumber(block_nr + 1);
+    // setCount(count + 1);
+    // setBlockNumber(block_nr + 1);
   // };
   // const handlePreviousBlock = () => {
   //   // setCount(count - 1);
   //   setBlockNumber(block_nr - 1);
   // };
-  // console.log(!block_data);
+console.log(block_data);
   return (
     <div>
       <p>Block number : {block_nr} </p>

@@ -60,6 +60,8 @@ export default function NavigationBar() {
     setValue(val);
   }
 
+  console.log(blockNr);
+
   return (
     <>
       <Navbar bg="light" expand="lg">
