@@ -21,6 +21,10 @@ BEGIN
   GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;
   GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
 
+  GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
+  GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
+  GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
+
   GRANT USAGE ON SCHEMA hafah_python TO hafbe_user;
   GRANT SELECT ON ALL TABLES IN SCHEMA hafah_python TO hafbe_user;
   GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_python TO hafbe_user;
@@ -41,6 +45,28 @@ BEGIN
   
   ALTER SCHEMA hafbe_backend OWNER TO hafbe_owner;
   ALTER SCHEMA hafbe_endpoints OWNER TO hafbe_owner;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_block_num(_block_hash BYTEA)
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN num FROM hive.blocks WHERE hash=_block_hash;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_head_block_num()
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1;
 END
 $$
 ;
@@ -68,26 +94,12 @@ $$
   )
 $$
 ;
---  Check get_block_num method 
-CREATE FUNCTION hafbe_backend.get_block_num(_block_hash BYTEA)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-  BEGIN
-   RETURN json_build_object(
-     "_block_num",(SELECT num AS __block_num FROM hive.blocks WHERE hash=_block_hash)
-   );
-END
-$$
-;
 
 CREATE FUNCTION hafbe_backend.get_witnesses_by_vote()
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
 $$
-
   import subprocess
   import json
 
