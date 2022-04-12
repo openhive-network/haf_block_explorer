@@ -14,6 +14,14 @@ create_api() {
 }
 
 start_webserver() {
+    default_port=3000
+    if [[ $1 == ?+([0-9]) ]]; then 
+        port=$1
+    else
+        port=$default_port
+    fi
+
+    sed -i "/server-port = /s/.*/server-port = \"$port\"/" postgrest.conf
     postgrest postgrest.conf
 }
 
@@ -34,12 +42,12 @@ install_plpython() {
 }
 
 if [ "$1" = "start" ]; then
-    start_webserver
+    start_webserver $2
 elif [ "$1" = "re-start" ]; then
     create_api
     create_user
     echo 'SUCCESS: Users and API recreated'
-    start_webserver
+    start_webserver $2
 elif [ "$1" =  "install-postgrest" ]; then
     install_postgrest
 elif [ "$1" =  "install-plpython" ]; then
