@@ -16,7 +16,7 @@ export const ApiContextProvider = ({ children }) => {
   const [blockNumber, setBlockNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [acc_history_limit, set_acc_history_limit] = useState(100);
+  const [acc_history_limit, set_acc_history_limit] = useState(1000);
   //  Get user profile data
   useEffect(() => {
     axios({

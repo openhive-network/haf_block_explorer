@@ -27,6 +27,7 @@ function App() {
   return (
     <div className="App">
       <NavigationBar />
+
       <Routes>
         <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
         <Route
