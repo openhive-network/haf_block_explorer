@@ -15,15 +15,36 @@ function App() {
 
   return (
     <div className="App">
-      {isDataLoading ? (
-        "Data loading"
-      ) : (
-        <>
-          <Header />
-          <Content />
-          <Footer />
-        </>
-      )}
+      <NavigationBar />
+
+      <Routes>
+        <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
+        <Route
+          path={`block/${block}`}
+          element={
+            <BlockPage
+              setBlockNumber={setBlockNumber}
+              setTitle={setTitle}
+              block_nr={blockNumber}
+            />
+          }
+        />
+        <Route
+          path={`user/${user}`}
+          element={<UserPage setTitle={setTitle} user={user} />}
+        />
+        <Route
+          path={`transaction/${transaction}`}
+          element={
+            <TransactionPage setTitle={setTitle} transaction={transaction} />
+          }
+        />
+        <Route
+          path="witnesses"
+          element={<WitnessesPage setTitle={setTitle} />}
+        />
+        <Route path="error" element={<ErrorPage setTitle={setTitle} />} />
+      </Routes>
     </div>
   );
 }

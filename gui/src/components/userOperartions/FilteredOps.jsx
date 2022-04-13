@@ -1,13 +1,7 @@
 import React from "react";
 import { Row, Col, Card } from "react-bootstrap";
-import { Toast, ToastContainer } from "react-bootstrap";
-import Pop from "./Pop";
 
-export default function FilteredOps({
-  user_profile_data,
-  active_op_filters,
-  user,
-}) {
+export default function FilteredOps({ user_profile_data, active_op_filters }) {
   return (
     <div>
       {user_profile_data?.map((d, i) => {
@@ -19,24 +13,14 @@ export default function FilteredOps({
           return "";
         } else {
           return (
-            <ToastContainer
-              style={{ width: "100%" }}
-              key={d[0]}
-              className="p-3"
-            >
-              <Toast style={{ width: "100%" }}>
-                <Toast.Header closeButton={false}>
-                  <strong className="me-auto">{user}</strong>
-                  <small className="text-muted">time ago</small>
-                </Toast.Header>
-                <Toast.Body>
+            <Row key={d[0]} className="justify-content-center">
+              <Col xs={6} className="m-2">
+                <Card style={{ overflow: "auto", height: "200px" }}>
                   <p>id : {d[0]}</p>
-                  <p>Operation Type : {op.type}</p>
-                  <Pop userData={userDataJson} />
-                  {/* <pre>{userDataJson}</pre> */}
-                </Toast.Body>
-              </Toast>
-            </ToastContainer>
+                  <pre>{userDataJson}</pre>
+                </Card>
+              </Col>
+            </Row>
           );
         }
       })}
