@@ -90,7 +90,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_account_history(_account VARCHAR, _start BIGINT = -1, _limit BIGINT = 1000, _operation_filter_low NUMERIC = 0, _operation_filter_high NUMERIC = 0, _include_reversible BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_endpoints.get_account_history(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _operation_filter_low NUMERIC = 0, _operation_filter_high NUMERIC = 0, _include_reversible BOOLEAN = FALSE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
