@@ -53,7 +53,21 @@ AS
 $$
 BEGIN
   RETURN hafbe_exceptions.raise_exception(500, 3, 'Internal Server Error',
-    'Type of received input is unknown', _input
+    'Type of received input is unknown.',
+    format('Received input: ''%s''.', _input)
+  );
+END
+$$
+;
+
+CREATE FUNCTION hafbe_exceptions.raise_unknown_block_hash_exception(_hash TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN hafbe_exceptions.raise_exception(404, 4, 'Not Found',
+    format('Block hash ''%s'' does not exist in database.', _hash)
   );
 END
 $$

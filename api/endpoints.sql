@@ -73,8 +73,14 @@ RETURNS INT
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __block_num INT = (SELECT hafbe_backend.get_block_num(_block_hash::BYTEA));
 BEGIN
-  RETURN hafbe_backend.get_block_num(_block_hash::BYTEA);
+  IF __block_num IS NULL THEN
+    RETURN hafbe_exceptions.raise_unknown_block_hash_exception(_block_hash);
+  ELSE
+    RETURN __block_num;
+  END IF;
 END
 $$
 ;
