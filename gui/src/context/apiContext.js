@@ -15,7 +15,8 @@ export const ApiContextProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState("");
   const [blockNumber, setBlockNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
-
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [acc_history_limit, set_acc_history_limit] = useState(100);
   //  Get user profile data
   useEffect(() => {
     axios({
@@ -27,14 +28,15 @@ export const ApiContextProvider = ({ children }) => {
         params: {
           account: userProfile,
           start: -1,
-          // limit: 10,
+          limit: acc_history_limit,
         },
         id: 1,
       },
-    }).then((res) =>
-      setUser_profile_data(res?.data?.result?.history?.reverse())
+    }).then(
+      (res) => setUser_profile_data(res?.data?.result?.history?.reverse()),
+      setDataLoaded(true)
     );
-  }, [userProfile]);
+  }, [userProfile, acc_history_limit]);
 
   // Get head block
   useEffect(() => {
@@ -109,6 +111,7 @@ export const ApiContextProvider = ({ children }) => {
   return (
     <ApiContext.Provider
       value={{
+        dataLoaded: dataLoaded,
         head_block: head_block,
         head_block_data: head_block_data,
         setUser_profile_data: setUser_profile_data,
@@ -122,6 +125,8 @@ export const ApiContextProvider = ({ children }) => {
         setBlockNumber: setBlockNumber,
         setTransactionId: setTransactionId,
         blockNumber: blockNumber,
+        acc_history_limit: acc_history_limit,
+        set_acc_history_limit: set_acc_history_limit,
       }}
     >
       {children}

@@ -49,11 +49,33 @@ export const getTransaction = (value, setTransNr, setIsTransactionFound) => {
     data: {
       jsonrpc: "2.0",
       method: "account_history_api.get_transaction",
-      params: { id: value,include_reversible: true },
+      params: { id: value, include_reversible: true },
       id: 1,
     },
   })
     .then((res) => setTransNr(res.data.result.transaction_id))
     .then(() => setIsTransactionFound(true))
     .catch(() => setIsTransactionFound(false));
+};
+//User profile history pagination
+export const userPagination = (
+  userProfile,
+  startPagintation,
+  setUser_profile_data,
+  limit
+) => {
+  axios({
+    method: "post",
+    url: "https://api.hive.blog",
+    data: {
+      jsonrpc: "2.0",
+      method: "account_history_api.get_account_history",
+      params: {
+        account: userProfile,
+        start: startPagintation,
+        limit: limit,
+      },
+      id: 1,
+    },
+  }).then((res) => setUser_profile_data(res?.data?.result?.history?.reverse()));
 };
