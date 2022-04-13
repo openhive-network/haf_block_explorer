@@ -11,6 +11,7 @@ create_api() {
     postgrest_dir=$PWD/api
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/endpoints.sql
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/exceptions.sql
 }
 
 start_webserver() {

@@ -2,9 +2,15 @@ DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints;
 
--- determines the input type as one of 'account_name', 'block_num', 'transaction_hash', 'block_hash'
--- returns 'unknown_hash' or 'unknown_input' when incorrect input is provided
--- returns 'account_name_array' when incomplete account name is provided
+/*
+determines the input type as one of 'account_name', 'block_num', 'transaction_hash', 'block_hash'
+returns 'account_name_array' when incomplete account name is provided
+raises exceptions:
+  > 'raise_block_num_too_high_exception()'
+  > 'raise_unknown_hash_exception()'
+  > 'raise_unknown_input_exception()'
+*/
+
 CREATE FUNCTION hafbe_endpoints.get_input_type(_input TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
@@ -13,6 +19,7 @@ $$
 DECLARE
   __input_type TEXT;
   __input_value TEXT = _input;
+  __head_block_num INT;
 BEGIN
   -- first, name existance is checked
   IF (SELECT name FROM hive.accounts WHERE name = _input) IS NOT NULL THEN
@@ -20,7 +27,12 @@ BEGIN
 
   -- second, positive digit and not name is assumed to be block number
   ELSIF _input SIMILAR TO '(\d+)' THEN
-    __input_type = 'block_num';
+    SELECT hafbe_endpoints.get_head_block_num() INTO __head_block_num;
+    IF _input::NUMERIC > __head_block_num THEN
+      RETURN hafbe_exceptions.raise_block_num_too_high_exception(_input::NUMERIC, __head_block_num);
+    ELSE
+      __input_type = 'block_num';
+    END IF;
 
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
@@ -31,7 +43,7 @@ BEGIN
       __input_type = 'block_hash';
       __input_value = hafbe_endpoints.get_block_num(_input);
     ELSE
-      __input_type = 'unknown_hash';
+      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input::TEXT);
     END IF;
 
   -- fourth, it is still possible input is partial name, max 50 names returned
@@ -42,8 +54,7 @@ BEGIN
 
     -- fifth, if no matching accounts were found, 'unknown_input' is returned
     IF (__input_value::JSON->>'possible_accounts') IS NULL THEN
-      __input_type = 'unknown_input';
-      __input_value = _input;
+      RETURN hafbe_exceptions.raise_unknown_input_exception(_input::TEXT);
     ELSE
       __input_type = 'account_name_array';
     END IF;
@@ -62,8 +73,14 @@ RETURNS INT
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __block_num INT = (SELECT hafbe_backend.get_block_num(_block_hash::BYTEA));
 BEGIN
-  RETURN hafbe_backend.get_block_num(_block_hash::BYTEA);
+  IF __block_num IS NULL THEN
+    RETURN hafbe_exceptions.raise_unknown_block_hash_exception(_block_hash);
+  ELSE
+    RETURN __block_num;
+  END IF;
 END
 $$
 ;
