@@ -70,7 +70,6 @@ export default function NavigationBar() {
     let val = form_value.current.value;
     setValue(val);
   }
-  useEffect(() => {});
   return (
     <>
       {/* <Navbar bg="light" expand="lg">
