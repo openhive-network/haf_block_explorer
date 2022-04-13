@@ -98,6 +98,26 @@ $$
 DECLARE
   __is_legacy_style BOOLEAN = FALSE;
 BEGIN
+  IF _start IS NULL OR _start < 0 THEN
+    _start = 9223372036854775807;
+  END IF;
+
+  IF _limit IS NULL OR _limit < 0 THEN
+    _limit = 1000;
+  END IF;
+
+  IF _operation_filter_low IS NULL OR _operation_filter_low < 0 THEN
+    _operation_filter_low = 0;
+  END IF;
+
+  IF _operation_filter_high IS NULL OR _operation_filter_high < 0 THEN
+    _operation_filter_high = 0;
+  END IF;
+
+  IF _include_reversible IS NULL THEN
+    _include_reversible = FALSE;
+  END IF;
+  
   RETURN hafah_python.ah_get_account_history_json(_operation_filter_low, _operation_filter_high, _account, _start, _limit, _include_reversible, __is_legacy_style);
 END
 $$
@@ -109,18 +129,24 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_block(_block_num::INT);
+  RETURN hafbe_backend.get_block(_block_num);
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA, _include_reversible BOOLEAN = FALSE, _is_legacy_style BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA, _include_reversible BOOLEAN = FALSE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __is_legacy_style BOOLEAN = FALSE;
 BEGIN
-  RETURN hafah_python.get_transaction_json(_trx_hash, _include_reversible, _is_legacy_style);
+  IF _include_reversible IS NULL THEN
+    _include_reversible = FALSE;
+  END IF;
+
+  RETURN hafah_python.get_transaction_json(_trx_hash, _include_reversible, __is_legacy_style);
 END
 $$
 ;
