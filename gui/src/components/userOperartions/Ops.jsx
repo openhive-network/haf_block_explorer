@@ -49,7 +49,7 @@ export default function Ops({ user_profile_data }) {
           </ToastContainer>
 =======
           <Row key={d[0]} className="justify-content-center">
-            <Col xs={6} className="m-2">
+            <Col className="m-2">
               <Card style={{ overflow: "auto", height: "200px" }}>
                 <p>id : {d[0]}</p>
                 <pre>{userDataJson}</pre>

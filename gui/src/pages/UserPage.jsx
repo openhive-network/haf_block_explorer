@@ -4,6 +4,9 @@ import { userPagination } from "../functions";
 import FilteredOps from "../components/userOperartions/FilteredOps";
 import Ops from "../components/userOperartions/Ops";
 import { Container, Col, Row } from "react-bootstrap";
+import { operations } from "../operations";
+
+// TODO : CHECK FILTERS, Ops LENGTH,Cards design
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -64,8 +67,7 @@ export default function User_Page({ user, setTitle }) {
   // Check if operation type exist and enable/disable filters
 
   const check_op_type = user_profile_data?.map((history) => history[1].op.type);
-  const operations = [...new Set(check_op_type)];
-  console.log(check_op_type.filter((cp, i) => cp === operations));
+  const set_op = [...new Set(check_op_type)];
 
   return (
     <Container>
@@ -97,16 +99,27 @@ export default function User_Page({ user, setTitle }) {
           <p>Showing operations per page : {user_profile_data?.length}</p>
           <div>
             <p>Filter Operations</p>
-            {operations?.map((o, i) => (
-              <div key={i} className="m-1">
-                <input
-                  type="checkbox"
-                  name={o}
-                  onChange={(e) => handleOperationFilters(e)}
-                />
-                <label htmlFor={o}>{o}</label>
-              </div>
-            ))}
+            {operations?.map((o, i) => {
+              return (
+                <div
+                  key={i}
+                  className="m-1"
+                  style={
+                    set_op.includes(o) === true
+                      ? { display: "block" }
+                      : { display: "none" }
+                  }
+                >
+                  <input
+                    disabled={!set_op.includes(o)}
+                    type="checkbox"
+                    name={o}
+                    onChange={(e) => handleOperationFilters(e)}
+                  />
+                  <label htmlFor={o}>{o}</label>
+                </div>
+              );
+            })}
           </div>
         </div>
       </Row>
