@@ -14,7 +14,7 @@ export default function FilteredOps({ user_profile_data, active_op_filters }) {
         } else {
           return (
             <Row key={d[0]} className="justify-content-center">
-              <Col xs={6} className="m-2">
+              <Col className="m-2">
                 <Card style={{ overflow: "auto", height: "200px" }}>
                   <p>id : {d[0]}</p>
                   <pre>{userDataJson}</pre>

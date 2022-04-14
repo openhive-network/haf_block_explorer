@@ -23,8 +23,8 @@ export default function OperationCard({ transaction, k, tr_id }) {
 
   return (
     <div key={k}>
-      <Row className="m-3 justify-content-center">
-        <Col xs={8}>
+      <Row className="mt-3 justify-content-center">
+        <Col>
           <Card className="text-left">
             <Card.Header
               onClick={() =>
