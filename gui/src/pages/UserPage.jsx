@@ -3,17 +3,22 @@ import { ApiContext } from "../context/apiContext";
 import { userPagination } from "../functions";
 import FilteredOps from "../components/userOperartions/FilteredOps";
 import Ops from "../components/userOperartions/Ops";
-import { Container, Col, Row } from "react-bootstrap";
+import { Container, Col, Row, Button, Pagination } from "react-bootstrap";
 import { operations } from "../operations";
+// import Pagination from "react-bootstrap/Pagination";
+import "./userPage.css";
+import TimeAgo from "javascript-time-ago";
+import en from "javascript-time-ago/locale/en.json";
+import ReactTimeAgo from "react-time-ago";
 
-// TODO : CHECK FILTERS, Ops LENGTH,Cards design
-
+TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
   const {
     user_profile_data,
     setUser_profile_data,
     set_acc_history_limit,
     acc_history_limit,
+    dataLoaded,
   } = useContext(ApiContext);
   setTitle(`HAF | User | ${user}`);
 
@@ -22,12 +27,21 @@ export default function User_Page({ user, setTitle }) {
   const trx_count =
     pagination_start === 0 ? pagination_start + max_trx_nr : pagination_start;
 
+  pagination_start === 0 && localStorage.setItem("trx_count_max", max_trx_nr);
+  const get_max_trx_num = localStorage.getItem("trx_count_max");
   function handleNextPage() {
     set_pagination_start(trx_count - acc_history_limit);
   }
 
   function handlePrevPage() {
     set_pagination_start(trx_count + acc_history_limit);
+  }
+  function handleLastPage() {
+    set_pagination_start(acc_history_limit);
+  }
+
+  function handleFirstPage() {
+    set_pagination_start(Number(get_max_trx_num));
   }
 
   useEffect(() => {
@@ -68,36 +82,58 @@ export default function User_Page({ user, setTitle }) {
 
   const check_op_type = user_profile_data?.map((history) => history[1].op.type);
   const set_op = [...new Set(check_op_type)];
+  const count_same = {};
+  check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
+
+  const count_filtered_ops = active_op_filters.map((k) => count_same[k]);
+  const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
+
+  const [show_filters, set_show_filters] = useState(false);
+  const timestamp = user_profile_data?.[1]?.[1].timestamp;
+  const now = new Date().toISOString().slice(0, timestamp?.length);
 
   return (
     <Container>
-      <Row>
-        <h1>This is personal page of {user}</h1>
-      </Row>
-      <Row>
-        <div className="d-flex flex-column justify-content-center align-items-center ">
-          <div className="nav-pages mb-3">
-            <button onClick={handlePrevPage}>Prev Page</button>
-            <button onClick={handleNextPage}>Next page</button>
-          </div>
+      <div
+        className="header"
+        // className="header d-flex justify-content-center"
+        // style={{ display: "flex", justifyContent: "center" }}
+      >
+        <h1 className="h-text">This is personal page of {user}</h1>
+      </div>
 
-          <div className="labels mb-3 d-flex">
+      <div className="op_count">
+        <p>
+         
+          Showing operations per page :
+          {filtered_ops_sum === 0
+            ? user_profile_data?.length
+            : filtered_ops_sum}
+        </p>
+      </div>
+      <div>
+        <Row hidden={!show_filters} className="filters">
+          <Col className="labels ">
+            <p>Operations count per page</p>
             {countTransPerPage.map((nr, i) => {
               return (
                 <div key={i} className="m-1">
                   <input
                     type="checkbox"
                     name={nr}
-                    checked={countIndex === i}
+                    checked={
+                      countIndex !== undefined
+                        ? countIndex === i
+                        : nr == user_profile_data?.length
+                    }
                     onChange={(e) => handleCheckbox(e)}
                   />
                   <label htmlFor={nr}>{nr}</label>
                 </div>
               );
             })}
-          </div>
-          <p>Showing operations per page : {user_profile_data?.length}</p>
-          <div>
+          </Col>
+          <Col>
             <p>Filter Operations</p>
             {operations?.map((o, i) => {
               return (
@@ -120,28 +156,61 @@ export default function User_Page({ user, setTitle }) {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </Row>
+          </Col>
+        </Row>
+      </div>
+      <div
+        style={{ display: "flex", justifyContent: "center" }}
+        className="filters_btn"
+      >
+        <Button onClick={() => set_show_filters(!show_filters)}>Filters</Button>
+      </div>
 
-      <Row>
+      <div className="pagination mt-3">
+        <Col xs={12}>
+          <Pagination>
+            <Pagination.First
+              disabled={get_max_trx_num == max_trx_nr}
+              onClick={handleFirstPage}
+            />
+            <Pagination.Prev
+              disabled={get_max_trx_num == max_trx_nr}
+              onClick={handlePrevPage}
+            />
+
+            <Pagination.Next
+              disabled={pagination_start === acc_history_limit}
+              onClick={handleNextPage}
+            />
+            <Pagination.Last
+              disabled={pagination_start === acc_history_limit}
+              onClick={handleLastPage}
+            />
+          </Pagination>
+        </Col>
+      </div>
+
+      <Row className="d-flex justify-content-center">
         <Col
           style={{
-            height: "800px",
+            height: "70vh",
             overflow: "auto",
           }}
-          xs={8}
+          xs={10}
+          aria-live="polite"
+          aria-atomic="true"
+          className="bg-dark position-relative"
         >
           {filters_len === 0 ? (
-            <Ops user_profile_data={user_profile_data} />
+            <Ops user_profile_data={user_profile_data} user={user} />
           ) : (
             <FilteredOps
+              user={user}
               user_profile_data={user_profile_data}
               active_op_filters={active_op_filters}
             />
           )}
         </Col>
-        <Col xs={4}>Col 4</Col>
       </Row>
     </Container>
   );
