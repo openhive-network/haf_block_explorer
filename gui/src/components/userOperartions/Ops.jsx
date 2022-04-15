@@ -1,5 +1,4 @@
 import React from "react";
-<<<<<<< HEAD
 // import { Row, Col, Card } from "react-bootstrap";
 import { Toast, ToastContainer } from "react-bootstrap";
 import Pop from "./Pop";
@@ -8,17 +7,12 @@ import en from "javascript-time-ago/locale/en.json";
 import ReactTimeAgo from "react-time-ago";
 export default function Ops({ user_profile_data, user }) {
   // TODO  ==== set time gtm
-=======
-import { Row, Col, Card } from "react-bootstrap";
-export default function Ops({ user_profile_data }) {
->>>>>>> Add operation filters for user history
   return (
     <div>
       {user_profile_data?.map((d) => {
         const op = d[1].op;
         const userDataJson = JSON.stringify(op, null, 2);
         return (
-<<<<<<< HEAD
           // <Row key={d[0]} className="justify-content-center">
           //   <Col className="m-2">
           //     <Card style={{ overflow: "auto", height: "200px" }}>
@@ -47,16 +41,6 @@ export default function Ops({ user_profile_data }) {
               </Toast.Body>
             </Toast>
           </ToastContainer>
-=======
-          <Row key={d[0]} className="justify-content-center">
-            <Col className="m-2">
-              <Card style={{ overflow: "auto", height: "200px" }}>
-                <p>id : {d[0]}</p>
-                <pre>{userDataJson}</pre>
-              </Card>
-            </Col>
-          </Row>
->>>>>>> Add operation filters for user history
         );
       })}
     </div>
