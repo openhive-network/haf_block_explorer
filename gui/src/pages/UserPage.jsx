@@ -10,6 +10,7 @@ import "./userPage.css";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
 import ReactTimeAgo from "react-time-ago";
+import TrxTable from "../components/TrxTable";
 
 TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
@@ -93,105 +94,108 @@ export default function User_Page({ user, setTitle }) {
   const now = new Date().toISOString().slice(0, timestamp?.length);
 
   return (
-    <Container>
-      <div
-        className="header"
-        // className="header d-flex justify-content-center"
-        // style={{ display: "flex", justifyContent: "center" }}
-      >
-        <h1 className="h-text">This is personal page of {user}</h1>
-      </div>
+    <>
+      {user_profile_data.length !== 0 ? (
+        <Container fluid>
+          <div
+            className="header"
+            // className="header d-flex justify-content-center"
+            // style={{ display: "flex", justifyContent: "center" }}
+          >
+            <h1 className="h-text">This is personal page of {user}</h1>
+          </div>
 
-      <div className="op_count">
-        <p>
-         
-          Showing operations per page :
-          {filtered_ops_sum === 0
-            ? user_profile_data?.length
-            : filtered_ops_sum}
-        </p>
-      </div>
-      <div>
-        <Row hidden={!show_filters} className="filters">
-          <Col className="labels ">
-            <p>Operations count per page</p>
-            {countTransPerPage.map((nr, i) => {
-              return (
-                <div key={i} className="m-1">
-                  <input
-                    type="checkbox"
-                    name={nr}
-                    checked={
-                      countIndex !== undefined
-                        ? countIndex === i
-                        : nr == user_profile_data?.length
-                    }
-                    onChange={(e) => handleCheckbox(e)}
-                  />
-                  <label htmlFor={nr}>{nr}</label>
-                </div>
-              );
-            })}
-          </Col>
-          <Col>
-            <p>Filter Operations</p>
-            {operations?.map((o, i) => {
-              return (
-                <div
-                  key={i}
-                  className="m-1"
-                  style={
-                    set_op.includes(o) === true
-                      ? { display: "block" }
-                      : { display: "none" }
-                  }
-                >
-                  <input
-                    disabled={!set_op.includes(o)}
-                    type="checkbox"
-                    name={o}
-                    onChange={(e) => handleOperationFilters(e)}
-                  />
-                  <label htmlFor={o}>{o}</label>
-                </div>
-              );
-            })}
-          </Col>
-        </Row>
-      </div>
-      <div
-        style={{ display: "flex", justifyContent: "center" }}
-        className="filters_btn"
-      >
-        <Button onClick={() => set_show_filters(!show_filters)}>Filters</Button>
-      </div>
+          <div className="op_count">
+            <p>
+              Showing operations per page :
+              {filtered_ops_sum === 0
+                ? user_profile_data?.length
+                : filtered_ops_sum}
+            </p>
+          </div>
+          <div>
+            <Row hidden={!show_filters} className="filters">
+              <Col className="labels ">
+                <p>Operations count per page</p>
+                {countTransPerPage.map((nr, i) => {
+                  return (
+                    <div key={i} className="m-1">
+                      <input
+                        type="checkbox"
+                        name={nr}
+                        checked={
+                          countIndex !== undefined
+                            ? countIndex === i
+                            : nr == user_profile_data?.length
+                        }
+                        onChange={(e) => handleCheckbox(e)}
+                      />
+                      <label htmlFor={nr}>{nr}</label>
+                    </div>
+                  );
+                })}
+              </Col>
+              <Col>
+                <p>Filter Operations</p>
+                {operations?.map((o, i) => {
+                  return (
+                    <div
+                      key={i}
+                      className="m-1"
+                      style={
+                        set_op.includes(o) === true
+                          ? { display: "block" }
+                          : { display: "none" }
+                      }
+                    >
+                      <input
+                        disabled={!set_op.includes(o)}
+                        type="checkbox"
+                        name={o}
+                        onChange={(e) => handleOperationFilters(e)}
+                      />
+                      <label htmlFor={o}>{o}</label>
+                    </div>
+                  );
+                })}
+              </Col>
+            </Row>
+          </div>
+          <div
+            style={{ display: "flex", justifyContent: "center" }}
+            className="filters_btn"
+          >
+            <Button onClick={() => set_show_filters(!show_filters)}>
+              Filters
+            </Button>
+          </div>
 
-      <div className="pagination mt-3">
-        <Col xs={12}>
-          <Pagination>
-            <Pagination.First
-              disabled={get_max_trx_num == max_trx_nr}
-              onClick={handleFirstPage}
-            />
-            <Pagination.Prev
-              disabled={get_max_trx_num == max_trx_nr}
-              onClick={handlePrevPage}
-            />
+          <div className="pagination mt-3">
+            <Col xs={12}>
+              <Pagination>
+                <Pagination.First
+                  disabled={get_max_trx_num == max_trx_nr}
+                  onClick={handleFirstPage}
+                />
+                <Pagination.Prev
+                  disabled={get_max_trx_num == max_trx_nr}
+                  onClick={handlePrevPage}
+                />
 
-            <Pagination.Next
-              disabled={pagination_start === acc_history_limit}
-              onClick={handleNextPage}
-            />
-            <Pagination.Last
-              disabled={pagination_start === acc_history_limit}
-              onClick={handleLastPage}
-            />
-          </Pagination>
-        </Col>
-      </div>
+                <Pagination.Next
+                  disabled={pagination_start === acc_history_limit}
+                  onClick={handleNextPage}
+                />
+                <Pagination.Last
+                  disabled={pagination_start === acc_history_limit}
+                  onClick={handleLastPage}
+                />
+              </Pagination>
+            </Col>
+          </div>
 
-      <Row className="d-flex justify-content-center">
-        <Col
+          <Row className="d-flex justify-content-center">
+            {/* <Col
           style={{
             height: "70vh",
             overflow: "auto",
@@ -210,8 +214,23 @@ export default function User_Page({ user, setTitle }) {
               active_op_filters={active_op_filters}
             />
           )}
-        </Col>
-      </Row>
-    </Container>
+        </Col> */}
+            <Col>
+              <TrxTable
+                next={handleNextPage}
+                prev={handlePrevPage}
+                first={handleFirstPage}
+                last={handleLastPage}
+                rows_per_page={acc_history_limit}
+              />
+            </Col>
+          </Row>
+        </Container>
+      ) : (
+        <div className="d-flex justify-content-center">
+          <h1>Please Wait</h1>
+        </div>
+      )}
+    </>
   );
 }
