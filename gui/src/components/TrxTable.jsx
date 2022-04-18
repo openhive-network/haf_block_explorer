@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import * as React from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -9,64 +9,58 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
 import { ApiContext } from "../context/apiContext";
-// import Pop from "../components/userOperartions/Pop";
-import { Row, Col, Offcanvas } from "react-bootstrap";
-// import { Button, Offcanvas } from "react-bootstrap";
+import Pop from "../components/userOperartions/Pop";
+import { Row, Col } from "react-bootstrap";
 
-export default function TrxData({
-  next,
-  prev,
-  first,
-  last,
-  active_op_filters,
-  acc_history_limit,
-}) {
+export default function TrxData({ next, prev, first, last, rows_per_page }) {
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(acc_history_limit);
+  const [rowsPerPage, setRowsPerPage] = React.useState(rows_per_page);
   const { user_profile_data } = React.useContext(ApiContext);
-  const [show, setShow] = useState(false);
-
-  // const handleClose = () => setShow(false);
-  const handleShow = () => setShow(!show);
 
   const columns = [
     { id: "name", label: "Op Number", minWidth: 170 },
     // { id: "code", label: "Op Block", minWidth: 170 },
     {
-      id: "op_type",
+      id: "population",
       label: "Op Type",
       minWidth: 170,
       align: "left",
+      format: (value) => value.toLocaleString("en-US"),
     },
     {
-      id: "op_value",
+      id: "size",
       label: "Op Value",
       minWidth: 170,
       align: "left",
+      format: (value) => value.toLocaleString("en-US"),
     },
     {
-      id: "op_details",
+      id: "info",
       label: "More Details",
       minWidth: 170,
       align: "left",
+      format: (value) => value.toLocaleString("en-US"),
     },
   ];
 
-  function createData(name, op_type, op_value, op_details) {
-    return { name, op_type, op_value, op_details };
+  function createData(name, population, size, info) {
+    return { name, population, size, info };
   }
 
   const op_number = user_profile_data?.map((history) => history[0]);
   const op_block = user_profile_data?.map((history) => history[1].block);
   const op_type = user_profile_data?.map((history) => history[1].op.type);
   const op_value = user_profile_data?.map((history) => history[1].op.value.id);
-  const more_details = <Button onClick={handleShow}>show</Button>;
+  const more_details = <Pop />;
   const rows = [];
+
   for (let i = 0; i < user_profile_data?.length; i++) {
     if (user_profile_data.length !== 0) {
       rows.push(
         createData(op_number[i], op_type[i], op_value[i], more_details)
       );
+    } else {
+      return rows.push("Loading Data");
     }
   }
 
@@ -80,10 +74,22 @@ export default function TrxData({
   };
 
   return (
-    <Row className="mt-5">
-      <Col>
-        <Paper>
-          <TableContainer>
+    <Row>
+      <Col xs={1} />
+      <Col xs={12} md={3}>
+        <Paper sx={{ height: 520 }} style={{ background: "lightblue" }}>
+          NEW PAPER
+        </Paper>
+      </Col>
+      <Col xs={12} md={7}>
+        <Paper
+          sx={{ width: "100%" }}
+          style={{
+            border: "15px solid lightblue",
+            borderRadius: "10px",
+          }}
+        >
+          <TableContainer sx={{ maxHeight: 440 }}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 <TableRow>
@@ -101,26 +107,21 @@ export default function TrxData({
               <TableBody>
                 {rows
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row, i) => {
-                    const filtered_op = active_op_filters?.filter(
-                      (o) => o == row.op_type
-                    );
-                    const newOp = filtered_op[0] === row.op_type;
-
+                  .map((row) => {
                     return (
                       <TableRow
-                        hidden={
-                          newOp === false && active_op_filters.length !== 0
-                        }
                         hover
                         role="checkbox"
-                        key={row.op_number}
+                        tabIndex={-1}
+                        key={row.code}
                       >
                         {columns.map((column, i) => {
                           const value = row[column.id];
                           return (
                             <TableCell key={i} align={column.align}>
-                              {value}
+                              {column.format && typeof value === "number"
+                                ? column.format(value)
+                                : value}
                             </TableCell>
                           );
                         })}
@@ -133,10 +134,10 @@ export default function TrxData({
 
           <div style={{ display: "flex", justifyContent: "space-around" }}>
             <TablePagination
-              rowsPerPageOptions={acc_history_limit}
+              rowsPerPageOptions={[10, 25, 100, 1000]}
               component="div"
               count={rows.length}
-              rowsPerPage={acc_history_limit}
+              rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
@@ -150,9 +151,7 @@ export default function TrxData({
           </div>
         </Paper>
       </Col>
-      <div className="userpage__offcanvas" hidden={!show}>
-        More Detailed Info about current transaction
-      </div>
+      <Col xs={1} />
     </Row>
   );
 }

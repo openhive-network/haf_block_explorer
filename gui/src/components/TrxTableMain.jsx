@@ -102,7 +102,7 @@ export default function TrxTableMain({ block_trans, tr_id }) {
   return (
     <>
       <Paper style={{ border: "15px solid #FDF6F0", borderRadius: "20px" }}>
-        <TableContainer>
+        <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>

@@ -10,8 +10,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
 import { getAccounts, getBlog, getTransaction } from "../functions";
-import { Link } from "react-router-dom";
-
 // import { FaAdn } from "react-icons/fa";
 // import IconButton from "@mui/material/IconButton";
 
@@ -77,45 +75,22 @@ export default function NavigationBar() {
           <Navbar.Brand href="/">Hive Block Explorer</Navbar.Brand>
           <Navbar.Toggle aria-controls="navbarScroll" />
           <Navbar.Collapse id="navbarScroll"> */}
-      <Row className="nav-bar">
-        <Col
-          style={{
-            display: "flex",
-            margin: "0 40px 0 50px",
-            alignItems: "center",
-          }}
-          xs={4}
-        >
-          <Link to="/">
-            <img
-              style={{ width: "80px" }}
-              src="https://hive.blog/images/favicons/favicon-196x196.png"
-            />
-          </Link>
-          <Link style={{ textDecoration: "none" }} to="/">
-            <h2
-              style={{
-                marginLeft: "10px",
-                color: "#fff",
-              }}
-            >
-              Haf Blocks
-            </h2>
-          </Link>
-        </Col>
-        <Col>
-          <Form className="nav-bar__form" onSubmit={handleSubmit}>
-            <FormControl
-              ref={form_value}
-              onChange={(e) => e.target.accName}
-              type="search"
-              placeholder="Search"
-              className="me-2"
-              aria-label="Search"
-            />
-          </Form>
-        </Col>
-      </Row>
+      <div className="nav-bar">
+        <Form className="nav-bar__form" onSubmit={handleSubmit}>
+          <FormControl
+            ref={form_value}
+            onChange={(e) => e.target.accName}
+            type="search"
+            placeholder="Search"
+            className="me-2"
+            aria-label="Search"
+          ></FormControl>
+
+          {/* <Button type="submit" variant="outline-success">
+          Search
+        </Button> */}
+        </Form>
+      </div>
       {/* </Navbar.Collapse>
         </Container>
       </Navbar> */}
