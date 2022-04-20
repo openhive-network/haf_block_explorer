@@ -71,6 +71,23 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_backend.get_operation_types()
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(result) FROM (
+    SELECT 
+      array_agg(id) AS "operation_id",
+      array_agg(split_part(name, '::', 3)) AS "operation_name",
+      array_agg(is_virtual) AS "is_virtual"
+    FROM hive.operation_types
+    ) result;
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account VARCHAR, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
 RETURNS JSON
 AS
