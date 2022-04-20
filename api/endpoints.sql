@@ -107,6 +107,17 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_endpoints.get_operation_types()
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN hafbe_backend.get_operation_types();
+END
+$$
+;
+
 CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _head_block BIGINT = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
