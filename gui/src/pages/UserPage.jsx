@@ -11,6 +11,7 @@ import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
 import ReactTimeAgo from "react-time-ago";
 import TrxTable from "../components/TrxTable";
+// import Offcanvas from "../components/OffCanvas";
 
 TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
@@ -54,7 +55,7 @@ export default function User_Page({ user, setTitle }) {
         acc_history_limit
       );
     }
-  }, [pagination_start]);
+  }, [pagination_start, setUser_profile_data, acc_history_limit]);
 
   //Transactions per page
   const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
@@ -97,14 +98,6 @@ export default function User_Page({ user, setTitle }) {
     <>
       {user_profile_data.length !== 0 ? (
         <Container fluid>
-          <div
-            className="header"
-            // className="header d-flex justify-content-center"
-            // style={{ display: "flex", justifyContent: "center" }}
-          >
-            <h1 className="h-text">This is personal page of {user}</h1>
-          </div>
-
           <div className="op_count">
             <p>
               Showing operations per page :
@@ -114,7 +107,7 @@ export default function User_Page({ user, setTitle }) {
             </p>
           </div>
           <div>
-            <Row hidden={!show_filters} className="filters">
+            <Row className="filters">
               <Col className="labels ">
                 <p>Operations count per page</p>
                 {countTransPerPage.map((nr, i) => {
@@ -170,7 +163,7 @@ export default function User_Page({ user, setTitle }) {
             </Button>
           </div>
 
-          <div className="pagination mt-3">
+          {/* <div className="pagination mt-3">
             <Col xs={12}>
               <Pagination>
                 <Pagination.First
@@ -192,36 +185,44 @@ export default function User_Page({ user, setTitle }) {
                 />
               </Pagination>
             </Col>
-          </div>
+          </div> */}
 
           <Row className="d-flex justify-content-center">
             {/* <Col
-          style={{
-            height: "70vh",
-            overflow: "auto",
-          }}
-          xs={10}
-          aria-live="polite"
-          aria-atomic="true"
-          className="bg-dark position-relative"
-        >
-          {filters_len === 0 ? (
-            <Ops user_profile_data={user_profile_data} user={user} />
-          ) : (
-            <FilteredOps
-              user={user}
-              user_profile_data={user_profile_data}
-              active_op_filters={active_op_filters}
-            />
-          )}
-        </Col> */}
-            <Col>
+              style={{
+                height: "70vh",
+                overflow: "auto",
+              }}
+              xs={10}
+              aria-live="polite"
+              aria-atomic="true"
+              className="bg-dark position-relative"
+            >
+              {filters_len === 0 ? (
+                <Ops user_profile_data={user_profile_data} user={user} />
+              ) : (
+                <FilteredOps
+                  user={user}
+                  user_profile_data={user_profile_data}
+                  active_op_filters={active_op_filters}
+                />
+              )}
+            </Col> */}
+            <Col
+             
+              xs={2}
+            >
+              <h3>SideBar With UserInfo</h3>
+              <p>{user}</p>
+              <p>User Info</p>
+            </Col>
+            <Col xs={9}>
               <TrxTable
+                active_op_filters={active_op_filters}
                 next={handleNextPage}
                 prev={handlePrevPage}
                 first={handleFirstPage}
                 last={handleLastPage}
-                rows_per_page={acc_history_limit}
               />
             </Col>
           </Row>

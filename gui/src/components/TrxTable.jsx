@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState } from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -9,13 +9,24 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
 import { ApiContext } from "../context/apiContext";
-import Pop from "../components/userOperartions/Pop";
-import { Row, Col } from "react-bootstrap";
+// import Pop from "../components/userOperartions/Pop";
+import { Row, Col, Offcanvas } from "react-bootstrap";
+// import { Button, Offcanvas } from "react-bootstrap";
 
-export default function TrxData({ next, prev, first, last, rows_per_page }) {
+export default function TrxData({
+  next,
+  prev,
+  first,
+  last,
+  active_op_filters,
+}) {
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(rows_per_page);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const { user_profile_data } = React.useContext(ApiContext);
+  const [show, setShow] = useState(false);
+
+  // const handleClose = () => setShow(false);
+  const handleShow = () => setShow(!show);
 
   const columns = [
     { id: "name", label: "Op Number", minWidth: 170 },
@@ -51,16 +62,13 @@ export default function TrxData({ next, prev, first, last, rows_per_page }) {
   const op_block = user_profile_data?.map((history) => history[1].block);
   const op_type = user_profile_data?.map((history) => history[1].op.type);
   const op_value = user_profile_data?.map((history) => history[1].op.value.id);
-  const more_details = <Pop />;
+  const more_details = <Button onClick={handleShow}>show</Button>;
   const rows = [];
-
   for (let i = 0; i < user_profile_data?.length; i++) {
     if (user_profile_data.length !== 0) {
       rows.push(
         createData(op_number[i], op_type[i], op_value[i], more_details)
       );
-    } else {
-      return rows.push("Loading Data");
     }
   }
 
@@ -75,21 +83,9 @@ export default function TrxData({ next, prev, first, last, rows_per_page }) {
 
   return (
     <Row>
-      <Col xs={1} />
-      <Col xs={12} md={3}>
-        <Paper sx={{ height: 520 }} style={{ background: "lightblue" }}>
-          NEW PAPER
-        </Paper>
-      </Col>
-      <Col xs={12} md={7}>
-        <Paper
-          sx={{ width: "100%" }}
-          style={{
-            border: "15px solid lightblue",
-            borderRadius: "10px",
-          }}
-        >
-          <TableContainer sx={{ maxHeight: 440 }}>
+      <Col>
+        <Paper>
+          <TableContainer>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 <TableRow>
@@ -107,14 +103,9 @@ export default function TrxData({ next, prev, first, last, rows_per_page }) {
               <TableBody>
                 {rows
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row) => {
+                  .map((row, i) => {
                     return (
-                      <TableRow
-                        hover
-                        role="checkbox"
-                        tabIndex={-1}
-                        key={row.code}
-                      >
+                      <TableRow hover role="checkbox" tabIndex={-1} key={i}>
                         {columns.map((column, i) => {
                           const value = row[column.id];
                           return (
@@ -151,7 +142,9 @@ export default function TrxData({ next, prev, first, last, rows_per_page }) {
           </div>
         </Paper>
       </Col>
-      <Col xs={1} />
+      <div className="userpage__offcanvas" hidden={!show}>
+        More Detailed Info about current transaction
+      </div>
     </Row>
   );
 }
