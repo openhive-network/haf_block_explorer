@@ -107,13 +107,11 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_account_history(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _operation_filter_low NUMERIC = 0, _operation_filter_high NUMERIC = 0, _include_reversible BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _head_block BIGINT = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __is_legacy_style BOOLEAN = FALSE;
 BEGIN
   IF _start IS NULL OR _start < 0 THEN
     _start = 9223372036854775807;
@@ -123,19 +121,11 @@ BEGIN
     _limit = 1000;
   END IF;
 
-  IF _operation_filter_low IS NULL OR _operation_filter_low < 0 THEN
-    _operation_filter_low = 0;
+  IF _head_block IS NULL THEN
+    SELECT hafbe_endpoints.get_head_block_num() INTO _head_block;
   END IF;
 
-  IF _operation_filter_high IS NULL OR _operation_filter_high < 0 THEN
-    _operation_filter_high = 0;
-  END IF;
-
-  IF _include_reversible IS NULL THEN
-    _include_reversible = FALSE;
-  END IF;
-  
-  RETURN hafah_python.ah_get_account_history_json(_operation_filter_low, _operation_filter_high, _account, _start, _limit, _include_reversible, __is_legacy_style);
+  RETURN hafbe_backend.get_ops_by_account(_account, _start, _limit, _filter, _head_block);
 END
 $$
 ;

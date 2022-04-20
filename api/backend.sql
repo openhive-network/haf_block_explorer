@@ -21,9 +21,6 @@ BEGIN
   GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;
   GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
 
-  GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
-  GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
-
   GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
   GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
   GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
@@ -72,6 +69,74 @@ BEGIN
   RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1;
 END
 $$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account VARCHAR, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+RETURNS JSON
+AS
+$function$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(ops_json) FROM (
+        SELECT
+          (CASE WHEN ops.trx_in_block < 0 THEN
+            '0000000000000000000000000000000000000000'
+          ELSE 
+            encode((SELECT trx_hash FROM hive.transactions_view WHERE ops.trx_in_block >= 0 AND acc_ops.block_num = block_num AND ops.trx_in_block = trx_in_block), 'escape')
+          END) AS "trx_id",
+          acc_ops.block_num AS "block",
+          (CASE WHEN ops.trx_in_block < 0 THEN 4294967295 ELSE ops.trx_in_block END) AS "trx_in_block",
+          ops.op_pos::BIGINT AS "op_in_trx",
+          op_types.is_virtual AS "virtual_op",
+          btrim(to_json(ops."timestamp")::TEXT, '"'::TEXT) AS "timestamp",
+          ops.body::JSON AS "op",
+          acc_ops.account_op_seq_no AS "operation_id"
+        FROM (
+          SELECT
+            operation_id,
+            op_type_id,
+            block_num,
+            account_op_seq_no
+          FROM
+            hive.account_operations_view
+          WHERE
+            account_id = (SELECT id FROM hive.accounts WHERE name = _account) AND 
+            account_op_seq_no <= _start AND 
+            block_num <= _head_block AND (
+              (SELECT array_length(_filter, 1)) IS NULL OR
+              op_type_id=ANY(_filter)
+            )
+          ORDER BY account_op_seq_no DESC
+          LIMIT _limit
+        ) acc_ops
+
+        JOIN LATERAL (
+          SELECT
+            body,
+            op_pos,
+            timestamp,
+            trx_in_block
+          FROM
+            hive.operations_view
+          WHERE acc_ops.operation_id = id) ops ON TRUE
+
+        JOIN LATERAL (
+          SELECT
+            is_virtual
+          FROM
+            hive.operation_types
+          WHERE acc_ops.op_type_id = id
+        ) op_types ON TRUE
+      ) ops_json
+    ) arr
+  ) result;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
 
 CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
