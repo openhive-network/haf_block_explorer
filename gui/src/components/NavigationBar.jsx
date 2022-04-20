@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
-import { Navbar, Container, Form, FormControl, Col } from "react-bootstrap";
+import {
+  Navbar,
+  Container,
+  Form,
+  FormControl,
+  Col,
+  Row,
+} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
 import { getAccounts, getBlog, getTransaction } from "../functions";
 import { Link } from "react-router-dom";
+
 // import { FaAdn } from "react-icons/fa";
 // import IconButton from "@mui/material/IconButton";
 
@@ -62,7 +70,7 @@ export default function NavigationBar() {
     let val = form_value.current.value;
     setValue(val);
   }
-
+  useEffect(() => {});
   return (
     <>
       {/* <Navbar bg="light" expand="lg">
@@ -70,11 +78,33 @@ export default function NavigationBar() {
           <Navbar.Brand href="/">Hive Block Explorer</Navbar.Brand>
           <Navbar.Toggle aria-controls="navbarScroll" />
           <Navbar.Collapse id="navbarScroll"> */}
-      <div className="nav-bar">
-        <Col xs={4}>
-          <Link to="/">HIVE LOGO</Link>
+      <Row className="nav-bar">
+        <Col
+          style={{
+            display: "flex",
+            margin: "0 40px 0 50px",
+            alignItems: "center",
+          }}
+          xs={4}
+        >
+          <Link to="/">
+            <img
+              style={{ width: "80px" }}
+              src="https://hive.blog/images/favicons/favicon-196x196.png"
+            />
+          </Link>
+          <Link style={{ textDecoration: "none" }} to="/">
+            <h2
+              style={{
+                marginLeft: "10px",
+                color: "#fff",
+              }}
+            >
+              Haf Blocks
+            </h2>
+          </Link>
         </Col>
-        <Col className="d-flex justify-content-center" xs={8}>
+        <Col>
           <Form className="nav-bar__form" onSubmit={handleSubmit}>
             <FormControl
               ref={form_value}
@@ -86,7 +116,7 @@ export default function NavigationBar() {
             />
           </Form>
         </Col>
-      </div>
+      </Row>
       {/* </Navbar.Collapse>
         </Container>
       </Navbar> */}

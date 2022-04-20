@@ -1,5 +1,5 @@
 .App {
-    padding-bottom: 50px;
+    padding-bottom: 0px;
     /* background-color: rgb(56, 53, 53);color: #fff */
 }
 
@@ -11,14 +11,14 @@
     background-color:'red' 
 }  */
 .nav-bar {
-    margin-bottom: 50px;
-    height: 80px;
+    margin: 0px 0 50px 0;
+    /* height: 80px; */
     justify-content: center;
     align-items: center;
     display: flex;
     width: 100vw;
-    /* background-color: #FCD8D4;
-    border-bottom: 5px solid red; */
+    background-color: #000;
+    /* border-bottom: 5px solid red; */
     /* z-index: 0 !important; */
 }
 
@@ -68,15 +68,16 @@ margin: 0; */
 
 .footer {
     border-top: 5px solid red;
-    position: absolute;
-    width: 100vw;
-    bottom: 0;
-    display: flex;
+    display:flex;
     justify-content: center;
     align-items: center;
+    background: #000;
     height: 50px;
-    background: #F5C6AA;
-
+    color: #fff;
+    margin-top:50px;
+}
+.footer p{
+    margin:0;
 }
 
 .userpage__offcanvas {
@@ -89,4 +90,20 @@ margin: 0; */
 
 .userpage__offcanvas:target {
     transform: translateX(10%);
+}
+
+.filters__operation{
+    border:1px solid red;
+    border-left:0px;
+    
+}
+
+.filters__operation-count{
+    border:1px solid red;
+    border-right:0px;
+   
+}
+
+.filters{
+    margin-bottom: 20px;
 }

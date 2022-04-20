@@ -20,7 +20,6 @@ export default function User_Page({ user, setTitle }) {
     setUser_profile_data,
     set_acc_history_limit,
     acc_history_limit,
-    dataLoaded,
   } = useContext(ApiContext);
   setTitle(`HAF | User | ${user}`);
 
@@ -90,80 +89,85 @@ export default function User_Page({ user, setTitle }) {
   const count_filtered_ops = active_op_filters.map((k) => count_same[k]);
   const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
 
-  const [show_filters, set_show_filters] = useState(false);
+  const [show_filters, set_show_filters] = useState(true);
   const timestamp = user_profile_data?.[1]?.[1].timestamp;
   const now = new Date().toISOString().slice(0, timestamp?.length);
 
   return (
     <>
-      {user_profile_data.length !== 0 ? (
-        <Container fluid>
-          <div className="op_count">
-            <p>
-              Showing operations per page :
-              {filtered_ops_sum === 0
-                ? user_profile_data?.length
-                : filtered_ops_sum}
-            </p>
-          </div>
-          <div>
-            <Row className="filters">
-              <Col className="labels ">
-                <p>Operations count per page</p>
-                {countTransPerPage.map((nr, i) => {
-                  return (
-                    <div key={i} className="m-1">
-                      <input
-                        type="checkbox"
-                        name={nr}
-                        checked={
-                          countIndex !== undefined
-                            ? countIndex === i
-                            : nr == user_profile_data?.length
-                        }
-                        onChange={(e) => handleCheckbox(e)}
-                      />
-                      <label htmlFor={nr}>{nr}</label>
-                    </div>
-                  );
-                })}
-              </Col>
-              <Col>
-                <p>Filter Operations</p>
-                {operations?.map((o, i) => {
-                  return (
-                    <div
-                      key={i}
-                      className="m-1"
-                      style={
-                        set_op.includes(o) === true
-                          ? { display: "block" }
-                          : { display: "none" }
-                      }
-                    >
-                      <input
-                        disabled={!set_op.includes(o)}
-                        type="checkbox"
-                        name={o}
-                        onChange={(e) => handleOperationFilters(e)}
-                      />
-                      <label htmlFor={o}>{o}</label>
-                    </div>
-                  );
-                })}
+      {/* {user_profile_data.length !== 0 ? ( */}
+      <Container fluid>
+        <div className="op_count">
+          <p>
+            Showing operations per page :
+            {filtered_ops_sum === 0
+              ? user_profile_data?.length
+              : filtered_ops_sum}
+          </p>
+        </div>
+        <div>
+          <Row hidden={show_filters} className="filters">
+            <Row className="d-flex justify-content-center">
+              <Col className="filters__header text-center" xs={5}>
+                <h3>Filters</h3>
               </Col>
             </Row>
-          </div>
-          <div
-            style={{ display: "flex", justifyContent: "center" }}
-            className="filters_btn"
-          >
-            <Button onClick={() => set_show_filters(!show_filters)}>
-              Filters
-            </Button>
-          </div>
+            <Col xs={2} className="filters__operation-count">
+              <p>Operations count per page</p>
+              {countTransPerPage.map((nr, i) => {
+                return (
+                  <div key={i} className="m-1">
+                    <input
+                      type="checkbox"
+                      name={nr}
+                      checked={
+                        countIndex !== undefined
+                          ? countIndex === i
+                          : nr == user_profile_data?.length
+                      }
+                      onChange={(e) => handleCheckbox(e)}
+                    />
+                    <label htmlFor={nr}>{nr}</label>
+                  </div>
+                );
+              })}
+            </Col>
+            <Col xs={3} className="filters__operation">
+              <p>Filter Operations</p>
+              {operations?.map((o, i) => {
+                return (
+                  <div
+                    key={i}
+                    className="m-1"
+                    style={
+                      set_op.includes(o) === true
+                        ? { display: "block" }
+                        : { display: "none" }
+                    }
+                  >
+                    <input
+                      disabled={!set_op.includes(o)}
+                      type="checkbox"
+                      name={o}
+                      onChange={(e) => handleOperationFilters(e)}
+                    />
+                    <label htmlFor={o}>{o}</label>
+                  </div>
+                );
+              })}
+            </Col>
+          </Row>
+        </div>
+        <div
+          style={{ display: "flex", justifyContent: "center" }}
+          className="filters_btn"
+        >
+          <Button onClick={() => set_show_filters(!show_filters)}>
+            Filters
+          </Button>
+        </div>
 
-          {/* <div className="pagination mt-3">
+        {/* <div className="pagination mt-3">
             <Col xs={12}>
               <Pagination>
                 <Pagination.First
@@ -187,8 +191,8 @@ export default function User_Page({ user, setTitle }) {
             </Col>
           </div> */}
 
-          <Row className="d-flex justify-content-center">
-            {/* <Col
+        <Row className="d-flex justify-content-center">
+          {/* <Col
               style={{
                 height: "70vh",
                 overflow: "auto",
@@ -208,30 +212,28 @@ export default function User_Page({ user, setTitle }) {
                 />
               )}
             </Col> */}
-            <Col
-             
-              xs={2}
-            >
-              <h3>SideBar With UserInfo</h3>
-              <p>{user}</p>
-              <p>User Info</p>
-            </Col>
-            <Col xs={9}>
-              <TrxTable
-                active_op_filters={active_op_filters}
-                next={handleNextPage}
-                prev={handlePrevPage}
-                first={handleFirstPage}
-                last={handleLastPage}
-              />
-            </Col>
-          </Row>
-        </Container>
-      ) : (
+          <Col xs={2}>
+            <h3>SideBar With UserInfo</h3>
+            <p>{user}</p>
+            <p>User Info</p>
+          </Col>
+          <Col xs={9}>
+            <TrxTable
+              active_op_filters={active_op_filters}
+              next={handleNextPage}
+              prev={handlePrevPage}
+              first={handleFirstPage}
+              last={handleLastPage}
+              acc_history_limit={acc_history_limit}
+            />
+          </Col>
+        </Row>
+      </Container>
+      {/* ) : (
         <div className="d-flex justify-content-center">
           <h1>Please Wait</h1>
         </div>
-      )}
+      )} */}
     </>
   );
 }

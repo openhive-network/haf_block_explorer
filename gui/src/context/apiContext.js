@@ -15,27 +15,8 @@ export const ApiContextProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState("");
   const [blockNumber, setBlockNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
-  const [dataLoaded, setDataLoaded] = useState(false);
+  // const [dataLoaded, setDataLoaded] = useState(false);
   const [acc_history_limit, set_acc_history_limit] = useState(1000);
-  //  Get user profile data
-  useEffect(() => {
-    axios({
-      method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "account_history_api.get_account_history",
-        params: {
-          account: userProfile,
-          start: -1,
-          limit: acc_history_limit,
-        },
-        id: 1,
-      },
-    }).then((res) =>
-      setUser_profile_data(res?.data?.result?.history?.reverse())
-    );
-  }, [userProfile, acc_history_limit]);
 
   // Get head block
   useEffect(() => {
@@ -64,6 +45,25 @@ export const ApiContextProvider = ({ children }) => {
       },
     }).then((res) => setHead_block_data(res?.data?.result?.block));
   }, [current_head_block]);
+  //  Get user profile data
+  useEffect(() => {
+    axios({
+      method: "post",
+      url: "https://api.hive.blog",
+      data: {
+        jsonrpc: "2.0",
+        method: "account_history_api.get_account_history",
+        params: {
+          account: userProfile,
+          start: -1,
+          limit: acc_history_limit,
+        },
+        id: 1,
+      },
+    }).then((res) =>
+      setUser_profile_data(res?.data?.result?.history?.reverse())
+    );
+  }, [userProfile, acc_history_limit]);
 
   // Get current block data
   useEffect(() => {
@@ -110,7 +110,7 @@ export const ApiContextProvider = ({ children }) => {
   return (
     <ApiContext.Provider
       value={{
-        dataLoaded: dataLoaded,
+        // dataLoaded: dataLoaded,
         head_block: head_block,
         head_block_data: head_block_data,
         setUser_profile_data: setUser_profile_data,

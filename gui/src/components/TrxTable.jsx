@@ -19,9 +19,10 @@ export default function TrxData({
   first,
   last,
   active_op_filters,
+  acc_history_limit,
 }) {
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rowsPerPage, setRowsPerPage] = React.useState(acc_history_limit);
   const { user_profile_data } = React.useContext(ApiContext);
   const [show, setShow] = useState(false);
 
@@ -32,30 +33,27 @@ export default function TrxData({
     { id: "name", label: "Op Number", minWidth: 170 },
     // { id: "code", label: "Op Block", minWidth: 170 },
     {
-      id: "population",
+      id: "op_type",
       label: "Op Type",
       minWidth: 170,
       align: "left",
-      format: (value) => value.toLocaleString("en-US"),
     },
     {
-      id: "size",
+      id: "op_value",
       label: "Op Value",
       minWidth: 170,
       align: "left",
-      format: (value) => value.toLocaleString("en-US"),
     },
     {
-      id: "info",
+      id: "op_details",
       label: "More Details",
       minWidth: 170,
       align: "left",
-      format: (value) => value.toLocaleString("en-US"),
     },
   ];
 
-  function createData(name, population, size, info) {
-    return { name, population, size, info };
+  function createData(name, op_type, op_value, op_details) {
+    return { name, op_type, op_value, op_details };
   }
 
   const op_number = user_profile_data?.map((history) => history[0]);
@@ -82,7 +80,7 @@ export default function TrxData({
   };
 
   return (
-    <Row>
+    <Row className="mt-5">
       <Col>
         <Paper>
           <TableContainer>
@@ -104,15 +102,25 @@ export default function TrxData({
                 {rows
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((row, i) => {
+                    const filtered_op = active_op_filters?.filter(
+                      (o) => o == row.op_type
+                    );
+                    const newOp = filtered_op[0] === row.op_type;
+
                     return (
-                      <TableRow hover role="checkbox" tabIndex={-1} key={i}>
+                      <TableRow
+                        hidden={
+                          newOp === false && active_op_filters.length !== 0
+                        }
+                        hover
+                        role="checkbox"
+                        key={row.op_number}
+                      >
                         {columns.map((column, i) => {
                           const value = row[column.id];
                           return (
                             <TableCell key={i} align={column.align}>
-                              {column.format && typeof value === "number"
-                                ? column.format(value)
-                                : value}
+                              {value}
                             </TableCell>
                           );
                         })}
@@ -125,10 +133,10 @@ export default function TrxData({
 
           <div style={{ display: "flex", justifyContent: "space-around" }}>
             <TablePagination
-              rowsPerPageOptions={[10, 25, 100, 1000]}
+              rowsPerPageOptions={acc_history_limit}
               component="div"
               count={rows.length}
-              rowsPerPage={rowsPerPage}
+              rowsPerPage={acc_history_limit}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
