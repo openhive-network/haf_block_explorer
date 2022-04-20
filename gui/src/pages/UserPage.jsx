@@ -107,8 +107,13 @@ export default function User_Page({ user, setTitle }) {
             </p>
           </div>
           <div>
-            <Row className="filters">
-              <Col className="labels ">
+            <Row hidden={show_filters} className="filters">
+              <Row className="d-flex justify-content-center">
+                <Col className="filters__header text-center" xs={5}>
+                  <h3>Filters</h3>
+                </Col>
+              </Row>
+              <Col xs={2} className="filters__operation-count">
                 <p>Operations count per page</p>
                 {countTransPerPage.map((nr, i) => {
                   return (
@@ -128,7 +133,7 @@ export default function User_Page({ user, setTitle }) {
                   );
                 })}
               </Col>
-              <Col>
+              <Col xs={3} className="filters__operation">
                 <p>Filter Operations</p>
                 {operations?.map((o, i) => {
                   return (
@@ -208,10 +213,7 @@ export default function User_Page({ user, setTitle }) {
                 />
               )}
             </Col> */}
-            <Col
-             
-              xs={2}
-            >
+            <Col xs={2}>
               <h3>SideBar With UserInfo</h3>
               <p>{user}</p>
               <p>User Info</p>
@@ -223,6 +225,7 @@ export default function User_Page({ user, setTitle }) {
                 prev={handlePrevPage}
                 first={handleFirstPage}
                 last={handleLastPage}
+                acc_history_limit={acc_history_limit}
               />
             </Col>
           </Row>
