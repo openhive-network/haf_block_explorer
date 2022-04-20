@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
-import { Navbar, Container, Form, FormControl, Button } from "react-bootstrap";
+import { Navbar, Container, Form, FormControl, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ApiContext } from "../context/apiContext";
 import { getAccounts, getBlog, getTransaction } from "../functions";
+import { Link } from "react-router-dom";
 // import { FaAdn } from "react-icons/fa";
 // import IconButton from "@mui/material/IconButton";
 
@@ -70,20 +71,21 @@ export default function NavigationBar() {
           <Navbar.Toggle aria-controls="navbarScroll" />
           <Navbar.Collapse id="navbarScroll"> */}
       <div className="nav-bar">
-        <Form className="nav-bar__form" onSubmit={handleSubmit}>
-          <FormControl
-            ref={form_value}
-            onChange={(e) => e.target.accName}
-            type="search"
-            placeholder="Search"
-            className="me-2"
-            aria-label="Search"
-          ></FormControl>
-
-          {/* <Button type="submit" variant="outline-success">
-          Search
-        </Button> */}
-        </Form>
+        <Col xs={4}>
+          <Link to="/">HIVE LOGO</Link>
+        </Col>
+        <Col className="d-flex justify-content-center" xs={8}>
+          <Form className="nav-bar__form" onSubmit={handleSubmit}>
+            <FormControl
+              ref={form_value}
+              onChange={(e) => e.target.accName}
+              type="search"
+              placeholder="Search"
+              className="me-2"
+              aria-label="Search"
+            />
+          </Form>
+        </Col>
       </div>
       {/* </Navbar.Collapse>
         </Container>

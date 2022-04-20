@@ -32,9 +32,8 @@ export const ApiContextProvider = ({ children }) => {
         },
         id: 1,
       },
-    }).then(
-      (res) => setUser_profile_data(res?.data?.result?.history?.reverse()),
-      setDataLoaded(true)
+    }).then((res) =>
+      setUser_profile_data(res?.data?.result?.history?.reverse())
     );
   }, [userProfile, acc_history_limit]);
 
