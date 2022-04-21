@@ -8,7 +8,7 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
-import { ApiContext } from "../context/apiContext";
+import { ApiContext } from "../../context/apiContext";
 // import Pop from "../components/userOperartions/Pop";
 import { Row, Col, Offcanvas } from "react-bootstrap";
 // import { Button, Offcanvas } from "react-bootstrap";
@@ -71,6 +71,8 @@ export default function TrxTable({
       );
     }
   }
+
+  console.log(show);
 
   // const handleChangePage = (event, newPage) => {
   //   setPage(newPage);

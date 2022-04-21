@@ -1,19 +1,21 @@
 import React, { useContext, useState, useEffect } from "react";
 import { ApiContext } from "../context/apiContext";
 import { userPagination } from "../functions";
-import FilteredOps from "../components/userOperartions/FilteredOps";
-import Ops from "../components/userOperartions/Ops";
+import FilteredOps from "../components/user/FilteredOps";
+import Ops from "../components/user/Ops";
 import { Container, Col, Row, Button, Pagination } from "react-bootstrap";
 import { operations } from "../operations";
+import ProgressBar from "react-bootstrap/ProgressBar";
 // import Pagination from "react-bootstrap/Pagination";
 import "./userPage.css";
-import TimeAgo from "javascript-time-ago";
-import en from "javascript-time-ago/locale/en.json";
-import ReactTimeAgo from "react-time-ago";
-import TrxTable from "../components/TrxTable";
+// import TimeAgo from "javascript-time-ago";
+// import en from "javascript-time-ago/locale/en.json";
+// import ReactTimeAgo from "react-time-ago";
+import TrxTable from "../components/tables/TrxTable";
+import UserProfileCard from "../components/user/UserProfileCard";
 // import Offcanvas from "../components/OffCanvas";
 
-TimeAgo.addDefaultLocale(en);
+// TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
   const {
     user_profile_data,
@@ -92,7 +94,7 @@ export default function User_Page({ user, setTitle }) {
 
   const [show_filters, set_show_filters] = useState(false);
   const timestamp = user_profile_data?.[1]?.[1].timestamp;
-  const now = new Date().toISOString().slice(0, timestamp?.length);
+  // const now = new Date().toISOString().slice(0, timestamp?.length);
 
   return (
     <>
@@ -213,12 +215,10 @@ export default function User_Page({ user, setTitle }) {
                 />
               )}
             </Col> */}
-            <Col xs={2}>
-              <h3>SideBar With UserInfo</h3>
-              <p>{user}</p>
-              <p>User Info</p>
+            <Col sm={12} md={3}>
+              <UserProfileCard user={user} />
             </Col>
-            <Col xs={7}>
+            <Col>
               <TrxTable
                 active_op_filters={active_op_filters}
                 next={handleNextPage}

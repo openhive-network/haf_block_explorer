@@ -9,7 +9,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import { Link } from "react-router-dom";
 import { useContext } from "react";
-import { ApiContext } from "../context/apiContext";
+import { ApiContext } from "../../context/apiContext";
 
 export default function TrxTableMain({ block_trans, tr_id }) {
   const [page, setPage] = React.useState(0);

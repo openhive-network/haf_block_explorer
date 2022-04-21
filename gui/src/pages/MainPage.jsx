@@ -3,7 +3,7 @@ import { ApiContext } from "../context/apiContext";
 import OperationCard from "../components/OperationCard";
 import { Link } from "react-router-dom";
 import { Container, Col, Row, ListGroup } from "react-bootstrap";
-import TrxTableMain from "../components/TrxTableMain";
+import TrxTableMain from "../components/tables/TrxTableMain";
 
 export default function Main_Page({ setTitle }) {
   setTitle((document.title = "HAF Blocks"));
