@@ -10,14 +10,14 @@ export default function Block_Page({ block_nr, setTitle }) {
 
   // const [count, setCount] = useState(block_nr);
   // const handleNextBlock = () => {
-    // setCount(count + 1);
-    // setBlockNumber(block_nr + 1);
+  // setCount(count + 1);
+  // setBlockNumber(block_nr + 1);
   // };
   // const handlePreviousBlock = () => {
   //   // setCount(count - 1);
   //   setBlockNumber(block_nr - 1);
   // };
-console.log(block_data);
+  // console.log(block_data);
   return (
     <div>
       <p>Block number : {block_nr} </p>
@@ -25,12 +25,14 @@ console.log(block_data);
       {trx?.length === 0 ? (
         <h1>No transactions for this block</h1>
       ) : (
-        trx?.map((single) => {
+        trx?.map((single, i) => {
           const trxToJson = JSON.stringify(single, null, 2);
+
           return (
             <Row key={single.signatures} className="justify-content-center">
               <Col xs={6}>
                 <Card>
+                  <p>ID : {block_data.transaction_ids[i]}</p>
                   <pre>{trxToJson}</pre>
                 </Card>
               </Col>

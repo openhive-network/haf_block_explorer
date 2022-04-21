@@ -218,7 +218,7 @@ export default function User_Page({ user, setTitle }) {
               <p>{user}</p>
               <p>User Info</p>
             </Col>
-            <Col xs={9}>
+            <Col xs={7}>
               <TrxTable
                 active_op_filters={active_op_filters}
                 next={handleNextPage}

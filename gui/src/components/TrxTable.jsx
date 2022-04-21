@@ -13,7 +13,7 @@ import { ApiContext } from "../context/apiContext";
 import { Row, Col, Offcanvas } from "react-bootstrap";
 // import { Button, Offcanvas } from "react-bootstrap";
 
-export default function TrxData({
+export default function TrxTable({
   next,
   prev,
   first,
@@ -72,24 +72,30 @@ export default function TrxData({
     }
   }
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  // const handleChangePage = (event, newPage) => {
+  //   setPage(newPage);
+  // };
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
+  // const handleChangeRowsPerPage = (event) => {
+  //   setRowsPerPage(+event.target.value);
+  //   setPage(0);
+  // };
 
   return (
     <Row>
       <Col>
         <Paper>
           <TableContainer>
+            <div className="d-flex justify-content-center">
+              <Button onClick={first}>First</Button>
+              <Button onClick={prev}>Prev</Button>
+              <Button onClick={next}>Next</Button>
+              <Button onClick={last}>Last</Button>
+            </div>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 <TableRow>
-                  {columns.map((column) => (
+                  {columns.map((column, i) => (
                     <TableCell
                       key={column.id}
                       align={column.align}
@@ -105,7 +111,14 @@ export default function TrxData({
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((row, i) => {
                     return (
-                      <TableRow hover role="checkbox" tabIndex={-1} key={i}>
+                      <TableRow
+                        hidden={
+                          newOp === false && active_op_filters.length !== 0
+                        }
+                        hover
+                        role="checkbox"
+                        key={i}
+                      >
                         {columns.map((column, i) => {
                           const value = row[column.id];
                           return (
@@ -123,7 +136,7 @@ export default function TrxData({
             </Table>
           </TableContainer>
 
-          <div style={{ display: "flex", justifyContent: "space-around" }}>
+          {/* <div style={{ display: "flex", justifyContent: "space-around" }}>
             <TablePagination
               rowsPerPageOptions={[10, 25, 100, 1000]}
               component="div"
@@ -132,14 +145,8 @@ export default function TrxData({
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-            <div style={{ display: "flex" }}>
-              <Button onClick={first}>First</Button>
-              <Button onClick={prev}>Prev</Button>
-              <Button onClick={next}>Next</Button>
-              <Button onClick={last}>Last</Button>
-            </div>
-          </div>
+            /> 
+          </div> */}
         </Paper>
       </Col>
       <div className="userpage__offcanvas" hidden={!show}>

@@ -1,5 +1,6 @@
 .App {
     padding-bottom: 0px;
+
     /* background-color: rgb(56, 53, 53);color: #fff */
 }
 
@@ -67,6 +68,9 @@ margin: 0; */
 }
 
 .footer {
+    /* position: relative;
+    width: 100vw;
+    bottom:0; */
     border-top: 5px solid red;
     display: flex;
     justify-content: center;
@@ -94,13 +98,13 @@ margin: 0; */
 }
 
 .filters__operation {
-    border: 1px solid red;
+    /* border:1px solid red; */
     border-left: 0px;
 
 }
 
 .filters__operation-count {
-    border: 1px solid red;
+    /* border:1px solid red; */
     border-right: 0px;
 
 }
