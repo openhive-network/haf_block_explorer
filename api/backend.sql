@@ -37,16 +37,12 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account_id(_account TEXT)
-RETURNS INT
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN id FROM hive.accounts_view WHERE name = _account;
-END
-$$
-;
+  GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
+  GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
+
+  GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
+  GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
+  GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
 
 CREATE FUNCTION hafbe_backend.format_op_types(_operation_id BIGINT, _operation_name TEXT, _is_virtual BOOLEAN)
 RETURNS JSON
@@ -118,7 +114,24 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_acc_op_types(_account_id INT)
+CREATE FUNCTION hafbe_backend.get_operation_types()
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(result) FROM (
+    SELECT 
+      array_agg(id) AS "operation_id",
+      array_agg(split_part(name, '::', 3)) AS "operation_name",
+      array_agg(is_virtual) AS "is_virtual"
+    FROM hive.operation_types
+    ) result;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account VARCHAR, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
