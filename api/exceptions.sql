@@ -12,7 +12,7 @@ BEGIN
   RETURN json_build_object(
       'status', _status,
       'error_id', _error_id,
-      'error', _error,
+      'error_type', _error,
       'message', _message,
       'data', _data
   );
@@ -27,7 +27,7 @@ AS
 $$
 BEGIN
   RETURN hafbe_exceptions.raise_exception(406, 1, 'Not Acceptable',
-    format('block_num ''%s'' is higher than head block (''%s'').', _block_num, _head_block_num)
+    format('block_num ''%s'' is higher than head block (%s).', _block_num, _head_block_num)
   );
 END
 $$
@@ -68,6 +68,20 @@ $$
 BEGIN
   RETURN hafbe_exceptions.raise_exception(404, 4, 'Not Found',
     format('Block hash ''%s'' does not exist in database.', _hash)
+  );
+END
+$$
+;
+
+CREATE FUNCTION hafbe_exceptions.raise_ops_limit_exception(_start BIGINT, _limit BIGINT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN hafbe_exceptions.raise_exception(406, 5, 'Not Acceptable',
+    'Start  is less than limit - 1',
+    format('%s < %s - 1',  _start, _limit)
   );
 END
 $$
