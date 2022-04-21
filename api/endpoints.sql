@@ -128,8 +128,12 @@ BEGIN
     _start = 9223372036854775807;
   END IF;
 
-  IF _limit IS NULL OR _limit < 0 THEN
+  IF _limit IS NULL OR _limit <= 0 THEN
     _limit = 1000;
+  END IF;
+
+  IF _start < (_limit - 1) THEN
+    RETURN hafbe_exceptions.raise_ops_limit_exception(_start, _limit);
   END IF;
 
   IF _head_block IS NULL THEN
