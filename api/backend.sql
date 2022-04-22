@@ -139,7 +139,8 @@ BEGIN
             trx_in_block
           FROM
             hive.operations_view
-          WHERE acc_ops.operation_id = id) ops ON TRUE
+          WHERE acc_ops.operation_id = id
+        ) ops ON TRUE
 
         JOIN LATERAL (
           SELECT
@@ -161,25 +162,131 @@ SET from_collapse_limit=16
 
 CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
 RETURNS JSON
-LANGUAGE 'plpython3u'
+LANGUAGE 'plpgsql'
 AS
 $$
-  global _block_num
+DECLARE
+  __block_api_data JSON = (hafbe_backend.get_block_witness_data(_block_num));
+BEGIN
+  RETURN json_build_object(
+    'block_num', _block_num,
+    'block_hash', (SELECT encode(hash, 'escape') FROM hive.blocks WHERE num=_block_num),
+    'timestamp', (SELECT created_at FROM hive.blocks WHERE num=_block_num),
+    'witness', (__block_api_data->>'witness'),
+    'signing_key', (__block_api_data->>'signing_key'),
+    'transaction_hashes', (__block_api_data->'transaction_ids'),
+    'transactions', ( hafbe_backend.get_transactions(
+      (SELECT ARRAY(
+        SELECT json_array_elements_text(__block_api_data->'transaction_ids'))
+      )::BYTEA[]) )
+  );
+END
+$$
+;
 
+CREATE FUNCTION hafbe_backend.get_block_witness_data(_block_num INT)
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
   import subprocess
   import json
 
   return json.dumps(
     json.loads(
       subprocess.check_output([
-      """
-      curl -X POST https://api.hive.blog \
-        -H 'Content-Type: application/json' \
-        -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
-      """ %_block_num
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
+        """ % _block_num
       ], shell=True).decode('utf-8')
-    )['result']
+    )['result']['block']
   )
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_transactions(_trx_hash_array BYTEA[])
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(json_data) FROM (
+        SELECT
+          encode(trxs.trx_hash, 'escape') AS "trx_hash",
+          trxs.ref_block_num,
+          trxs.ref_block_prefix,
+          trxs.expiration,
+          trxs.trx_in_block,
+          (CASE WHEN multisig.signature_num = 0 THEN
+            ARRAY[trxs.signature]
+          ELSE
+            array_prepend(
+              trxs.signature, (SELECT ARRAY(
+                SELECT encode(signature, 'escape') FROM hive.transactions_multisig_view WHERE trx_hash=trxs.trx_hash)
+              )
+            )
+          END) AS "signatures",
+          (SELECT hafbe_backend.get_ops_in_transaction(trxs.block_num, trxs.trx_in_block)) AS "operations"
+        FROM (
+          SELECT
+            trx_hash,
+            block_num,
+            ref_block_num,
+            ref_block_prefix,
+            expiration,
+            trx_in_block,
+            encode(signature, 'escape') AS "signature"
+          FROM
+            hive.transactions_view
+          WHERE
+            trx_hash=ANY(_trx_hash_array)
+        ) trxs
+
+        JOIN LATERAL (
+          SELECT
+            COUNT(signature) AS "signature_num"
+          FROM
+            hive.transactions_multisig_view
+          WHERE 
+            trx_hash=ANY(_trx_hash_array)
+        ) multisig ON TRUE
+        
+        ORDER BY trxs.trx_in_block DESC
+      ) json_data
+    ) arr
+  ) result;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_in_transaction(_block_num INT, _trx_in_block INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(json_data) FROM (
+        SELECT
+          hov.body::JSON,
+          hov.op_pos AS "op_in_trx",
+          hot.is_virtual
+        FROM
+          hive.operations_view hov
+        JOIN
+          hive.operation_types hot ON hov.op_type_id = hot.id
+        WHERE
+          hov.block_num = _block_num AND hov.trx_in_block = _trx_in_block
+        ORDER BY hov.op_pos DESC
+      ) json_data
+    ) arr
+  ) result;
+END
 $$
 ;
 
