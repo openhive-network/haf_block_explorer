@@ -19,6 +19,7 @@ export default function NavigationBar() {
   const navigate = useNavigate();
   const form_value = useRef("");
   const [value, setValue] = useState("");
+
   // const [accName, setAccName] = useState("");
   // const [blockNr, setBlockNr] = useState("");
   // const [transNr, setTransNr] = useState("");
@@ -64,11 +65,12 @@ export default function NavigationBar() {
   //   isBlockFound,
   //   isTransactionFound,
   // ]);
-  const [checkType, setCheckType] = useState("");
+  const [check_input, set_check_input] = useState("");
   function handleSubmit(e) {
     e.preventDefault();
     let val = form_value.current.value;
     setValue(val);
+    form_value.current.value = "";
   }
 
   //Check data type
@@ -79,26 +81,32 @@ export default function NavigationBar() {
       headers: { "Content-Type": "application/json" },
       data: { _input: value },
     })
-      .then((res) => setCheckType(res.data.input_type))
-      .catch((err) => setCheckType("No data"));
+      .then((res) => set_check_input(res.data))
+      .catch((err) => set_check_input("No data"));
   }, [value]);
   // Navigate to correct page
   useEffect(() => {
-    if (checkType === "block_num") {
+    if (check_input.input_type === "block_num") {
       setBlockNumber(value);
       navigate(`block/${value}`);
     }
-    if (checkType === "account_name") {
+    if (check_input.input_type === "account_name") {
       setUserProfile(value);
       navigate(`user/${value}`);
     }
 
-    if (checkType === "transaction_id") {
+    if (check_input.input_type === "transaction_id") {
       setTransactionId(value);
       navigate(`transaction/${value}`);
     }
-  }, [checkType, value]);
-  // console.log(checkType);
+    if (check_input.input_type === "block_hash") {
+      setBlockNumber(check_input.input_value);
+      navigate(`block/${check_input.input_value}`);
+    }
+    if (check_input === "No data") {
+      navigate("/error");
+    }
+  }, [check_input, value]);
 
   return (
     <>

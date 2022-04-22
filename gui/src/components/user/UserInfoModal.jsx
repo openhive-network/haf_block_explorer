@@ -1,29 +1,6 @@
 import React, { useContext } from "react";
 import { ApiContext } from "../../context/apiContext";
-const HighlightedJSON = ({ json }) => {
-  const highlightedJSON = (jsonObj) =>
-    Object.keys(jsonObj).map((key, i) => {
-      const value = jsonObj[key];
-      let valueType = typeof value;
-      const isSimpleValue =
-        ["string", "number", "boolean"].includes(valueType) || !value;
-      if (isSimpleValue && valueType === "object") {
-        valueType = "null";
-      }
-      return (
-        <div key={key} className="line">
-          <span className="key">{key === "json" ? "" : key}:</span>
-          {isSimpleValue ? (
-            <span className={valueType}>{value}</span>
-          ) : (
-            highlightedJSON(value)
-          )}
-        </div>
-      );
-    });
-
-  return <div className="json">{highlightedJSON(json)}</div>;
-};
+import HighlightedJSON from "../HighlightedJSON";
 
 export default function UserInfoModal({
   showUserModal,
@@ -40,7 +17,6 @@ export default function UserInfoModal({
   const { user_info } = useContext(ApiContext);
   const user_info_to_json = JSON.stringify(user_info, null, 2);
 
-  console.log(user_info_to_json);
   return (
     <div
       onClick={() => setShowUserModal(true)}
@@ -66,7 +42,7 @@ export default function UserInfoModal({
           wordWrap: "break-word",
           whiteSpace: "pre-wrap",
           width: "50vw",
-          height: "100vh",
+          height: "80vh",
           borderTop: "5px solid red",
           borderLeft: "5px solid red",
           borderBottom: "5px solid red",
@@ -79,7 +55,7 @@ export default function UserInfoModal({
           style={{
             display: "flex",
             width: "100%",
-            borderBottom: "1px solid black",
+            borderBottom: "5px solid black",
             // height: "70px",
           }}
           className="modal__header"

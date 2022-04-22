@@ -35,6 +35,7 @@ export default function UserProfileCard({ setShowUserModal, user }) {
           <img
             style={{ width: "62px", borderRadius: "50%" }}
             src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            alt="user picture"
           />
         </div>
         <div className="username" style={{ margin: "20px 0 0 20px" }}>

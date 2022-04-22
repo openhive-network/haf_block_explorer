@@ -1,27 +1,32 @@
 import React, { useContext, useState } from "react";
 import { ApiContext } from "../context/apiContext";
-import { Card, Row, Col } from "react-bootstrap";
+import { Card, Row, Col, Button } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 
 export default function Block_Page({ block_nr, setTitle }) {
-  const { block_data } = useContext(ApiContext);
+  const { block_data, setBlockNumber, blockNumber } = useContext(ApiContext);
   const trx = block_data?.transactions;
   setTitle(`HAF | Block | ${block_nr}`);
-  //TO DO block counter
+  //Block counter
+  const navigate = useNavigate();
 
-  // const [count, setCount] = useState(block_nr);
-  // const handleNextBlock = () => {
-  // setCount(count + 1);
-  // setBlockNumber(block_nr + 1);
-  // };
-  // const handlePreviousBlock = () => {
-  //   // setCount(count - 1);
-  //   setBlockNumber(block_nr - 1);
-  // };
+  const handleNextBlock = () => {
+    navigate(`/block/${blockNumber + 1}`);
+    setBlockNumber(blockNumber + 1);
+  };
+  const handlePreviousBlock = () => {
+    navigate(`/block/${blockNumber - 1}`);
+    setBlockNumber(blockNumber - 1);
+  };
   // console.log(block_data);
   return (
     <div>
+      <Button onClick={handlePreviousBlock}>{"<"}</Button>
+      <Button onClick={handleNextBlock}>{">"}</Button>
       <p>Block number : {block_nr} </p>
       <p> Block transactions count : {trx?.length}</p>
+      <p>Time : {block_data?.timestamp}</p>
+      <p>Witness : {block_data?.witness}</p>
       {trx?.length === 0 ? (
         <h1>No transactions for this block</h1>
       ) : (

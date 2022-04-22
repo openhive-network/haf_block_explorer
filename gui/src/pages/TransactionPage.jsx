@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { ApiContext } from "../context/apiContext";
 import { Card, Row, Col } from "react-bootstrap";
+import HighlightedJSON from "../components/HighlightedJSON";
 
 export default function Transaction_Page({ transaction, setTitle }) {
   setTitle(`HAF | Transaction`);
@@ -24,13 +25,29 @@ export default function Transaction_Page({ transaction, setTitle }) {
       {/* {transData === undefined ? (
         <p>Transaction will be shown in : {seconds} </p>
       ) : ( */}
-        <Row className="justify-content-center mt-5">
-          <Col xs={6}>
-            <Card>
-              <pre>{trnasToJson}</pre>
-            </Card>
-          </Col>
-        </Row>
+      <Row className="mt-5">
+        <Col className="d-flex justify-content-center">
+          {!transData ? (
+            "No data"
+          ) : (
+            <div
+              style={{
+                width: "50vw",
+                height: "60vh",
+                wordBreak: "break-word",
+                whiteSpace: "pre-wrap",
+                overflow: "auto",
+                background: "#dfdfdf",
+                borderRadius: "25px",
+                padding: "20px",
+              }}
+              className="transaction__json"
+            >
+              <HighlightedJSON json={transData} />
+            </div>
+          )}
+        </Col>
+      </Row>
       {/* )} */}
     </div>
   );
