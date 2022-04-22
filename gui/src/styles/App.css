@@ -12,7 +12,7 @@
     background-color:'red' 
 }  */
 .nav-bar {
-    margin: 0px 0 50px 0;
+    margin: 0px 0 20px 0;
     /* height: 80px; */
     justify-content: center;
     align-items: center;
@@ -111,4 +111,38 @@ margin: 0; */
 
 .filters {
     margin-bottom: 20px;
+}
+
+/* .json {
+    background: #f2f2f2;
+    padding: 2rem;
+    margin: 2rem;
+}
+    /* first line not indented */
+
+
+.line {
+    margin-left: 1rem;
+}
+
+.key {
+    margin-right: 0.5rem;
+    color: black;
+    font-weight: 600;
+}
+
+.string {
+    color: green;
+}
+
+.number {
+    color: blue;
+}
+
+.boolean {
+    color: purple;
+}
+
+.null {
+    color: red;
 }

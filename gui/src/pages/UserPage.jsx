@@ -13,7 +13,7 @@ import "./userPage.css";
 // import ReactTimeAgo from "react-time-ago";
 import TrxTable from "../components/tables/TrxTable";
 import UserProfileCard from "../components/user/UserProfileCard";
-// import Offcanvas from "../components/OffCanvas";
+import UserInfoModal from "../components/user/UserInfoModal";
 
 // TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
@@ -92,7 +92,9 @@ export default function User_Page({ user, setTitle }) {
   const count_filtered_ops = active_op_filters.map((k) => count_same[k]);
   const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
 
-  const [show_filters, set_show_filters] = useState(false);
+  const [show_filters, set_show_filters] = useState(true);
+  const [showUserModal, setShowUserModal] = useState(true);
+
   const timestamp = user_profile_data?.[1]?.[1].timestamp;
   // const now = new Date().toISOString().slice(0, timestamp?.length);
 
@@ -164,11 +166,7 @@ export default function User_Page({ user, setTitle }) {
           <div
             style={{ display: "flex", justifyContent: "center" }}
             className="filters_btn"
-          >
-            <Button onClick={() => set_show_filters(!show_filters)}>
-              Filters
-            </Button>
-          </div>
+          ></div>
 
           {/* <div className="pagination mt-3">
             <Col xs={12}>
@@ -194,7 +192,7 @@ export default function User_Page({ user, setTitle }) {
             </Col>
           </div> */}
 
-          <Row className="d-flex justify-content-center">
+          <Row className="d-flex justify-content-center mt-5">
             {/* <Col
               style={{
                 height: "70vh",
@@ -215,11 +213,21 @@ export default function User_Page({ user, setTitle }) {
                 />
               )}
             </Col> */}
+            <UserInfoModal
+              user={user}
+              showUserModal={showUserModal}
+              setShowUserModal={setShowUserModal}
+            />
             <Col sm={12} md={3}>
-              <UserProfileCard user={user} />
+              <UserProfileCard
+                setShowUserModal={setShowUserModal}
+                user={user}
+              />
             </Col>
             <Col>
               <TrxTable
+                set_show_filters={set_show_filters}
+                show_filters={show_filters}
                 active_op_filters={active_op_filters}
                 next={handleNextPage}
                 prev={handlePrevPage}

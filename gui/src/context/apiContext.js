@@ -10,6 +10,7 @@ export const ApiContextProvider = ({ children }) => {
   const [user_profile_data, setUser_profile_data] = useState([]);
   const [transData, setTransData] = useState("");
   const [witnessData, setWitnessData] = useState("");
+  const [user_info, set_user_info] = useState("");
 
   // Used in  api calls , values changes when clicked on some user/block/trnasaction values and navigates to user/block/transaction  page
   const [userProfile, setUserProfile] = useState("");
@@ -108,10 +109,24 @@ export const ApiContextProvider = ({ children }) => {
     }).then((res) => setWitnessData(res?.data?.result));
   }, []);
 
+  // Get user personal info
+  useEffect(() => {
+    axios({
+      method: "post",
+      url: "https://api.hive.blog",
+      data: {
+        jsonrpc: "2.0",
+        method: "condenser_api.get_accounts",
+        params: [[userProfile]],
+        id: 1,
+      },
+    }).then((res) => set_user_info(res?.data?.result[0]));
+  }, [userProfile]);
   return (
     <ApiContext.Provider
       value={{
-        dataLoaded: dataLoaded,
+        user_info: user_info,
+        // dataLoaded: dataLoaded,
         head_block: head_block,
         head_block_data: head_block_data,
         setUser_profile_data: setUser_profile_data,

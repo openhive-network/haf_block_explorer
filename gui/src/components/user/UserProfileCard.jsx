@@ -1,7 +1,7 @@
 import React from "react";
 import { Button, ProgressBar } from "react-bootstrap";
 
-export default function UserProfileCard({ user }) {
+export default function UserProfileCard({ setShowUserModal, user }) {
   return (
     <div
       className="user-info-div"
@@ -10,14 +10,17 @@ export default function UserProfileCard({ user }) {
         minWidth: "300px",
         // border: "5px solid black",
         borderRadius: "20px",
-        background: "#e4e6fe",
-        // color: "#fff",
+        background: "#2C3136",
+        color: "#fff",
         padding: "30px",
       }}
     >
       <div
         className="user-pic-name"
-        style={{ display: "flex", marginBottom: "20px" }}
+        style={{
+          display: "flex",
+          marginBottom: "20px",
+        }}
       >
         <div
           className="user-pic"
@@ -25,10 +28,15 @@ export default function UserProfileCard({ user }) {
             width: "70px",
             height: "70px",
             border: "4px solid red",
-            borderRadius: "50px",
+            borderRadius: "50%",
             // margin: "20px",
           }}
-        />
+        >
+          <img
+            style={{ width: "62px", borderRadius: "50%" }}
+            src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+          />
+        </div>
         <div className="username" style={{ margin: "20px 0 0 20px" }}>
           <p style={{ fontSize: "20px", textTransform: "capitalize" }}>
             {user}
@@ -74,7 +82,12 @@ export default function UserProfileCard({ user }) {
             Voting Power
           </p>
           <p style={{ margin: "0" }}>100%</p>
-          <ProgressBar style={{ margin: "10px 0 10px 0" }} animated now={100} />
+          <ProgressBar
+            variant="danger"
+            style={{ margin: "10px 0 10px 0" }}
+            animated
+            now={100}
+          />
         </div>
         <div
           style={{
@@ -88,7 +101,12 @@ export default function UserProfileCard({ user }) {
             Downvote Power
           </p>
           <p style={{ margin: "0" }}>100%</p>
-          <ProgressBar style={{ margin: "10px 0 10px 0" }} animated now={100} />
+          <ProgressBar
+            variant="danger"
+            style={{ margin: "10px 0 10px 0" }}
+            animated
+            now={100}
+          />
         </div>
         <div
           style={{
@@ -102,7 +120,12 @@ export default function UserProfileCard({ user }) {
             Resource Credits
           </p>
           <p style={{ margin: "0" }}>100%</p>
-          <ProgressBar style={{ margin: "10px 0 10px 0" }} animated now={100} />
+          <ProgressBar
+            variant="danger"
+            style={{ margin: "10px 0 10px 0" }}
+            animated
+            now={100}
+          />
         </div>
       </div>
       <div
@@ -120,9 +143,9 @@ export default function UserProfileCard({ user }) {
       </div>
       <div className="more-details d-flex justify-content-center">
         <Button
+          onClick={() => setShowUserModal(false)}
           style={{ width: "70%", color: "white", fontSize: "20px" }}
-          variant="warning"
-          size="sm"
+          variant="danger"
         >
           More info
         </Button>
