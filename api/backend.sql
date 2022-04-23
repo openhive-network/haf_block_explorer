@@ -160,7 +160,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
+CREATE FUNCTION hafbe_backend.get_block(_block_num INT,  _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -178,7 +178,8 @@ BEGIN
     'transactions', ( hafbe_backend.get_transactions(
       (SELECT ARRAY(
         SELECT json_array_elements_text(__block_api_data->'transaction_ids'))
-      )::BYTEA[]) )
+      )::BYTEA[],
+      _filter) )
   );
 END
 $$
@@ -206,7 +207,7 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_transactions(_trx_hash_array BYTEA[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_transactions(_trx_hash_array BYTEA[], _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -230,7 +231,7 @@ BEGIN
               )
             )
           END) AS "signatures",
-          (SELECT hafbe_backend.get_ops_in_transaction(trxs.block_num, trxs.trx_in_block)) AS "operations"
+          (SELECT hafbe_backend.get_ops_in_transaction(trxs.block_num, trxs.trx_in_block, _filter)) AS "operations"
         FROM (
           SELECT
             trx_hash,
@@ -263,7 +264,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_in_transaction(_block_num INT, _trx_in_block INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_in_transaction(_block_num INT, _trx_in_block INT, _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -275,15 +276,19 @@ BEGIN
         SELECT
           hov.body::JSON,
           hov.op_pos AS "op_in_trx",
-          hot.is_virtual
+          hot.is_virtual,
+          hot.id AS "op_type_id"
         FROM
           hive.operations_view hov
         JOIN
           hive.operation_types hot ON hov.op_type_id = hot.id
         WHERE
-          hov.block_num = _block_num AND hov.trx_in_block = _trx_in_block
+          hov.block_num = _block_num AND
+          hov.trx_in_block = _trx_in_block
         ORDER BY hov.op_pos DESC
       ) json_data
+      WHERE
+        (SELECT array_length(_filter, 1)) IS NULL OR op_type_id=ANY(_filter)
     ) arr
   ) result;
 END
