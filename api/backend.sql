@@ -166,7 +166,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __block_api_data JSON = (hafbe_backend.get_block_witness_data(_block_num));
+  __block_api_data JSON = (hafbe_backend.get_block_api_data(_block_num));
 BEGIN
   RETURN json_build_object(
     'block_num', _block_num,
@@ -174,7 +174,6 @@ BEGIN
     'timestamp', (SELECT created_at FROM hive.blocks WHERE num=_block_num),
     'witness', (__block_api_data->>'witness'),
     'signing_key', (__block_api_data->>'signing_key'),
-    'transaction_hashes', (__block_api_data->'transaction_ids'),
     'transactions', ( hafbe_backend.get_transactions(
       (SELECT ARRAY(
         SELECT json_array_elements_text(__block_api_data->'transaction_ids'))
@@ -185,7 +184,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_block_witness_data(_block_num INT)
+CREATE FUNCTION hafbe_backend.get_block_api_data(_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
