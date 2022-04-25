@@ -118,11 +118,26 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __account_id INT = hafbe_backend.get_account_id(_account);
+BEGIN
+  RETURN hafbe_backend.get_acc_op_types(__account_id);
+END
+$$
+;
+
 CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _head_block BIGINT = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __account_id INT;
 BEGIN
   IF _start IS NULL OR _start < 0 THEN
     _start = 9223372036854775807;
@@ -144,7 +159,9 @@ BEGIN
     _filter = ARRAY[]::SMALLINT[];
   END IF;
 
-  RETURN hafbe_backend.get_ops_by_account(_account, _start, _limit, _filter, _head_block);
+  SELECT hafbe_backend.get_account_id(_account) INTO __account_id;
+
+  RETURN hafbe_backend.get_ops_by_account(__account_id, _start, _limit, _filter, _head_block);
 END
 $$
 ;
