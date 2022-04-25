@@ -14,6 +14,7 @@ import "./userPage.css";
 import TrxTable from "../components/tables/TrxTable";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoModal from "../components/user/UserInfoModal";
+import axios from "axios";
 
 // TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
@@ -22,11 +23,10 @@ export default function User_Page({ user, setTitle }) {
     setUser_profile_data,
     set_acc_history_limit,
     acc_history_limit,
-    dataLoaded,
   } = useContext(ApiContext);
   setTitle(`HAF | User | ${user}`);
 
-  const max_trx_nr = user_profile_data?.[0]?.[0];
+  const max_trx_nr = user_profile_data?.[0]?.operation_id;
   const [pagination_start, set_pagination_start] = useState(0);
   const trx_count =
     pagination_start === 0 ? pagination_start + max_trx_nr : pagination_start;
@@ -47,7 +47,6 @@ export default function User_Page({ user, setTitle }) {
   function handleFirstPage() {
     set_pagination_start(Number(get_max_trx_num));
   }
-
   useEffect(() => {
     if (pagination_start !== 0) {
       userPagination(
@@ -67,10 +66,10 @@ export default function User_Page({ user, setTitle }) {
     setCountIndex(countTransPerPage.indexOf(e.target.name));
   };
   // Operation type filters
-
+  const [filters, setFilters] = useState([]);
   const [active_op_filters, set_active_op_filters] = useState([]);
   const [filters_len, set_filters_len] = useState(active_op_filters.length);
-  const handleOperationFilters = (e) => {
+  const handleOperationFilters = (e, index) => {
     if (e.target.checked === true) {
       set_active_op_filters((prev) => [...prev, e.target.name]);
       set_filters_len(filters_len + 1);
@@ -84,7 +83,7 @@ export default function User_Page({ user, setTitle }) {
 
   // Check if operation type exist and enable/disable filters
 
-  const check_op_type = user_profile_data?.map((history) => history[1].op.type);
+  const check_op_type = user_profile_data?.map((history) => history.op.type);
   const set_op = [...new Set(check_op_type)];
   const count_same = {};
   check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
@@ -94,10 +93,10 @@ export default function User_Page({ user, setTitle }) {
 
   const [show_filters, set_show_filters] = useState(true);
   const [showUserModal, setShowUserModal] = useState(true);
-
-  const timestamp = user_profile_data?.[1]?.[1].timestamp;
+  console.log(count_filtered_ops);
+  // const timestamp = user_profile_data?.[1]?.[1].timestamp;
   // const now = new Date().toISOString().slice(0, timestamp?.length);
-
+  // console.log(operations.indexOf(active_op_filters));
   return (
     <>
       {user_profile_data.length !== 0 ? (
@@ -144,17 +143,17 @@ export default function User_Page({ user, setTitle }) {
                     <div
                       key={i}
                       className="m-1"
-                      style={
-                        set_op.includes(o) === true
-                          ? { display: "block" }
-                          : { display: "none" }
-                      }
+                      // style={
+                      //   set_op.includes(o) === true
+                      //     ? { display: "block" }
+                      //     : { display: "none" }
+                      // }
                     >
                       <input
-                        disabled={!set_op.includes(o)}
+                        // disabled={!set_op.includes(o)}
                         type="checkbox"
                         name={o}
-                        onChange={(e) => handleOperationFilters(e)}
+                        onChange={(e) => handleOperationFilters(e, i)}
                       />
                       <label htmlFor={o}>{o}</label>
                     </div>

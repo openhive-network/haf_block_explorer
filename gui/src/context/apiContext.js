@@ -48,23 +48,41 @@ export const ApiContextProvider = ({ children }) => {
     }).then((res) => setHead_block_data(res?.data?.result?.block));
   }, [current_head_block]);
   //  Get user profile data
+  // useEffect(() => {
+  //   axios({
+  //     method: "post",
+  //     url: "https://api.hive.blog",
+  //     data: {
+  //       jsonrpc: "2.0",
+  //       method: "account_history_api.get_account_history",
+  //       params: {
+  //         account: userProfile,
+  //         start: -1,
+  //         limit: acc_history_limit,
+  //       },
+  //       id: 1,
+  //     },
+  //   }).then((res) =>
+  //     setUser_profile_data(res?.data?.result?.history?.reverse())
+  //   );
+  // }, [userProfile, acc_history_limit]);
+
+  //  Get user profile data #2
+
   useEffect(() => {
-    axios({
-      method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "account_history_api.get_account_history",
-        params: {
-          account: userProfile,
-          start: -1,
-          limit: acc_history_limit,
+    if (userProfile !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          _account: userProfile,
+          _start: -1,
+          _limit: acc_history_limit,
+          _filter: [],
         },
-        id: 1,
-      },
-    }).then((res) =>
-      setUser_profile_data(res?.data?.result?.history?.reverse())
-    );
+      }).then((res) => setUser_profile_data(res.data));
+    }
   }, [userProfile, acc_history_limit]);
 
   // Get current block data
@@ -80,6 +98,20 @@ export const ApiContextProvider = ({ children }) => {
       },
     }).then((res) => setBlock_data(res?.data?.result?.block));
   }, [blockNumber]);
+
+  // getBlockData #2 upto 5000000 local
+  // useEffect(() => {
+  //   axios({
+  //     method: "post",
+  //     url: "http://192.168.5.118:3002/rpc/get_block",
+  //     headers: { "Content-Type": "application/json" },
+  //     data: {
+  //       _block_num: blockNumber,
+  //       _filter: [],
+  //     },
+  //   }).then((res) => console.log(res?.data));
+  // }, [blockNumber]);
+
   /// Get transaction Data
   useEffect(() => {
     axios({

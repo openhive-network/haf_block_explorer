@@ -2,80 +2,102 @@ import axios from "axios";
 
 ///// API CALLS
 
-// Get accounts
-export const getAccounts = (value, setAccName, setIsAccountFound) => {
-  axios({
-    method: "post",
-    url: "https://api.hive.blog",
-    data: {
-      jsonrpc: "2.0",
-      method: "condenser_api.get_accounts",
-      params: [[value]],
-      id: 1,
-    },
-  })
-    .then((res) => setAccName(res.data.result[0].name))
-    .then(() => setIsAccountFound(true))
-    .catch(() => setIsAccountFound(false));
-};
+// // Get accounts
+// export const getAccounts = (value, setAccName, setIsAccountFound) => {
+//   axios({
+//     method: "post",
+//     url: "https://api.hive.blog",
+//     data: {
+//       jsonrpc: "2.0",
+//       method: "condenser_api.get_accounts",
+//       params: [[value]],
+//       id: 1,
+//     },
+//   })
+//     .then((res) => setAccName(res.data.result[0].name))
+//     .then(() => setIsAccountFound(true))
+//     .catch(() => setIsAccountFound(false));
+// };
 
-// Get blog
-export const getBlog = (value, setBlockNr, setIsBlockFound) => {
-  axios({
-    method: "post",
-    url: "https://api.hive.blog",
-    data: {
-      jsonrpc: "2.0",
-      method: "account_history_api.get_ops_in_block",
-      params: {
-        block_num: value,
-        only_virtual: false,
-        include_reversible: true,
-      },
-      id: 1,
-    },
-  })
-    .then((res) => setBlockNr(res.data.result.ops[0].block))
-    .then(() => setIsBlockFound(true))
-    .catch(() => setIsBlockFound(false));
-};
+// // Get blog
+// export const getBlog = (value, setBlockNr, setIsBlockFound) => {
+//   axios({
+//     method: "post",
+//     url: "https://api.hive.blog",
+//     data: {
+//       jsonrpc: "2.0",
+//       method: "account_history_api.get_ops_in_block",
+//       params: {
+//         block_num: value,
+//         only_virtual: false,
+//         include_reversible: true,
+//       },
+//       id: 1,
+//     },
+//   })
+//     .then((res) => setBlockNr(res.data.result.ops[0].block))
+//     .then(() => setIsBlockFound(true))
+//     .catch(() => setIsBlockFound(false));
+// };
 
-// Get transaction
+// // Get transaction
 
-export const getTransaction = (value, setTransNr, setIsTransactionFound) => {
-  axios({
-    method: "post",
-    url: "https://api.hive.blog",
-    data: {
-      jsonrpc: "2.0",
-      method: "account_history_api.get_transaction",
-      params: { id: value, include_reversible: true },
-      id: 1,
-    },
-  })
-    .then((res) => setTransNr(res.data.result.transaction_id))
-    .then(() => setIsTransactionFound(true))
-    .catch(() => setIsTransactionFound(false));
-};
+// export const getTransaction = (value, setTransNr, setIsTransactionFound) => {
+//   axios({
+//     method: "post",
+//     url: "https://api.hive.blog",
+//     data: {
+//       jsonrpc: "2.0",
+//       method: "account_history_api.get_transaction",
+//       params: { id: value, include_reversible: true },
+//       id: 1,
+//     },
+//   })
+//     .then((res) => setTransNr(res.data.result.transaction_id))
+//     .then(() => setIsTransactionFound(true))
+//     .catch(() => setIsTransactionFound(false));
+// };
 //User profile history pagination
+// export const userPagination = (
+//   userProfile,
+//   startPagintation,
+//   setUser_profile_data,
+//   limit
+// ) => {
+//   axios({
+//     method: "post",
+//     url: "https://api.hive.blog",
+//     data: {
+//       jsonrpc: "2.0",
+//       method: "account_history_api.get_account_history",
+//       params: {
+//         account: userProfile,
+//         start: startPagintation,
+//         limit: limit,
+//       },
+//       id: 1,
+//     },
+//   }).then((res) => setUser_profile_data(res?.data?.result?.history?.reverse()));
+// };
+
+//User profile history pagination #2
 export const userPagination = (
   userProfile,
   startPagintation,
   setUser_profile_data,
   limit
 ) => {
-  axios({
-    method: "post",
-    url: "https://api.hive.blog",
-    data: {
-      jsonrpc: "2.0",
-      method: "account_history_api.get_account_history",
-      params: {
-        account: userProfile,
-        start: startPagintation,
-        limit: limit,
+  if (userProfile !== "") {
+    axios({
+      method: "post",
+      url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
+      headers: { "Content-Type": "application/json" },
+      data: {
+        _account: userProfile,
+        _start: startPagintation,
+        _limit: limit,
+        _filter: [],
       },
-      id: 1,
-    },
-  }).then((res) => setUser_profile_data(res?.data?.result?.history?.reverse()));
+    }).then((res) => setUser_profile_data(res.data));
+  }
 };

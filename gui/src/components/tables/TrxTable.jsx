@@ -48,13 +48,12 @@ export default function TrxTable({
       align: "left",
       format: (value) => value.toLocaleString("en-US"),
     },
-    {
-      id: "size",
-      label: "Op Value",
-      minWidth: 170,
-      align: "left",
-      format: (value) => value.toLocaleString("en-US"),
-    },
+    // {
+    //   id: "op_value",
+    //   label: "Op Value",
+    //   minWidth: 170,
+    //   align: "left",
+    // },
     {
       id: "info",
       label: "More Details",
@@ -68,18 +67,18 @@ export default function TrxTable({
     name,
     op_block,
     op_type,
-    op_value,
+    // op_value,
     op_details,
     op_trx_id
   ) {
-    return { name, op_block, op_type, op_value, op_details, op_trx_id };
+    return { name, op_block, op_type, op_details, op_trx_id };
   }
 
-  const op_number = user_profile_data?.map((history) => history[0]);
-  const op_block = user_profile_data?.map((history) => history[1].block);
-  const op_trx_id = user_profile_data?.map((history) => history[1].trx_id);
-  const op_type = user_profile_data?.map((history) => history[1].op.type);
-  const op_value = user_profile_data?.map((history) => history[1].op.value.id);
+  const op_number = user_profile_data?.map((history) => history.operation_id);
+  const op_block = user_profile_data?.map((history) => history.block);
+  const op_trx_id = user_profile_data?.map((history) => history.trx_id);
+  const op_type = user_profile_data?.map((history) => history.op.type);
+  // const op_value = user_profile_data?.map((history) => history[1].op.value.id);
   const more_details = <Button onClick={handleShow}>show</Button>;
   let rows = [];
   for (let i = 0; i < user_profile_data?.length; i++) {
@@ -89,7 +88,7 @@ export default function TrxTable({
           op_number[i],
           op_block[i],
           op_type[i],
-          op_value[i],
+          // op_value[i],
           more_details,
           op_trx_id[i]
         )
