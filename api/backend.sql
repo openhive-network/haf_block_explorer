@@ -91,7 +91,45 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account VARCHAR, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+CREATE FUNCTION hafbe_backend.get_account_id(_account VARCHAR)
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN id FROM hive.accounts_view WHERE name = _account;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_acc_op_types(_account_id INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(result) FROM (
+    SELECT
+      array_agg(operation_id) AS "operation_id",
+      array_agg(operation_name) AS "operation_name"
+    FROM (
+      SELECT DISTINCT
+        hov.op_type_id AS "operation_id",
+        split_part(hot.name, '::', 3) AS "operation_name"
+      FROM
+        hive.account_operations_view hov
+      JOIN
+        hive.operation_types hot ON hot.id = hov.op_type_id
+      WHERE
+        account_id = _account_id
+      ORDER BY hov.op_type_id
+    ) acc_ops
+  ) result;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
 RETURNS JSON
 AS
 $function$
@@ -121,7 +159,7 @@ BEGIN
           FROM
             hive.account_operations_view
           WHERE
-            account_id = (SELECT id FROM hive.accounts WHERE name = _account) AND 
+            account_id = _account_id AND 
             account_op_seq_no <= _start AND 
             block_num <= _head_block AND (
               (SELECT array_length(_filter, 1)) IS NULL OR
