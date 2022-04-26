@@ -31,7 +31,8 @@ export default function TrxTable({
 
   // const handleClose = () => setShow(false);
   const handleShow = () => setShow(!show);
-
+  // console.log(op_types.map((o, i) => o[0][i] == active_op_filters));
+  // console.log(active_op_filters);
   const columns = [
     { id: "name", label: "Op Number", minWidth: 170 },
     // { id: "code", label: "Op Block", minWidth: 170 },
@@ -104,6 +105,7 @@ export default function TrxTable({
   //   setRowsPerPage(+event.target.value);
   //   setPage(0);
   // };
+
   return (
     <Row>
       <Col>
@@ -199,7 +201,7 @@ export default function TrxTable({
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-            /> 
+            />
           </div> */}
         </Paper>
       </Col>

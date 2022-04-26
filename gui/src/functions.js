@@ -85,7 +85,8 @@ export const userPagination = (
   userProfile,
   startPagintation,
   setUser_profile_data,
-  limit
+  limit,
+  filter
 ) => {
   if (userProfile !== "") {
     axios({
@@ -96,7 +97,7 @@ export const userPagination = (
         _account: userProfile,
         _start: startPagintation,
         _limit: limit,
-        _filter: [],
+        _filter: filter,
       },
     }).then((res) => setUser_profile_data(res.data));
   }

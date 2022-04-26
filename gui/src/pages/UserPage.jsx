@@ -4,7 +4,7 @@ import { userPagination } from "../functions";
 import FilteredOps from "../components/user/FilteredOps";
 import Ops from "../components/user/Ops";
 import { Container, Col, Row, Button, Pagination } from "react-bootstrap";
-import { operations } from "../operations";
+// import { op_types } from "../op_types";
 import ProgressBar from "react-bootstrap/ProgressBar";
 // import Pagination from "react-bootstrap/Pagination";
 import "./userPage.css";
@@ -23,6 +23,9 @@ export default function User_Page({ user, setTitle }) {
     setUser_profile_data,
     set_acc_history_limit,
     acc_history_limit,
+    op_types,
+    op_filters,
+    set_op_filters,
   } = useContext(ApiContext);
   setTitle(`HAF | User | ${user}`);
 
@@ -53,10 +56,11 @@ export default function User_Page({ user, setTitle }) {
         user,
         pagination_start,
         setUser_profile_data,
-        acc_history_limit
+        acc_history_limit,
+        op_filters
       );
     }
-  }, [pagination_start, setUser_profile_data, acc_history_limit]);
+  }, [pagination_start, setUser_profile_data, acc_history_limit, op_filters]);
 
   //Transactions per page
   const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
@@ -65,45 +69,71 @@ export default function User_Page({ user, setTitle }) {
     set_acc_history_limit(Number(e.target.name));
     setCountIndex(countTransPerPage.indexOf(e.target.name));
   };
-  // Operation type filters
-  const [filters, setFilters] = useState([]);
-  const [active_op_filters, set_active_op_filters] = useState([]);
-  const [filters_len, set_filters_len] = useState(active_op_filters.length);
-  const handleOperationFilters = (e, index) => {
-    if (e.target.checked === true) {
-      set_active_op_filters((prev) => [...prev, e.target.name]);
-      set_filters_len(filters_len + 1);
-    } else if (e.target.checked === false) {
-      set_filters_len(filters_len - 1);
+  // Operation  filters
 
-      const i = active_op_filters.indexOf(e.target.name);
-      i === 0 ? active_op_filters?.shift() : active_op_filters?.splice(i, i);
-    }
-  };
-
-  // Check if operation type exist and enable/disable filters
+  const [show_filters, set_show_filters] = useState(true);
+  const [filered_op_names, set_filtered_op_names] = useState([]);
+  const [showUserModal, setShowUserModal] = useState(true);
+  const [filters_length, set_filters_length] = useState(op_filters.length);
+  const [filters_length_names, set_filters_length_names] = useState(
+    filered_op_names.length
+  );
 
   const check_op_type = user_profile_data?.map((history) => history.op.type);
   const set_op = [...new Set(check_op_type)];
   const count_same = {};
   check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
 
-  const count_filtered_ops = active_op_filters.map((k) => count_same[k]);
+  const count_filtered_ops = op_filters.map((k) => count_same[k]);
   const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
 
-  const [show_filters, set_show_filters] = useState(true);
-  const [showUserModal, setShowUserModal] = useState(true);
-  console.log(count_filtered_ops);
-  // const timestamp = user_profile_data?.[1]?.[1].timestamp;
-  // const now = new Date().toISOString().slice(0, timestamp?.length);
-  // console.log(operations.indexOf(active_op_filters));
+  // useEffect(() => {
+  //   if (user !== "") {
+  //     axios({
+  //       method: "post",
+  //       url: "http://192.168.5.118:3002/rpc/get_acc_op_types",
+  //       headers: { "Content-Type": "application/json" },
+  //       data: {
+  //         _account: user,
+  //       },
+  //     }).then((res) => set_operations(res.data));
+  //   }
+  // }, [user]);
+
+  // console.log(op_types.map((o) => o[1]));
+  const opName = op_types?.map((o) => o[1]);
+  const opId = op_types?.map((o) => o[0]);
+  const opVirtual = op_types.map((o) => o[2]);
+  // let opObj = {};
+  // opName?.forEach((name) => opObj[name[opId]]);
+  // console.log(opName);
+
+  const handleCheck = (e, i) => {
+    if (e.target.checked === true) {
+      set_op_filters((prev) => [...prev, opId[i]]);
+      set_filters_length(filters_length + 1);
+      set_filtered_op_names((prev) => [...prev, opName[i]]);
+      set_filters_length_names(filters_length_names + 1);
+    }
+    if (e.target.checked === false) {
+      set_filters_length(filters_length - 1);
+      set_filters_length_names(filters_length_names - 1);
+      const index = op_filters.indexOf(opId[i]);
+      index === 0 ? op_filters.shift() : op_filters.splice(index, index);
+      const index_names = filered_op_names.indexOf(opName[i]);
+      index === 0
+        ? filered_op_names.shift()
+        : filered_op_names.splice(index_names, index_names);
+    }
+  };
+  console.log(user_profile_data);
   return (
     <>
       {user_profile_data.length !== 0 ? (
         <Container fluid>
           <div className="op_count">
             <p>
-              Showing operations per page :
+              Showing op_types per page :
               {filtered_ops_sum === 0
                 ? user_profile_data?.length
                 : filtered_ops_sum}
@@ -138,22 +168,14 @@ export default function User_Page({ user, setTitle }) {
               </Col>
               <Col xs={3} className="filters__operation">
                 <p>Filter Operations</p>
-                {operations?.map((o, i) => {
+                {opName?.map((o, i) => {
+                  // console.log(opId[i]);
                   return (
-                    <div
-                      key={i}
-                      className="m-1"
-                      // style={
-                      //   set_op.includes(o) === true
-                      //     ? { display: "block" }
-                      //     : { display: "none" }
-                      // }
-                    >
+                    <div key={i} className="m-1">
                       <input
-                        // disabled={!set_op.includes(o)}
                         type="checkbox"
                         name={o}
-                        onChange={(e) => handleOperationFilters(e, i)}
+                        onChange={(e) => handleCheck(e, i)}
                       />
                       <label htmlFor={o}>{o}</label>
                     </div>
@@ -167,51 +189,7 @@ export default function User_Page({ user, setTitle }) {
             className="filters_btn"
           ></div>
 
-          {/* <div className="pagination mt-3">
-            <Col xs={12}>
-              <Pagination>
-                <Pagination.First
-                  disabled={get_max_trx_num == max_trx_nr}
-                  onClick={handleFirstPage}
-                />
-                <Pagination.Prev
-                  disabled={get_max_trx_num == max_trx_nr}
-                  onClick={handlePrevPage}
-                />
-
-                <Pagination.Next
-                  disabled={pagination_start === acc_history_limit}
-                  onClick={handleNextPage}
-                />
-                <Pagination.Last
-                  disabled={pagination_start === acc_history_limit}
-                  onClick={handleLastPage}
-                />
-              </Pagination>
-            </Col>
-          </div> */}
-
           <Row className="d-flex justify-content-center mt-5">
-            {/* <Col
-              style={{
-                height: "70vh",
-                overflow: "auto",
-              }}
-              xs={10}
-              aria-live="polite"
-              aria-atomic="true"
-              className="bg-dark position-relative"
-            >
-              {filters_len === 0 ? (
-                <Ops user_profile_data={user_profile_data} user={user} />
-              ) : (
-                <FilteredOps
-                  user={user}
-                  user_profile_data={user_profile_data}
-                  active_op_filters={active_op_filters}
-                />
-              )}
-            </Col> */}
             <UserInfoModal
               user={user}
               showUserModal={showUserModal}
@@ -227,7 +205,7 @@ export default function User_Page({ user, setTitle }) {
               <TrxTable
                 set_show_filters={set_show_filters}
                 show_filters={show_filters}
-                active_op_filters={active_op_filters}
+                active_op_filters={filered_op_names}
                 next={handleNextPage}
                 prev={handlePrevPage}
                 first={handleFirstPage}

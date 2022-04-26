@@ -19,7 +19,9 @@ export const ApiContextProvider = ({ children }) => {
 
   // const [dataLoaded, setDataLoaded] = useState(false);
   const [acc_history_limit, set_acc_history_limit] = useState(100);
-
+  const [op_types, set_op_types] = useState([]);
+  const [op_filters, set_op_filters] = useState([]);
+  // console.log(op_filters);
   // Get head block
   useEffect(() => {
     axios({
@@ -67,6 +69,19 @@ export const ApiContextProvider = ({ children }) => {
   //   );
   // }, [userProfile, acc_history_limit]);
 
+  //Get available operation types for current user
+  useEffect(() => {
+    if (userProfile !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.5.118:3002/rpc/get_acc_op_types",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          _account: userProfile,
+        },
+      }).then((res) => set_op_types(res.data));
+    }
+  }, [userProfile, set_op_types]);
   //  Get user profile data #2
 
   useEffect(() => {
@@ -79,11 +94,11 @@ export const ApiContextProvider = ({ children }) => {
           _account: userProfile,
           _start: -1,
           _limit: acc_history_limit,
-          _filter: [],
+          _filter: op_filters,
         },
       }).then((res) => setUser_profile_data(res.data));
     }
-  }, [userProfile, acc_history_limit]);
+  }, [userProfile, op_filters, acc_history_limit, setUser_profile_data]);
 
   // Get current block data
   useEffect(() => {
@@ -159,6 +174,9 @@ export const ApiContextProvider = ({ children }) => {
       value={{
         user_info: user_info,
         // dataLoaded: dataLoaded,
+        set_op_filters: set_op_filters,
+        op_filters: op_filters,
+        op_types: op_types,
         head_block: head_block,
         head_block_data: head_block_data,
         setUser_profile_data: setUser_profile_data,
