@@ -114,14 +114,41 @@ BEGIN
       array_agg(operation_name) AS "operation_name"
     FROM (
       SELECT DISTINCT
+        haov.op_type_id AS "operation_id",
+        split_part(hot.name, '::', 3) AS "operation_name"
+      FROM
+        hive.account_operations_view haov
+      JOIN
+        hive.operation_types hot ON hot.id = haov.op_type_id
+      WHERE
+        account_id = _account_id
+      ORDER BY haov.op_type_id
+    ) acc_ops
+  ) result;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_block_opp_types(_block_num INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(result) FROM (
+    SELECT
+      array_agg(operation_id) AS "operation_id",
+      array_agg(operation_name) AS "operation_name"
+    FROM (
+      SELECT DISTINCT
         hov.op_type_id AS "operation_id",
         split_part(hot.name, '::', 3) AS "operation_name"
       FROM
-        hive.account_operations_view hov
+        hive.operations_view hov
       JOIN
         hive.operation_types hot ON hot.id = hov.op_type_id
       WHERE
-        account_id = _account_id
+        block_num = _block_num
       ORDER BY hov.op_type_id
     ) acc_ops
   ) result;
