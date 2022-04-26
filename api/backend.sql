@@ -111,11 +111,13 @@ BEGIN
   RETURN to_json(result) FROM (
     SELECT
       array_agg(operation_id) AS "operation_id",
-      array_agg(operation_name) AS "operation_name"
+      array_agg(operation_name) AS "operation_name",
+      array_agg(is_virtual) AS "is_virtual"
     FROM (
       SELECT DISTINCT
         haov.op_type_id AS "operation_id",
-        split_part(hot.name, '::', 3) AS "operation_name"
+        split_part(hot.name, '::', 3) AS "operation_name",
+        hot.is_virtual AS "is_virtual"
       FROM
         hive.account_operations_view haov
       JOIN
@@ -138,11 +140,13 @@ BEGIN
   RETURN to_json(result) FROM (
     SELECT
       array_agg(operation_id) AS "operation_id",
-      array_agg(operation_name) AS "operation_name"
+      array_agg(operation_name) AS "operation_name",
+      array_agg(is_virtual) AS "is_virtual"
     FROM (
       SELECT DISTINCT
         hov.op_type_id AS "operation_id",
-        split_part(hot.name, '::', 3) AS "operation_name"
+        split_part(hot.name, '::', 3) AS "operation_name",
+        hot.is_virtual AS "is_virtual"
       FROM
         hive.operations_view hov
       JOIN
