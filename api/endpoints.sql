@@ -131,13 +131,13 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_block_opp_types(_block_num INT)
+CREATE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_block_opp_types(_block_num);
+  RETURN hafbe_backend.get_block_op_types(_block_num);
 END
 $$
 ;
