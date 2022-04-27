@@ -1,12 +1,12 @@
 import React, { useContext, useState } from "react";
-import { ApiContext } from "../context/apiContext";
+import { BlockContext } from "../contexts/blockContext";
 import { Card, Row, Col, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 export default function Block_Page({ block_nr, setTitle }) {
-  const { block_data, setBlockNumber, blockNumber } = useContext(ApiContext);
+  const { block_data, setBlockNumber, blockNumber } = useContext(BlockContext);
   const trx = block_data?.transactions;
-  setTitle(`HAF | Block | ${block_nr}`);
+  // setTitle(`HAF | Block | ${block_nr}`);
   //Block counter
   const navigate = useNavigate();
 
@@ -18,7 +18,6 @@ export default function Block_Page({ block_nr, setTitle }) {
     navigate(`/block/${blockNumber - 1}`);
     setBlockNumber(blockNumber - 1);
   };
-  // console.log(block_data);
   return (
     <div>
       <Button onClick={handlePreviousBlock}>{"<"}</Button>

@@ -1,10 +1,10 @@
 import React, { useContext, useState } from "react";
-import { ApiContext } from "../context/apiContext";
+import { WitnessContext } from "../contexts/witnessContext";
 import { Row, Col, Container, Table } from "react-bootstrap";
 
 export default function Witnesses_Page({ setTitle }) {
-  setTitle("HAF | Witnesess");
-  const { witnessData } = useContext(ApiContext);
+  // setTitle("HAF | Witnesess");
+  const { witnessData } = useContext(WitnessContext);
   let nr = [];
   for (let i = 1; i <= witnessData?.length; i++) {
     nr.push(i);

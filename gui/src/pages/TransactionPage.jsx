@@ -1,23 +1,23 @@
 import React, { useContext, useEffect, useState } from "react";
-import { ApiContext } from "../context/apiContext";
 import { Card, Row, Col } from "react-bootstrap";
 import HighlightedJSON from "../components/HighlightedJSON";
+import { TranasctionContext } from "../contexts/transactionContext";
 
 export default function Transaction_Page({ transaction, setTitle }) {
-  setTitle(`HAF | Transaction`);
-  const { transData } = useContext(ApiContext);
-  const trnasToJson = JSON.stringify(transData, null, 2);
+  // setTitle(`HAF | Transaction`);
+  const { transData } = useContext(TranasctionContext);
+  // const trnasToJson = JSON.stringify(transData, null, 2);
 
-  const [seconds, setSeconds] = useState(60);
+  // const [seconds, setSeconds] = useState(60);
 
-  const timeout = setTimeout(() => {
-    setSeconds(seconds - 1);
-  }, 1000);
+  // const timeout = setTimeout(() => {
+  //   setSeconds(seconds - 1);
+  // }, 1000);
 
-  if (seconds <= 0) {
-    clearTimeout(timeout);
-    window.location.reload();
-  }
+  // if (seconds <= 0) {
+  //   clearTimeout(timeout);
+  //   window.location.reload();
+  // }
 
   return (
     <div>

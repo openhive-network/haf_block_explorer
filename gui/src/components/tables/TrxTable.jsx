@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -8,7 +8,9 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
-import { ApiContext } from "../../context/apiContext";
+import { UserProfileContext } from "../../contexts/userProfileContext";
+import { BlockContext } from "../../contexts/blockContext";
+import { TranasctionContext } from "../../contexts/transactionContext";
 // import Pop from "../components/userOperartions/Pop";
 import { Row, Col, Offcanvas } from "react-bootstrap";
 // import { Button, Offcanvas } from "react-bootstrap";
@@ -24,9 +26,11 @@ export default function TrxTable({
   set_show_filters,
   show_filters,
 }) {
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const { user_profile_data } = React.useContext(ApiContext);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(acc_history_limit);
+  const { user_profile_data } = useContext(UserProfileContext);
+  const { setBlockNumber } = useContext(BlockContext);
+  const { setTransactionId } = useContext(TranasctionContext);
   const [show, setShow] = useState(false);
 
   // const handleClose = () => setShow(false);
@@ -80,6 +84,7 @@ export default function TrxTable({
   const op_trx_id = user_profile_data?.map((history) => history.trx_id);
   const op_type = user_profile_data?.map((history) => history.op.type);
   // const op_value = user_profile_data?.map((history) => history[1].op.value.id);
+
   const more_details = <Button onClick={handleShow}>show</Button>;
   let rows = [];
   for (let i = 0; i < user_profile_data?.length; i++) {
@@ -159,7 +164,14 @@ export default function TrxTable({
                           const value = row[column.id];
                           const route = () => {
                             if (column.id === "op_block") {
-                              return <a href={`/block/${value}`}>{value}</a>;
+                              return (
+                                <Link
+                                  onClick={() => setBlockNumber(value)}
+                                  to={`/block/${value}`}
+                                >
+                                  {value}
+                                </Link>
+                              );
                             }
                             if (
                               column.id === "name" &&
@@ -167,9 +179,14 @@ export default function TrxTable({
                                 "0000000000000000000000000000000000000000"
                             ) {
                               return (
-                                <a href={`/transaction/${row.op_trx_id}`}>
+                                <Link
+                                  onClick={() =>
+                                    setTransactionId(row.op_trx_id)
+                                  }
+                                  to={`/transaction/${row.op_trx_id}`}
+                                >
                                   {value}
-                                </a>
+                                </Link>
                               );
                             }
                             if (value === undefined) {

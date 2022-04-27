@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { ApiContext } from "../../context/apiContext";
+import { UserProfileContext } from "../../contexts/userProfileContext";
 import HighlightedJSON from "../HighlightedJSON";
 
 export default function UserInfoModal({
@@ -14,7 +14,7 @@ export default function UserInfoModal({
     padding: "15px 0 0 0",
   };
 
-  const { user_info } = useContext(ApiContext);
+  const { user_info } = useContext(UserProfileContext);
   const user_info_to_json = JSON.stringify(user_info, null, 2);
 
   return (

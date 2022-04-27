@@ -1,22 +1,15 @@
 import React, { useContext, useState, useEffect } from "react";
-import { ApiContext } from "../context/apiContext";
+import { UserProfileContext } from "../contexts/userProfileContext";
 import { userPagination } from "../functions";
 import FilteredOps from "../components/user/FilteredOps";
 import Ops from "../components/user/Ops";
 import { Container, Col, Row, Button, Pagination } from "react-bootstrap";
-// import { op_types } from "../op_types";
 import ProgressBar from "react-bootstrap/ProgressBar";
-// import Pagination from "react-bootstrap/Pagination";
 import "./userPage.css";
-// import TimeAgo from "javascript-time-ago";
-// import en from "javascript-time-ago/locale/en.json";
-// import ReactTimeAgo from "react-time-ago";
 import TrxTable from "../components/tables/TrxTable";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoModal from "../components/user/UserInfoModal";
-import axios from "axios";
 
-// TimeAgo.addDefaultLocale(en);
 export default function User_Page({ user, setTitle }) {
   const {
     user_profile_data,
@@ -26,8 +19,8 @@ export default function User_Page({ user, setTitle }) {
     op_types,
     op_filters,
     set_op_filters,
-  } = useContext(ApiContext);
-  setTitle(`HAF | User | ${user}`);
+  } = useContext(UserProfileContext);
+  // setTitle(`HAF | User | ${user}`);
 
   const max_trx_nr = user_profile_data?.[0]?.operation_id;
   const [pagination_start, set_pagination_start] = useState(0);
@@ -66,7 +59,7 @@ export default function User_Page({ user, setTitle }) {
   const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
   const [countIndex, setCountIndex] = useState();
   const handleCheckbox = (e) => {
-    set_acc_history_limit(Number(e.target.name));
+    set_acc_history_limit(() => Number(e.target.name));
     setCountIndex(countTransPerPage.indexOf(e.target.name));
   };
   // Operation  filters
@@ -84,9 +77,9 @@ export default function User_Page({ user, setTitle }) {
   const count_same = {};
   check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
 
-  const count_filtered_ops = op_filters.map((k) => count_same[k]);
+  const count_filtered_ops = filered_op_names.map((k) => count_same[k]);
   const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
-
+  // console.log(filtered_ops_sum);
   // useEffect(() => {
   //   if (user !== "") {
   //     axios({
@@ -126,7 +119,7 @@ export default function User_Page({ user, setTitle }) {
         : filered_op_names.splice(index_names, index_names);
     }
   };
-  console.log(user_profile_data);
+
   return (
     <>
       {user_profile_data.length !== 0 ? (

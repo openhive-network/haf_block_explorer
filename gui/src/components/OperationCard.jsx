@@ -1,7 +1,8 @@
 import { useContext } from "react";
 import { Row, Col, Card } from "react-bootstrap";
-import { ApiContext } from "../context/apiContext";
 import { Link } from "react-router-dom";
+import { UserProfileContext } from "../contexts/userProfileContext";
+import { TranasctionContext } from "../contexts/transactionContext";
 
 export default function OperationCard({ transaction, k, tr_id }) {
   const user =
@@ -17,7 +18,8 @@ export default function OperationCard({ transaction, k, tr_id }) {
     transaction.value.creator ||
     transaction.value.publisher;
 
-  const { setUserProfile, setTransactionId } = useContext(ApiContext);
+  const { setUserProfile } = useContext(UserProfileContext);
+  const { setTransactionId } = useContext(TranasctionContext);
   const operationInfoJson = JSON.stringify(transaction.value, null, 2);
   const id = tr_id.filter((single_id, index) => index === k && single_id);
 

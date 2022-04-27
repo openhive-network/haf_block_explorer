@@ -1,14 +1,9 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
-import {
-  // Navbar,
-  // Container,
-  Form,
-  FormControl,
-  Col,
-  Row,
-} from "react-bootstrap";
+import { Form, FormControl, Col, Row } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { ApiContext } from "../context/apiContext";
+import { BlockContext } from "../contexts/blockContext";
+import { UserProfileContext } from "../contexts/userProfileContext";
+import { TranasctionContext } from "../contexts/transactionContext";
 // import { getAccounts, getBlog, getTransaction } from "../functions";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -27,8 +22,10 @@ export default function NavigationBar() {
   // const [isBlockFound, setIsBlockFound] = useState(null);
   // const [isTransactionFound, setIsTransactionFound] = useState(null);
 
-  const { setBlockNumber, setUserProfile, setTransactionId } =
-    useContext(ApiContext);
+  // const { setUserProfile, setTransactionId } = useContext(ApiContext);
+  const { setBlockNumber } = useContext(BlockContext);
+  const { setUserProfile } = useContext(UserProfileContext);
+  const { setTransactionId } = useContext(TranasctionContext);
 
   // Find what user typed into search input and navigate him to correct page
   // useEffect(() => {
@@ -123,7 +120,7 @@ export default function NavigationBar() {
           <Form className="nav-bar__form" onSubmit={handleSubmit}>
             <FormControl
               ref={form_value}
-              onChange={(e) => e.target.accName}
+              onChange={(e) => e.target.value}
               type="search"
               placeholder="Search"
               className="me-2"
