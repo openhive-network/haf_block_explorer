@@ -60,6 +60,13 @@ install_jmeter() {
     echo './jmeter $@' >> $jmeter
     sudo chmod +x $jmeter
     sudo mv $jmeter "/usr/local/bin/${jmeter}"
+
+    sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/
+    sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/jmeter.log
+}
+
+run_tests() {
+    bash $PWD/tests/run_performance_tests.sh $@
 }
 
 postgrest_v=9.0.0
@@ -78,6 +85,8 @@ elif [ "$1" =  "install-plpython" ]; then
     install_plpython
 elif [ "$1" =  "install-jmeter" ]; then
     install_jmeter
+elif [ "$1" =  "run-tests" ]; then
+    run_tests $@
 else
     echo "job not found"
     exit 1

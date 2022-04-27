@@ -1,1 +1,3 @@
 postgrest.conf
+tests/performance/result
+tests/performance/db
