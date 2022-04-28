@@ -188,7 +188,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _start BIGINT = 9223372036854775807, _limit BIGINT = 1000)
+CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -210,7 +210,7 @@ BEGIN
     _filter = ARRAY[]::SMALLINT[];
   END IF;
 
-  RETURN hafbe_backend.get_ops_by_block(_block_num, _filter, _start, _limit);
+  RETURN hafbe_backend.get_ops_by_block(_block_num, _start, _limit, _filter);
 END
 $$
 ;

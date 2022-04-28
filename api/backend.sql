@@ -173,73 +173,80 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
-RETURNS JSON
+CREATE TYPE hafbe_backend.operations AS (
+  trx_id TEXT,
+  block INT,
+  trx_in_block INT,
+  op_in_trx SMALLINT,
+  virtual_op BOOLEAN,
+  timestamp TEXT,
+  op JSON,
+  operation_id BIGINT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
 BEGIN
-  RETURN to_json(arr) FROM (
-    SELECT ARRAY(
-      SELECT to_json(ops_json) FROM (
-        SELECT
-          (CASE WHEN ops.trx_in_block < 0 THEN
-            '0000000000000000000000000000000000000000'
-          ELSE 
-            encode((SELECT trx_hash FROM hive.transactions_view WHERE ops.trx_in_block >= 0 AND acc_ops.block_num = block_num AND ops.trx_in_block = trx_in_block), 'escape')
-          END) AS "trx_id",
-          acc_ops.block_num AS "block",
-          (CASE WHEN ops.trx_in_block < 0 THEN 4294967295 ELSE ops.trx_in_block END) AS "trx_in_block",
-          ops.op_pos::BIGINT AS "op_in_trx",
-          op_types.is_virtual AS "virtual_op",
-          btrim(to_json(ops."timestamp")::TEXT, '"'::TEXT) AS "timestamp",
-          ops.body::JSON AS "op",
-          acc_ops.account_op_seq_no AS "operation_id"
-        FROM (
-          SELECT
-            operation_id,
-            op_type_id,
-            block_num,
-            account_op_seq_no
-          FROM
-            hive.account_operations_view
-          WHERE
-            account_id = _account_id AND 
-            account_op_seq_no <= _start AND 
-            block_num <= _head_block AND (
-              (SELECT array_length(_filter, 1)) IS NULL OR
-              op_type_id=ANY(_filter)
-            )
-          ORDER BY account_op_seq_no DESC
-          LIMIT _limit
-        ) acc_ops
+  RETURN QUERY SELECT
+    trx.trx_hash,
+    acc_ops.block_num::INT,
+    (CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE ops.trx_in_block END)::INT,
+    ops.op_pos::SMALLINT,
+    op_types.is_virtual,
+    btrim(to_json(ops."timestamp")::TEXT, '"'::TEXT),
+    ops.body::JSON,
+    acc_ops.account_op_seq_no::BIGINT
+  FROM (
+    SELECT operation_id, op_type_id, block_num, account_op_seq_no
+    FROM hive.account_operations_view
+    WHERE account_id = _account_id AND account_op_seq_no <= _start AND block_num <= _head_block AND (
+      (SELECT array_length(_filter, 1)) IS NULL OR
+      op_type_id=ANY(_filter)
+    )
+    ORDER BY account_op_seq_no DESC
+    LIMIT _limit
+  ) acc_ops
 
-        JOIN LATERAL (
-          SELECT
-            body,
-            op_pos,
-            timestamp,
-            trx_in_block
-          FROM
-            hive.operations_view
-          WHERE acc_ops.operation_id = id
-        ) ops ON TRUE
+  JOIN LATERAL (
+    SELECT body, op_pos, timestamp, trx_in_block
+    FROM hive.operations_view
+    WHERE acc_ops.operation_id = id
+  ) ops ON TRUE
 
-        JOIN LATERAL (
-          SELECT
-            is_virtual
-          FROM
-            hive.operation_types
-          WHERE acc_ops.op_type_id = id
-        ) op_types ON TRUE
-      ) ops_json
-    ) arr
-  ) result;
+  JOIN LATERAL (
+    SELECT is_virtual
+    FROM hive.operation_types
+    WHERE acc_ops.op_type_id = id
+  ) op_types ON TRUE
+
+  JOIN LATERAL (
+    SELECT CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE encode(trx_hash, 'escape') END AS trx_hash
+    FROM hive.transactions_view
+    WHERE acc_ops.block_num = block_num AND ops.trx_in_block = trx_in_block
+  ) trx ON TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _start, _limit, _filter, _head_block))
+    ) arr
+  ) result;
+END
+$$
 ;
 
 CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
@@ -283,72 +290,63 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT,  _filter SMALLINT[], _start BIGINT, _limit BIGINT)
-RETURNS JSON
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
 BEGIN
-  RETURN to_json(arr) FROM (
-    SELECT ARRAY(
-      SELECT to_json(ops_json) FROM (
-        SELECT
-          trx.trx_hash AS "trx_id",
-          _block_num AS "block",
-          (CASE WHEN block_ops.trx_in_block < 0 THEN 4294967295 ELSE block_ops.trx_in_block END) AS "trx_in_block",
-          block_ops.op_pos::BIGINT AS "op_in_trx",
-          op_types.is_virtual AS "virtual_op",
-          btrim(to_json(block_ops.timestamp)::TEXT, '"'::TEXT) AS "timestamp",
-          block_ops.body::JSON AS "op",
-          block_ops.id AS "operation_id"
-        FROM (
-          SELECT
-            trx_in_block,
-            op_pos,
-            timestamp,
-            body,
-            id,
-            op_type_id
-          FROM
-            hive.operations_view
-          WHERE
-            block_num = _block_num AND 
-            id <= _start AND (
-              (SELECT array_length(_filter, 1)) IS NULL OR
-              op_type_id=ANY(_filter)
-            )
-          ORDER BY id DESC
-          LIMIT _limit
-        ) block_ops
+  RETURN QUERY SELECT
+    trx.trx_hash,
+    _block_num,
+    (CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE ops.trx_in_block END)::INT,
+    ops.op_pos::SMALLINT,
+    op_types.is_virtual,
+    btrim(to_json(ops.timestamp)::TEXT, '"'::TEXT),
+    ops.body::JSON,
+    ops.id::BIGINT
+  FROM (
+    SELECT trx_in_block, op_pos, timestamp, body, id, op_type_id
+    FROM hive.operations_view
+    WHERE block_num = _block_num AND  id <= _start AND (
+      (SELECT array_length(_filter, 1)) IS NULL OR
+      op_type_id=ANY(_filter)
+    )
+    ORDER BY id DESC
+    LIMIT _limit
+  ) ops
 
-        JOIN LATERAL (
-          SELECT
-            is_virtual
-          FROM
-            hive.operation_types
-          WHERE block_ops.op_type_id = id
-        ) op_types ON TRUE
+  JOIN LATERAL (
+    SELECT is_virtual
+    FROM hive.operation_types
+    WHERE ops.op_type_id = id
+  ) op_types ON TRUE
 
-        JOIN LATERAL (
-          SELECT CASE WHEN block_ops.trx_in_block < 0 THEN
-            NULL
-          ELSE
-            encode(trx_hash, 'escape')
-          END AS trx_hash
-          FROM
-            hive.transactions_view
-          WHERE
-            _block_num = block_num AND
-            block_ops.trx_in_block = trx_in_block
-        ) trx ON TRUE
-      ) ops_json
-    ) arr
-  ) result;
+  JOIN LATERAL (
+    SELECT CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE encode(trx_hash, 'escape') END AS trx_hash
+    FROM hive.transactions_view
+    WHERE _block_num = block_num AND ops.trx_in_block = trx_in_block
+  ) trx ON TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _start, _limit, _filter))
+    ) arr
+  ) result;
+END
+$$
 ;
 
 CREATE FUNCTION hafbe_backend.get_witnesses_by_vote()
