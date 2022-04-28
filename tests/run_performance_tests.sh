@@ -41,7 +41,7 @@ generate_report() {
 PERFORMANCE_DIR=$PWD/tests/performance
 RESULT_DIR=$PWD/tests/performance/result
 RESULT_REPORT_DIR=$RESULT_DIR/result_report
-PERFORMANCE_DATA_DIR=$PWD/tests/performance/db
+PERFORMANCE_DATA_DIR=$PWD/tests/performance/result
 
 JMX_FILE="endpoints.jmx"
 JMX_IN=$PERFORMANCE_DIR/$JMX_FILE
