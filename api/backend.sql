@@ -173,6 +173,19 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN encode(trx_hash, 'escape')
+  FROM hive.transactions_view htv
+  WHERE htv.block_num = _block_num AND htv.trx_in_block = _trx_in_block;
+END
+$$
+;
+
 CREATE TYPE hafbe_backend.operations AS (
   trx_id TEXT,
   block INT,
@@ -190,42 +203,23 @@ AS
 $function$
 BEGIN
   RETURN QUERY SELECT
-    trx.trx_hash,
-    acc_ops.block_num::INT,
-    (CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE ops.trx_in_block END)::INT,
-    ops.op_pos::SMALLINT,
-    op_types.is_virtual,
-    btrim(to_json(ops."timestamp")::TEXT, '"'::TEXT),
-    ops.body::JSON,
-    acc_ops.account_op_seq_no::BIGINT
-  FROM (
-    SELECT operation_id, op_type_id, block_num, account_op_seq_no
-    FROM hive.account_operations_view
-    WHERE account_id = _account_id AND account_op_seq_no <= _start AND block_num <= _head_block AND (
-      (SELECT array_length(_filter, 1)) IS NULL OR
-      op_type_id=ANY(_filter)
-    )
-    ORDER BY account_op_seq_no DESC
-    LIMIT _limit
-  ) acc_ops
-
-  JOIN LATERAL (
-    SELECT body, op_pos, timestamp, trx_in_block
-    FROM hive.operations_view
-    WHERE acc_ops.operation_id = id
-  ) ops ON TRUE
-
-  JOIN LATERAL (
-    SELECT is_virtual
-    FROM hive.operation_types
-    WHERE acc_ops.op_type_id = id
-  ) op_types ON TRUE
-
-  JOIN LATERAL (
-    SELECT CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE encode(trx_hash, 'escape') END AS trx_hash
-    FROM hive.transactions_view
-    WHERE acc_ops.block_num = block_num AND ops.trx_in_block = trx_in_block
-  ) trx ON TRUE;
+    hafbe_backend.get_trx_hash(hov.block_num, hov.trx_in_block)::TEXT,
+    hov.block_num::INT,
+    hov.trx_in_block::INT,
+    hov.op_pos::SMALLINT,
+    hot.is_virtual::BOOLEAN,
+    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
+    hov.body::JSON,
+    hov.id::BIGINT
+  FROM hive.account_operations_view haov
+  JOIN hive.operations_view hov ON hov.id = haov.operation_id
+  JOIN hive.operation_types hot ON hot.id = haov.op_type_id
+  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND haov.block_num <= _head_block AND (
+    (SELECT array_length(_filter, 1)) IS NULL OR
+    haov.op_type_id=ANY(_filter)
+  )
+  ORDER BY haov.account_op_seq_no DESC
+  LIMIT _limit;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -296,36 +290,22 @@ AS
 $function$
 BEGIN
   RETURN QUERY SELECT
-    trx.trx_hash,
-    _block_num,
-    (CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE ops.trx_in_block END)::INT,
-    ops.op_pos::SMALLINT,
-    op_types.is_virtual,
-    btrim(to_json(ops.timestamp)::TEXT, '"'::TEXT),
-    ops.body::JSON,
-    ops.id::BIGINT
-  FROM (
-    SELECT trx_in_block, op_pos, timestamp, body, id, op_type_id
-    FROM hive.operations_view
-    WHERE block_num = _block_num AND  id <= _start AND (
-      (SELECT array_length(_filter, 1)) IS NULL OR
-      op_type_id=ANY(_filter)
-    )
-    ORDER BY id DESC
-    LIMIT _limit
-  ) ops
-
-  JOIN LATERAL (
-    SELECT is_virtual
-    FROM hive.operation_types
-    WHERE ops.op_type_id = id
-  ) op_types ON TRUE
-
-  JOIN LATERAL (
-    SELECT CASE WHEN ops.trx_in_block < 0 THEN NULL ELSE encode(trx_hash, 'escape') END AS trx_hash
-    FROM hive.transactions_view
-    WHERE _block_num = block_num AND ops.trx_in_block = trx_in_block
-  ) trx ON TRUE;
+    hafbe_backend.get_trx_hash(_block_num, hov.trx_in_block)::TEXT,
+    hov.block_num::INT,
+    hov.trx_in_block::INT,
+    hov.op_pos::SMALLINT,
+    hot.is_virtual::BOOLEAN,
+    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
+    hov.body::JSON,
+    hov.id::BIGINT
+  FROM hive.operations_view hov
+  JOIN hive.operation_types hot ON hot.id = hov.op_type_id
+  WHERE hov.block_num = _block_num AND hov.id <= _start AND (
+    (SELECT array_length(_filter, 1)) IS NULL OR
+    hov.op_type_id=ANY(_filter)
+  )
+  ORDER BY hov.id DESC
+  LIMIT _limit;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
