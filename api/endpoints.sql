@@ -41,7 +41,7 @@ BEGIN
       __input_type = 'transaction_hash';
     ELSIF (SELECT hash FROM hive.blocks WHERE hash = _input::BYTEA) IS NOT NULL THEN
       __input_type = 'block_hash';
-      __input_value = hafbe_endpoints.get_block_num(_input);
+      __input_value = hafbe_backend.get_block_num(_input::BYTEA);
     ELSE
       RETURN hafbe_exceptions.raise_unknown_hash_exception(_input::TEXT);
     END IF;
@@ -68,6 +68,7 @@ END
 $$
 ;
 
+-- TODO: might remove along with `raise_unknown_block_hash_exception()` if unused
 CREATE FUNCTION hafbe_endpoints.get_block_num(_block_hash TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
