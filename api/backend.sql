@@ -203,17 +203,26 @@ AS
 $function$
 BEGIN
   RETURN QUERY SELECT
-    hafbe_backend.get_trx_hash(hov.block_num, hov.trx_in_block)::TEXT,
-    hov.block_num::INT,
+    hafbe_backend.get_trx_hash(haov.block_num, hov.trx_in_block)::TEXT,
+    haov.block_num::INT,
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
     hov.id::BIGINT
-  FROM hive.account_operations_view haov
-  JOIN hive.operations_view hov ON hov.id = haov.operation_id
-  JOIN hive.operation_types hot ON hot.id = haov.op_type_id
+  FROM (
+    SELECT operation_id, op_type_id, account_id, account_op_seq_no, block_num
+    FROM hive.account_operations_view
+  ) haov
+  JOIN LATERAL (
+    SELECT trx_in_block, op_pos, timestamp, body, id
+    FROM hive.operations_view
+  ) hov ON hov.id = haov.operation_id
+  JOIN LATERAL (
+    SELECT is_virtual, id
+    FROM hive.operation_types
+  ) hot ON hot.id = haov.op_type_id
   WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND haov.block_num <= _head_block AND (
     (SELECT array_length(_filter, 1)) IS NULL OR
     haov.op_type_id=ANY(_filter)
@@ -291,15 +300,21 @@ $function$
 BEGIN
   RETURN QUERY SELECT
     hafbe_backend.get_trx_hash(_block_num, hov.trx_in_block)::TEXT,
-    hov.block_num::INT,
+    _block_num::INT,
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
     hov.id::BIGINT
-  FROM hive.operations_view hov
-  JOIN hive.operation_types hot ON hot.id = hov.op_type_id
+  FROM (
+    SELECT block_num, op_type_id, trx_in_block, op_pos, timestamp, body, id
+    FROM hive.operations_view
+  ) hov
+  JOIN LATERAL (
+    SELECT id, is_virtual
+    FROM hive.operation_types
+  ) hot ON hot.id = hov.op_type_id
   WHERE hov.block_num = _block_num AND hov.id <= _start AND (
     (SELECT array_length(_filter, 1)) IS NULL OR
     hov.op_type_id=ANY(_filter)
