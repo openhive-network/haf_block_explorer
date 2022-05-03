@@ -190,7 +190,7 @@ CREATE TYPE hafbe_backend.operations AS (
   trx_id TEXT,
   block INT,
   trx_in_block INT,
-  op_in_trx SMALLINT,
+  op_in_trx INT,
   virtual_op BOOLEAN,
   timestamp TEXT,
   op JSON,
@@ -206,7 +206,7 @@ BEGIN
     hafbe_backend.get_trx_hash(hov.block_num, hov.trx_in_block)::TEXT,
     hov.block_num::INT,
     hov.trx_in_block::INT,
-    hov.op_pos::SMALLINT,
+    hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
@@ -253,10 +253,10 @@ DECLARE
 BEGIN
   RETURN json_build_object(
     'block_num', _block_num,
-    'block_hash', (SELECT encode(hash, 'escape') FROM hive.blocks WHERE num=_block_num),
-    'timestamp', (SELECT created_at FROM hive.blocks WHERE num=_block_num),
-    'witness', (__block_api_data->>'witness'),
-    'signing_key', (__block_api_data->>'signing_key')
+    'block_hash', __block_api_data->>'block_id',
+    'timestamp', __block_api_data->>'timestamp',
+    'witness', __block_api_data->>'witness',
+    'signing_key', __block_api_data->>'signing_key'
   );
 END
 $$
@@ -293,7 +293,7 @@ BEGIN
     hafbe_backend.get_trx_hash(_block_num, hov.trx_in_block)::TEXT,
     hov.block_num::INT,
     hov.trx_in_block::INT,
-    hov.op_pos::SMALLINT,
+    hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
