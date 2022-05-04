@@ -42,6 +42,36 @@ install_plpython() {
     sudo apt-get -y install python3 postgresql-plpython3-12
 }
 
+install_jmeter() {
+    sudo apt-get update -y
+    sudo apt-get install openjdk-8-jdk -y
+
+    wget "https://downloads.apache.org//jmeter/binaries/apache-jmeter-${jmeter_v}.zip"
+
+    jmeter_src="apache-jmeter-${jmeter_v}"
+    sudo unzip "${jmeter_src}.zip" -d '/usr/local/src'
+    rm "${jmeter_src}.zip"
+
+    jmeter="jmeter-${jmeter_v}"
+    touch $jmeter
+    echo '#!/usr/bin/env bash' >> $jmeter
+    echo '' >> $jmeter
+    echo "cd '/usr/local/src/apache-jmeter-${jmeter_v}/bin'" >> $jmeter
+    echo './jmeter $@' >> $jmeter
+    sudo chmod +x $jmeter
+    sudo mv $jmeter "/usr/local/bin/${jmeter}"
+
+    sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/
+    sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/jmeter.log
+}
+
+run_tests() {
+    bash $PWD/tests/run_performance_tests.sh $@
+}
+
+postgrest_v=9.0.0
+jmeter_v=5.4.3
+
 if [ "$1" = "start" ]; then
     start_webserver $2
 elif [ "$1" = "re-start" ]; then
@@ -53,6 +83,10 @@ elif [ "$1" =  "install-postgrest" ]; then
     install_postgrest
 elif [ "$1" =  "install-plpython" ]; then
     install_plpython
+elif [ "$1" =  "install-jmeter" ]; then
+    install_jmeter
+elif [ "$1" =  "run-tests" ]; then
+    run_tests $@
 else
     echo "job not found"
     exit 1
