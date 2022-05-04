@@ -19,55 +19,69 @@ $$
 DECLARE
   __input_type TEXT;
   __input_value TEXT = _input;
+  __block_num INT;
   __head_block_num INT;
+  __accounts_array JSON;
 BEGIN
   -- first, name existance is checked
-  IF (SELECT name FROM hive.accounts WHERE name = _input) IS NOT NULL THEN
-    __input_type = 'account_name';
+  IF (SELECT name FROM hive.accounts WHERE name = _input LIMIT 1) IS NOT NULL THEN
+    RETURN json_build_object(
+      'input_type', 'account_name',
+      'input_value', _input
+    );
+  END IF;
 
   -- second, positive digit and not name is assumed to be block number
-  ELSIF _input SIMILAR TO '(\d+)' THEN
+  IF _input SIMILAR TO '(\d+)' THEN
     SELECT hafbe_endpoints.get_head_block_num() INTO __head_block_num;
     IF _input::NUMERIC > __head_block_num THEN
       RETURN hafbe_exceptions.raise_block_num_too_high_exception(_input::NUMERIC, __head_block_num);
     ELSE
-      __input_type = 'block_num';
-    END IF;
-
-  -- third, if input is 40 char hash, it is validated for transaction or block hash
-  -- hash is unknown if failed to validate
-  ELSIF _input SIMILAR TO '([a-f0-9]{40})' THEN
-    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = _input::BYTEA) IS NOT NULL THEN
-      __input_type = 'transaction_hash';
-    ELSIF (SELECT hash FROM hive.blocks WHERE hash = _input::BYTEA) IS NOT NULL THEN
-      __input_type = 'block_hash';
-      __input_value = hafbe_endpoints.get_block_num(_input);
-    ELSE
-      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input::TEXT);
-    END IF;
-
-  -- fourth, it is still possible input is partial name, max 50 names returned
-  ELSE
-    __input_value = json_build_object(
-      'possible_accounts', (SELECT hafbe_endpoints.find_matching_accounts(_input::TEXT))
-    );
-
-    -- fifth, if no matching accounts were found, 'unknown_input' is returned
-    IF (__input_value::JSON->>'possible_accounts') IS NULL THEN
-      RETURN hafbe_exceptions.raise_unknown_input_exception(_input::TEXT);
-    ELSE
-      __input_type = 'account_name_array';
+      RETURN json_build_object(
+        'input_type', 'block_num',
+        'input_value', _input
+      );
     END IF;
   END IF;
 
-  RETURN json_build_object(
-    'input_type', __input_type,
-    'input_value', __input_value
-  );
+  -- third, if input is 40 char hash, it is validated for transaction or block hash
+  -- hash is unknown if failed to validate
+  IF _input SIMILAR TO '([a-f0-9]{40})' THEN
+    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = _input::BYTEA LIMIT 1) IS NOT NULL THEN
+      RETURN json_build_object(
+        'input_type', 'transaction_hash',
+        'input_value', _input
+      );
+    ELSE
+      __block_num = hafbe_backend.get_block_num(_input::BYTEA);
+    END IF;
+
+    IF __input_type IS NULL AND __block_num IS NOT NULL THEN
+      RETURN json_build_object(
+        'input_type', 'block_hash',
+        'input_value', __block_num
+      );
+    ELSIF __input_type IS NULL AND __block_num IS NULL THEN
+      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input::TEXT);
+    END IF;
+  END IF;
+
+  -- fourth, it is still possible input is partial name, max 50 names returned.
+  -- if no matching accounts were found, 'unknown_input' is returned
+  SELECT hafbe_endpoints.find_matching_accounts(_input::TEXT) INTO __accounts_array;
+  IF __accounts_array IS NOT NULL THEN
+    RETURN json_build_object(
+      'input_type', 'account_name_array',
+      'input_value', __accounts_array
+    );
+  ELSE
+    RETURN hafbe_exceptions.raise_unknown_input_exception(_input::TEXT);
+  END IF;
 END
 $$
 ;
 
+-- TODO: might remove along with `raise_unknown_block_hash_exception()` if unused
 CREATE FUNCTION hafbe_endpoints.get_block_num(_block_hash TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
