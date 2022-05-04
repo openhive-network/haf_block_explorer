@@ -286,7 +286,7 @@ BEGIN
   RETURN json_build_object(
     'id', __account_data->>'id',
     'name', _account,
-    'profile_image', __account_data->'json_metadata'->>'profile_image',
+    'profile_image', ((__account_data->>'json_metadata')::JSON)->'profile'->>'profile_image',
     'last_owner_update', __account_data->>'last_owner_update',
     'last_account_update', __account_data->>'last_account_update',
     'created', __account_data->>'created',
