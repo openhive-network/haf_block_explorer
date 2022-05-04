@@ -329,7 +329,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witnesses_by_vote()
+CREATE FUNCTION hafbe_backend.get_top_witnesses(_witnesses_number INT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -344,10 +344,54 @@ $$
       """
       curl -X POST https://api.hive.blog \
         -H 'Content-Type: application/json' \
-        -d '{"jsonrpc": "2.0", "method": "condenser_api.get_witnesses_by_vote", "params": [null,21], "id": null}'
-      """ 
+        -d '{"jsonrpc": "2.0", "method": "condenser_api.get_witnesses_by_vote", "params": [null, %d], "id": null}'
+      """ % _witnesses_number
       ], shell=True).decode('utf-8')
     )['result']
   )
-  $$
-  ;
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_witness_by_account(_account VARCHAR)
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "condenser_api.get_witness_by_account", "params": ["%s"], "id": null}'
+        """ % _account
+      ], shell=True).decode('utf-8')
+    )['result']
+  )
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_account(_account VARCHAR)
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "condenser_api.get_accounts", "params": [["%s"]], "id": null}'
+        """ % _account
+      ], shell=True).decode('utf-8')
+    )['result'][0]
+  )
+$$
+;
