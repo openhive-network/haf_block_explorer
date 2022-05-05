@@ -194,7 +194,8 @@ CREATE TYPE hafbe_backend.operations AS (
   virtual_op BOOLEAN,
   timestamp TEXT,
   op JSON,
-  operation_id BIGINT
+  operation_id BIGINT,
+  acc_operation_id BIGINT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
@@ -210,7 +211,8 @@ BEGIN
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
-    hov.id::BIGINT
+    hov.id::BIGINT,
+    haov.account_op_seq_no::BIGINT
   FROM (
     SELECT operation_id, op_type_id, account_id, account_op_seq_no, block_num
     FROM hive.account_operations_view
@@ -306,7 +308,8 @@ BEGIN
     hot.is_virtual::BOOLEAN,
     btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
-    hov.id::BIGINT
+    hov.id::BIGINT,
+    NULL::BIGINT
   FROM (
     SELECT block_num, op_type_id, trx_in_block, op_pos, timestamp, body, id
     FROM hive.operations_view
