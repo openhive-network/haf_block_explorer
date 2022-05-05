@@ -19,7 +19,7 @@ export default function Content() {
   const user = location.pathname.split("/user/").pop();
   const block = Number(location.pathname.split("/block/").pop());
   const transaction = location.pathname.split("/transaction/").pop();
-  console.log(location);
+  // console.log(location);
   const [title, setTitle] = useState("");
   document.title = title;
   useEffect(() => {
@@ -27,8 +27,6 @@ export default function Content() {
     setBlockNumber(block);
     setTransactionId(transaction);
   }, [user, block, transaction]);
-
-  // console.log(userProfile);
 
   return (
     <Routes>

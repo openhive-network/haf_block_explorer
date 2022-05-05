@@ -3,12 +3,27 @@ import { UserProfileContext } from "../contexts/userProfileContext";
 import { userPagination } from "../functions";
 import FilteredOps from "../components/user/FilteredOps";
 import Ops from "../components/user/Ops";
-import { Container, Col, Row, Button, Pagination } from "react-bootstrap";
-import ProgressBar from "react-bootstrap/ProgressBar";
+import {
+  Container,
+  Col,
+  Row,
+  // Button,
+  // Pagination,
+  Dropdown,
+  Toast,
+  Modal,
+  Form,
+  ProgressBar,
+} from "react-bootstrap";
+import { Button, Pagination } from "@mui/material";
 import "./userPage.css";
 import TrxTable from "../components/tables/TrxTable";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoModal from "../components/user/UserInfoModal";
+import { TranasctionContext } from "../contexts/transactionContext";
+import { Link } from "react-router-dom";
+import HighlightedJSON from "../components/HighlightedJSON";
+import MultiSelectFilters from "../components/MultiSelectFilters";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -20,6 +35,7 @@ export default function User_Page({ user, setTitle }) {
     op_filters,
     set_op_filters,
   } = useContext(UserProfileContext);
+  const { setTransactionId } = useContext(TranasctionContext);
   // setTitle(`HAF | User | ${user}`);
 
   const max_trx_nr = user_profile_data?.[0]?.operation_id;
@@ -64,7 +80,7 @@ export default function User_Page({ user, setTitle }) {
   };
   // Operation  filters
 
-  const [show_filters, set_show_filters] = useState(true);
+  const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
   const [showUserModal, setShowUserModal] = useState(true);
   const [filters_length, set_filters_length] = useState(op_filters.length);
@@ -100,6 +116,7 @@ export default function User_Page({ user, setTitle }) {
   // let opObj = {};
   // opName?.forEach((name) => opObj[name[opId]]);
   // console.log(opName);
+  // console.log(op_filters);
 
   const handleCheck = (e, i) => {
     if (e.target.checked === true) {
@@ -120,6 +137,8 @@ export default function User_Page({ user, setTitle }) {
     }
   };
 
+  // console.log(user_profile_data);
+
   return (
     <>
       {user_profile_data.length !== 0 ? (
@@ -132,8 +151,8 @@ export default function User_Page({ user, setTitle }) {
                 : filtered_ops_sum}
             </p>
           </div>
-          <div>
-            <Row hidden={show_filters} className="filters">
+          {/* <div> */}
+          {/* <Row hidden={show_filters} className="filters">
               <Row className="d-flex justify-content-center">
                 <Col className="filters__header text-center" xs={5}>
                   <h3>Filters</h3>
@@ -175,27 +194,177 @@ export default function User_Page({ user, setTitle }) {
                   );
                 })}
               </Col>
-            </Row>
-          </div>
-          <div
+            </Row> */}
+          {/* </div> */}
+          {/* <div
             style={{ display: "flex", justifyContent: "center" }}
             className="filters_btn"
-          ></div>
+          >
+            <Button>Open</Button>
+          </div> */}
 
-          <Row className="d-flex justify-content-center mt-5">
-            <UserInfoModal
-              user={user}
-              showUserModal={showUserModal}
-              setShowUserModal={setShowUserModal}
-            />
+          <Row className="d-flex mt-5">
             <Col sm={12} md={3}>
               <UserProfileCard
                 setShowUserModal={setShowUserModal}
                 user={user}
               />
             </Col>
-            <Col>
-              <TrxTable
+            <UserInfoModal
+              user={user}
+              showUserModal={showUserModal}
+              setShowUserModal={setShowUserModal}
+            />
+            <Col sm={12} md={8}>
+              <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
+                <h1>Operations</h1>
+              </Row>
+              <Row
+                style={{ margin: "20px 5px 20px 0" }}
+                className="d-flex justify-content-end align-items-right"
+              >
+                <Button onClick={() => set_show_filters(!show_filters)}>
+                  Modal
+                </Button>
+                <MultiSelectFilters
+                  show_filters={show_filters}
+                  set_show_filters={set_show_filters}
+                />
+                {/* <Button
+                  style={{ width: "200px" }}
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => set_show_filters(!show_filters)}
+                >
+                  Filters
+                </Button> */}
+              </Row>
+
+              <Row>
+                {user_profile_data?.map((profile, i) => {
+                  const type = profile.op.type.replaceAll("_", " ");
+                  const link_to_trx = (
+                    <Link
+                      style={{ color: "#000", textDecoration: "none" }}
+                      to={`/transaction/${profile.trx_id}`}
+                    >
+                      {profile.operation_id}
+                    </Link>
+                  );
+                  const link_to_block = (
+                    <Link
+                      style={{
+                        color: "#000",
+                        textDecoration: "none",
+                      }}
+                      to={`/block/${profile.block}`}
+                    >
+                      {profile.block}
+                    </Link>
+                  );
+
+                  return (
+                    <Col key={profile.operation_id} sm={12}>
+                      <Toast
+                        className="d-inline-block m-1 w-100"
+                        bg="secondary"
+                        key={i}
+                      >
+                        <Toast.Header closeButton={false}>
+                          <img
+                            src="holder.js/20x20?text=%20"
+                            className="rounded me-2"
+                            alt=""
+                          />
+                          <strong className="me-auto">
+                            <p style={{ margin: "0" }}>
+                              ID{" "}
+                              {profile.trx_id !== null
+                                ? link_to_trx
+                                : profile.operation_id}
+                            </p>
+                            <p style={{ margin: "0" }}>Block {link_to_block}</p>
+                          </strong>
+                          <strong className="me-auto">
+                            <p
+                              style={{
+                                fontSize: "20px",
+                                textTransform: "capitalize",
+                              }}
+                            >
+                              {type}
+                            </p>
+                          </strong>
+
+                          <small>{profile.timestamp} </small>
+                        </Toast.Header>
+                        <Toast.Body className="text-white">
+                          {/* {user}{" "} */}
+                          {profile.op.type === "transfer_operation" ? (
+                            <p>
+                              from : {profile.op.value.from}, to :{" "}
+                              {profile.op.value.to}
+                            </p>
+                          ) : (
+                            ""
+                          )}
+                          <HighlightedJSON json={profile} />
+                          {/* {profile.op.type === "vote_operation" ? (
+                            <p>
+                              Voter :{" "}
+                              <span>
+                                <Link
+                                  style={{
+                                    fontSize: "16px",
+                                    color: "red",
+                                    fontWeight: "bold",
+                                    textDecoration: "none",
+                                  }}
+                                  to={`/user/${profile.op.value.voter}`}
+                                >
+                                  {profile.op.value.voter}
+                                </Link>
+                              </span>{" "}
+                              upvoted user's :{" "}
+                              <span>
+                                <Link
+                                  style={{
+                                    fontSize: "16px",
+                                    color: "red",
+                                    fontWeight: "bold",
+                                    textDecoration: "none",
+                                  }}
+                                  to={`/user/${profile.op.value.author}`}
+                                >
+                                  {profile.op.value.author}
+                                </Link>
+                              </span>{" "}
+                              post :{" "}
+                              <span>
+                                <Link
+                                  style={{
+                                    fontSize: "16px",
+                                    color: "red",
+                                    fontWeight: "bold",
+                                    textDecoration: "none",
+                                  }}
+                                  to={`https://www.hiveblocks.com/steemfest/@${profile.op.value.author}/${profile.op.value.permlink}`}
+                                >
+                                  {profile.op.value.permlink}
+                                </Link>
+                              </span>
+                            </p>
+                          ) : (
+                            ""
+                          )} */}
+                        </Toast.Body>
+                      </Toast>
+                    </Col>
+                  );
+                })}
+              </Row>
+
+              {/* <TrxTable
                 set_show_filters={set_show_filters}
                 show_filters={show_filters}
                 active_op_filters={filered_op_names}
@@ -204,7 +373,7 @@ export default function User_Page({ user, setTitle }) {
                 first={handleFirstPage}
                 last={handleLastPage}
                 acc_history_limit={acc_history_limit}
-              />
+              /> */}
             </Col>
           </Row>
         </Container>

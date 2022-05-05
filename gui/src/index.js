@@ -12,8 +12,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 ReactDOM.render(
   <ErrorBoundary>
     <HeadBlockContextProvider>
-      <BlockContextProvider>
-        <UserProfileContextProvider>
+      <UserProfileContextProvider>
+        <BlockContextProvider>
           <TranasctionContextProvider>
             <WitnessContextProvider>
               <BrowserRouter>
@@ -21,8 +21,8 @@ ReactDOM.render(
               </BrowserRouter>
             </WitnessContextProvider>
           </TranasctionContextProvider>
-        </UserProfileContextProvider>
-      </BlockContextProvider>
+        </BlockContextProvider>
+      </UserProfileContextProvider>
     </HeadBlockContextProvider>
   </ErrorBoundary>,
   document.getElementById("root")

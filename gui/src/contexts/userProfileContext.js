@@ -1,11 +1,12 @@
 import { useState, createContext, useEffect } from "react";
+
 import axios from "axios";
 
 export const UserProfileContext = createContext();
 export const UserProfileContextProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState("");
   const [user_profile_data, setUser_profile_data] = useState([]);
-  const [acc_history_limit, set_acc_history_limit] = useState(1000);
+  const [acc_history_limit, set_acc_history_limit] = useState(100);
   const [op_filters, set_op_filters] = useState([]);
   const [user_info, set_user_info] = useState("");
   const [op_types, set_op_types] = useState([]);

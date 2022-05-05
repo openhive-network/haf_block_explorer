@@ -127,22 +127,22 @@ margin: 0; */
 
 .key {
     margin-right: 0.5rem;
-    color: black;
+    color: rgb(98, 255, 7);
     font-weight: 600;
 }
 
 .string {
-    color: green;
+    color: rgb(106, 255, 235);
 }
 
 .number {
-    color: blue;
+    color: rgb(249, 252, 84);
 }
 
 .boolean {
-    color: purple;
+    color: rgb(255, 50, 255);
 }
 
 .null {
-    color: red;
+    color: rgb(255, 0, 0);
 }

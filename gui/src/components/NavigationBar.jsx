@@ -74,7 +74,7 @@ export default function NavigationBar() {
   useEffect(() => {
     axios({
       method: "post",
-      url: "http://localhost:3000/rpc/get_input_type",
+      url: "http://192.168.5.118:3002/rpc/get_input_type",
       headers: { "Content-Type": "application/json" },
       data: { _input: value },
     })
@@ -92,7 +92,7 @@ export default function NavigationBar() {
       navigate(`user/${value}`);
     }
 
-    if (check_input.input_type === "transaction_id") {
+    if (check_input.input_type === "transaction_hash") {
       setTransactionId(value);
       navigate(`transaction/${value}`);
     }
