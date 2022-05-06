@@ -21,24 +21,27 @@ def generate_input_db():
   limit = db_size // 4
   data = gen_rand_block_range(limit)
   rand_block_arr_str = "'{%s}'" % ','.join(gen_rand_block_range(limit))
-  data += call_sql("SELECT encode(hash, 'escape') FROM hive.blocks WHERE num = ANY(%s)" % rand_block_arr_str, limit)
-  data += call_sql("SELECT encode(trx_hash, 'escape') FROM hive.transactions WHERE block_num = ANY(%s)" % rand_block_arr_str, limit)
+  data += call_sql("SELECT encode(hash, 'hex') FROM hive.blocks WHERE num = ANY(%s)" % rand_block_arr_str, limit)
+  data += call_sql("SELECT encode(trx_hash, 'hex') FROM hive.transactions WHERE block_num = ANY(%s)" % rand_block_arr_str, limit)
   data += get_acc_names(limit)
   return data
 
 def generate_db():
   rand_blocks = gen_rand_block_range(db_size)
+  rand_block_arr_str = "'{%s}'" % ','.join(gen_rand_block_range(db_size))
+  trx_hashes = call_sql("SELECT '\\x' || encode(trx_hash, 'hex') FROM hive.transactions WHERE block_num = ANY(%s)" % rand_block_arr_str, db_size)
   acc_names = get_acc_names(db_size)
   partial_acc_names = [el[:-1] for el in acc_names]
   input_data = generate_input_db()
 
   random.shuffle(rand_blocks)
+  random.shuffle(trx_hashes)
   random.shuffle(acc_names)
   random.shuffle(partial_acc_names)
   random.shuffle(input_data)
 
-  data = ["%s,%s,%s,%s" % (block, name, part_name, input) for block, name, part_name, input in zip(
-    rand_blocks, acc_names, partial_acc_names, input_data
+  data = [f'{block},\{trx_hash},{name},{part_name},{input}' for block, trx_hash, name, part_name, input in zip(
+    rand_blocks, trx_hashes, acc_names, partial_acc_names, input_data
   )]
 
   with open(os.path.join(db_dir, 'db.csv'), 'w') as f: f.write("\n".join(data))

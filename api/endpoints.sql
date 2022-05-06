@@ -229,19 +229,16 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA, _include_reversible BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
   __is_legacy_style BOOLEAN = FALSE;
+  __include_reversible BOOLEAN = TRUE;
 BEGIN
-  IF _include_reversible IS NULL THEN
-    _include_reversible = FALSE;
-  END IF;
-
-  RETURN hafah_python.get_transaction_json(_trx_hash, _include_reversible, __is_legacy_style);
+  RETURN hafah_python.get_transaction_json(_trx_hash, __include_reversible, __is_legacy_style);
 END
 $$
 ;
@@ -282,11 +279,22 @@ AS
 $$
 DECLARE
   __account_data JSON = hafbe_backend.get_account(_account);
+  __json_metadata JSON;
+  __profile JSON;
+  __profile_image TEXT;
 BEGIN
+  BEGIN
+    SELECT (__account_data->>'json_metadata')::JSON INTO __json_metadata;
+    SELECT (__json_metadata->>'profile')::JSON INTO __profile;
+    SELECT __profile->>'profile_image' INTO __profile_image;
+  EXCEPTION WHEN invalid_text_representation THEN
+    SELECT NULL INTO __profile_image;
+  END;
+  
   RETURN json_build_object(
     'id', __account_data->>'id',
     'name', _account,
-    'profile_image', ((__account_data->>'json_metadata')::JSON)->'profile'->>'profile_image',
+    'profile_image', __profile_image,
     'last_owner_update', __account_data->>'last_owner_update',
     'last_account_update', __account_data->>'last_account_update',
     'created', __account_data->>'created',
