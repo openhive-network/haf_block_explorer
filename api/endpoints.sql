@@ -47,13 +47,13 @@ BEGIN
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
   IF _input SIMILAR TO '([a-f0-9]{40})' THEN
-    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = _input::BYTEA LIMIT 1) IS NOT NULL THEN
+    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = ('\x' || _input)::BYTEA LIMIT 1) IS NOT NULL THEN
       RETURN json_build_object(
         'input_type', 'transaction_hash',
         'input_value', _input
       );
     ELSE
-      __block_num = hafbe_backend.get_block_num(_input::BYTEA);
+      __block_num = hafbe_backend.get_block_num(('\x' || _input)::BYTEA);
     END IF;
 
     IF __input_type IS NULL AND __block_num IS NOT NULL THEN
