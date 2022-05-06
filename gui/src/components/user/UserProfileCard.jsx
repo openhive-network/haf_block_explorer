@@ -1,16 +1,10 @@
-import React, { useContext } from "react";
+import React from "react";
 import { Button, ProgressBar } from "react-bootstrap";
-import { UserProfileContext } from "../../contexts/userProfileContext";
+// import { UserProfileContext } from "../../contexts/userProfileContext";
 
 export default function UserProfileCard({ setShowUserModal, user }) {
-  const { user_info } = useContext(UserProfileContext);
-  const user_meta =
-    user_info?.json_metadata !== "" && JSON.parse(user_info?.json_metadata);
-  // const user_pic =
-  //   user_meta.l === "No picture"
-  //     ? "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-  //     : user_meta?.profile.user_pic;
-  // console.log(user_meta);
+  // const { user_info } = useContext(UserProfileContext);
+  const profile_picture = `https://images.hive.blog/u/${user}/avatar`;
   return (
     <div
       className="user-info-div"
@@ -43,8 +37,7 @@ export default function UserProfileCard({ setShowUserModal, user }) {
         >
           <img
             style={{ width: "62px", borderRadius: "50%" }}
-            // src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-            // src={user_pic}
+            src={profile_picture}
             alt="user picture"
           />
         </div>

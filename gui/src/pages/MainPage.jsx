@@ -50,6 +50,15 @@ export default function Main_Page({ setTitle }) {
             Current witness :
             <Link to={`/user/${head_block.current_witness}`}>
               <p onClick={() => setUserProfile(head_block.current_witness)}>
+                <img
+                  src={`https://images.hive.blog/u/${head_block.current_witness}/avatar`}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    margin: "5px",
+                    borderRadius: "50%",
+                  }}
+                />{" "}
                 {head_block.current_witness}
               </p>
             </Link>
@@ -90,6 +99,15 @@ export default function Main_Page({ setTitle }) {
                       action
                       href={`/user/${w.owner}`}
                     >
+                      <img
+                        src={`https://images.hive.blog/u/${w.owner}/avatar`}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          margin: "5px",
+                          borderRadius: "50%",
+                        }}
+                      />
                       {w.owner}
                     </ListGroup.Item>
                   </ListGroup>

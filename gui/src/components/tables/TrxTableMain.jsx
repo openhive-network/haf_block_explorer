@@ -79,6 +79,15 @@ export default function TrxTableMain({ block_trans, tr_id }) {
               setUserProfile(typeof user[i] === "object" ? user[i][0] : user[i])
             }
           >
+            <img
+              src={`https://images.hive.blog/u/${user[i]}/avatar`}
+              style={{
+                width: "40px",
+                height: "40px",
+                margin: "5px",
+                borderRadius: "50%",
+              }}
+            />
             <Link to={`user/${user[i]}`}>{user[i]}</Link>
           </div>,
           trx_type[i],

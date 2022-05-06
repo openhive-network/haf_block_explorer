@@ -74,7 +74,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
       set_op_filters(trim_not_virtual);
     }
   }, [vfilters]);
-  console.log(op_filters);
+
   return (
     <div>
       <Modal show={show_filters}>
