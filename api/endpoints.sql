@@ -68,7 +68,7 @@ BEGIN
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT hafbe_endpoints.find_matching_accounts(_input::TEXT) INTO __accounts_array;
+  SELECT hafbe_backend.find_matching_accounts(_input::TEXT) INTO __accounts_array;
   IF __accounts_array IS NOT NULL THEN
     RETURN json_build_object(
       'input_type', 'account_name_array',
@@ -77,35 +77,6 @@ BEGIN
   ELSE
     RETURN hafbe_exceptions.raise_unknown_input_exception(_input::TEXT);
   END IF;
-END
-$$
-;
-
--- TODO: might remove along with `raise_unknown_block_hash_exception()` if unused
-CREATE FUNCTION hafbe_endpoints.get_block_num(_block_hash TEXT)
-RETURNS INT
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __block_num INT = (SELECT hafbe_backend.get_block_num(_block_hash::BYTEA));
-BEGIN
-  IF __block_num IS NULL THEN
-    RETURN hafbe_exceptions.raise_unknown_block_hash_exception(_block_hash);
-  ELSE
-    RETURN __block_num;
-  END IF;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.find_matching_accounts(_partial_account_name TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN btracker_app.find_matching_accounts(_partial_account_name);
 END
 $$
 ;
@@ -156,7 +127,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _head_block BIGINT = NULL)
+CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -176,17 +147,13 @@ BEGIN
     RETURN hafbe_exceptions.raise_ops_limit_exception(_start, _limit);
   END IF;
 
-  IF _head_block IS NULL THEN
-    SELECT hafbe_endpoints.get_head_block_num() INTO _head_block;
-  END IF;
-
   IF _filter IS NULL THEN
     _filter = ARRAY[]::SMALLINT[];
   END IF;
 
   SELECT hafbe_backend.get_account_id(_account) INTO __account_id;
 
-  RETURN hafbe_backend.get_ops_by_account(__account_id, _start, _limit, _filter, _head_block);
+  RETURN hafbe_backend.get_ops_by_account(__account_id, _start, _limit, _filter);
 END
 $$
 ;

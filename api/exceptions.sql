@@ -60,26 +60,13 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_unknown_block_hash_exception(_hash TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN hafbe_exceptions.raise_exception(404, 4, 'Not Found',
-    format('Block hash ''%s'' does not exist in database.', _hash)
-  );
-END
-$$
-;
-
 CREATE FUNCTION hafbe_exceptions.raise_ops_limit_exception(_start BIGINT, _limit BIGINT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_exceptions.raise_exception(406, 5, 'Not Acceptable',
+  RETURN hafbe_exceptions.raise_exception(406, 4, 'Not Acceptable',
     'Start  is less than limit - 1',
     format('%s < %s - 1',  _start, _limit)
   );

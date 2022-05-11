@@ -52,6 +52,17 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_backend.get_head_block_num()
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1;
+END
+$$
+;
+
 CREATE FUNCTION hafbe_backend.get_block_num(_block_hash BYTEA)
 RETURNS INT
 LANGUAGE 'plpgsql'
@@ -63,13 +74,13 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_head_block_num()
-RETURNS INT
+CREATE FUNCTION hafbe_backend.find_matching_accounts(_partial_account_name TEXT)
+RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1;
+  RETURN btracker_app.find_matching_accounts(_partial_account_name);
 END
 $$
 ;
@@ -198,7 +209,7 @@ CREATE TYPE hafbe_backend.operations AS (
   acc_operation_id BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
@@ -225,7 +236,7 @@ BEGIN
     SELECT is_virtual, id
     FROM hive.operation_types
   ) hot ON hot.id = haov.op_type_id
-  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND haov.block_num <= _head_block AND (
+  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND (
     (SELECT array_length(_filter, 1)) IS NULL OR
     haov.op_type_id=ANY(_filter)
   )
@@ -239,7 +250,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -247,7 +258,7 @@ $$
 BEGIN
   RETURN to_json(arr) FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _start, _limit, _filter, _head_block))
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _start, _limit, _filter))
     ) arr
   ) result;
 END
