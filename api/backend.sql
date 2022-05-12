@@ -190,7 +190,7 @@ LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
-  RETURN encode(trx_hash, 'escape')
+  RETURN encode(trx_hash, 'hex')
   FROM hive.transactions_view htv
   WHERE htv.block_num = _block_num AND htv.trx_in_block = _trx_in_block;
 END

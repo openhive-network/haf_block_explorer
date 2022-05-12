@@ -196,16 +196,14 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA)
+CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __is_legacy_style BOOLEAN = FALSE;
-  __include_reversible BOOLEAN = TRUE;
 BEGIN
-  RETURN hafah_python.get_transaction_json(_trx_hash, __include_reversible, __is_legacy_style);
+  -- _trx_hash TEXT -> BYTEA, __include_reversible = FALSE, __is_legacy_style = FALSE
+  RETURN hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA);
 END
 $$
 ;
