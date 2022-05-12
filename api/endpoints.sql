@@ -226,7 +226,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account VARCHAR)
+CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -237,24 +237,19 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_account(_account VARCHAR)
+CREATE FUNCTION hafbe_endpoints.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
   __account_data JSON = hafbe_backend.get_account(_account);
-  __json_metadata JSON;
-  __profile JSON;
   __profile_image TEXT;
 BEGIN
-  BEGIN
-    SELECT (__account_data->>'json_metadata')::JSON INTO __json_metadata;
-    SELECT (__json_metadata->>'profile')::JSON INTO __profile;
-    SELECT __profile->>'profile_image' INTO __profile_image;
-  EXCEPTION WHEN invalid_text_representation THEN
-    SELECT NULL INTO __profile_image;
-  END;
+  SELECT hafbe_backend.parse_profile_picture(__account_data, 'json_metadata') INTO __profile_image;
+  IF __profile_image IS NULL THEN
+    SELECT hafbe_backend.parse_profile_picture(__account_data, 'posting_json_metadata') INTO __profile_image;
+  END IF;
   
   RETURN json_build_object(
     'id', __account_data->>'id',

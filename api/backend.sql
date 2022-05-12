@@ -85,7 +85,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account_id(_account VARCHAR)
+CREATE FUNCTION hafbe_backend.get_account_id(_account TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -381,7 +381,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_by_account(_account VARCHAR)
+CREATE FUNCTION hafbe_backend.get_witness_by_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -403,7 +403,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account(_account VARCHAR)
+CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -422,5 +422,25 @@ $$
       ], shell=True).decode('utf-8')
     )['result'][0]
   )
+$$
+;
+
+CREATE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __profile_image TEXT;
+BEGIN
+  BEGIN
+    SELECT INTO __profile_image ( (
+      ((_account_data->>_key)::JSON)->>'profile'
+      )::JSON )->>'profile_image';
+  EXCEPTION WHEN invalid_text_representation THEN
+    SELECT NULL INTO __profile_image;
+  END;
+  RETURN __profile_image;
+END
 $$
 ;
