@@ -10,6 +10,7 @@ import UserInfoModal from "../components/user/UserInfoModal";
 import { Link } from "react-router-dom";
 import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
+import GetOperation from "../operations";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -25,7 +26,7 @@ export default function User_Page({ user, setTitle }) {
   } = useContext(UserProfileContext);
   // const { setTransactionId } = useContext(TranasctionContext);
   // setTitle(`HAF | User | ${user}`);
-
+  // console.log(getOperation("vote_operation"));
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
@@ -40,7 +41,7 @@ export default function User_Page({ user, setTitle }) {
   //Transactions per page
   const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
   // Operation  filters
-
+  const [show_json, set_show_json] = useState(false);
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
   const [showUserModal, setShowUserModal] = useState(true);
@@ -148,7 +149,7 @@ export default function User_Page({ user, setTitle }) {
                       style={{ color: "#000", textDecoration: "none" }}
                       to={`/transaction/${profile.trx_id}`}
                     >
-                      {profile.operation_id}
+                      {profile.acc_operation_id}
                     </Link>
                   );
                   const link_to_block = (
@@ -162,15 +163,18 @@ export default function User_Page({ user, setTitle }) {
                       {profile.block}
                     </Link>
                   );
-
+                  // console.log(profile);
                   return (
                     <Col key={profile.operation_id} sm={12}>
                       <Toast
                         className="d-inline-block m-1 w-100"
-                        bg="secondary"
+                        style={{ backgroundColor: "#091B4B" }}
                         key={i}
                       >
-                        <Toast.Header closeButton={false}>
+                        <Toast.Header
+                          style={{ color: "#091B4B" }}
+                          closeButton={false}
+                        >
                           <img
                             src="holder.js/20x20?text=%20"
                             className="rounded me-2"
@@ -181,7 +185,7 @@ export default function User_Page({ user, setTitle }) {
                               ID{" "}
                               {profile.trx_id !== null
                                 ? link_to_trx
-                                : profile.operation_id}
+                                : profile.acc_operation_id}
                             </p>
                             <p style={{ margin: "0" }}>Block {link_to_block}</p>
                           </strong>
@@ -199,81 +203,22 @@ export default function User_Page({ user, setTitle }) {
                           <small>{profile.timestamp} </small>
                         </Toast.Header>
                         <Toast.Body className="text-white">
-                          {/* {user}{" "} */}
-                          {profile.op.type === "transfer_operation" ? (
-                            <p>
-                              from : {profile.op.value.from}, to :{" "}
-                              {profile.op.value.to}
-                            </p>
-                          ) : (
-                            ""
-                          )}
-                          <HighlightedJSON json={profile} />
-                          {/* {profile.op.type === "vote_operation" ? (
-                            <p>
-                              Voter :{" "}
-                              <span>
-                                <Link
-                                  style={{
-                                    fontSize: "16px",
-                                    color: "red",
-                                    fontWeight: "bold",
-                                    textDecoration: "none",
-                                  }}
-                                  to={`/user/${profile.op.value.voter}`}
-                                >
-                                  {profile.op.value.voter}
-                                </Link>
-                              </span>{" "}
-                              upvoted user's :{" "}
-                              <span>
-                                <Link
-                                  style={{
-                                    fontSize: "16px",
-                                    color: "red",
-                                    fontWeight: "bold",
-                                    textDecoration: "none",
-                                  }}
-                                  to={`/user/${profile.op.value.author}`}
-                                >
-                                  {profile.op.value.author}
-                                </Link>
-                              </span>{" "}
-                              post :{" "}
-                              <span>
-                                <Link
-                                  style={{
-                                    fontSize: "16px",
-                                    color: "red",
-                                    fontWeight: "bold",
-                                    textDecoration: "none",
-                                  }}
-                                  to={`https://www.hiveblocks.com/steemfest/@${profile.op.value.author}/${profile.op.value.permlink}`}
-                                >
-                                  {profile.op.value.permlink}
-                                </Link>
-                              </span>
-                            </p>
-                          ) : (
-                            ""
-                          )} */}
+                          <GetOperation
+                            setShowJson={set_show_json}
+                            showJson={show_json}
+                            value={profile.op.type}
+                            type={profile}
+                          />
+                          <HighlightedJSON
+                            showJson={show_json}
+                            json={profile}
+                          />
                         </Toast.Body>
                       </Toast>
                     </Col>
                   );
                 })}
               </Row>
-
-              {/* <TrxTable
-                set_show_filters={set_show_filters}
-                show_filters={show_filters}
-                active_op_filters={filered_op_names}
-                next={handleNextPage}
-                prev={handlePrevPage}
-                first={handleFirstPage}
-                last={handleLastPage}
-                acc_history_limit={acc_history_limit}
-              /> */}
             </Col>
           </Row>
         </Container>

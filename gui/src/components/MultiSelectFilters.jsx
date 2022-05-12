@@ -43,13 +43,13 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     set_v_filters(value);
   };
 
-  const op_names = op_types.map((type) => type[1]);
-  const op_number = op_types.map((type) => type[0]);
-  const op_virtual = op_types.map((type) => type[2]);
+  // const op_names = op_types.map((type) => type[1]);
+  // const op_number = op_types.map((type) => type[0]);
+  // const op_virtual = op_types.map((type) => type[2]);
 
   // const is_virtual = check_virtual.filter((v) => v === false);
-  const [v, setV] = useState([]);
-  const [nv, setNv] = useState([]);
+  // const [v, setV] = useState([]);
+  // const [nv, setNv] = useState([]);
 
   // for (let i = 0; i < op_types.length; i++) {
   //   if (vfilters.includes("Virtual") === true) {
@@ -98,11 +98,12 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               renderValue={(selected) => "Active filters : " + selected.length}
               MenuProps={MenuProps}
             >
-              {op_types.map((name, i) => {
+              {op_types?.map((name, i) => {
+                const trim_op_name = name[1].replaceAll("_", " ");
                 return (
                   <MenuItem key={i} value={name[0]}>
                     <Checkbox checked={op_filters.indexOf(name[0]) > -1} />
-                    <ListItemText primary={name[1]} />
+                    <ListItemText primary={trim_op_name} />
                   </MenuItem>
                 );
               })}

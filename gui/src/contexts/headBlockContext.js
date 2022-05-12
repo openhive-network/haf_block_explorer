@@ -24,14 +24,13 @@ export const HeadBlockContextProvider = ({ children }) => {
   useEffect(() => {
     axios({
       method: "post",
-      url: "https://api.hive.blog",
+      url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+      headers: { "Content-Type": "application/json" },
       data: {
-        jsonrpc: "2.0",
-        method: "block_api.get_block",
-        params: { block_num: current_head_block },
-        id: 1,
+        _block_num: current_head_block,
+        _filter: [],
       },
-    }).then((res) => setHead_block_data(res?.data?.result?.block));
+    }).then((res) => setHead_block_data(res?.data));
   }, [current_head_block]);
 
   return (

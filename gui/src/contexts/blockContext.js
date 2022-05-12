@@ -8,31 +8,31 @@ export const BlockContextProvider = ({ children }) => {
   const [blockNumber, setBlockNumber] = useState("");
 
   // Get current block data
-  useEffect(() => {
-    axios({
-      method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "block_api.get_block",
-        params: { block_num: blockNumber },
-        id: 1,
-      },
-    }).then((res) => setBlock_data(res?.data?.result?.block));
-  }, [blockNumber]);
-
-  // getBlockData #2 upto 5000000 local
   // useEffect(() => {
   //   axios({
   //     method: "post",
-  //     url: "http://192.168.5.118:3002/rpc/get_block",
-  //     headers: { "Content-Type": "application/json" },
+  //     url: "https://api.hive.blog",
   //     data: {
-  //       _block_num: blockNumber,
-  //       _filter: [],
+  //       jsonrpc: "2.0",
+  //       method: "block_api.get_block",
+  //       params: { block_num: blockNumber },
+  //       id: 1,
   //     },
-  //   }).then((res) => console.log(res?.data));
+  //   }).then((res) => setBlock_data(res?.data?.result?.block));
   // }, [blockNumber]);
+
+  // getBlockData #2 upto 5000000 local
+  useEffect(() => {
+    axios({
+      method: "post",
+      url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+      headers: { "Content-Type": "application/json" },
+      data: {
+        _block_num: blockNumber,
+        _filter: [],
+      },
+    }).then((res) => setBlock_data(res?.data.reverse()));
+  }, [blockNumber]);
 
   return (
     <BlockContext.Provider

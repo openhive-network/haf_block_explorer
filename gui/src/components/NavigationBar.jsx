@@ -69,12 +69,12 @@ export default function NavigationBar() {
     setValue(val);
     form_value.current.value = "";
   }
-
+  // console.log(value);
   //Check data type
   useEffect(() => {
     axios({
       method: "post",
-      url: "http://192.168.5.100:3002/rpc/get_input_type",
+      url: "http://192.168.5.118:3002/rpc/get_input_type",
       headers: { "Content-Type": "application/json" },
       data: { _input: value },
     })

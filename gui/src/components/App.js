@@ -16,16 +16,16 @@ export default function App() {
     head_block_data?.transaction_ids?.length == undefined;
 
   return (
-    <div className="App">
-      {isDataLoading ? (
-        "Data loading"
-      ) : (
-        <>
-          <Header />
-          <Content />
-          {/* <Footer /> */}
-        </>
-      )}
-    </div>
+    // <div className="App">
+    //   {isDataLoading ? (
+    //     "Data loading"
+    //   ) : (
+    <>
+      <Header />
+      <Content />
+      {/* <Footer /> */}
+    </>
+    //   )}
+    // </div>
   );
 }

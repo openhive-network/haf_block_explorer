@@ -5,8 +5,9 @@ import { BlockContext } from "../contexts/blockContext";
 import { WitnessContext } from "../contexts/witnessContext";
 import OperationCard from "../components/OperationCard";
 import { Link } from "react-router-dom";
-import { Container, Col, Row, ListGroup } from "react-bootstrap";
+import { Container, Col, Row, ListGroup, Toast, Button } from "react-bootstrap";
 import TrxTableMain from "../components/tables/TrxTableMain";
+import GetOperations from "../operations";
 
 export default function Main_Page({ setTitle }) {
   // setTitle((document.title = "HAF Blocks"));
@@ -25,7 +26,7 @@ export default function Main_Page({ setTitle }) {
 
   const is_data_loading =
     transactions_of_block === undefined || transactions_of_block.length === 0;
-
+  console.log(head_block_data.op);
   return (
     <Container fluid className="main">
       {/* {is_data_loading ? (
@@ -67,8 +68,7 @@ export default function Main_Page({ setTitle }) {
             <Link to="/witnesses">Top Wintesses</Link>
           </h4>
           <Row className="justify-content-center">
-            <Col>
-              {/* {transactions_of_block?.map((single, index) => (
+            {/* {transactions_of_block?.map((single, index) => (
                 <OperationCard
                   key={index}
                   transaction={single}
@@ -77,12 +77,56 @@ export default function Main_Page({ setTitle }) {
                 />
               ))} */}
 
-              <h3>Last Transactions (3 sec)</h3>
+            <h3>Last Transactions (3 sec)</h3>
 
-              <TrxTableMain
+            {/* <TrxTableMain
                 block_trans={transactions_of_block}
                 tr_id={transactions_ids}
-              />
+              /> */}
+            <Col>
+              {head_block_data.map((block) => (
+                <Toast
+                  className="d-inline-block m-1 w-100"
+                  style={{ backgroundColor: "#091B4B" }}
+                  // key={i}
+                >
+                  <Toast.Header
+                    style={{ color: "#091B4B" }}
+                    closeButton={false}
+                  >
+                    <img
+                      src="holder.js/20x20?text=%20"
+                      className="rounded me-2"
+                      alt=""
+                    />
+                    <strong className="me-auto">
+                      {/* <p style={{ margin: "0" }}>
+                      ID{" "}
+                      {single.trx_id !== null
+                        ? link_to_trx
+                        : single.acc_operation_id}
+                    </p>
+                    <p style={{ margin: "0" }}>Block {link_to_block}</p> */}
+                    </strong>
+                    <strong className="me-auto">
+                      <p
+                        style={{
+                          fontSize: "20px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {block?.op?.type}
+                      </p>
+                    </strong>
+
+                    {/* <small>{single.timestamp} </small> */}
+                  </Toast.Header>
+                  <Toast.Body className="text-white">
+                    <GetOperations value={block?.op?.type} type={block} />
+                    {/* <HighlightedJSON json={single} /> */}
+                  </Toast.Body>
+                </Toast>
+              ))}
             </Col>
             <Col xs={1} />
             <Col
