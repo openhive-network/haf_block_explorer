@@ -24,9 +24,22 @@ GRANT hafbe_user TO hive;
 
 -- grant new priviliges
 GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
 
 GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hafah_python TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafah_python TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_python TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hive TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hive TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hafbe_user;
