@@ -3,15 +3,12 @@
 set -e
 set -o pipefail
 
-create_user() {
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c '\timing' -c "call hafbe_backend.create_api_user();"
-}
-
 create_api() {
     postgrest_dir=$PWD/api
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/endpoints.sql
     psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/exceptions.sql
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/roles.sql
 }
 
 start_webserver() {
@@ -76,7 +73,6 @@ if [ "$1" = "start" ]; then
     start_webserver $2
 elif [ "$1" = "re-start" ]; then
     create_api
-    create_user
     echo 'SUCCESS: Users and API recreated'
     start_webserver $2
 elif [ "$1" =  "install-postgrest" ]; then
