@@ -41,18 +41,18 @@ cd gui ; npm start
 
 ## Testing performance
 
-haf block explorer has 6 performance/load test suites ready in `tests/performance/endpoints.jmx`.<br>To run tests you must have JMeter installed:
+haf block explorer has 10 performance/load test suites ready in `tests/performance/endpoints.jmx`.<br>To run tests you must have JMeter installed:
 ```
 ./run.sh install-jmeter
 ```
 then run tests with:
 ```
-./run.sh run-tests <PORT> <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
+./run.sh run-tests <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
 ```
 
-E.g. this will run 12 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
+E.g. this will run 20 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
 ```
-./run.sh run-tests 3000 2 200 2400
+./run.sh run-tests 2 200 4000
 ```
 
 Read test result in Apache JMeter Dashboard, generated at `tests/performance/result/result_report/index,html`
