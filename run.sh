@@ -19,7 +19,7 @@ start_webserver() {
         port=$default_port
     fi
 
-    sed -i "/server-port = /s/.*/server-port = \"$port\"/" postgrest.conf
+    sed -i "/server-port = /s/.*/server-port = \"$port\"/" $CONFIG_PATH
     postgrest postgrest.conf
 }
 
@@ -63,11 +63,15 @@ install_jmeter() {
 }
 
 run_tests() {
-    bash $PWD/tests/run_performance_tests.sh $@
+    server_port=$(sed -rn '/^server-port/p' $CONFIG_PATH | sed "s/server-port//g" | sed "s/[\"\? =]//g")
+
+    bash $PWD/tests/run_performance_tests.sh $server_port $@
 }
 
 postgrest_v=9.0.0
 jmeter_v=5.4.3
+
+CONFIG_PATH=$PWD/postgrest.conf
 
 if [ "$1" = "start" ]; then
     start_webserver $2
