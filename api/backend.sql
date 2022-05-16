@@ -156,7 +156,7 @@ CREATE TYPE hafbe_backend.operations AS (
   op_in_trx INT,
   virtual_op BOOLEAN,
   timestamp TEXT,
-  op JSON,
+  operations JSON,
   operation_id BIGINT,
   acc_operation_id BIGINT
 );
