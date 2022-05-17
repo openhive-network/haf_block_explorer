@@ -1,5 +1,11 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { HeadBlockContext } from "./contexts/headBlockContext";
+import {
+  calculate_hive_hbd,
+  calculate_vests,
+  calculateHivePower,
+} from "./functions";
+
 const red_bold = {
   fontWeight: "bold",
   color: "red",
@@ -23,76 +29,108 @@ const show_details_button = {
   color: "lime",
 };
 
+const img_style = {
+  width: "40px",
+  height: "40px",
+  borderRadius: "50%",
+};
+
 const link_text = { color: "pink", textTransform: "none" };
 const boolean = { color: "#34f0c7" };
 
-export default function GetOperations({ value, type, showJson, setShowJson }) {
-  const { head_block } = useContext(HeadBlockContext);
-  const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
-  const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
-  // const operation_value = JSON.stringify(type.op.value, null, 2);
+export default function GetOperations({
+  value,
+  type,
+  showJson,
+  setShowJson,
+  index,
+}) {
+  const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
+  // const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
+  // const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
+  // const operation_value = JSON.stringify(type.value, null, 2);
 
-  const calculate_hive_hbd = (value) => {
-    const res = Number(value) / 1000;
-    return res.toFixed(2);
-  };
+  // const calculate_hive_hbd = (value) => {
+  //   const res = Number(value) / 1000;
+  //   return res.toFixed(2);
+  // };
 
-  const calculate_vests = (value) => {
-    const res = Number(value) / 1000000;
-    return res.toFixed(2);
-  };
+  // const calculate_vests = (value) => {
+  //   const res = Number(value) / 1000000;
+  //   return res.toFixed(2);
+  // };
 
-  const calculateHivePower = (account_vests) => {
-    const vest_sum = vesting_fund * (Number(account_vests) / vesting_shares);
-    const hive_power = vest_sum / 1000;
-    return hive_power.toFixed(2);
-  };
+  // const [testBTN, setTestBTN] = useState(false);
+
+  // const calculateHivePower = (account_vests) => {
+  //   const vest_sum = vesting_fund * (Number(account_vests) / vesting_shares);
+  //   const hive_power = vest_sum / 1000;
+  //   return hive_power.toFixed(2);
+  // };
+  const [testBTN, setTestBTN] = useState(false);
   switch (value) {
     case "vote_operation":
       return (
         <p>
-          Voter : <span red_bold={red_bold}>{type.op.value.voter}</span>, author
-          : <span red_bold={red_bold}>{type.op.value.author}</span>, permlink:{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.voter}</span>, author :{" "}
+          <span style={red_bold}>{type.value.author}</span>, permlink:{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
         </p>
       );
       break;
     case "comment_operation":
-      return !type.op.value.parent_author || !type.op.value.parent_permlink ? (
+      return !type.value.parent_author || !type.value.parent_permlink ? (
         <p>
-          Author : <span red_bold={red_bold}>{type.op.value.author} </span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span red_bold={red_bold}>{type.value.author} </span>
           authored permlink :
           <span red_bold={red_bold}>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>{" "}
         </p>
       ) : (
         <p>
-          Author : <span red_bold={red_bold}>{type.op.value.author}</span>{" "}
-          commented{" "}
-          <span red_bold={red_bold}>{type.op.value.parent_author}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span red_bold={red_bold}>{type.value.author}</span> commented{" "}
+          <span red_bold={red_bold}>{type.value.parent_author}</span>
           's permlink :
           <span red_bold={red_bold}>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.parent_author}/${type.op.value.parent_permlink}`}
+              href={`https://hive.blog/@${type.value.parent_author}/${type.value.parent_permlink}`}
               target="_blank"
             >
-              {type.op.value.parent_permlink}
+              {type.value.parent_permlink}
             </a>
           </span>{" "}
         </p>
@@ -102,17 +140,29 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "transfer_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> transfered{" "}
-          <span style={blue_bold}>{type.op.value.amount?.amount / 1000}</span>{" "}
-          HIVE to <span style={green_bold}>{type.op.value.to}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> transfered{" "}
+          <span style={blue_bold}>{type.value.amount?.amount / 1000}</span> HIVE
+          to <span style={green_bold}>{type.value.to}</span>
         </p>
       );
       break;
     case "transfer_to_vesting_operation":
       return (
         <p>
-          <span style={blue_bold}>{type.op.value.from}</span> vest{" "}
-          <span style={green_bold}> {type.op.value.amount?.amount / 1000}</span>{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={blue_bold}>{type.value.from}</span> vest{" "}
+          <span style={green_bold}> {type.value.amount?.amount / 1000}</span>{" "}
           HIVE
         </p>
       );
@@ -121,9 +171,19 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "withdraw_vesting_operation":
       return (
         <p>
-          <span style={blue_bold}>{type.op.value.account}</span> withdraw{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={blue_bold}>{type.value.account}</span> withdraw{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.vesting_shares.amount)}
+            {calculateHivePower(
+              type.value.vesting_shares.amount,
+              vesting_fund,
+              vesting_shares
+            )}
           </span>{" "}
           HP from vesting
         </p>
@@ -132,14 +192,20 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "limit_order_create_operation":
       return (
         <p>
-          <span style={blue_bold}>{type.op.value.owner}</span> wants receive
-          amount :{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={blue_bold}>{type.value.owner}</span> wants receive amount
+          :{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.min_to_receive.amount)}
+            {calculate_hive_hbd(type.value.min_to_receive.amount)}
           </span>{" "}
           HIVE in exchange for{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.amount_to_sell.amount)}
+            {calculate_hive_hbd(type.value.amount_to_sell.amount)}
           </span>{" "}
           HBD{" "}
         </p>
@@ -148,20 +214,32 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "limit_order_cancel_operation":
       return (
         <p>
-          <span style={blue_bold}>{type.op.value.owner}</span> cancel order ID :{" "}
-          <span style={red_bold}>{type.op.value.orderid}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={blue_bold}>{type.value.owner}</span> cancel order ID :{" "}
+          <span style={red_bold}>{type.value.orderid}</span>
         </p>
       );
       break;
     case "feed_publish_operation":
       return (
         <p>
-          <span style={blue_bold}>{type.op.value.publisher}</span> feed price :
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={blue_bold}>{type.value.publisher}</span> feed price :
           <span style={red_bold}>
             {" "}
             $
-            {Number(type.op.value.exchange_rate.base.amount) /
-              Number(type.op.value.exchange_rate.quote.amount)}
+            {Number(type.value.exchange_rate.base.amount) /
+              Number(type.value.exchange_rate.quote.amount)}
           </span>
         </p>
       );
@@ -169,10 +247,9 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "convert_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> conversion request
-          :{" "}
+          <span style={red_bold}>{type.value.owner}</span> conversion request :{" "}
           <span style={blue_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HBD
+            {calculate_hive_hbd(type.value.amount.amount)} HBD
           </span>{" "}
           to <span style={green_bold}>HIVE</span>
         </p>
@@ -181,56 +258,94 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "account_create_operation":
       return (
         <p>
-          {" "}
-          <span style={red_bold}>{type.op.value.creator}</span> create account :{" "}
-          <span style={green_bold}>{type.op.value.new_account_name}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.creator}</span> create account :{" "}
+          <span style={green_bold}>{type.value.new_account_name}</span>
         </p>
       );
       break;
     case "account_update_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> update account
-          data
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account}</span> update account data
         </p>
       );
       break;
     case "witness_update_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> update witness
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.owner}</span> update witness
         </p>
       );
       break;
     case "account_witness_vote_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> approve witness{" "}
-          <span style={blue_bold}>{type.op.value.witness}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account}</span> approve witness{" "}
+          <span style={blue_bold}>{type.value.witness}</span>
         </p>
       );
       break;
     case "account_witness_proxy_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> set{" "}
-          <span style={blue_bold}>{type.op.value.proxy}</span> as proxy
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account}</span> set{" "}
+          <span style={blue_bold}>{type.value.proxy}</span> as proxy
         </p>
       );
       break;
     case "pow_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.worker_account}</span> found a
-          pow
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.worker_account}</span> found a pow
         </p>
       );
       break;
     case "custom_operation":
       return (
         <p>
-          {" "}
-          <span style={red_bold}>{type.op.value.required_auths}</span> custom
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.required_auths}</span> custom
           operation{" "}
           <span>
             <button
@@ -249,17 +364,22 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "delete_comment_operation":
       return (
         <p>
-          {" "}
-          <span style={red_bold}>{type.op.value.author}</span> deleted comment
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.author}</span> deleted comment
           permlink :{" "}
           <span>
             {" "}
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
         </p>
@@ -267,42 +387,59 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       break;
     case "custom_json_operation":
       return (
-        <p>
-          <span style={red_bold}>
-            {!type.op.value.required_posting_auths[0]
-              ? type.op.value.required_auths[0]
-              : type.op.value.required_posting_auths[0]}
-          </span>{" "}
-          custom operation
-          <span>
-            <button
-              onClick={() => setShowJson(!showJson)}
-              style={show_details_button}
-            >
-              Show details
-            </button>
-          </span>
-        </p>
+        <>
+          <p>
+            <span>
+              <img
+                style={img_style}
+                src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+              />
+            </span>{" "}
+            <span style={red_bold}>
+              {!type?.value.required_posting_auths[0]
+                ? type?.value.required_auths[0]
+                : type?.value.required_posting_auths[0]}
+            </span>{" "}
+            custom operation
+            <span>
+              <button
+                onClick={() => setTestBTN(!testBTN)}
+                style={show_details_button}
+              >
+                Show details
+              </button>
+            </span>
+            <span>
+              <pre hidden={!testBTN}>
+                {JSON.stringify(type.value, null, 2)}{" "}
+              </pre>
+            </span>
+          </p>
+        </>
       );
       break;
     case "comment_options_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.author}</span> max payout :{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.author}</span> max payout :{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.max_accepted_payout.amount)}
+            {calculate_hive_hbd(type.value.max_accepted_payout.amount)}
           </span>{" "}
           ,{" "}
           <span style={blue_bold}>
-            {(type.op.value.percent_hbd / 100).toFixed(2)} %
+            {(type.value.percent_hbd / 100).toFixed(2)} %
           </span>
           , allow votes :{" "}
-          <span style={boolean}>
-            {JSON.stringify(type.op.value?.allow_votes)}
-          </span>
+          <span style={boolean}>{JSON.stringify(type.value?.allow_votes)}</span>
           , allow curation rewards :{" "}
           <span style={boolean}>
-            {JSON.stringify(type.op.value?.allow_curation_rewards)}
+            {JSON.stringify(type.value?.allow_curation_rewards)}
           </span>
         </p>
       );
@@ -310,11 +447,16 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "set_withdraw_vesting_route_operation":
       return (
         <p>
-          From <span style={red_bold}>{type.op.value.from_account}</span> to{" "}
-          <span style={green_bold}>{type.op.value.to_account}</span> , percent :{" "}
-          <span style={blue_bold}>{type.op.value.percent}</span>, auto vest :{" "}
-          <span style={boolean}>{JSON.stringify(type.op.value.auto_vest)}</span>{" "}
-          ,{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from_account}</span> to{" "}
+          <span style={green_bold}>{type.value.to_account}</span> , percent :{" "}
+          <span style={blue_bold}>{type.value.percent}</span>, auto vest :{" "}
+          <span style={boolean}>{JSON.stringify(type.value.auto_vest)}</span> ,{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -329,8 +471,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "limit_order_create2_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> limit order create
-          2{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.owner}</span> limit order create 2{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -345,7 +492,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "claim_account_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.creator}</span> claim account{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.creator}</span> claim account{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -360,9 +513,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "create_claimed_account_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.creator}</span> claimed new
-          account{" "}
-          <span style={blue_bold}>{type.op.value.new_account_name}</span>{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.creator}</span> claimed new account{" "}
+          <span style={blue_bold}>{type.value.new_account_name}</span>{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -377,9 +535,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "request_account_recovery_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account_to_recover}</span>{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account_to_recover}</span>{" "}
           requested{" "}
-          <span style={green_bold}>{type.op.value.recovery_account}</span> for
+          <span style={green_bold}>{type.value.recovery_account}</span> for
           account recovery{" "}
         </p>
       );
@@ -387,8 +551,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "recover_account_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account_to_recover}</span>{" "}
-          recover account{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account_to_recover}</span> recover
+          account{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -403,9 +573,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "change_recovery_account_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account_to_recover}</span>{" "}
-          change recovery account to new account :{" "}
-          <span style={blue_bold}>{type.op.value.new_recovery_account}</span>{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account_to_recover}</span> change
+          recovery account to new account :{" "}
+          <span style={blue_bold}>{type.value.new_recovery_account}</span>{" "}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -420,9 +596,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "escrow_transfer_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> escrow transfer to{" "}
-          : <span style={blue_bold}>{type.op.value.to}</span> , agent :{" "}
-          <span style={green_bold}>{type.op.value.agent}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> escrow transfer to :{" "}
+          <span style={blue_bold}>{type.value.to}</span> , agent :{" "}
+          <span style={green_bold}>{type.value.agent}</span>
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -437,9 +619,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "escrow_dispute_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> escrow dispute to :{" "}
-          <span style={blue_bold}>{type.op.value.to}</span> , agent :{" "}
-          <span style={green_bold}>{type.op.value.agent}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> escrow dispute to :{" "}
+          <span style={blue_bold}>{type.value.to}</span> , agent :{" "}
+          <span style={green_bold}>{type.value.agent}</span>
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -454,9 +642,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "escrow_release_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> escrow release to :{" "}
-          <span style={blue_bold}>{type.op.value.to}</span> , agent :{" "}
-          <span style={green_bold}>{type.op.value.agent}</span>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> escrow release to :{" "}
+          <span style={blue_bold}>{type.value.to}</span> , agent :{" "}
+          <span style={green_bold}>{type.value.agent}</span>
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -471,9 +665,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "pow2_operation":
       return (
         <p>
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
           <span style={red_bold}>
             {" "}
-            {type.op.value.work.value.input.worker_account}
+            {type.value.work.value.input.worker_account}
           </span>{" "}
           found a pow
           <button
@@ -489,7 +689,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "escrow_approve_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> escrow approve
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> escrow approve
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -504,10 +710,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "transfer_to_savings_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value?.from}</span> transfer to
-          savings :{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value?.from}</span> transfer to savings :{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HBD
+            {calculate_hive_hbd(type.value.amount.amount)} HBD
           </span>
           <span>
             <button
@@ -523,10 +734,16 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "transfer_from_savings_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value?.from}</span> transfer from
-          savings :{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value?.from}</span> transfer from savings
+          :{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HBD
+            {calculate_hive_hbd(type.value.amount.amount)} HBD
           </span>
           <span>
             <button
@@ -542,8 +759,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "cancel_transfer_from_savings_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> cancel transfer
-          from savings
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.from}</span> cancel transfer from
+          savings
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -573,7 +796,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "decline_voting_rights_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> decline voting
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account}</span> decline voting
           rights{" "}
           <span>
             <button
@@ -595,17 +824,28 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "claim_reward_balance_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> claim reward :{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
+          </span>{" "}
+          <span style={red_bold}>{type.value.account}</span> claim reward :{" "}
           <span style={blue_bold}>
-            {calculate_hive_hbd(type.op.value.reward_hive.amount)} HIVE
+            {calculate_hive_hbd(type.value.reward_hive.amount)} HIVE
           </span>
           ,{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.reward_hbd.amount)} HBD
+            {calculate_hive_hbd(type.value.reward_hbd.amount)} HBD
           </span>
           ,{" "}
           <span style={red_bold}>
-            {calculateHivePower(type.op.value.reward_vests.amount)} HP
+            {calculateHivePower(
+              type.value.reward_vests.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>
           {/* <span>
             <button
@@ -621,20 +861,31 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "delegate_vesting_shares_operation":
       return (
         <p>
-          Delegator <span style={red_bold}>{type.op.value.delegator}</span>,
-          delegate{" "}
-          <span style={green_bold}>
-            {calculateHivePower(type.op.value.vesting_shares.amount)} HP
+          Delegator{" "}
+          <span>
+            <img
+              style={img_style}
+              src={`https://images.hive.blog/u/${type.value.voter}/avatar`}
+            />
           </span>{" "}
-          to <span style={blue_bold}>{type.op.value.delegatee}</span>
+          <span style={red_bold}>{type.value.delegator}</span>, delegate{" "}
+          <span style={green_bold}>
+            {calculateHivePower(
+              type.value.vesting_shares.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
+          </span>{" "}
+          to <span style={blue_bold}>{type.value.delegatee}</span>
         </p>
       );
       break;
     case "account_create_with_delegation_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.creator}</span> create account{" "}
-          <span style={blue_bold}>{type.op.value.new_account_name}</span> {""}
+          <span style={red_bold}>{type.value.creator}</span> create account{" "}
+          <span style={blue_bold}>{type.value.new_account_name}</span> {""}
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -649,7 +900,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "witness_set_properties_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> witness set
+          <span style={red_bold}>{type.value.owner}</span> witness set
           properties
           <span>
             <button
@@ -665,7 +916,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "account_update2_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> account update2
+          <span style={red_bold}>{type.value.account}</span> account update2
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -680,8 +931,8 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "create_proposal_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.creator}</span> create proposal
-          subject : <span style={blue_bold}>{type.op.value.subject}</span>
+          <span style={red_bold}>{type.value.creator}</span> create proposal
+          subject : <span style={blue_bold}>{type.value.subject}</span>
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -696,8 +947,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "update_proposal_votes_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.voter}</span> update proposal
-          votes
+          <span style={red_bold}>{type.value.voter}</span> update proposal votes
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -712,7 +962,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "remove_proposal_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.proposal_owner}</span> remove
+          <span style={red_bold}>{type.value.proposal_owner}</span> remove
           proposal
           <span>
             <button
@@ -728,7 +978,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "update_proposal_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.creator}</span> update proposal
+          <span style={red_bold}>{type.value.creator}</span> update proposal
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -743,10 +993,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "collateralized_convert_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> collateralized
+          <span style={red_bold}>{type.value.owner}</span> collateralized
           convert amount :{" "}
           <span style={blue_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HIVE
+            {calculate_hive_hbd(type.value.amount.amount)} HIVE
           </span>
           <span>
             <button
@@ -762,10 +1012,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "recurrent_transfer_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> recurrent transfer
-          to <span style={blue_bold}>{type.op.value.to}</span>, amount :{" "}
+          <span style={red_bold}>{type.value.from}</span> recurrent transfer to{" "}
+          <span style={blue_bold}>{type.value.to}</span>, amount :{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HBD
+            {calculate_hive_hbd(type.value.amount.amount)} HBD
           </span>
           <span>
             <button
@@ -781,14 +1031,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "fill_convert_request_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> fill convert
-          request, amount in :
+          <span style={red_bold}>{type.value.owner}</span> fill convert request,
+          amount in :
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.amount_in.amount)} HBD
+            {calculate_hive_hbd(type.value.amount_in.amount)} HBD
           </span>{" "}
           , amount out:{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.amount_out.amount)} HIVE
+            {calculate_hive_hbd(type.value.amount_out.amount)} HIVE
           </span>
           <span>
             <button
@@ -804,22 +1054,27 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "author_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.author}</span> author reward :
+          <span style={red_bold}>{type.value.author}</span> author reward :
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.hbd_payout.amount)} HBD
+            {calculate_hive_hbd(type.value.hbd_payout.amount)} HBD
           </span>{" "}
           , amount out:{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.vesting_payout.amount)} HP
+            {calculateHivePower(
+              type.value.vesting_payout.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
           for{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
           <span>
@@ -836,20 +1091,25 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "curation_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.curator}</span> curation reward{" "}
+          <span style={red_bold}>{type.value.curator}</span> curation reward{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.reward.amount)} HP
+            {calculateHivePower(
+              type.value.reward.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
           , comment author :{" "}
-          <span style={green_bold}>{type.op.value.comment_author}</span> ,
-          comment permlink:{" "}
+          <span style={green_bold}>{type.value.comment_author}</span> , comment
+          permlink:{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.comment_author}/${type.op.value.comment_permlink}`}
+              href={`https://hive.blog/@${type.value.comment_author}/${type.value.comment_permlink}`}
               target="_blank"
             >
-              {type.op.value.comment_permlink}
+              {type.value.comment_permlink}
             </a>
           </span>
           <span>
@@ -866,18 +1126,18 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "comment_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.author}</span> comment reward{" "}
+          <span style={red_bold}>{type.value.author}</span> comment reward{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.payout.amount)} HBD
+            {calculate_hive_hbd(type.value.payout.amount)} HBD
           </span>{" "}
           permlink:{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
           <span>
@@ -894,9 +1154,9 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "liquidity_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> liquidity reward{" "}
+          <span style={red_bold}>{type.value.owner}</span> liquidity reward{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.payout.amount)} HIVE
+            {calculate_hive_hbd(type.value.payout.amount)} HIVE
           </span>{" "}
           <span>
             <button
@@ -912,9 +1172,9 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "interest_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> collect{" "}
+          <span style={red_bold}>{type.value.owner}</span> collect{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.interest.amount)} HBD
+            {calculate_hive_hbd(type.value.interest.amount)} HBD
           </span>{" "}
           interest
           <span>
@@ -931,17 +1191,24 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "fill_vesting_withdraw_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from_account}</span> withdraw{" "}
+          <span style={red_bold}>{type.value.from_account}</span> withdraw{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.withdrawn.amount)} HP
+            {calculateHivePower(
+              type.value.withdrawn.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
           as{" "}
           <span style={blue_bold}>
-            {type.op.value.to_account === type.op.value.from_account
-              ? `${calculate_hive_hbd(type.op.value.deposited.amount)} HIVE`
-              : `${calculateHivePower(type.op.value.deposited.amount)} HP to ${
-                  type.op.value.to_account
-                }`}
+            {type.value.to_account === type.value.from_account
+              ? `${calculate_hive_hbd(type.value.deposited.amount)} HIVE`
+              : `${calculateHivePower(
+                  type.value.deposited.amount,
+                  vesting_fund,
+                  vesting_shares
+                )} HP to ${type.value.to_account}`}
           </span>{" "}
           <span>
             <button
@@ -957,9 +1224,8 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "fill_order_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.current_owner}</span> fill
-          order, open owner{" "}
-          <span style={green_bold}>{type.op.value.open_owner}</span>
+          <span style={red_bold}>{type.value.current_owner}</span> fill order,
+          open owner <span style={green_bold}>{type.value.open_owner}</span>
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -974,7 +1240,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "shutdown_witness_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.owner}</span> shutdown witness
+          <span style={red_bold}>{type.value.owner}</span> shutdown witness
           <span>
             <button
               onClick={() => setShowJson(!showJson)}
@@ -989,10 +1255,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "fill_transfer_from_savings_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.from}</span> fill transfer from
+          <span style={red_bold}>{type.value.from}</span> fill transfer from
           savings{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.amount.amount)} HBD
+            {calculate_hive_hbd(type.value.amount.amount)} HBD
           </span>
           <span>
             <button
@@ -1008,7 +1274,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "hardfork_operation":
       return (
         <p>
-          Hardfork ID: <span style={red_bold}>{type.op.value.hardfork_id}</span>
+          Hardfork ID: <span style={red_bold}>{type.value.hardfork_id}</span>
         </p>
       );
       break;
@@ -1016,7 +1282,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "comment_payout_update_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.author}</span> comment payout
+          <span style={red_bold}>{type.value.author}</span> comment payout
           update{" "}
           <span>
             <button
@@ -1032,9 +1298,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "return_vesting_delegation_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.account}</span> return of{" "}
+          <span style={red_bold}>{type.value.account}</span> return of{" "}
           <span style={blue_bold}>
-            {calculateHivePower(type.op.value.vesting_shares.amount)} HP
+            {calculateHivePower(
+              type.value.vesting_shares.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
           delegation
           <span>
@@ -1051,23 +1322,28 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "comment_benefactor_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.benefactor}</span> comment
+          <span style={red_bold}>{type.value.benefactor}</span> comment
           benefactor reward :{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.hbd_payout.amount)} HBD
+            {calculate_hive_hbd(type.value.hbd_payout.amount)} HBD
           </span>{" "}
           and{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.vesting_payout.amount)} HP
+            {calculateHivePower(
+              type.value.vesting_payout.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
           for{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
         </p>
@@ -1076,10 +1352,14 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "producer_reward_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.producer}</span> producer reward
-          :{" "}
+          <span style={red_bold}>{type.value.producer}</span> producer reward :{" "}
           <span style={green_bold}>
-            {calculateHivePower(type.op.value.vesting_shares.amount)} HP
+            {calculateHivePower(
+              type.value.vesting_shares.amount,
+              vesting_fund,
+              vesting_shares
+            )}{" "}
+            HP
           </span>{" "}
         </p>
       );
@@ -1089,15 +1369,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
         <p>
           Clear null account balance, total cleared:{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.total_cleared[0].amount)} HIVE{" "}
+            {calculate_hive_hbd(type.value.total_cleared[0].amount)} HIVE{" "}
           </span>
           ,{" "}
           <span style={blue_bold}>
-            {calculate_vests(type.op.value.total_cleared[1].amount)} VESTS{" "}
+            {calculate_vests(type.value.total_cleared[1].amount)} VESTS{" "}
           </span>
           ,{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.total_cleared[2].amount)} HBD{" "}
+            {calculate_hive_hbd(type.value.total_cleared[2].amount)} HBD{" "}
           </span>
         </p>
       );
@@ -1105,9 +1385,9 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "proposal_pay_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.receiver}</span> receive{" "}
+          <span style={red_bold}>{type.value.receiver}</span> receive{" "}
           <span style={blue_bold}>
-            {calculate_hive_hbd(type.op.value.payment.amount)} HIVE{" "}
+            {calculate_hive_hbd(type.value.payment.amount)} HIVE{" "}
           </span>{" "}
           proposal funding
         </p>
@@ -1117,10 +1397,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <p>
           {" "}
-          <span style={red_bold}>{type.op.value.fund_account}</span> additional
+          <span style={red_bold}>{type.value.fund_account}</span> additional
           fuds{" "}
           <span style={red_bold}>
-            {calculate_hive_hbd(type.op.value.additional_funds.amount)} HBD
+            {calculate_hive_hbd(type.value.additional_funds.amount)} HBD
           </span>
         </p>
       );
@@ -1129,10 +1409,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <p>
           {" "}
-          <span style={red_bold}>{type.op.value.account}</span> hardfork hive{" "}
+          <span style={red_bold}>{type.value.account}</span> hardfork hive{" "}
           <span>
             <pre style={{ color: "#37e8ff" }}>
-              {JSON.stringify(type.op.value, null, 2)}
+              {JSON.stringify(type.value, null, 2)}
             </pre>
           </span>
         </p>
@@ -1142,11 +1422,11 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <p>
           {" "}
-          <span style={red_bold}>{type.op.value.account}</span> hardfork hive
+          <span style={red_bold}>{type.value.account}</span> hardfork hive
           restore{" "}
           <span>
             <pre style={{ color: "#37e8ff" }}>
-              {JSON.stringify(type.op.value, null, 2)}
+              {JSON.stringify(type.value, null, 2)}
             </pre>
           </span>
         </p>
@@ -1155,7 +1435,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "delayed_voting_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.voter}</span> delayer voting
+          <span style={red_bold}>{type.value.voter}</span> delayer voting
         </p>
       );
       break;
@@ -1165,7 +1445,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
           consolidate treasury balance{" "}
           <span>
             <pre style={{ color: "#37e8ff" }}>
-              {JSON.stringify(type.op.value, null, 2)}
+              {JSON.stringify(type.value, null, 2)}
             </pre>
           </span>
         </p>
@@ -1174,11 +1454,11 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "effective_comment_vote_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.voter}</span> effective comment
+          <span style={red_bold}>{type.value.voter}</span> effective comment
           vote{" "}
           <span>
             <pre style={{ color: "#37e8ff" }}>
-              {JSON.stringify(type.op.value, null, 2)}
+              {JSON.stringify(type.value, null, 2)}
             </pre>
           </span>
         </p>
@@ -1187,15 +1467,15 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "ineffective_delete_comment_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.author}</span> ineffective
-          delete comment permlink :{" "}
+          <span style={red_bold}>{type.value.author}</span> ineffective delete
+          comment permlink :{" "}
           <span>
             <a
               style={link_text}
-              href={`https://hive.blog/@${type.op.value.author}/${type.op.value.permlink}`}
+              href={`https://hive.blog/@${type.value.author}/${type.value.permlink}`}
               target="_blank"
             >
-              {type.op.value.permlink}
+              {type.value.permlink}
             </a>
           </span>
         </p>
@@ -1204,13 +1484,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
     case "sps_convert_operation":
       return (
         <p>
-          <span style={red_bold}>{type.op.value.fund_account}</span> amount in{" "}
+          <span style={red_bold}>{type.value.fund_account}</span> amount in{" "}
           <span style={blue_bold}>
-            {calculate_hive_hbd(type.op.value.hive_amount_in.amount)} HIVE
+            {calculate_hive_hbd(type.value.hive_amount_in.amount)} HIVE
           </span>
           , amount out{" "}
           <span style={green_bold}>
-            {calculate_hive_hbd(type.op.value.hbd_amount_out.amount)} HBD
+            {calculate_hive_hbd(type.value.hbd_amount_out.amount)} HBD
           </span>
         </p>
       );
@@ -1222,11 +1502,11 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <p>
           {" "}
-          <span style={red_bold}>{type.op.value.account}</span> change recovery
+          <span style={red_bold}>{type.value.account}</span> change recovery
           account , old account :{" "}
-          <span style={blue_bold}>{type.op.value.old_recovery_account}</span>,
-          new account :{" "}
-          <span style={blue_bold}>{type.op.value.new_recovery_account}</span>
+          <span style={blue_bold}>{type.value.old_recovery_account}</span>, new
+          account :{" "}
+          <span style={blue_bold}>{type.value.new_recovery_account}</span>
         </p>
       );
       break;
@@ -1235,20 +1515,19 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
         <>
           <p>
             {" "}
-            <span style={red_bold}>{type.op.value.from_account}</span> transfer
-            to vesting completed.
+            <span style={red_bold}>{type.value.from_account}</span> transfer to
+            vesting completed.
           </p>
           <p>
             Hive vested :{" "}
             <span style={blue_bold}>
-              {calculate_hive_hbd(type.op.value.hive_vested.amount)} HIVE
+              {calculate_hive_hbd(type.value.hive_vested.amount)} HIVE
             </span>
           </p>
           <p>
             Vesting shares received :{" "}
             <span style={blue_bold}>
-              {calculate_vests(type.op.value.vesting_shares_received.amount)}{" "}
-              VESTS
+              {calculate_vests(type.value.vesting_shares_received.amount)} VESTS
             </span>
           </p>
         </>
@@ -1258,10 +1537,10 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.worker}</span> pow reward{" "}
+            <span style={red_bold}>{type.value.worker}</span> pow reward{" "}
             <span style={blue_bold}>
               {" "}
-              {calculate_hive_hbd(type.op.value.reward.amount)} HIVE
+              {calculate_hive_hbd(type.value.reward.amount)} HIVE
             </span>
           </p>
         </>
@@ -1271,22 +1550,20 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.owner}</span> vesting shares
+            <span style={red_bold}>{type.value.owner}</span> vesting shares
             split{" "}
           </p>
           <p>
             Vesting shares before split :{" "}
             <span style={blue_bold}>
-              {calculate_vests(
-                type.op.value.vesting_shares_before_split.amount
-              )}{" "}
+              {calculate_vests(type.value.vesting_shares_before_split.amount)}{" "}
               VESTS
             </span>
           </p>
           <p>
             Vesting shares after split :{" "}
             <span style={blue_bold}>
-              {calculate_vests(type.op.value.vesting_shares_after_split.amount)}{" "}
+              {calculate_vests(type.value.vesting_shares_after_split.amount)}{" "}
               VESTS
             </span>
           </p>
@@ -1299,7 +1576,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
         <>
           <p>
             Created new account name{" "}
-            <span style={red_bold}>{type.op.value.new_account_name}</span>
+            <span style={red_bold}>{type.value.new_account_name}</span>
           </p>
         </>
       );
@@ -1309,26 +1586,26 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.owner}</span> fill
-            collateralized convert request
+            <span style={red_bold}>{type.value.owner}</span> fill collateralized
+            convert request
           </p>
           <p>
             Amount in:{" "}
             <span style={blue_bold}>
-              {calculate_hive_hbd(type.op.value.amount_in.amount)} HIVE
+              {calculate_hive_hbd(type.value.amount_in.amount)} HIVE
             </span>
           </p>
           <p>
             Amount out:{" "}
             <span style={blue_bold}>
-              {calculate_hive_hbd(type.op.value.amount_out.amount)} HBD
+              {calculate_hive_hbd(type.value.amount_out.amount)} HBD
             </span>
           </p>
 
           <p>
             Excess collateral:{" "}
             <span style={blue_bold}>
-              {calculate_hive_hbd(type.op.value.excess_collateral.amount)} HIVE
+              {calculate_hive_hbd(type.value.excess_collateral.amount)} HIVE
             </span>
           </p>
         </>
@@ -1339,7 +1616,7 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
         <>
           <p>
             System warning message : <br></br>
-            <span style={red_bold}>{type.op.value.message}</span>
+            <span style={red_bold}>{type.value.message}</span>
           </p>
         </>
       );
@@ -1348,13 +1625,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.from}</span> fill recurrent
-            transfer to <span style={blue_bold}>{type.op.value.to}</span>
+            <span style={red_bold}>{type.value.from}</span> fill recurrent
+            transfer to <span style={blue_bold}>{type.value.to}</span>
           </p>
           <p>
             Amount :{" "}
             <span style={red_bold}>
-              {calculate_hive_hbd(type.op.value.amount.amount)} HIVE
+              {calculate_hive_hbd(type.value.amount.amount)} HIVE
             </span>
           </p>
         </>
@@ -1364,13 +1641,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.from}</span> failed recurrent
-            transfer to <span style={blue_bold}>{type.op.value.to}</span>
+            <span style={red_bold}>{type.value.from}</span> failed recurrent
+            transfer to <span style={blue_bold}>{type.value.to}</span>
           </p>
           <p>
             Amount :{" "}
             <span style={red_bold}>
-              {calculate_hive_hbd(type.op.value.amount.amount)} HIVE
+              {calculate_hive_hbd(type.value.amount.amount)} HIVE
             </span>
           </p>
         </>
@@ -1380,13 +1657,13 @@ export default function GetOperations({ value, type, showJson, setShowJson }) {
       return (
         <>
           <p>
-            <span style={red_bold}>{type.op.value.seller}</span> limit order
+            <span style={red_bold}>{type.value.seller}</span> limit order
             cancelled
           </p>
           <p>
             Amount back :{" "}
             <span style={red_bold}>
-              {calculate_hive_hbd(type.op.value.amount_back.amount)} HIVE
+              {calculate_hive_hbd(type.value.amount_back.amount)} HIVE
             </span>
           </p>
         </>

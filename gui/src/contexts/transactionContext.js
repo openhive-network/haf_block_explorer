@@ -9,16 +9,21 @@ export const TranasctionContextProvider = ({ children }) => {
 
   /// Get transaction Data
   useEffect(() => {
+    // axios({
+    //   method: "post",
+    //   url: "https://api.hive.blog",
+    //   data: {
+    //     jsonrpc: "2.0",
+    //     method: "account_history_api.get_transaction",
+    //     params: { id: transactionId, include_reversible: true },
+    //     id: 1,
+    //   },
     axios({
       method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "account_history_api.get_transaction",
-        params: { id: transactionId, include_reversible: true },
-        id: 1,
-      },
-    }).then((res) => setTransData(res?.data?.result));
+      url: "http://192.168.5.118:3002/rpc/get_transaction",
+      headers: { "Content-Type": "application/json" },
+      data: { _trx_hash: transactionId },
+    }).then((res) => setTransData(res?.data));
   }, [transactionId]);
 
   return (

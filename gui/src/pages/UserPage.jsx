@@ -44,13 +44,15 @@ export default function User_Page({ user, setTitle }) {
   const [show_json, set_show_json] = useState(false);
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
-  const [showUserModal, setShowUserModal] = useState(true);
+  const [showUserModal, setShowUserModal] = useState(false);
   // const [filters_length, set_filters_length] = useState(op_filters.length);
   // const [filters_length_names, set_filters_length_names] = useState(
   //   filered_op_names.length
   // );
 
-  const check_op_type = user_profile_data?.map((history) => history.op.type);
+  const check_op_type = user_profile_data?.map(
+    (history) => history.operations.type
+  );
   // const set_op = [...new Set(check_op_type)];
   const count_same = {};
   check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
@@ -70,6 +72,8 @@ export default function User_Page({ user, setTitle }) {
     set_pagination(page.pop());
   };
 
+  const handleClose = () => setShowUserModal(false);
+  const handleShow = () => setShowUserModal(true);
   return (
     <>
       {user_profile_data.length !== 0 ? (
@@ -85,15 +89,12 @@ export default function User_Page({ user, setTitle }) {
 
           <Row className="d-flex mt-5">
             <Col sm={12} md={3}>
-              <UserProfileCard
-                setShowUserModal={setShowUserModal}
-                user={user}
-              />
+              <UserProfileCard handleShow={handleShow} user={user} />
             </Col>
             <UserInfoModal
               user={user}
               showUserModal={showUserModal}
-              setShowUserModal={setShowUserModal}
+              handleClose={handleClose}
             />
             <Col sm={12} md={8}>
               <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
@@ -143,7 +144,7 @@ export default function User_Page({ user, setTitle }) {
 
               <Row>
                 {user_profile_data?.map((profile, i) => {
-                  const type = profile.op.type.replaceAll("_", " ");
+                  const type = profile.operations.type.replaceAll("_", " ");
                   const link_to_trx = (
                     <Link
                       style={{ color: "#000", textDecoration: "none" }}
@@ -204,10 +205,10 @@ export default function User_Page({ user, setTitle }) {
                         </Toast.Header>
                         <Toast.Body className="text-white">
                           <GetOperation
-                            setShowJson={set_show_json}
+                            setShowUserModalJson={set_show_json}
                             showJson={show_json}
-                            value={profile.op.type}
-                            type={profile}
+                            value={profile.operations.type}
+                            type={profile.operations}
                           />
                           <HighlightedJSON
                             showJson={show_json}

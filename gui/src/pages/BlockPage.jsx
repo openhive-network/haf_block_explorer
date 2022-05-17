@@ -34,13 +34,13 @@ export default function Block_Page({ block_nr, setTitle }) {
       ) : (
         trx?.map((single, i) => {
           const trxToJson = JSON.stringify(single, null, 2);
-          const type = single.op.type.replaceAll("_", " ");
+          const type = single.operations.type.replaceAll("_", " ");
           const link_to_trx = (
             <Link
               style={{ color: "#000", textDecoration: "none" }}
               to={`/transaction/${single.trx_id}`}
             >
-              {single.acc_operation_id}
+              {single.trx_id}
             </Link>
           );
           const link_to_block = (
@@ -73,10 +73,7 @@ export default function Block_Page({ block_nr, setTitle }) {
                     />
                     <strong className="me-auto">
                       <p style={{ margin: "0" }}>
-                        ID{" "}
-                        {single.trx_id !== null
-                          ? link_to_trx
-                          : single.acc_operation_id}
+                        ID {single.trx_id !== null ? link_to_trx : "none"}
                       </p>
                       <p style={{ margin: "0" }}>Block {link_to_block}</p>
                     </strong>
@@ -94,7 +91,10 @@ export default function Block_Page({ block_nr, setTitle }) {
                     <small>{single.timestamp} </small>
                   </Toast.Header>
                   <Toast.Body className="text-white">
-                    <GetOperations value={single.op.type} type={single} />
+                    <GetOperations
+                      value={single.operations.type}
+                      type={single.operations}
+                    />
                     <HighlightedJSON json={single} />
                   </Toast.Body>
                 </Toast>

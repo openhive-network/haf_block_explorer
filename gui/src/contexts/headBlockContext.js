@@ -19,6 +19,9 @@ export const HeadBlockContextProvider = ({ children }) => {
   }, []);
 
   const current_head_block = head_block?.head_block_number;
+  // const { head_block } = useContext(HeadBlockContext);
+  const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
+  const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
 
   //Get head block data
   useEffect(() => {
@@ -30,12 +33,14 @@ export const HeadBlockContextProvider = ({ children }) => {
         _block_num: current_head_block,
         _filter: [],
       },
-    }).then((res) => setHead_block_data(res?.data));
+    }).then((res) => setHead_block_data(res?.data.reverse()));
   }, [current_head_block]);
 
   return (
     <HeadBlockContext.Provider
       value={{
+        vesting_fund: vesting_fund,
+        vesting_shares: vesting_shares,
         head_block: head_block,
         head_block_data: head_block_data,
       }}
