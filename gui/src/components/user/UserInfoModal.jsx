@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
 import HighlightedJSON from "../HighlightedJSON";
-import { Row, Col } from "react-bootstrap";
+import { Row, Col, Button } from "react-bootstrap";
 import { Modal, Typography, Box } from "@mui/material";
 
 export default function UserInfoModal({ showUserModal, handleClose, user }) {
@@ -34,23 +34,82 @@ export default function UserInfoModal({ showUserModal, handleClose, user }) {
     return keys;
   }
   const keys = getKeys(user_info, true, true);
-  console.log(getKeys(user_info, true, true));
-  console.log(user_info[getKeys(user_info, true, true)]);
+  console.log(user_info);
+  // console.log(user_info[getKeys(user_info, true, true)]);
   let values = [];
   for (let i = 0; i < keys.length; i++) {
     values.push(user_info[keys[i]]);
   }
   const style = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: "auto",
-    bgcolor: "background.paper",
-    border: "2px solid #000",
-    boxShadow: 24,
-    p: 4,
+    width: "50%",
+    overflow: "auto",
+    height: "800px",
   };
+
+  // const {
+  //   id,
+  //   name,
+  //   proxy,
+  //   previous_owner_update,
+  //   last_owner_update,
+  //   last_account_update,
+  //   created,
+  //   mined,
+  //   recovery_account,
+  //   last_account_recovery,
+  //   reset_account,
+  //   comment_count,
+  //   lifetime_vote_count,
+  //   post_count,
+  //   can_vote,
+  //   voting_power,
+  //   balance,
+  //   savings_balance,
+  //   hbd_balance,
+  //   hbd_seconds,
+  //   hbd_seconds_last_update,
+  //   hbd_last_interest_payment,
+  //   savings_hbd_balance,
+  //   savings_hbd_seconds,
+  //   savings_hbd_seconds_last_update,
+  //   savings_hbd_last_interest_payment,
+  //   savings_withdraw_requests,
+  //   reward_hbd_balance,
+  //   reward_hive_balance,
+  //   reward_vesting_balance,
+  //   reward_vesting_hive,
+  //   vesting_shares,
+  //   delegated_vesting_shares,
+  //   received_vesting_shares,
+  //   vesting_withdraw_rate,
+  //   post_voting_power,
+  //   next_vesting_withdrawal,
+  //   withdrawn,
+  //   to_withdraw,
+  //   withdraw_routes,
+  //   pending_transfers,
+  //   curation_rewards,
+  //   posting_rewards,
+  //   proxied_vsf_votes,
+  //   witnesses_voted_for,
+  //   last_post,
+  //   last_root_post,
+  //   last_vote_time,
+  //   post_bandwidth,
+  //   pending_claimed_accounts,
+  //   governance_vote_expiration_ts,
+  //   delayed_votes,
+  //   open_recurrent_transfers,
+  //   vesting_balance,
+  //   reputation,
+  //   transfer_history,
+  //   market_history,
+  //   post_history,
+  //   vote_history,
+  //   other_history,
+  //   tags_usage,
+  //   guest_bloggers,
+  // } = user_info;
   return (
     // <Modal show={showUserModal} onHide={handleClose}>
     //   <Modal.Header closeButton>
@@ -99,52 +158,28 @@ export default function UserInfoModal({ showUserModal, handleClose, user }) {
     //     </Button>
     //   </Modal.Footer>
     // </Modal>
-    <Modal
-      open={showUserModal}
-      onClose={handleClose}
-      aria-labelledby="modal-modal-title"
-      aria-describedby="modal-modal-description"
-    >
-      <Box sx={style}>
-        <Typography id="modal-modal-title" variant="h6" component="h2">
-          Text in a modal
-        </Typography>
-        <Typography id="modal-modal-description" sx={{ mt: 2 }}>
-          <Row>
-            <Col xs={2}>
-              {keys?.map((key) => {
-                const hasDot = key.match(/\.(?=[A-Za-z])/g);
+    <div style={style} hidden={showUserModal}>
+      <Row>
+        <Button onClick={handleClose}>Close</Button>
+      </Row>
+      <Row>
+        <Col xs={2}></Col>
 
-                return (
-                  <>
-                    {hasDot === null && (
-                      <ul>
-                        <li>{JSON.stringify(key)}</li>
-                      </ul>
-                    )}
-                  </>
-                );
-              })}
-            </Col>
-
-            <Col xs={2}>
-              {values?.map((value) => {
-                console.log(value);
-                return (
-                  <>
-                    {value != "undefined" && (
-                      <ul>
-                        <li>{JSON.stringify(value)}</li>
-                      </ul>
-                    )}
-                  </>
-                );
-              })}
-            </Col>
-          </Row>
-        </Typography>
-      </Box>
-    </Modal>
+        <Col xs={2}>
+          {values?.map((value) => {
+            return (
+              <>
+                {value != "undefined" && (
+                  <ul>
+                    <li>{JSON.stringify(value)}</li>
+                  </ul>
+                )}
+              </>
+            );
+          })}
+        </Col>
+      </Row>
+    </div>
     // <div
     //   onClick={() => setShowUserModal(true)}
     //   hidden={showUserModal}

@@ -4,7 +4,7 @@ import axios from "axios";
 export const WitnessContext = createContext();
 
 export const WitnessContextProvider = ({ children }) => {
-  const [witnessData, setWitnessData] = useState([]);
+  const [witnessData, setWitnessData] = useState(null);
 
   // Get witnesses data
   useEffect(() => {
@@ -14,7 +14,7 @@ export const WitnessContextProvider = ({ children }) => {
       data: {
         jsonrpc: "2.0",
         method: "condenser_api.get_witnesses_by_vote",
-        params: [null, 21],
+        params: [null, 1000],
         id: 1,
       },
     }).then((res) => setWitnessData(res?.data?.result));

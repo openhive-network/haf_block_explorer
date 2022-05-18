@@ -114,56 +114,72 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_backend.get_account_id(_account VARCHAR)
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN id FROM hive.accounts_view WHERE name = _account;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.format_op_types(_operation_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN ('[' || _operation_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']')::JSON;
+END
+$$
+;
+
 CREATE FUNCTION hafbe_backend.get_operation_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(result) FROM (
-    SELECT 
-      array_agg(id) AS "operation_id",
-      array_agg(split_part(name, '::', 3)) AS "operation_name",
-      array_agg(is_virtual) AS "is_virtual"
-    FROM hive.operation_types
-    ) result;
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT
+        hafbe_backend.format_op_types(id, name, is_virtual)
+      FROM
+        hive.operation_types
+      ORDER BY id ASC
+    ) arr
+  ) result;
 END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account VARCHAR, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
+CREATE FUNCTION hafbe_backend.get_acc_op_types(_account_id INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
-  FROM hafbe_backend.get_set_of_acc_op_types(_account_id);
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_block_op_types(_block_num INT)
-RETURNS SETOF hafbe_backend.op_types
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN QUERY SELECT
-    hov.op_type_id::BIGINT,
-    hot.name::TEXT,
-    hot.is_virtual::BOOLEAN
-  FROM (
-    SELECT DISTINCT op_type_id
-    FROM hive.operations_view
-    WHERE block_num = _block_num
-  ) hov
-
-  JOIN LATERAL (
-    SELECT id, name, is_virtual
-    FROM hive.operation_types
-  ) hot ON hot.id = hov.op_type_id
-  ORDER BY hov.op_type_id ASC;
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY (
+      SELECT
+        hafbe_backend.format_op_types(operation_id, operation_name, is_virtual)
+      FROM (
+        SELECT DISTINCT
+          haov.op_type_id AS "operation_id",
+          hot.name AS "operation_name",
+          hot.is_virtual AS "is_virtual"
+        FROM
+          hive.account_operations_view haov
+        JOIN
+          hive.operation_types hot ON hot.id = haov.op_type_id
+        WHERE
+          account_id = _account_id
+        ORDER BY haov.op_type_id ASC
+      ) acc_ops
+    ) arr
+  ) result;
 END
 $$
 ;
@@ -174,8 +190,25 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
-  FROM hafbe_backend.get_set_of_block_op_types(_block_num);
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY (
+      SELECT
+        hafbe_backend.format_op_types(operation_id, operation_name, is_virtual)
+      FROM (
+        SELECT DISTINCT
+          hov.op_type_id AS "operation_id",
+          hot.name AS "operation_name",
+          hot.is_virtual AS "is_virtual"
+        FROM
+          hive.operations_view hov
+        JOIN
+          hive.operation_types hot ON hot.id = hov.op_type_id
+        WHERE
+          block_num = _block_num
+        ORDER BY hov.op_type_id ASC
+      ) acc_ops
+    ) arr
+  ) result;
 END
 $$
 ;
@@ -186,7 +219,7 @@ LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
-  RETURN encode(trx_hash, 'hex')
+  RETURN encode(trx_hash, 'escape')
   FROM hive.transactions_view htv
   WHERE htv.block_num = _block_num AND htv.trx_in_block = _trx_in_block;
 END
@@ -200,46 +233,31 @@ CREATE TYPE hafbe_backend.operations AS (
   op_in_trx INT,
   virtual_op BOOLEAN,
   timestamp TEXT,
-  operations JSON,
-  operation_id BIGINT,
-  acc_operation_id BIGINT
+  op JSON,
+  operation_id BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
-DECLARE
-  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
-  __no_start_date BOOLEAN = (_date_start IS NULL);
-  __no_end_date BOOLEAN = (_date_end IS NULL);
 BEGIN
   RETURN QUERY SELECT
-    hafbe_backend.get_trx_hash(haov.block_num, hov.trx_in_block)::TEXT,
-    haov.block_num::INT,
+    hafbe_backend.get_trx_hash(hov.block_num, hov.trx_in_block)::TEXT,
+    hov.block_num::INT,
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
-    hov.timestamp::TEXT,
+    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
-    hov.id::BIGINT,
-    haov.account_op_seq_no::BIGINT
-  FROM (
-    SELECT operation_id, op_type_id, account_id, account_op_seq_no, block_num
-    FROM hive.account_operations_view
-  ) haov
-  JOIN LATERAL (
-    SELECT trx_in_block, op_pos, timestamp, body, id
-    FROM hive.operations_view
-  ) hov ON hov.id = haov.operation_id
-  JOIN LATERAL (
-    SELECT is_virtual, id
-    FROM hive.operation_types
-  ) hot ON hot.id = haov.op_type_id
-  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _top_op_id AND (
-    __filter_ops OR haov.op_type_id=ANY(_filter)) AND
-    (__no_start_date OR hov.timestamp >= _date_start) AND
-    (__no_end_date OR hov.timestamp < _date_end)
+    hov.id::BIGINT
+  FROM hive.account_operations_view haov
+  JOIN hive.operations_view hov ON hov.id = haov.operation_id
+  JOIN hive.operation_types hot ON hot.id = haov.op_type_id
+  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND haov.block_num <= _head_block AND (
+    (SELECT array_length(_filter, 1)) IS NULL OR
+    haov.op_type_id=ANY(_filter)
+  )
   ORDER BY haov.account_op_seq_no DESC
   LIMIT _limit;
 END
@@ -250,7 +268,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[], _head_block BIGINT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -258,7 +276,7 @@ $$
 BEGIN
   RETURN to_json(arr) FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _top_op_id, _limit, _filter, _date_start, _date_end))
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _start, _limit, _filter, _head_block))
     ) arr
   ) result;
 END
@@ -271,7 +289,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __block_api_data JSON = (((SELECT hafbe_backend.get_block_api_data(_block_num))->'result')->'block');
+  __block_api_data JSON = (hafbe_backend.get_block_api_data(_block_num));
 BEGIN
   RETURN json_build_object(
     'block_num', _block_num,
@@ -301,38 +319,30 @@ $$
           -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
         """ % _block_num
       ], shell=True).decode('utf-8')
-    )
+    )['result']['block']
   )
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
-DECLARE
-  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
   RETURN QUERY SELECT
     hafbe_backend.get_trx_hash(_block_num, hov.trx_in_block)::TEXT,
-    _block_num::INT,
+    hov.block_num::INT,
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
-    hov.timestamp::TEXT,
+    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
     hov.body::JSON,
-    hov.id::BIGINT,
-    NULL::BIGINT
-  FROM (
-    SELECT block_num, op_type_id, trx_in_block, op_pos, timestamp, body, id
-    FROM hive.operations_view
-  ) hov
-  JOIN LATERAL (
-    SELECT id, is_virtual
-    FROM hive.operation_types
-  ) hot ON hot.id = hov.op_type_id
-  WHERE hov.block_num = _block_num AND hov.id <= _top_op_id AND (
-    __filter_ops OR hov.op_type_id=ANY(_filter)
+    hov.id::BIGINT
+  FROM hive.operations_view hov
+  JOIN hive.operation_types hot ON hot.id = hov.op_type_id
+  WHERE hov.block_num = _block_num AND hov.id <= _start AND (
+    (SELECT array_length(_filter, 1)) IS NULL OR
+    hov.op_type_id=ANY(_filter)
   )
   ORDER BY hov.id DESC
   LIMIT _limit;
@@ -344,7 +354,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -352,33 +362,9 @@ $$
 BEGIN
   RETURN to_json(arr) FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _start, _limit, _filter))
     ) arr
   ) result;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN json_agg(account_id)::JSON FROM (
-    SELECT account_id FROM (
-      SELECT DISTINCT ON (account_id)
-        account_id,
-        SUM(vote) AS voted
-      FROM
-        hafbe_app.witness_votes
-      WHERE
-        witness_id = _witness_id
-    ) votes
-    WHERE
-      voted = 1
-    LIMIT _limit
-  ) voters;
 END
 $$
 ;
@@ -406,7 +392,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_by_account(_account TEXT)
+CREATE FUNCTION hafbe_backend.get_witness_by_account(_account VARCHAR)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -428,7 +414,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
+CREATE FUNCTION hafbe_backend.get_account(_account VARCHAR)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -447,25 +433,5 @@ $$
       ], shell=True).decode('utf-8')
     )['result'][0]
   )
-$$
-;
-
-CREATE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
-RETURNS TEXT
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __profile_image TEXT;
-BEGIN
-  BEGIN
-    SELECT INTO __profile_image ( (
-      ((_account_data->>_key)::JSON)->>'profile'
-      )::JSON )->>'profile_image';
-  EXCEPTION WHEN invalid_text_representation THEN
-    SELECT NULL INTO __profile_image;
-  END;
-  RETURN __profile_image;
-END
 $$
 ;

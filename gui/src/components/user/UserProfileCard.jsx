@@ -15,24 +15,25 @@ import axios from "axios";
 export default function UserProfileCard({ handleShow, user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
+  const [costs, setCosts] = useState(null);
   const profile_picture = `https://images.hive.blog/u/${user}/avatar`;
   const user_vesting_shares =
     Number(user_info?.vesting_shares.split("VESTS")[0]) * 1000000;
-  const [rep, setRep] = useState([]);
-  useEffect(() => {
-    axios({
-      method: "post",
-      url: "https://api.hive.blog",
-      data: {
-        jsonrpc: "2.0",
-        method: "reputation_api.get_account_reputations",
-        params: { account_lower_bound: user },
-        id: 1,
-      },
-    }).then((res) =>
-      setRep(res.data.result.reputations.map((r) => parseInt(r.reputation)))
-    );
-  }, [user]);
+  // const [rep, setRep] = useState([]);
+  // useEffect(() => {
+  //   axios({
+  //     method: "post",
+  //     url: "https://api.hive.blog",
+  //     data: {
+  //       jsonrpc: "2.0",
+  //       method: "reputation_api.get_account_reputations",
+  //       params: { account_lower_bound: user },
+  //       id: 1,
+  //     },
+  //   }).then((res) =>
+  //     setRep(res.data.result.reputations.map((r) => parseInt(r.reputation)))
+  //   );
+  // }, [user]);
 
   function effectiveVests() {
     if (user_info !== undefined && user_info !== null) {
@@ -97,6 +98,75 @@ export default function UserProfileCard({ handleShow, user }) {
     var stamp = moment.utc(timestamp);
     var diff = stamp.diff(now, "minutes");
     return moment.duration(diff, "minutes").humanize(true);
+  }
+
+  useEffect(() => {
+    axios.get("https://api.ausbit.dev/rc").then((res) => setCosts(res.data));
+  }, []);
+  function resourceBudgetComments() {
+    if (resource_credits.rc_manabar !== undefined) {
+      var cost = 1175937456;
+      if (costs !== null) {
+        cost = costs.comment;
+      }
+      var available = resource_credits.rc_manabar.current_mana / cost;
+      if (available >= 1000000) {
+        return "1M+";
+      } else {
+        return tidyNumber(available.toFixed(0));
+      }
+    } else {
+      return null;
+    }
+  }
+  function resourceBudgetVotes() {
+    if (resource_credits.rc_manabar !== undefined) {
+      var cost = 109514642;
+      if (costs !== null) {
+        cost = costs.vote;
+      }
+      var available = resource_credits.rc_manabar.current_mana / cost;
+      if (available >= 1000000) {
+        return "1M+";
+      } else {
+        return tidyNumber(available.toFixed(0));
+      }
+    } else {
+      return null;
+    }
+  }
+  function resourceBudgetTransfers() {
+    if (resource_credits.rc_manabar !== undefined) {
+      var cost = 487237759;
+      if (costs !== null) {
+        cost = costs.transfer;
+      }
+      var available = resource_credits.rc_manabar.current_mana / cost;
+      if (available >= 1000000) {
+        return "1M+";
+      } else {
+        return tidyNumber(available.toFixed(0));
+      }
+    } else {
+      return null;
+    }
+  }
+
+  function resourceBudgetClaimAccounts() {
+    if (resource_credits.rc_manabar !== undefined) {
+      var cost = 8541343515163;
+      if (costs !== null) {
+        cost = costs.claim_account;
+      }
+      var available = resource_credits.rc_manabar.current_mana / cost;
+      if (available >= 1000000) {
+        return "1M+";
+      } else {
+        return tidyNumber(available.toFixed(0));
+      }
+    } else {
+      return null;
+    }
   }
 
   return (
@@ -268,6 +338,13 @@ export default function UserProfileCard({ handleShow, user }) {
       >
         <p style={{ margin: "0" }}>Reputation</p>
         <p>100</p>
+      </div>
+      <div>
+        Enough credits for aproximately
+        <p>{resourceBudgetComments()} comments</p>
+        <p>{resourceBudgetVotes()} votes</p>
+        <p>{resourceBudgetTransfers()} transfers</p>
+        <p>{resourceBudgetClaimAccounts()} account claims</p>
       </div>
       <div className="more-details d-flex justify-content-center">
         <Button

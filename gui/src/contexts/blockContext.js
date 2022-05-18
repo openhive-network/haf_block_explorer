@@ -4,7 +4,7 @@ import axios from "axios";
 export const BlockContext = createContext();
 
 export const BlockContextProvider = ({ children }) => {
-  const [block_data, setBlock_data] = useState([]);
+  const [block_data, setBlock_data] = useState(null);
   const [blockNumber, setBlockNumber] = useState("");
 
   // Get current block data

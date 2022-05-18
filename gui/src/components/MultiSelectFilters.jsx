@@ -10,6 +10,7 @@ import {
   ListItemText,
   Button,
 } from "@mui/material";
+import { Form } from "react-bootstrap";
 import { UserProfileContext } from "../contexts/userProfileContext";
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -132,6 +133,15 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
                 );
               })}
             </Select>
+
+            <Form.Group controlId="dob">
+              <Form.Label>Select Date</Form.Label>
+              <Form.Control
+                type="date"
+                name="dob"
+                placeholder="Date of Birth"
+              />
+            </Form.Group>
           </FormControl>
         </Modal.Body>
         <Modal.Footer>

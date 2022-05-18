@@ -4,7 +4,7 @@ import axios from "axios";
 export const TranasctionContext = createContext();
 
 export const TranasctionContextProvider = ({ children }) => {
-  const [transData, setTransData] = useState([]);
+  const [transData, setTransData] = useState(null);
   const [transactionId, setTransactionId] = useState("");
 
   /// Get transaction Data

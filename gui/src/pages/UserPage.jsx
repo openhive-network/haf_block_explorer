@@ -44,7 +44,7 @@ export default function User_Page({ user, setTitle }) {
   const [show_json, set_show_json] = useState(false);
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(true);
   // const [filters_length, set_filters_length] = useState(op_filters.length);
   // const [filters_length_names, set_filters_length_names] = useState(
   //   filered_op_names.length
@@ -72,8 +72,8 @@ export default function User_Page({ user, setTitle }) {
     set_pagination(page.pop());
   };
 
-  const handleClose = () => setShowUserModal(false);
-  const handleShow = () => setShowUserModal(true);
+  const handleClose = () => setShowUserModal(true);
+  const handleShow = () => setShowUserModal(false);
   return (
     <>
       {user_profile_data.length !== 0 ? (
