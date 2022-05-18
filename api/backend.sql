@@ -48,6 +48,17 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_backend.format_op_types(_operation_id BIGINT, _operation_name TEXT, _is_virtual BOOLEAN)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN ('[' || _operation_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']')::JSON;
+END
+$$
+;
+
 CREATE TYPE hafbe_backend.op_types AS (
   operation_id BIGINT,
   operation_name TEXT,
@@ -62,7 +73,7 @@ $$
 BEGIN
   RETURN QUERY SELECT
     id::BIGINT,
-    split_part(name, '::', 3)::TEXT,
+    name::TEXT,
     is_virtual::BOOLEAN
   FROM hive.operation_types
   ORDER BY id ASC;
@@ -76,20 +87,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(ARRAY[
-    obj_of_lists->'operation_id',
-    obj_of_lists->'operation_name',
-    obj_of_lists->'is_virtual'
-  ])
-  FROM (
-    SELECT json_build_object(
-      'operation_id', json_agg(setof_types.operation_id),
-      'operation_name', json_agg(setof_types.operation_name),
-      'is_virtual', json_agg(setof_types.is_virtual)
-    ) AS obj_of_lists FROM (
-      SELECT operation_id, operation_name, is_virtual FROM hafbe_backend.get_set_of_op_types()
-    ) setof_types
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_op_types();
 END
 $$
 ;
@@ -102,7 +101,7 @@ $$
 BEGIN
   RETURN QUERY SELECT
     haov.op_type_id::BIGINT,
-    split_part(hot.name, '::', 3)::TEXT,
+    hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
     SELECT DISTINCT op_type_id
@@ -125,20 +124,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(ARRAY[
-    obj_of_lists->'operation_id',
-    obj_of_lists->'operation_name',
-    obj_of_lists->'is_virtual'
-  ])
-  FROM (
-    SELECT json_build_object(
-      'operation_id', json_agg(setof_types.operation_id),
-      'operation_name', json_agg(setof_types.operation_name),
-      'is_virtual', json_agg(setof_types.is_virtual)
-    ) AS obj_of_lists FROM (
-      SELECT operation_id, operation_name, is_virtual FROM hafbe_backend.get_set_of_acc_op_types(_account_id)
-    ) setof_types
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_acc_op_types(_account_id);
 END
 $$
 ;
@@ -151,7 +138,7 @@ $$
 BEGIN
   RETURN QUERY SELECT
     hov.op_type_id::BIGINT,
-    split_part(hot.name, '::', 3)::TEXT,
+    hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
     SELECT DISTINCT op_type_id
@@ -174,20 +161,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(ARRAY[
-    obj_of_lists->'operation_id',
-    obj_of_lists->'operation_name',
-    obj_of_lists->'is_virtual'
-  ])
-  FROM (
-    SELECT json_build_object(
-      'operation_id', json_agg(setof_types.operation_id),
-      'operation_name', json_agg(setof_types.operation_name),
-      'is_virtual', json_agg(setof_types.is_virtual)
-    ) AS obj_of_lists FROM (
-      SELECT operation_id, operation_name, is_virtual FROM hafbe_backend.get_set_of_block_op_types(_block_num)
-    ) setof_types
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_block_op_types(_block_num);
 END
 $$
 ;
