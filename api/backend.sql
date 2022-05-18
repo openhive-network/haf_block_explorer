@@ -48,7 +48,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.format_op_types(_operation_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
+CREATE FUNCTION hafbe_backend.format_op_types(_operation_id BIGINT, _operation_name TEXT, _is_virtual BOOLEAN)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -59,21 +59,61 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_operation_types()
+CREATE TYPE hafbe_backend.op_types AS (
+  operation_id BIGINT,
+  operation_name TEXT,
+  is_virtual BOOLEAN
+);
+
+CREATE FUNCTION hafbe_backend.get_set_of_op_types()
+RETURNS SETOF hafbe_backend.op_types
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    id::BIGINT,
+    name::TEXT,
+    is_virtual::BOOLEAN
+  FROM hive.operation_types
+  ORDER BY id ASC;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_op_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
-    SELECT ARRAY(
-      SELECT
-        hafbe_backend.format_op_types(id, name, is_virtual)
-      FROM
-        hive.operation_types
-      ORDER BY id ASC
-    ) arr
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_op_types();
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_acc_op_types(_account_id INT)
+RETURNS SETOF hafbe_backend.op_types
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    haov.op_type_id::BIGINT,
+    hot.name::TEXT,
+    hot.is_virtual::BOOLEAN
+  FROM (
+    SELECT DISTINCT op_type_id
+    FROM hive.account_operations_view
+    WHERE account_id = _account_id
+  ) haov
+
+  JOIN LATERAL (
+    SELECT id, name, is_virtual
+    FROM hive.operation_types
+  ) hot ON hot.id = haov.op_type_id
+  ORDER BY haov.op_type_id ASC;
 END
 $$
 ;
@@ -84,25 +124,33 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
-    SELECT ARRAY (
-      SELECT
-        hafbe_backend.format_op_types(operation_id, operation_name, is_virtual)
-      FROM (
-        SELECT DISTINCT
-          haov.op_type_id AS "operation_id",
-          hot.name AS "operation_name",
-          hot.is_virtual AS "is_virtual"
-        FROM
-          hive.account_operations_view haov
-        JOIN
-          hive.operation_types hot ON hot.id = haov.op_type_id
-        WHERE
-          account_id = _account_id
-        ORDER BY haov.op_type_id ASC
-      ) acc_ops
-    ) arr
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_acc_op_types(_account_id);
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_block_op_types(_block_num INT)
+RETURNS SETOF hafbe_backend.op_types
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    hov.op_type_id::BIGINT,
+    hot.name::TEXT,
+    hot.is_virtual::BOOLEAN
+  FROM (
+    SELECT DISTINCT op_type_id
+    FROM hive.operations_view
+    WHERE block_num = _block_num
+  ) hov
+
+  JOIN LATERAL (
+    SELECT id, name, is_virtual
+    FROM hive.operation_types
+  ) hot ON hot.id = hov.op_type_id
+  ORDER BY hov.op_type_id ASC;
 END
 $$
 ;
@@ -113,25 +161,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
-    SELECT ARRAY (
-      SELECT
-        hafbe_backend.format_op_types(operation_id, operation_name, is_virtual)
-      FROM (
-        SELECT DISTINCT
-          hov.op_type_id AS "operation_id",
-          hot.name AS "operation_name",
-          hot.is_virtual AS "is_virtual"
-        FROM
-          hive.operations_view hov
-        JOIN
-          hive.operation_types hot ON hot.id = hov.op_type_id
-        WHERE
-          block_num = _block_num
-        ORDER BY hov.op_type_id ASC
-      ) acc_ops
-    ) arr
-  ) result;
+  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
+  FROM hafbe_backend.get_set_of_block_op_types(_block_num);
 END
 $$
 ;

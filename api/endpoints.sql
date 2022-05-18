@@ -92,13 +92,13 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_operation_types()
+CREATE FUNCTION hafbe_endpoints.get_op_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_operation_types();
+  RETURN hafbe_backend.get_op_types();
 END
 $$
 ;
