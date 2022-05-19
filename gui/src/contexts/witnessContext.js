@@ -14,7 +14,7 @@ export const WitnessContextProvider = ({ children }) => {
       data: {
         jsonrpc: "2.0",
         method: "condenser_api.get_witnesses_by_vote",
-        params: [null, 1000],
+        params: [null, 100],
         id: 1,
       },
     }).then((res) => setWitnessData(res?.data?.result));

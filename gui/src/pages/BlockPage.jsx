@@ -7,9 +7,8 @@ import HighlightedJSON from "../components/HighlightedJSON";
 
 export default function Block_Page({ block_nr, setTitle }) {
   const { block_data, setBlockNumber, blockNumber } = useContext(BlockContext);
-  const trx = block_data;
+
   // setTitle(`HAF | Block | ${block_nr}`);
-  console.log(trx);
   //Block counter
   const navigate = useNavigate();
 
@@ -24,19 +23,19 @@ export default function Block_Page({ block_nr, setTitle }) {
 
   return (
     <>
-      {trx === null ? (
+      {block_data === undefined ? (
         <h1>Loading...</h1>
       ) : (
         <div>
           <Button onClick={handlePreviousBlock}>{"<"}</Button>
           <Button onClick={handleNextBlock}>{">"}</Button>
           <p>Block number : {block_nr} </p>
-          <p> Block transactions count : {trx?.length}</p>
+          <p> Block transactions count : {block_data?.length}</p>
 
-          {trx?.length === 0 ? (
+          {block_data?.length === 0 ? (
             <h1>No transactions for this block</h1>
           ) : (
-            trx?.map((single, i) => {
+            block_data?.map((single, i) => {
               const trxToJson = JSON.stringify(single, null, 2);
               const type = single.operations.type.replaceAll("_", " ");
               const link_to_trx = (
@@ -59,12 +58,12 @@ export default function Block_Page({ block_nr, setTitle }) {
                 </Link>
               );
               return (
-                <Row key={single.signatures} className="justify-content-center">
+                <Row key={i} className="justify-content-center">
                   <Col sm={8}>
                     <Toast
                       className="d-inline-block m-1 w-100"
                       style={{ backgroundColor: "#091B4B" }}
-                      key={i}
+                      // key={i}
                     >
                       <Toast.Header
                         style={{ color: "#091B4B" }}

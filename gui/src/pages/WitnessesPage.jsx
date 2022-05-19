@@ -102,7 +102,7 @@ const cell_names = [
 
 export default function CustomizedTables() {
   const { witnessData } = useContext(WitnessContext);
-  console.log(witnessData);
+
   return (
     <>
       {witnessData === null ? (
@@ -119,7 +119,7 @@ export default function CustomizedTables() {
             </TableHead>
             <TableBody>
               {witnessData.map((witness, i) => (
-                <StyledTableRow key={witness.id}>
+                <StyledTableRow key={i}>
                   <StyledTableCell component="th" scope="witness">
                     {i}
                   </StyledTableCell>

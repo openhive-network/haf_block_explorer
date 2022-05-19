@@ -60,10 +60,10 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   //   }
   // }
 
-  const notVirtualOps = op_types.map((op) => op[2] === false && op[0]);
-  const virtualOps = op_types.map((op) => op[2] === true && op[0]);
-  const trim_not_virtual = notVirtualOps.filter((m) => m !== false);
-  const trim_virtual = virtualOps.filter((m) => m !== false);
+  const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
+  const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
+  const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
+  const trim_virtual = virtualOps?.filter((m) => m !== false);
   // console.log(trim_not_virtual);
   // console.log(trim_virtual);
 

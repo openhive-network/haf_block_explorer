@@ -10,7 +10,7 @@ export default function Transaction_Page({ transaction, setTitle }) {
   const { transData } = useContext(TranasctionContext);
   // const trnasToJson = JSON.stringify(transData, null, 2);
 
-  const [seconds, setSeconds] = useState(10);
+  const [seconds, setSeconds] = useState(60);
 
   const timeout = setTimeout(() => {
     setSeconds(seconds - 1);

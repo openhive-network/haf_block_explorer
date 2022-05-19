@@ -18,22 +18,7 @@ export default function UserProfileCard({ handleShow, user }) {
   const [costs, setCosts] = useState(null);
   const profile_picture = `https://images.hive.blog/u/${user}/avatar`;
   const user_vesting_shares =
-    Number(user_info?.vesting_shares.split("VESTS")[0]) * 1000000;
-  // const [rep, setRep] = useState([]);
-  // useEffect(() => {
-  //   axios({
-  //     method: "post",
-  //     url: "https://api.hive.blog",
-  //     data: {
-  //       jsonrpc: "2.0",
-  //       method: "reputation_api.get_account_reputations",
-  //       params: { account_lower_bound: user },
-  //       id: 1,
-  //     },
-  //   }).then((res) =>
-  //     setRep(res.data.result.reputations.map((r) => parseInt(r.reputation)))
-  //   );
-  // }, [user]);
+    Number(user_info?.vesting_shares?.split("VESTS")[0]) * 1000000;
 
   function effectiveVests() {
     if (user_info !== undefined && user_info !== null) {
@@ -49,7 +34,7 @@ export default function UserProfileCard({ handleShow, user }) {
   }
   function downvotePower() {
     return (
-      (user_info?.downvote_manabar.current_mana /
+      (user_info?.downvote_manabar?.current_mana /
         ((effectiveVests() / 4) * 1e4)) *
       100
     );
@@ -72,7 +57,7 @@ export default function UserProfileCard({ handleShow, user }) {
 
   function calcResourseCredits() {
     const res =
-      (parseInt(resource_credits?.rc_manabar.current_mana) /
+      (parseInt(resource_credits?.rc_manabar?.current_mana) /
         parseInt(resource_credits?.max_rc)) *
       100;
     return res.toFixed(2);
@@ -104,12 +89,12 @@ export default function UserProfileCard({ handleShow, user }) {
     axios.get("https://api.ausbit.dev/rc").then((res) => setCosts(res.data));
   }, []);
   function resourceBudgetComments() {
-    if (resource_credits.rc_manabar !== undefined) {
+    if (resource_credits?.rc_manabar !== undefined) {
       var cost = 1175937456;
       if (costs !== null) {
         cost = costs.comment;
       }
-      var available = resource_credits.rc_manabar.current_mana / cost;
+      var available = resource_credits?.rc_manabar?.current_mana / cost;
       if (available >= 1000000) {
         return "1M+";
       } else {
@@ -120,12 +105,12 @@ export default function UserProfileCard({ handleShow, user }) {
     }
   }
   function resourceBudgetVotes() {
-    if (resource_credits.rc_manabar !== undefined) {
+    if (resource_credits?.rc_manabar !== undefined) {
       var cost = 109514642;
       if (costs !== null) {
         cost = costs.vote;
       }
-      var available = resource_credits.rc_manabar.current_mana / cost;
+      var available = resource_credits?.rc_manabar?.current_mana / cost;
       if (available >= 1000000) {
         return "1M+";
       } else {
@@ -136,12 +121,12 @@ export default function UserProfileCard({ handleShow, user }) {
     }
   }
   function resourceBudgetTransfers() {
-    if (resource_credits.rc_manabar !== undefined) {
+    if (resource_credits?.rc_manabar !== undefined) {
       var cost = 487237759;
       if (costs !== null) {
         cost = costs.transfer;
       }
-      var available = resource_credits.rc_manabar.current_mana / cost;
+      var available = resource_credits?.rc_manabar?.current_mana / cost;
       if (available >= 1000000) {
         return "1M+";
       } else {
@@ -153,12 +138,12 @@ export default function UserProfileCard({ handleShow, user }) {
   }
 
   function resourceBudgetClaimAccounts() {
-    if (resource_credits.rc_manabar !== undefined) {
+    if (resource_credits?.rc_manabar !== undefined) {
       var cost = 8541343515163;
       if (costs !== null) {
         cost = costs.claim_account;
       }
-      var available = resource_credits.rc_manabar.current_mana / cost;
+      var available = resource_credits?.rc_manabar?.current_mana / cost;
       if (available >= 1000000) {
         return "1M+";
       } else {

@@ -4,7 +4,7 @@ import axios from "axios";
 export const BlockContext = createContext();
 
 export const BlockContextProvider = ({ children }) => {
-  const [block_data, setBlock_data] = useState(null);
+  const [block_data, setBlock_data] = useState(undefined);
   const [blockNumber, setBlockNumber] = useState("");
 
   // Get current block data
@@ -23,15 +23,17 @@ export const BlockContextProvider = ({ children }) => {
 
   // getBlockData #2 upto 5000000 local
   useEffect(() => {
-    axios({
-      method: "post",
-      url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
-      headers: { "Content-Type": "application/json" },
-      data: {
-        _block_num: blockNumber,
-        _filter: [],
-      },
-    }).then((res) => setBlock_data(res?.data.reverse()));
+    if (blockNumber !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          _block_num: blockNumber,
+          _filter: [],
+        },
+      }).then((res) => setBlock_data(res?.data.reverse()));
+    }
   }, [blockNumber]);
 
   return (

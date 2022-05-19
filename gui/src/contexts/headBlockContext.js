@@ -4,7 +4,7 @@ import axios from "axios";
 export const HeadBlockContext = createContext();
 export const HeadBlockContextProvider = ({ children }) => {
   const [head_block, setHead_block] = useState("");
-  const [head_block_data, setHead_block_data] = useState([]);
+  const [head_block_data, setHead_block_data] = useState(null);
   //   Get head block number
   useEffect(() => {
     axios({
@@ -19,21 +19,22 @@ export const HeadBlockContextProvider = ({ children }) => {
   }, []);
 
   const current_head_block = head_block?.head_block_number;
-  // const { head_block } = useContext(HeadBlockContext);
   const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
   const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
 
   //Get head block data
   useEffect(() => {
-    axios({
-      method: "post",
-      url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
-      headers: { "Content-Type": "application/json" },
-      data: {
-        _block_num: current_head_block,
-        _filter: [],
-      },
-    }).then((res) => setHead_block_data(res?.data.reverse()));
+    if (head_block !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          _block_num: current_head_block,
+          _filter: [],
+        },
+      }).then((res) => setHead_block_data(res?.data.reverse()));
+    }
   }, [current_head_block]);
 
   return (

@@ -90,12 +90,9 @@ export default function User_Page({ user, setTitle }) {
           <Row className="d-flex mt-5">
             <Col sm={12} md={3}>
               <UserProfileCard handleShow={handleShow} user={user} />
+              <UserInfoModal />
             </Col>
-            <UserInfoModal
-              user={user}
-              showUserModal={showUserModal}
-              handleClose={handleClose}
-            />
+
             <Col sm={12} md={8}>
               <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
                 <h1>Operations</h1>
@@ -210,10 +207,10 @@ export default function User_Page({ user, setTitle }) {
                             value={profile.operations.type}
                             type={profile.operations}
                           />
-                          <HighlightedJSON
+                          {/* <HighlightedJSON
                             showJson={show_json}
                             json={profile}
-                          />
+                          /> */}
                         </Toast.Body>
                       </Toast>
                     </Col>
@@ -225,7 +222,7 @@ export default function User_Page({ user, setTitle }) {
         </Container>
       ) : (
         <div className="d-flex justify-content-center">
-          <h1>Please Wait</h1>
+          <h1>Loading ...</h1>
         </div>
       )}
     </>
