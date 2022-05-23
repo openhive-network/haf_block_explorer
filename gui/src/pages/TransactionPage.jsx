@@ -10,16 +10,16 @@ export default function Transaction_Page({ transaction, setTitle }) {
   const { transData } = useContext(TranasctionContext);
   // const trnasToJson = JSON.stringify(transData, null, 2);
 
-  const [seconds, setSeconds] = useState(60);
+  // const [seconds, setSeconds] = useState(60);
 
-  const timeout = setTimeout(() => {
-    setSeconds(seconds - 1);
-  }, 1000);
+  // const timeout = setTimeout(() => {
+  //   setSeconds(seconds - 1);
+  // }, 1000);
 
-  if (seconds <= 0) {
-    clearTimeout(timeout);
-    window.location.reload();
-  }
+  // if (seconds <= 0) {
+  //   clearTimeout(timeout);
+  //   window.location.reload();
+  // }
 
   // console.log(transData.operations);
   // const type = profile.operations.map((op) => op.type.replaceAll("_", " "));
@@ -42,105 +42,105 @@ export default function Transaction_Page({ transaction, setTitle }) {
   //     {transData.block}
   //   </Link>
   // );
-  console.log(transData);
+  // console.log(transData);
   return (
     <div>
       <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
-      {transData === null ? (
+      {/* {transData === null ? (
         <p>
           Note : New transactions need time to show up. <br></br>Transaction
           will be shown in : {seconds}{" "}
         </p>
-      ) : (
-        <>
-          <Row className="mt-5 justify-content-center">
-            <Col sm={6}>
-              {transData?.operations?.map((op, i) => {
-                const type = op.type.replaceAll("_", " ");
+      ) : ( */}
+      <>
+        <Row className="mt-5 justify-content-center">
+          <Col sm={6}>
+            {transData?.operations?.map((op, i) => {
+              const type = op.type.replaceAll("_", " ");
 
-                const link_to_trx = (
-                  <Link
-                    style={{ color: "#000", textDecoration: "none" }}
-                    to={`/transaction/${op.transaction_id}`}
+              const link_to_trx = (
+                <Link
+                  style={{ color: "#000", textDecoration: "none" }}
+                  to={`/transaction/${op.transaction_id}`}
+                >
+                  {transData.transaction_id}
+                </Link>
+              );
+              const link_to_block = (
+                <Link
+                  style={{
+                    color: "#000",
+                    textDecoration: "none",
+                  }}
+                  to={`/block/${op.block_num}`}
+                >
+                  {transData.block_num}
+                </Link>
+              );
+              return (
+                <Toast
+                  className="d-inline-block m-1 w-100"
+                  style={{ backgroundColor: "#091B4B" }}
+                  key={i}
+                >
+                  <Toast.Header
+                    style={{ color: "#091B4B" }}
+                    closeButton={false}
                   >
-                    {transData.transaction_id}
-                  </Link>
-                );
-                const link_to_block = (
-                  <Link
-                    style={{
-                      color: "#000",
-                      textDecoration: "none",
-                    }}
-                    to={`/block/${op.block_num}`}
-                  >
-                    {transData.block_num}
-                  </Link>
-                );
-                return (
-                  <Toast
-                    className="d-inline-block m-1 w-100"
-                    style={{ backgroundColor: "#091B4B" }}
-                    key={i}
-                  >
-                    <Toast.Header
-                      style={{ color: "#091B4B" }}
-                      closeButton={false}
-                    >
-                      <img
-                        src="holder.js/20x20?text=%20"
-                        className="rounded me-2"
-                        alt=""
-                      />
-                      <strong className="me-auto">
-                        <p style={{ margin: "0" }}>ID {link_to_trx}</p>
-                        <p style={{ margin: "0" }}>Block {link_to_block}</p>
-                      </strong>
-                      <strong className="me-auto">
-                        <p
-                          style={{
-                            fontSize: "20px",
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {type}
-                        </p>
-                      </strong>
+                    <img
+                      src="holder.js/20x20?text=%20"
+                      className="rounded me-2"
+                      alt=""
+                    />
+                    <strong className="me-auto">
+                      <p style={{ margin: "0" }}>ID {link_to_trx}</p>
+                      <p style={{ margin: "0" }}>Block {link_to_block}</p>
+                    </strong>
+                    <strong className="me-auto">
+                      <p
+                        style={{
+                          fontSize: "20px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {type}
+                      </p>
+                    </strong>
 
-                      <small>{op.timestamp} </small>
-                    </Toast.Header>
-                    <Toast.Body className="text-white">
-                      <GetOperations value={op.type} type={op} />
-                    </Toast.Body>
-                  </Toast>
-                );
-              })}
-            </Col>
-          </Row>
-          <Row className="mt-5 justify-content-center">
-            {/* {transData?.operations?.map((op) => {
+                    <small>{op.timestamp} </small>
+                  </Toast.Header>
+                  <Toast.Body className="text-white">
+                    <GetOperations value={op.type} type={op} />
+                  </Toast.Body>
+                </Toast>
+              );
+            })}
+          </Col>
+        </Row>
+        <Row className="mt-5 justify-content-center">
+          {/* {transData?.operations?.map((op) => {
           // console.log(op.value);
           return <GetOperations value={op?.type} type={op} />;
         })} */}
 
-            <Col sm={6}>
-              {!transData ? (
-                "No data"
-              ) : (
-                <div
-                  style={{
-                    // width: "50vw",
-                    height: "60vh",
-                    wordBreak: "break-word",
-                    whiteSpace: "pre-wrap",
-                    overflow: "auto",
-                    background: "#091B4B",
-                    borderRadius: "25px",
-                    padding: "20px",
-                  }}
-                  className="transaction__json"
-                >
-                  {/* {transData?.operations.map((op) => (
+          <Col sm={6}>
+            {!transData ? (
+              "No data"
+            ) : (
+              <div
+                style={{
+                  // width: "50vw",
+                  height: "60vh",
+                  wordBreak: "break-word",
+                  whiteSpace: "pre-wrap",
+                  overflow: "auto",
+                  background: "#091B4B",
+                  borderRadius: "25px",
+                  padding: "20px",
+                }}
+                className="transaction__json"
+              >
+                {/* {transData?.operations.map((op) => (
                
               ))}
               <Toast
@@ -179,13 +179,13 @@ export default function Transaction_Page({ transaction, setTitle }) {
                 </Toast.Body>
               </Toast> */}
 
-                  <HighlightedJSON json={transData} />
-                </div>
-              )}
-            </Col>
-          </Row>
-        </>
-      )}
+                <HighlightedJSON json={transData} />
+              </div>
+            )}
+          </Col>
+        </Row>
+      </>
+      {/* )} */}
     </div>
   );
 }

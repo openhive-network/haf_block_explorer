@@ -4,7 +4,7 @@ import axios from "axios";
 export const BlockContext = createContext();
 
 export const BlockContextProvider = ({ children }) => {
-  const [block_data, setBlock_data] = useState(undefined);
+  const [block_data, setBlock_data] = useState(null);
   const [blockNumber, setBlockNumber] = useState("");
 
   // Get current block data
@@ -21,7 +21,7 @@ export const BlockContextProvider = ({ children }) => {
   //   }).then((res) => setBlock_data(res?.data?.result?.block));
   // }, [blockNumber]);
 
-  // getBlockData #2 upto 5000000 local
+  // getBlockData 
   useEffect(() => {
     if (blockNumber !== "") {
       axios({

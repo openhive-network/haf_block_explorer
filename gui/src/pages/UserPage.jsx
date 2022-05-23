@@ -23,6 +23,7 @@ export default function User_Page({ user, setTitle }) {
     // set_op_filters,
     set_pagination,
     pagination,
+    userProfile,
   } = useContext(UserProfileContext);
   // const { setTransactionId } = useContext(TranasctionContext);
   // setTitle(`HAF | User | ${user}`);
@@ -76,155 +77,155 @@ export default function User_Page({ user, setTitle }) {
   const handleShow = () => setShowUserModal(false);
   return (
     <>
-      {user_profile_data.length !== 0 ? (
-        <Container fluid>
-          <div className="op_count">
-            <p>
-              Showing op_types per page :
-              {filtered_ops_sum === 0
-                ? user_profile_data?.length
-                : filtered_ops_sum}
-            </p>
-          </div>
+      {/* {user_profile_data.length !== 0 ? ( */}
+      <Container fluid>
+        <div className="op_count">
+          <p>
+            Showing op_types per page :
+            {filtered_ops_sum === 0
+              ? user_profile_data?.length
+              : filtered_ops_sum}
+          </p>
+        </div>
 
-          <Row className="d-flex mt-5">
-            <Col sm={12} md={3}>
-              <UserProfileCard handleShow={handleShow} user={user} />
-              <UserInfoModal />
-            </Col>
+        <Row className="d-flex mt-5">
+          <Col sm={12} md={3}>
+            <UserProfileCard handleShow={handleShow} user={user} />
+            <UserInfoModal />
+          </Col>
 
-            <Col sm={12} md={8}>
-              <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
-                <h1>Operations</h1>
-              </Row>
-              <Row>
-                <Col className="d-flex justify-content-end">
-                  <Button
-                    variant="secondary"
-                    onClick={() => set_show_filters(!show_filters)}
-                  >
-                    Filters
-                  </Button>
-                  <MultiSelectFilters
-                    show_filters={show_filters}
-                    set_show_filters={set_show_filters}
+          <Col sm={12} md={8}>
+            <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
+              <h1>Operations</h1>
+            </Row>
+            <Row>
+              <Col className="d-flex justify-content-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => set_show_filters(!show_filters)}
+                >
+                  Filters
+                </Button>
+                <MultiSelectFilters
+                  show_filters={show_filters}
+                  set_show_filters={set_show_filters}
+                />
+              </Col>
+            </Row>
+            <Row>
+              <Col className="d-flex justify-content-center">
+                {op_filters.length === 0 ? (
+                  <Pagination
+                    onClick={(e) =>
+                      set_pagination(
+                        get_max_trx_num -
+                          (Number(e.target.innerText) - 1) * acc_history_limit
+                      )
+                    }
+                    count={page_count}
+                    color="secondary"
+                    hidePrevButton
+                    hideNextButton
                   />
-                </Col>
-              </Row>
-              <Row>
-                <Col className="d-flex justify-content-center">
-                  {op_filters.length === 0 ? (
-                    <Pagination
-                      onClick={(e) =>
-                        set_pagination(
-                          get_max_trx_num -
-                            (Number(e.target.innerText) - 1) * acc_history_limit
-                        )
-                      }
-                      count={page_count}
-                      color="secondary"
-                      hidePrevButton
-                      hideNextButton
-                    />
-                  ) : (
-                    <>
-                      <Button onClick={handlePrevPage}>
-                        <ArrowBackIosNewIcon />
-                      </Button>
-                      <Button onClick={handleNextPage}>
-                        <ArrowForwardIosIcon />
-                      </Button>
-                    </>
-                  )}
-                </Col>
-              </Row>
+                ) : (
+                  <>
+                    <Button onClick={handlePrevPage}>
+                      <ArrowBackIosNewIcon />
+                    </Button>
+                    <Button onClick={handleNextPage}>
+                      <ArrowForwardIosIcon />
+                    </Button>
+                  </>
+                )}
+              </Col>
+            </Row>
 
-              <Row>
-                {user_profile_data?.map((profile, i) => {
-                  const type = profile.operations.type.replaceAll("_", " ");
-                  const link_to_trx = (
-                    <Link
-                      style={{ color: "#000", textDecoration: "none" }}
-                      to={`/transaction/${profile.trx_id}`}
+            <Row>
+              {user_profile_data?.map((profile, i) => {
+                const type = profile.operations.type.replaceAll("_", " ");
+                const link_to_trx = (
+                  <Link
+                    style={{ color: "#000", textDecoration: "none" }}
+                    to={`/transaction/${profile.trx_id}`}
+                  >
+                    {profile.acc_operation_id}
+                  </Link>
+                );
+                const link_to_block = (
+                  <Link
+                    style={{
+                      color: "#000",
+                      textDecoration: "none",
+                    }}
+                    to={`/block/${profile.block}`}
+                  >
+                    {profile.block}
+                  </Link>
+                );
+                // console.log(profile);
+                return (
+                  <Col key={profile.operation_id} sm={12}>
+                    <Toast
+                      className="d-inline-block m-1 w-100"
+                      style={{ backgroundColor: "#091B4B" }}
+                      key={i}
                     >
-                      {profile.acc_operation_id}
-                    </Link>
-                  );
-                  const link_to_block = (
-                    <Link
-                      style={{
-                        color: "#000",
-                        textDecoration: "none",
-                      }}
-                      to={`/block/${profile.block}`}
-                    >
-                      {profile.block}
-                    </Link>
-                  );
-                  // console.log(profile);
-                  return (
-                    <Col key={profile.operation_id} sm={12}>
-                      <Toast
-                        className="d-inline-block m-1 w-100"
-                        style={{ backgroundColor: "#091B4B" }}
-                        key={i}
+                      <Toast.Header
+                        style={{ color: "#091B4B" }}
+                        closeButton={false}
                       >
-                        <Toast.Header
-                          style={{ color: "#091B4B" }}
-                          closeButton={false}
-                        >
-                          <img
-                            src="holder.js/20x20?text=%20"
-                            className="rounded me-2"
-                            alt=""
-                          />
-                          <strong className="me-auto">
-                            <p style={{ margin: "0" }}>
-                              ID{" "}
-                              {profile.trx_id !== null
-                                ? link_to_trx
-                                : profile.acc_operation_id}
-                            </p>
-                            <p style={{ margin: "0" }}>Block {link_to_block}</p>
-                          </strong>
-                          <strong className="me-auto">
-                            <p
-                              style={{
-                                fontSize: "20px",
-                                textTransform: "capitalize",
-                              }}
-                            >
-                              {type}
-                            </p>
-                          </strong>
+                        <img
+                          src="holder.js/20x20?text=%20"
+                          className="rounded me-2"
+                          alt=""
+                        />
+                        <strong className="me-auto">
+                          <p style={{ margin: "0" }}>
+                            ID{" "}
+                            {profile.trx_id !== null
+                              ? link_to_trx
+                              : profile.acc_operation_id}
+                          </p>
+                          <p style={{ margin: "0" }}>Block {link_to_block}</p>
+                        </strong>
+                        <strong className="me-auto">
+                          <p
+                            style={{
+                              fontSize: "20px",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {type}
+                          </p>
+                        </strong>
 
-                          <small>{profile.timestamp} </small>
-                        </Toast.Header>
-                        <Toast.Body className="text-white">
-                          <GetOperation
-                            setShowUserModalJson={set_show_json}
-                            showJson={show_json}
-                            value={profile.operations.type}
-                            type={profile.operations}
-                          />
-                          {/* <HighlightedJSON
+                        <small>{profile.timestamp} </small>
+                      </Toast.Header>
+                      <Toast.Body className="text-white">
+                        <GetOperation
+                          setShowUserModalJson={set_show_json}
+                          showJson={show_json}
+                          value={profile.operations.type}
+                          type={profile.operations}
+                        />
+                        {/* <HighlightedJSON
                             showJson={show_json}
                             json={profile}
                           /> */}
-                        </Toast.Body>
-                      </Toast>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </Col>
-          </Row>
-        </Container>
-      ) : (
+                      </Toast.Body>
+                    </Toast>
+                  </Col>
+                );
+              })}
+            </Row>
+          </Col>
+        </Row>
+      </Container>
+      {/* ) : (
         <div className="d-flex justify-content-center">
           <h1>Loading ...</h1>
         </div>
-      )}
+      )} */}
     </>
   );
 }

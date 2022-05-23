@@ -4,7 +4,7 @@ import axios from "axios";
 export const HeadBlockContext = createContext();
 export const HeadBlockContextProvider = ({ children }) => {
   const [head_block, setHead_block] = useState("");
-  const [head_block_data, setHead_block_data] = useState(null);
+  const [head_block_data, setHead_block_data] = useState([]);
   //   Get head block number
   useEffect(() => {
     axios({

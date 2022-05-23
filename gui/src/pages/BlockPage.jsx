@@ -23,7 +23,7 @@ export default function Block_Page({ block_nr, setTitle }) {
 
   return (
     <>
-      {block_data === undefined ? (
+      {block_data === null ? (
         <h1>Loading...</h1>
       ) : (
         <div>

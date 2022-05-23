@@ -13,7 +13,7 @@ export const UserProfileContextProvider = ({ children }) => {
   const [pagination, set_pagination] = useState(-1);
   const [resource_credits, set_resource_credits] = useState({});
 
-  // console.log(pagination);
+  console.log(userProfile);
 
   //Get available operation types for current user
   useEffect(() => {

@@ -20,7 +20,9 @@ export const WitnessContextProvider = ({ children }) => {
     }).then((res) => setWitnessData(res?.data?.result));
   }, []);
   return (
-    <WitnessContext.Provider value={{ witnessData: witnessData }}>
+    <WitnessContext.Provider
+      value={{ witnessData: witnessData, setWitnessData: setWitnessData }}
+    >
       {children}
     </WitnessContext.Provider>
   );
