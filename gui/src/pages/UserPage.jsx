@@ -1,16 +1,17 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import { UserProfileContext } from "../contexts/userProfileContext";
-import { Container, Col, Row, Toast } from "react-bootstrap";
+import { Container, Col, Row } from "react-bootstrap";
 import { Button, Pagination } from "@mui/material";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import "./userPage.css";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoModal from "../components/user/UserInfoModal";
-import { Link } from "react-router-dom";
-import HighlightedJSON from "../components/HighlightedJSON";
+// import { Link } from "react-router-dom";
+// import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
-import GetOperation from "../operations";
+// import GetOperation from "../operations";
+import OpCard from "../components/OpCard";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -42,7 +43,7 @@ export default function User_Page({ user, setTitle }) {
   //Transactions per page
   const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
   // Operation  filters
-  const [show_json, set_show_json] = useState(false);
+  // const [show_json, set_show_json] = useState(false);
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
   const [showUserModal, setShowUserModal] = useState(true);
@@ -142,30 +143,30 @@ export default function User_Page({ user, setTitle }) {
 
             <Row>
               {user_profile_data?.map((profile, i) => {
-                const type = profile.operations.type.replaceAll("_", " ");
-                const link_to_trx = (
-                  <Link
-                    style={{ color: "#000", textDecoration: "none" }}
-                    to={`/transaction/${profile.trx_id}`}
-                  >
-                    {profile.acc_operation_id}
-                  </Link>
-                );
-                const link_to_block = (
-                  <Link
-                    style={{
-                      color: "#000",
-                      textDecoration: "none",
-                    }}
-                    to={`/block/${profile.block}`}
-                  >
-                    {profile.block}
-                  </Link>
-                );
+                // const type = profile.operations.type.replaceAll("_", " ");
+                // const link_to_trx = (
+                //   <Link
+                //     style={{ color: "#000", textDecoration: "none" }}
+                //     to={`/transaction/${profile.trx_id}`}
+                //   >
+                //     {profile.acc_operation_id}
+                //   </Link>
+                // );
+                // const link_to_block = (
+                //   <Link
+                //     style={{
+                //       color: "#000",
+                //       textDecoration: "none",
+                //     }}
+                //     to={`/block/${profile.block}`}
+                //   >
+                //     {profile.block}
+                //   </Link>
+                // );
                 // console.log(profile);
                 return (
                   <Col key={profile.operation_id} sm={12}>
-                    <Toast
+                    {/* <Toast
                       className="d-inline-block m-1 w-100"
                       style={{ backgroundColor: "#091B4B" }}
                       key={i}
@@ -208,12 +209,13 @@ export default function User_Page({ user, setTitle }) {
                           value={profile.operations.type}
                           type={profile.operations}
                         />
-                        {/* <HighlightedJSON
+                        <HighlightedJSON
                             showJson={show_json}
                             json={profile}
-                          /> */}
+                          />
                       </Toast.Body>
-                    </Toast>
+                    </Toast> */}
+                    <OpCard block={profile} index={i} full_trx={profile} />
                   </Col>
                 );
               })}

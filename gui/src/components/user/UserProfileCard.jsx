@@ -332,13 +332,13 @@ export default function UserProfileCard({ handleShow, user }) {
         <p>{resourceBudgetClaimAccounts()} account claims</p>
       </div>
       <div className="more-details d-flex justify-content-center">
-        <Button
+        {/* <Button
           onClick={handleShow}
           style={{ width: "70%", color: "white", fontSize: "20px" }}
           variant="danger"
         >
           More info
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ import { Container, Row, Col } from "react-bootstrap";
 import { WitnessContext } from "../contexts/witnessContext";
 import moment from "moment";
 import Button from "@mui/material/Button";
-
+import { Link } from "react-router-dom";
 export default function DataTable() {
   const { witnessData, setWitnessData } = useContext(WitnessContext);
   const cell_names = [
@@ -169,7 +169,9 @@ export default function DataTable() {
                       return (
                         <StyledTableRow key={i}>
                           <StyledTableCell component="th" scope="witness">
-                            {witness.owner}
+                            <Link to={`/user/${witness.owner}`}>
+                              {witness.owner}
+                            </Link>
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
                             {tidyNumber(

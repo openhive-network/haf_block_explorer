@@ -9,9 +9,14 @@ import {
   Checkbox,
   ListItemText,
   Button,
+  Stack,
+  TextField,
 } from "@mui/material";
-import { Form } from "react-bootstrap";
 import { UserProfileContext } from "../contexts/userProfileContext";
+import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { MobileDatePicker } from "@mui/x-date-pickers/MobileDatePicker";
+
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -44,28 +49,10 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     set_v_filters(value);
   };
 
-  // const op_names = op_types.map((type) => type[1]);
-  // const op_number = op_types.map((type) => type[0]);
-  // const op_virtual = op_types.map((type) => type[2]);
-
-  // const is_virtual = check_virtual.filter((v) => v === false);
-  // const [v, setV] = useState([]);
-  // const [nv, setNv] = useState([]);
-
-  // for (let i = 0; i < op_types.length; i++) {
-  //   if (vfilters.includes("Virtual") === true) {
-  //     setV(op_number[i]);
-  //   } else if (vfilters.includes("Not-Virtual") === true) {
-  //     setNv(op_number[i]);
-  //   }
-  // }
-
   const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
   const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
   const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
   const trim_virtual = virtualOps?.filter((m) => m !== false);
-  // console.log(trim_not_virtual);
-  // console.log(trim_virtual);
 
   useEffect(() => {
     if (vfilters === "Virtual") {
@@ -74,15 +61,35 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     if (vfilters === "Not-Virtual") {
       set_op_filters(trim_not_virtual);
     }
-  }, [vfilters]);
+  }, [vfilters, set_op_filters, trim_virtual, trim_not_virtual]);
 
+  //Calendar
+  const [dateSelectError, setDateSelectError] = useState("");
+  const [startDateState, setStartDateState] = useState(null);
+
+  const changeStartDate = (e) => {
+    setStartDateState(e);
+  };
+  const [endDateState, setEndDateState] = useState(null);
+  const changeEndDate = (e) => {
+    setEndDateState(e);
+  };
+  const trimDate = (date) => date?.toISOString().split("T")[0];
+
+  const handleFilterBtn = () => {
+    set_show_filters(false);
+    setDateSelectError("");
+    if (startDateState?._d > endDateState?._d) {
+      set_show_filters(true);
+      setDateSelectError("End date can't be higher than start date ");
+    }
+  };
+  console.log(trimDate(startDateState?._d));
   return (
     <div>
-      <Modal show={show_filters}>
-        <Modal.Header>
+      <Modal show={show_filters} onHide={() => set_show_filters(false)}>
+        <Modal.Header closeButton>
           <h5 className="modal-title">Modal title</h5>
-          {/* <Button onClick={() => setV(!v)}>show Virtual</Button>
-          <Button onClick={() => setNv(!nv)}>show non-Virtual</Button> */}
         </Modal.Header>
         <Modal.Body>
           <FormControl sx={{ m: 1, width: 300 }}>
@@ -117,35 +124,45 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
             <Select
               labelId="demo-multiple-checkbox-label2"
               id="demo-multiple-checkbox2"
-              // multiple
               value={vfilters}
               onChange={handleVirtual}
               input={<OutlinedInput label="Check virtual" />}
-              // renderValue={(selected) => selected}
               MenuProps={MenuProps}
             >
               {VIRTUAL_FILTERS.map((filter, i) => {
                 return (
                   <MenuItem key={i} value={filter}>
-                    {/* <Checkbox checked={vfilters.indexOf(filter) > -1} /> */}
                     {filter}
                   </MenuItem>
                 );
               })}
             </Select>
 
-            <Form.Group controlId="dob">
-              <Form.Label>Select Date</Form.Label>
-              <Form.Control
-                type="date"
-                name="dob"
-                placeholder="Date of Birth"
-              />
-            </Form.Group>
+            <div className="mt-4">
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <Stack spacing={3}>
+                  <MobileDatePicker
+                    label="Start Date"
+                    inputFormat="MM/dd/yyyy"
+                    value={startDateState}
+                    onChange={changeStartDate}
+                    renderInput={(params) => <TextField {...params} />}
+                  />
+                  <MobileDatePicker
+                    label="End Date"
+                    inputFormat="MM/dd/yyyy"
+                    value={endDateState}
+                    onChange={changeEndDate}
+                    renderInput={(params) => <TextField {...params} />}
+                  />
+                </Stack>
+              </LocalizationProvider>
+              <p style={{ color: "red" }}>{dateSelectError}</p>
+            </div>
           </FormControl>
         </Modal.Body>
         <Modal.Footer>
-          <Button onClick={() => set_show_filters(false)}>Close</Button>
+          <Button onClick={handleFilterBtn}>Filter</Button>
         </Modal.Footer>
       </Modal>
     </div>

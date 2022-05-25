@@ -1,13 +1,14 @@
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { HeadBlockContext } from "../contexts/headBlockContext";
 import { UserProfileContext } from "../contexts/userProfileContext";
 import { BlockContext } from "../contexts/blockContext";
 import { WitnessContext } from "../contexts/witnessContext";
-import OperationCard from "../components/OperationCard";
+// import OperationCard from "../components/OperationCard";
 import { Link } from "react-router-dom";
-import { Container, Col, Row, ListGroup, Toast, Button } from "react-bootstrap";
-import TrxTableMain from "../components/tables/TrxTableMain";
-import GetOperations from "../operations";
+import { Container, Col, Row, ListGroup } from "react-bootstrap";
+// import TrxTableMain from "../components/tables/TrxTableMain";
+// import GetOperations from "../operations";
+import OpCard from "../components/OpCard";
 
 export default function Main_Page({ setTitle }) {
   // setTitle((document.title = "HAF Blocks"));
@@ -16,13 +17,13 @@ export default function Main_Page({ setTitle }) {
   const { head_block, head_block_data } = useContext(HeadBlockContext);
   const { setUserProfile } = useContext(UserProfileContext);
   const current_head_block = head_block.head_block_number;
-  const transaction = head_block_data?.transactions;
-  const transactions_of_block = transaction?.map(
-    (trans) => trans.operations[0]
-  );
+  // const transaction = head_block_data?.transactions;
+  // const transactions_of_block = transaction?.map(
+  //   (trans) => trans.operations[0]
+  // );
 
   const operations_count_per_block = head_block_data?.length;
-  const transactions_ids = head_block_data?.transaction_ids;
+  // const transactions_ids = head_block_data?.transaction_ids;
 
   // const is_data_loading =
   //   transactions_of_block === undefined || transactions_of_block.length === 0;
@@ -92,68 +93,69 @@ export default function Main_Page({ setTitle }) {
               /> */}
           <Col xs={12} sm={8}>
             {head_block_data?.map((block, index) => {
-              const type = block.operations.type.replaceAll("_", " ");
-              const link_to_trx = (
-                <Link
-                  style={{ color: "#000", textDecoration: "none" }}
-                  to={`/transaction/${block.trx_id}`}
-                >
-                  {block.trx_id}
-                </Link>
-              );
-              const link_to_block = (
-                <Link
-                  style={{
-                    color: "#000",
-                    textDecoration: "none",
-                  }}
-                  to={`/block/${block.block}`}
-                >
-                  {block.block}
-                </Link>
-              );
+              // const type = block.operations.type.replaceAll("_", " ");
+              // const link_to_trx = (
+              //   <Link
+              //     style={{ color: "#000", textDecoration: "none" }}
+              //     to={`/transaction/${block.trx_id}`}
+              //   >
+              //     {block.trx_id}
+              //   </Link>
+              // );
+              // const link_to_block = (
+              //   <Link
+              //     style={{
+              //       color: "#000",
+              //       textDecoration: "none",
+              //     }}
+              //     to={`/block/${block.block}`}
+              //   >
+              //     {block.block}
+              //   </Link>
+              // );
               return (
-                <Toast
-                  className="d-inline-block m-1 w-100"
-                  style={{ backgroundColor: "#091B4B" }}
-                  key={index}
-                >
-                  <Toast.Header
-                    style={{ color: "#091B4B" }}
-                    closeButton={false}
-                  >
-                    <img
-                      src="holder.js/20x20?text=%20"
-                      className="rounded me-2"
-                      alt=""
-                    />
-                    <strong className="me-auto">
-                      <p style={{ margin: "0" }}>
-                        ID {block.trx_id !== null ? link_to_trx : "no id"}
-                      </p>
-                      <p style={{ margin: "0" }}>Block {link_to_block}</p>
-                    </strong>
-                    <strong className="me-auto">
-                      <p
-                        style={{
-                          fontSize: "20px",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {type}
-                      </p>
-                    </strong>
+                // <Toast
+                //   className="d-inline-block m-1 w-100"
+                //   style={{ backgroundColor: "#091B4B" }}
+                //   key={index}
+                // >
+                //   <Toast.Header
+                //     style={{ color: "#091B4B" }}
+                //     closeButton={false}
+                //   >
+                //     <img
+                //       src="holder.js/20x20?text=%20"
+                //       className="rounded me-2"
+                //       alt=""
+                //     />
+                //     <strong className="me-auto">
+                //       <p style={{ margin: "0" }}>
+                //         ID {block.trx_id !== null ? link_to_trx : "no id"}
+                //       </p>
+                //       <p style={{ margin: "0" }}>Block {link_to_block}</p>
+                //     </strong>
+                //     <strong className="me-auto">
+                //       <p
+                //         style={{
+                //           fontSize: "20px",
+                //           textTransform: "capitalize",
+                //         }}
+                //       >
+                //         {type}
+                //       </p>
+                //     </strong>
 
-                    <small>{block.timestamp} </small>
-                  </Toast.Header>
-                  <Toast.Body className="text-white">
-                    <GetOperations
-                      value={block?.operations?.type}
-                      type={block.operations}
-                    />
-                    {/* <HighlightedJSON json={single} /> */}
-                  </Toast.Body>
-                </Toast>
+                //     <small>{block.timestamp} </small>
+                //   </Toast.Header>
+                //   <Toast.Body className="text-white">
+                //     <GetOperations
+                //       value={block?.operations?.type}
+                //       type={block.operations}
+                //     />
+                //     {/* <HighlightedJSON json={single} /> */}
+                //   </Toast.Body>
+                // </Toast>
+                <OpCard block={block} index={index} full_trx={block} />
               );
             })}
           </Col>

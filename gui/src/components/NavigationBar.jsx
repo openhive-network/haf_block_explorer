@@ -74,7 +74,7 @@ export default function NavigationBar() {
   useEffect(() => {
     axios({
       method: "post",
-      url: "http://192.168.5.118:3002/rpc/get_input_type",
+      url: "http://192.168.4.250:3002/rpc/get_input_type",
       headers: { "Content-Type": "application/json" },
       data: { _input: value },
     })
@@ -103,7 +103,14 @@ export default function NavigationBar() {
     if (check_input === "No data") {
       navigate("/error");
     }
-  }, [check_input, value]);
+  }, [
+    check_input,
+    value,
+    setBlockNumber,
+    setTransactionId,
+    setUserProfile,
+    // navigate,
+  ]);
 
   return (
     <>
@@ -112,11 +119,34 @@ export default function NavigationBar() {
           <Navbar.Brand href="/">Hive Block Explorer</Navbar.Brand>
           <Navbar.Toggle aria-controls="navbarScroll" />
           <Navbar.Collapse id="navbarScroll"> */}
-      <div className="nav-bar">
-        <Col xs={4}>
-          <Link to="/">HIVE LOGO</Link>
+      <Row className="nav-bar">
+        <Col
+          style={{
+            display: "flex",
+            margin: "0 40px 0 50px",
+            alignItems: "center",
+          }}
+          xs={4}
+        >
+          <Link to="/">
+            <img
+              alt="hive-logo"
+              style={{ width: "80px" }}
+              src="https://hive.blog/images/favicons/favicon-196x196.png"
+            />
+          </Link>
+          <Link style={{ textDecoration: "none" }} to="/">
+            <h2
+              style={{
+                marginLeft: "10px",
+                color: "#fff",
+              }}
+            >
+              Haf Blocks
+            </h2>
+          </Link>
         </Col>
-        <Col className="d-flex justify-content-center" xs={8}>
+        <Col>
           <Form className="nav-bar__form" onSubmit={handleSubmit}>
             <FormControl
               ref={form_value}
@@ -128,7 +158,7 @@ export default function NavigationBar() {
             />
           </Form>
         </Col>
-      </div>
+      </Row>
       {/* </Navbar.Collapse>
         </Container>
       </Navbar> */}

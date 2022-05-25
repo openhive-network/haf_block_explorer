@@ -1,9 +1,10 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Card, Row, Col, Toast } from "react-bootstrap";
-import { Link } from "react-router-dom";
-import HighlightedJSON from "../components/HighlightedJSON";
+import React, { useContext } from "react";
+import { Row, Col } from "react-bootstrap";
+// import { Link } from "react-router-dom";
+// import HighlightedJSON from "../components/HighlightedJSON";
 import { TranasctionContext } from "../contexts/transactionContext";
-import GetOperations from "../operations";
+// import GetOperations from "../operations";
+import OpCard from "../components/OpCard";
 
 export default function Transaction_Page({ transaction, setTitle }) {
   // setTitle(`HAF | Transaction`);
@@ -21,112 +22,32 @@ export default function Transaction_Page({ transaction, setTitle }) {
   //   window.location.reload();
   // }
 
-  // console.log(transData.operations);
-  // const type = profile.operations.map((op) => op.type.replaceAll("_", " "));
-  // const link_to_trx = (
-  //   <Link
-  //     style={{ color: "#000", textDecoration: "none" }}
-  //     to={`/transaction/${transData.trx_id}`}
-  //   >
-  //     {transData.acc_operation_id}
-  //   </Link>
-  // );
-  // const link_to_block = (
-  //   <Link
-  //     style={{
-  //       color: "#000",
-  //       textDecoration: "none",
-  //     }}
-  //     to={`/block/${transData.block}`}
-  //   >
-  //     {transData.block}
-  //   </Link>
-  // );
-  // console.log(transData);
+  /* {transData === null ? (
+    <p>
+      Note : New transactions need time to show up. <br></br>Transaction
+      will be shown in : {seconds}{" "}
+    </p>
+  ) : ( */
+
+  // <>
   return (
-    <div>
-      <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
-      {/* {transData === null ? (
-        <p>
-          Note : New transactions need time to show up. <br></br>Transaction
-          will be shown in : {seconds}{" "}
-        </p>
-      ) : ( */}
-      <>
-        <Row className="mt-5 justify-content-center">
-          <Col sm={6}>
-            {transData?.operations?.map((op, i) => {
-              const type = op.type.replaceAll("_", " ");
-
-              const link_to_trx = (
-                <Link
-                  style={{ color: "#000", textDecoration: "none" }}
-                  to={`/transaction/${op.transaction_id}`}
-                >
-                  {transData.transaction_id}
-                </Link>
-              );
-              const link_to_block = (
-                <Link
-                  style={{
-                    color: "#000",
-                    textDecoration: "none",
-                  }}
-                  to={`/block/${op.block_num}`}
-                >
-                  {transData.block_num}
-                </Link>
-              );
-              return (
-                <Toast
-                  className="d-inline-block m-1 w-100"
-                  style={{ backgroundColor: "#091B4B" }}
-                  key={i}
-                >
-                  <Toast.Header
-                    style={{ color: "#091B4B" }}
-                    closeButton={false}
-                  >
-                    <img
-                      src="holder.js/20x20?text=%20"
-                      className="rounded me-2"
-                      alt=""
-                    />
-                    <strong className="me-auto">
-                      <p style={{ margin: "0" }}>ID {link_to_trx}</p>
-                      <p style={{ margin: "0" }}>Block {link_to_block}</p>
-                    </strong>
-                    <strong className="me-auto">
-                      <p
-                        style={{
-                          fontSize: "20px",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {type}
-                      </p>
-                    </strong>
-
-                    <small>{op.timestamp} </small>
-                  </Toast.Header>
-                  <Toast.Body className="text-white">
-                    <GetOperations value={op.type} type={op} />
-                  </Toast.Body>
-                </Toast>
-              );
-            })}
-          </Col>
-        </Row>
-        <Row className="mt-5 justify-content-center">
-          {/* {transData?.operations?.map((op) => {
-          // console.log(op.value);
-          return <GetOperations value={op?.type} type={op} />;
-        })} */}
-
-          <Col sm={6}>
-            {!transData ? (
-              "No data"
-            ) : (
+    <>
+      {!transData ? (
+        "Loading"
+      ) : transData === null ? (
+        "No data"
+      ) : (
+        <div>
+          <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
+          <Row className="mt-5 justify-content-center">
+            <Col sm={6}>
+              {transData?.operations?.map((op, i) => (
+                <OpCard block={op} index={i} full_trx={transData} />
+              ))}
+            </Col>
+          </Row>
+          {/* <Row className="mt-5 justify-content-center">
+            <Col sm={6}>
               <div
                 style={{
                   // width: "50vw",
@@ -140,52 +61,14 @@ export default function Transaction_Page({ transaction, setTitle }) {
                 }}
                 className="transaction__json"
               >
-                {/* {transData?.operations.map((op) => (
-               
-              ))}
-              <Toast
-                className="d-inline-block m-1 w-100"
-                style={{ backgroundColor: "#091B4B" }}
-                key={i}
-              >
-                <Toast.Header style={{ color: "#091B4B" }} closeButton={false}>
-                  <img
-                    src="holder.js/20x20?text=%20"
-                    className="rounded me-2"
-                    alt=""
-                  />
-                  <strong className="me-auto">
-                    <p style={{ margin: "0" }}>
-                      ID {transData.trx_id !== null ? link_to_trx : "none"}
-                    </p>
-                    <p style={{ margin: "0" }}>Block {link_to_block}</p>
-                  </strong>
-                  <strong className="me-auto">
-                    <p
-                      style={{
-                        fontSize: "20px",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {type}
-                    </p>
-                  </strong>
-
-                  <small>{transData.timestamp} </small>
-                </Toast.Header>
-                <Toast.Body className="text-white">
-                  <GetOperations value={single.operations.type} type={single} />
-                  <HighlightedJSON json={single} />
-                </Toast.Body>
-              </Toast> */}
-
                 <HighlightedJSON json={transData} />
               </div>
-            )}
-          </Col>
-        </Row>
-      </>
-      {/* )} */}
-    </div>
+            </Col>
+          </Row> */}
+        </div>
+      )}
+    </>
   );
+
+  /* )} */
 }
