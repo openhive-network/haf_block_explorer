@@ -5,6 +5,9 @@ export const HeadBlockContext = createContext();
 export const HeadBlockContextProvider = ({ children }) => {
   const [head_block, setHead_block] = useState("");
   const [head_block_data, setHead_block_data] = useState([]);
+
+  // 192.168.5.118 -steem7
+  // 192.168.4.250 -steem10
   //   Get head block number
   useEffect(() => {
     axios({
@@ -27,7 +30,7 @@ export const HeadBlockContextProvider = ({ children }) => {
     if (head_block !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_ops_by_block",
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: current_head_block,

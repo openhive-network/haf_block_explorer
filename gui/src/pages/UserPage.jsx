@@ -25,7 +25,11 @@ export default function User_Page({ user, setTitle }) {
     set_pagination,
     pagination,
     userProfile,
+    resource_credits,
+    user_info,
   } = useContext(UserProfileContext);
+  console.log(user_info);
+
   // const { setTransactionId } = useContext(TranasctionContext);
   // setTitle(`HAF | User | ${user}`);
   // console.log(getOperation("vote_operation"));
@@ -78,95 +82,100 @@ export default function User_Page({ user, setTitle }) {
   const handleShow = () => setShowUserModal(false);
   return (
     <>
-      {/* {user_profile_data.length !== 0 ? ( */}
-      <Container fluid>
-        <div className="op_count">
-          <p>
-            Showing op_types per page :
-            {filtered_ops_sum === 0
-              ? user_profile_data?.length
-              : filtered_ops_sum}
-          </p>
-        </div>
+      {/* /* {user_profile_data.length !== 0 ? ( */}
+      {
+        user_info === "" ? (
+          <h1>Loading ...</h1>
+        ) : (
+          <Container fluid>
+            <div className="op_count">
+              <p>
+                Showing op_types per page :
+                {filtered_ops_sum === 0
+                  ? user_profile_data?.length
+                  : filtered_ops_sum}
+              </p>
+            </div>
 
-        <Row className="d-flex mt-5">
-          <Col sm={12} md={3}>
-            <UserProfileCard handleShow={handleShow} user={user} />
-            <UserInfoModal />
-          </Col>
-
-          <Col sm={12} md={8}>
-            <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
-              <h1>Operations</h1>
-            </Row>
-            <Row>
-              <Col className="d-flex justify-content-end">
-                <Button
-                  variant="secondary"
-                  onClick={() => set_show_filters(!show_filters)}
-                >
-                  Filters
-                </Button>
-                <MultiSelectFilters
-                  show_filters={show_filters}
-                  set_show_filters={set_show_filters}
-                />
+            <Row className="d-flex mt-5">
+              <Col sm={12} md={3}>
+                <UserProfileCard handleShow={handleShow} user={user} />
+                <UserInfoModal />
               </Col>
-            </Row>
-            <Row>
-              <Col className="d-flex justify-content-center">
-                {op_filters.length === 0 ? (
-                  <Pagination
-                    onClick={(e) =>
-                      set_pagination(
-                        get_max_trx_num -
-                          (Number(e.target.innerText) - 1) * acc_history_limit
-                      )
-                    }
-                    count={page_count}
-                    color="secondary"
-                    hidePrevButton
-                    hideNextButton
-                  />
-                ) : (
-                  <>
-                    <Button onClick={handlePrevPage}>
-                      <ArrowBackIosNewIcon />
-                    </Button>
-                    <Button onClick={handleNextPage}>
-                      <ArrowForwardIosIcon />
-                    </Button>
-                  </>
-                )}
-              </Col>
-            </Row>
 
-            <Row>
-              {user_profile_data?.map((profile, i) => {
-                // const type = profile.operations.type.replaceAll("_", " ");
-                // const link_to_trx = (
-                //   <Link
-                //     style={{ color: "#000", textDecoration: "none" }}
-                //     to={`/transaction/${profile.trx_id}`}
-                //   >
-                //     {profile.acc_operation_id}
-                //   </Link>
-                // );
-                // const link_to_block = (
-                //   <Link
-                //     style={{
-                //       color: "#000",
-                //       textDecoration: "none",
-                //     }}
-                //     to={`/block/${profile.block}`}
-                //   >
-                //     {profile.block}
-                //   </Link>
-                // );
-                // console.log(profile);
-                return (
-                  <Col key={profile.operation_id} sm={12}>
-                    {/* <Toast
+              <Col sm={12} md={8}>
+                <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
+                  <h1>Operations</h1>
+                </Row>
+                <Row>
+                  <Col className="d-flex justify-content-end">
+                    <Button
+                      variant="secondary"
+                      onClick={() => set_show_filters(!show_filters)}
+                    >
+                      Filters
+                    </Button>
+                    <MultiSelectFilters
+                      show_filters={show_filters}
+                      set_show_filters={set_show_filters}
+                    />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col className="d-flex justify-content-center">
+                    {op_filters.length === 0 ? (
+                      <Pagination
+                        onClick={(e) =>
+                          set_pagination(
+                            get_max_trx_num -
+                              (Number(e.target.innerText) - 1) *
+                                acc_history_limit
+                          )
+                        }
+                        count={page_count}
+                        color="secondary"
+                        hidePrevButton
+                        hideNextButton
+                      />
+                    ) : (
+                      <>
+                        <Button onClick={handlePrevPage}>
+                          <ArrowBackIosNewIcon />
+                        </Button>
+                        <Button onClick={handleNextPage}>
+                          <ArrowForwardIosIcon />
+                        </Button>
+                      </>
+                    )}
+                  </Col>
+                </Row>
+
+                <Row>
+                  {user_profile_data?.map((profile, i) => {
+                    // const type = profile.operations.type.replaceAll("_", " ");
+                    // const link_to_trx = (
+                    //   <Link
+                    //     style={{ color: "#000", textDecoration: "none" }}
+                    //     to={`/transaction/${profile.trx_id}`}
+                    //   >
+                    //     {profile.acc_operation_id}
+                    //   </Link>
+                    // );
+                    // const link_to_block = (
+                    //   <Link
+                    //     style={{
+                    //       color: "#000",
+                    //       textDecoration: "none",
+                    //     }}
+                    //     to={`/block/${profile.block}`}
+                    //   >
+                    //     {profile.block}
+                    //   </Link>
+                    // );
+                    // console.log(profile);
+                    return (
+                      <Col key={profile.operation_id} sm={12}>
+                        {/* <Toast
                       className="d-inline-block m-1 w-100"
                       style={{ backgroundColor: "#091B4B" }}
                       key={i}
@@ -215,19 +224,21 @@ export default function User_Page({ user, setTitle }) {
                           />
                       </Toast.Body>
                     </Toast> */}
-                    <OpCard block={profile} index={i} full_trx={profile} />
-                  </Col>
-                );
-              })}
+                        <OpCard block={profile} index={i} full_trx={profile} />
+                      </Col>
+                    );
+                  })}
+                </Row>
+              </Col>
             </Row>
-          </Col>
-        </Row>
-      </Container>
-      {/* ) : (
+          </Container>
+        )
+        /* /* ) : (
         <div className="d-flex justify-content-center">
           <h1>Loading ...</h1>
         </div>
-      )} */}
+      )} */
+      }
     </>
   );
 }

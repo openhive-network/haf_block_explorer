@@ -74,7 +74,7 @@ export default function NavigationBar() {
   useEffect(() => {
     axios({
       method: "post",
-      url: "http://192.168.4.250:3002/rpc/get_input_type",
+      url: "http://192.168.5.118:3002/rpc/get_input_type",
       headers: { "Content-Type": "application/json" },
       data: { _input: value },
     })

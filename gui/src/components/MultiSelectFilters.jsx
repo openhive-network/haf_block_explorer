@@ -84,7 +84,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
       setDateSelectError("End date can't be higher than start date ");
     }
   };
-  console.log(trimDate(startDateState?._d));
+  // console.log(trimDate(startDateState?._d));
   return (
     <div>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>

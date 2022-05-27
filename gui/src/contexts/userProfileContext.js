@@ -13,14 +13,15 @@ export const UserProfileContextProvider = ({ children }) => {
   const [pagination, set_pagination] = useState(-1);
   const [resource_credits, set_resource_credits] = useState({});
 
-  console.log(userProfile);
-
+  // console.log(userProfile);
+  // 192.168.5.118 -steem7
+  // 192.168.4.250 -steem10
   //Get available operation types for current user
   useEffect(() => {
     if (userProfile !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_acc_op_types",
+        url: "http://192.168.5.118:3002/rpc/get_acc_op_types",
 
         headers: { "Content-Type": "application/json" },
         data: {
@@ -39,7 +40,8 @@ export const UserProfileContextProvider = ({ children }) => {
       axios({
         method: "post",
         // url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
-        url: "http://192.168.4.250:3002/rpc/get_ops_by_account",
+
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
         headers: { "Content-Type": "application/json" },
         data: {
           _account: userProfile,
@@ -93,7 +95,6 @@ export const UserProfileContextProvider = ({ children }) => {
         user_info: user_info,
         op_types: op_types,
         op_filters: op_filters,
-        set_op_filters: set_op_filters,
       }}
     >
       {children}

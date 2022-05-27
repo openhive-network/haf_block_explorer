@@ -6,6 +6,8 @@ export const BlockContext = createContext();
 export const BlockContextProvider = ({ children }) => {
   const [block_data, setBlock_data] = useState(null);
   const [blockNumber, setBlockNumber] = useState("");
+  const [block_op_types, set_block_op_types] = useState([]);
+  const [block_op_filters, set_block_op_filters] = useState([]);
 
   // Get current block data
   // useEffect(() => {
@@ -20,21 +22,35 @@ export const BlockContextProvider = ({ children }) => {
   //     },
   //   }).then((res) => setBlock_data(res?.data?.result?.block));
   // }, [blockNumber]);
-
+  // 192.168.5.118 -steem7
+  // // 192.168.4.250 -steem10
   // getBlockData
   useEffect(() => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_ops_by_block",
+        url: "http://192.168.5.118:3002/rpc/get_block_op_types",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,
-          _filter: [],
+        },
+      }).then((res) => set_block_op_types(res.data));
+    }
+  }, [blockNumber, set_block_op_types]);
+
+  useEffect(() => {
+    if (blockNumber !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          _block_num: blockNumber,
+          _filter: block_op_filters,
         },
       }).then((res) => setBlock_data(res?.data.reverse()));
     }
-  }, [blockNumber]);
+  }, [blockNumber, block_op_filters, setBlock_data]);
 
   return (
     <BlockContext.Provider
@@ -42,6 +58,10 @@ export const BlockContextProvider = ({ children }) => {
         block_data: block_data,
         blockNumber: blockNumber,
         setBlockNumber: setBlockNumber,
+        block_op_types: block_op_types,
+        set_block_op_types: set_block_op_types,
+        block_op_filters: block_op_filters,
+        set_block_op_filters: set_block_op_filters,
       }}
     >
       {children}

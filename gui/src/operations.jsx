@@ -72,10 +72,16 @@ export default function GetOperations({
 
   function prettyViewCard() {
     return (
-      <>
+      <div style={{ marginTop: "20px" }}>
         {keys.map((key) => (
-          <Card style={{ width: "60%" }}>
-            <Card.Body style={{ color: "#fcff31", background: "#091B4B" }}>
+          <Card style={{ width: "50%" }}>
+            <Card.Body
+              style={{
+                color: "#fcff31",
+                background: "#091B4B",
+                padding: "5px",
+              }}
+            >
               <Row>
                 <Col>{key}</Col>
                 <Col>{JSON.stringify(type.value[key])}</Col>
@@ -83,7 +89,7 @@ export default function GetOperations({
             </Card.Body>
           </Card>
         ))}
-      </>
+      </div>
     );
   }
 
@@ -101,7 +107,9 @@ export default function GetOperations({
         </button>
       </span>
       <div hidden={!showJson}>
-        <pre>{JSON.stringify(full_trx, null, 2)} </pre>
+        <pre style={{ color: "#3aff33" }}>
+          {JSON.stringify(full_trx, null, 2)}{" "}
+        </pre>
       </div>
       <div hidden={!showDetails}>{prettyViewCard()}</div>
     </>

@@ -55,8 +55,8 @@ export default function Main_Page({ setTitle }) {
             </h4>
             <h4>
               Current witness :
-              <Link to={`/user/${head_block.current_witness}`}>
-                <p onClick={() => setUserProfile(head_block.current_witness)}>
+              <Link to={`/user/${head_block?.current_witness}`}>
+                <p onClick={() => setUserProfile(head_block?.current_witness)}>
                   {/* <img
                   src={`https://images.hive.blog/u/${head_block.current_witness}/avatar`}
                   style={{

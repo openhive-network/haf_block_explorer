@@ -1,14 +1,16 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { BlockContext } from "../contexts/blockContext";
 import { Row, Col, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 // import GetOperations from "../operations";
 // import HighlightedJSON from "../components/HighlightedJSON";
 import OpCard from "../components/OpCard";
+import BlockOpsFilters from "../components/BlockOpsFilters";
 
 export default function Block_Page({ block_nr, setTitle }) {
-  const { block_data, setBlockNumber, blockNumber } = useContext(BlockContext);
-
+  const { block_data, setBlockNumber, blockNumber, block_op_types } =
+    useContext(BlockContext);
+  const [show_modal, set_show_modal] = useState(false);
   // setTitle(`HAF | Block | ${block_nr}`);
   //Block counter
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ export default function Block_Page({ block_nr, setTitle }) {
     navigate(`/block/${blockNumber - 1}`);
     setBlockNumber(blockNumber - 1);
   };
+  // console.log(block_op_types);
+  const handleFilters = () => set_show_modal(!show_modal);
 
   return (
     <>
@@ -39,7 +43,13 @@ export default function Block_Page({ block_nr, setTitle }) {
               </div>
 
               <p> Transactions in block : {block_data?.length}</p>
+              <Button onClick={handleFilters}>Filters</Button>
             </Col>
+
+            <BlockOpsFilters
+              show_modal={show_modal}
+              set_show_modal={set_show_modal}
+            />
           </Row>
 
           {block_data?.length === 0 ? (
