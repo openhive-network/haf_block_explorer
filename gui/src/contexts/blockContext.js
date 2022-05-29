@@ -6,7 +6,7 @@ export const BlockContext = createContext();
 export const BlockContextProvider = ({ children }) => {
   const [block_data, setBlock_data] = useState(null);
   const [blockNumber, setBlockNumber] = useState("");
-  const [block_op_types, set_block_op_types] = useState([]);
+  const [block_op_types, set_block_op_types] = useState(null);
   const [block_op_filters, set_block_op_filters] = useState([]);
 
   // Get current block data
@@ -29,7 +29,7 @@ export const BlockContextProvider = ({ children }) => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.5.118:3002/rpc/get_block_op_types",
+        url: "http://192.168.4.169:3002/rpc/get_block_op_types",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,
@@ -42,7 +42,7 @@ export const BlockContextProvider = ({ children }) => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+        url: "http://192.168.4.169:3002/rpc/get_ops_by_block",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,

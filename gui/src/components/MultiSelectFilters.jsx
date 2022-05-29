@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import { Modal } from "react-bootstrap";
 import {
   FormControl,
@@ -28,7 +28,7 @@ const MenuProps = {
   },
 };
 
-const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual"];
+const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual", "All"];
 
 export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const { op_types, set_op_filters, op_filters } =
@@ -41,27 +41,41 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     } = event;
     set_op_filters(value);
   };
-
-  const handleVirtual = (event) => {
-    const {
-      target: { value },
-    } = event;
-    set_v_filters(value);
-  };
-
   const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
   const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
   const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
   const trim_virtual = virtualOps?.filter((m) => m !== false);
 
-  useEffect(() => {
-    if (vfilters === "Virtual") {
+  const handleVirtual = (event) => {
+    const {
+      target: { value },
+    } = event;
+
+    set_v_filters(value);
+    if (value === "Virtual") {
       set_op_filters(trim_virtual);
     }
-    if (vfilters === "Not-Virtual") {
+    if (value === "Not-Virtual") {
       set_op_filters(trim_not_virtual);
     }
-  }, [vfilters, set_op_filters, trim_virtual, trim_not_virtual]);
+    if (value === "All") {
+      set_op_filters([]);
+    }
+  };
+
+  // const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
+  // const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
+  // const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
+  // const trim_virtual = virtualOps?.filter((m) => m !== false);
+
+  // useEffect(() => {
+  //   if (vfilters === "Virtual") {
+  //     set_op_filters(trim_virtual);
+  //   }
+  //   if (vfilters === "Not-Virtual") {
+  //     set_op_filters(trim_not_virtual);
+  //   }
+  // }, [vfilters, set_op_filters, trim_virtual, trim_not_virtual]);
 
   //Calendar
   const [dateSelectError, setDateSelectError] = useState("");
@@ -74,7 +88,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const changeEndDate = (e) => {
     setEndDateState(e);
   };
-  const trimDate = (date) => date?.toISOString().split("T")[0];
+  // const trimDate = (date) => date?.toISOString().split("T")[0];
 
   const handleFilterBtn = () => {
     set_show_filters(false);

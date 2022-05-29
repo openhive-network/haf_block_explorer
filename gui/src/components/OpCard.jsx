@@ -32,11 +32,11 @@ export default function OpCard({ block, index, full_trx }) {
       {" "}
       <Toast
         className="d-inline-block m-1 w-100"
-        style={{ backgroundColor: "#091B4B" }}
+        style={{ backgroundColor: "#2C3136" }}
         key={index}
       >
-        <Toast.Header style={{ color: "#091B4B" }} closeButton={false}>
-          <img src="holder.js/20x20?text=%20" className="rounded me-2" alt="" />
+        <Toast.Header style={{ color: "#2C3136" }} closeButton={false}>
+          {/* <img src="holder.js/20x20?text=%20" className="rounded me-2" alt="" /> */}
           <strong className="me-auto">
             <p style={{ margin: "0" }}>
               ID {block.trx_id !== null ? link_to_trx : "no id"}

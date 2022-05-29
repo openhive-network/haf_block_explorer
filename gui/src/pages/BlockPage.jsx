@@ -25,10 +25,10 @@ export default function Block_Page({ block_nr, setTitle }) {
   };
   // console.log(block_op_types);
   const handleFilters = () => set_show_modal(!show_modal);
-
+  // console.log(block_op_types);
   return (
     <>
-      {block_data === null ? (
+      {block_op_types === null ? (
         <h1>Loading...</h1>
       ) : (
         <div>
@@ -51,20 +51,15 @@ export default function Block_Page({ block_nr, setTitle }) {
               set_show_modal={set_show_modal}
             />
           </Row>
-
-          {block_data?.length === 0 ? (
-            <h1>No transactions for this block</h1>
-          ) : (
-            block_data?.map((single, i) => {
-              return (
-                <Row key={i} className="justify-content-center">
-                  <Col sm={8}>
-                    <OpCard block={single} index={i} full_trx={single} />
-                  </Col>
-                </Row>
-              );
-            })
-          )}
+          {block_data?.map((single, i) => {
+            return (
+              <Row key={i} className="justify-content-center">
+                <Col sm={8}>
+                  <OpCard block={single} index={i} full_trx={single} />
+                </Col>
+              </Row>
+            );
+          })}
         </div>
       )}
     </>

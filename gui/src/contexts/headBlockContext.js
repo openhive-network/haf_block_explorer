@@ -30,7 +30,7 @@ export const HeadBlockContextProvider = ({ children }) => {
     if (head_block !== "") {
       axios({
         method: "post",
-        url: "http://192.168.5.118:3002/rpc/get_ops_by_block",
+        url: "http://192.168.4.169:3002/rpc/get_ops_by_block",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: current_head_block,

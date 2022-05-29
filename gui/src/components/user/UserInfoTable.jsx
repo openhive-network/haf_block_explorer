@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
-import HighlightedJSON from "../HighlightedJSON";
-import { Row, Col, Button, Card } from "react-bootstrap";
+// import HighlightedJSON from "../HighlightedJSON";
+import { Row, Col, Card } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
-export default function UserInfoModal() {
+export default function UserInfoTable() {
   // const center = {
   //   display: "flex",
   //   width: "100%",
@@ -111,9 +111,8 @@ export default function UserInfoModal() {
     "guest_bloggers",
   ];
 
-  // console.log(user_info["id"]);
   return (
-    <>
+    <div style={{ marginTop: "25px" }}>
       {keys.map((key, index) => {
         const render_key = () => {
           if (key === "recovery_account" || key === "reset_account") {
@@ -122,7 +121,15 @@ export default function UserInfoModal() {
         };
 
         return (
-          <Card key={index} style={{ borderRadius: "0" }}>
+          <Card
+            key={index}
+            style={{
+              borderRadius: "0",
+              background: "#2C3136",
+              border: "1px solid #fff",
+              color: "#fff",
+            }}
+          >
             <Card.Body style={{ padding: "5px" }}>
               <Row>
                 <Col>{key}</Col>
@@ -139,6 +146,6 @@ export default function UserInfoModal() {
           </Card>
         );
       })}
-    </>
+    </div>
   );
 }
