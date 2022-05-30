@@ -5,10 +5,23 @@ set -o pipefail
 
 create_api() {
     postgrest_dir=$PWD/api
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/backend.sql
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/endpoints.sql
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/exceptions.sql
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f $postgrest_dir/roles.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
+}
+
+create_indexes() {
+    echo "Creating indexes, this might take a while."
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_account_id ON hive.account_operations USING btree (account_id)"
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_account_id ON hive.account_operations_reversible USING btree (account_id)"
+
 }
 
 start_webserver() {
@@ -71,12 +84,14 @@ run_tests() {
 postgrest_v=9.0.0
 jmeter_v=5.4.3
 
+DB_NAME=haf_block_log
 CONFIG_PATH=$PWD/postgrest.conf
 
 if [ "$1" = "start" ]; then
     start_webserver $2
 elif [ "$1" = "re-start" ]; then
     create_api
+    create_indexes
     echo 'SUCCESS: Users and API recreated'
     start_webserver $2
 elif [ "$1" =  "install-postgrest" ]; then
