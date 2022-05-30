@@ -104,9 +104,10 @@ BEGIN
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
-    SELECT DISTINCT op_type_id
+    SELECT op_type_id
     FROM hive.account_operations_view
     WHERE account_id = _account_id
+    GROUP BY op_type_id
   ) haov
 
   JOIN LATERAL (
@@ -141,9 +142,10 @@ BEGIN
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
-    SELECT DISTINCT op_type_id
+    SELECT op_type_id
     FROM hive.operations_view
     WHERE block_num = _block_num
+    GROUP BY op_type_id
   ) hov
 
   JOIN LATERAL (
@@ -192,10 +194,14 @@ CREATE TYPE hafbe_backend.operations AS (
   acc_operation_id BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
+DECLARE
+  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
+  __no_start_date BOOLEAN = (_date_start IS NULL);
+  __no_end_date BOOLEAN = (_date_end IS NULL);
 BEGIN
   RETURN QUERY SELECT
     hafbe_backend.get_trx_hash(haov.block_num, hov.trx_in_block)::TEXT,
@@ -203,7 +209,7 @@ BEGIN
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
-    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
+    hov.timestamp::TEXT,
     hov.body::JSON,
     hov.id::BIGINT,
     haov.account_op_seq_no::BIGINT
@@ -219,10 +225,10 @@ BEGIN
     SELECT is_virtual, id
     FROM hive.operation_types
   ) hot ON hot.id = haov.op_type_id
-  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _start AND (
-    (SELECT array_length(_filter, 1)) IS NULL OR
-    haov.op_type_id=ANY(_filter)
-  )
+  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _top_op_id AND (
+    __filter_ops OR haov.op_type_id=ANY(_filter)) AND
+    (__no_start_date OR hov.timestamp >= _date_start) AND
+    (__no_end_date OR hov.timestamp < _date_end)
   ORDER BY haov.account_op_seq_no DESC
   LIMIT _limit;
 END
@@ -233,7 +239,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -241,7 +247,7 @@ $$
 BEGIN
   RETURN to_json(arr) FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _start, _limit, _filter))
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _top_op_id, _limit, _filter, _date_start, _date_end))
     ) arr
   ) result;
 END
@@ -289,10 +295,12 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
+DECLARE
+  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
   RETURN QUERY SELECT
     hafbe_backend.get_trx_hash(_block_num, hov.trx_in_block)::TEXT,
@@ -300,7 +308,7 @@ BEGIN
     hov.trx_in_block::INT,
     hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
-    btrim(to_json(hov.timestamp)::TEXT, '"'::TEXT)::TEXT,
+    hov.timestamp::TEXT,
     hov.body::JSON,
     hov.id::BIGINT,
     NULL::BIGINT
@@ -312,9 +320,8 @@ BEGIN
     SELECT id, is_virtual
     FROM hive.operation_types
   ) hot ON hot.id = hov.op_type_id
-  WHERE hov.block_num = _block_num AND hov.id <= _start AND (
-    (SELECT array_length(_filter, 1)) IS NULL OR
-    hov.op_type_id=ANY(_filter)
+  WHERE hov.block_num = _block_num AND hov.id <= _top_op_id AND (
+    __filter_ops OR hov.op_type_id=ANY(_filter)
   )
   ORDER BY hov.id DESC
   LIMIT _limit;
@@ -326,7 +333,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _start BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -334,7 +341,7 @@ $$
 BEGIN
   RETURN to_json(arr) FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _start, _limit, _filter))
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
     ) arr
   ) result;
 END
