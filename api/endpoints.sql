@@ -202,8 +202,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  -- _trx_hash TEXT -> BYTEA, __include_reversible = FALSE, __is_legacy_style = FALSE
-  RETURN hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA, FALSE, FALSE);
+  -- _trx_hash TEXT -> BYTEA, __include_reversible = TRUE, __is_legacy_style = FALSE
+  RETURN hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA, TRUE, FALSE);
 END
 $$
 ;
