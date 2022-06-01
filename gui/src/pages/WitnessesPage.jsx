@@ -139,7 +139,7 @@ export default function DataTable() {
     setCount(count + 1);
     sort(name);
   };
-
+  console.log(witnessData);
   return (
     <>
       {witnessData === null ? (
@@ -173,22 +173,22 @@ export default function DataTable() {
                               {witness.owner}
                             </Link>
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="votes">
                             {tidyNumber(
                               Math.round(witness.votes / 1000000 / 1000000)
                             )}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="voters">
                             ???
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
-                            {witness.total_missed}
+                          <StyledTableCell component="th" scope="missed">
+                            {tidyNumber(witness.total_missed)}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
-                            {witness.last_confirmed_block_num}
+                          <StyledTableCell component="th" scope="last_block">
+                            {tidyNumber(witness.last_confirmed_block_num)}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
-                            ???
+                          <StyledTableCell component="th" scope="apr">
+                            {Number(witness.props.hbd_interest_rate) / 100}%
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
                             {witness.hbd_exchange_rate.base.split("HBD")[0]}
@@ -212,13 +212,13 @@ export default function DataTable() {
                             ???
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
-                            {witness.props.account_subsidy_budget}
+                            {tidyNumber(witness.props.account_subsidy_budget)}
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
-                            {witness.props.account_subsidy_decay}
+                            {tidyNumber(witness.props.account_subsidy_decay)}
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
-                            {witness.props.maximum_block_size}
+                            {tidyNumber(witness.props.maximum_block_size)}
                           </StyledTableCell>
                           <StyledTableCell component="th" scope="witness">
                             {witness.hardfork_version_vote}

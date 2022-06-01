@@ -38,7 +38,7 @@ export const HeadBlockContextProvider = ({ children }) => {
         },
       }).then((res) => setHead_block_data(res?.data.reverse()));
     }
-  }, [current_head_block]);
+  }, [head_block, current_head_block]);
 
   return (
     <HeadBlockContext.Provider

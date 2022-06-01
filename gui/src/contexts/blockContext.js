@@ -25,6 +25,7 @@ export const BlockContextProvider = ({ children }) => {
   // 192.168.5.118 -steem7
   // // 192.168.4.250 -steem10
   // getBlockData
+  // console.log(block_data);
   useEffect(() => {
     if (blockNumber !== "") {
       axios({

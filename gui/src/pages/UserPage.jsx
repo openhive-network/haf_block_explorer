@@ -1,5 +1,6 @@
 import React, { useContext, useState } from "react";
 import { UserProfileContext } from "../contexts/userProfileContext";
+import { WitnessContext } from "../contexts/witnessContext";
 import { Container, Col, Row } from "react-bootstrap";
 import { Button, Pagination } from "@mui/material";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
@@ -8,7 +9,7 @@ import "./userPage.css";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoTable from "../components/user/UserInfoTable";
 // import { Link } from "react-router-dom";
-// import HighlightedJSON from "../components/HighlightedJSON";
+import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
 // import GetOperation from "../operations";
 import OpCard from "../components/OpCard";
@@ -26,10 +27,14 @@ export default function User_Page({ user, setTitle }) {
     pagination,
     // userProfile,
     // resource_credits,
-    // user_info,
+    user_info,
+    startDateState,
+    endDateState,
   } = useContext(UserProfileContext);
-  // console.log(user_info);
-
+  const { witnessData } = useContext(WitnessContext);
+  const user_witness = witnessData?.filter((w) => w.owner === user);
+  // console.log(user_info?.witness_votes);
+  // console.log(user_witness?.[0].signing_key);
   // const { setTransactionId } = useContext(TranasctionContext);
   // setTitle(`HAF | User | ${user}`);
   // console.log(getOperation("vote_operation"));
@@ -55,13 +60,15 @@ export default function User_Page({ user, setTitle }) {
   // const [filters_length_names, set_filters_length_names] = useState(
   //   filered_op_names.length
   // );
+  // console.log(user_profile_data);
+  // console.log(witnessData);
 
   const check_op_type = user_profile_data?.map(
     (history) => history.operations.type
   );
   // const set_op = [...new Set(check_op_type)];
   const count_same = {};
-  check_op_type.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
+  check_op_type?.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
 
   const count_filtered_ops = filered_op_names.map((k) => count_same[k]);
   const filtered_ops_sum = count_filtered_ops.reduce((a, b) => a + b, 0);
@@ -80,50 +87,319 @@ export default function User_Page({ user, setTitle }) {
 
   // const handleClose = () => setShowUserModal(true);
   const handleShow = () => setShowUserModal(false);
-  // console.log(user_profile_data);
+  // const meta_data = JSON?.parse(user_info?.json_metadata);
+  // console.log(user_info);
+  // console.log(...user_info?.owner.key_auths[0]);
   return (
     <>
-      {/* /* {user_profile_data.length !== 0 ? ( */}
-      {user_profile_data.length === 0 ? (
+      {user_info === "" ||
+      witnessData === null ||
+      user_profile_data === null ? (
         <h1>Loading ...</h1>
       ) : (
         <Container fluid>
-          <div className="op_count">
+          {/* <div className="op_count">
             <p>
               Showing op_types per page :
               {filtered_ops_sum === 0
                 ? user_profile_data?.length
                 : filtered_ops_sum}
             </p>
-          </div>
+          </div> */}
 
           <Row className="d-flex mt-5">
             <Col sm={12} md={3}>
-              <UserProfileCard handleShow={handleShow} user={user} />
-              <UserInfoTable />
+              <UserProfileCard user={user} />
+              <UserInfoTable user_info={user_info} />
+              {user_info?.json_metadata ? (
+                <div
+                  style={{
+                    background: "#2C3136",
+                    color: "#fff",
+                    marginTop: "25px",
+                    borderRadius: "10px",
+                    padding: "20px",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    textAlign: "center",
+                  }}
+                >
+                  <h3>JSON metadata</h3>
+                  <pre
+                    style={{
+                      borderRadius: "10px",
+                      background: "#18003fef",
+                      wordWrap: "break-word",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      padding: "10px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <HighlightedJSON
+                      json={JSON.parse(user_info?.json_metadata)}
+                    />
+                  </pre>
+                </div>
+              ) : (
+                ""
+              )}
+              {user_info?.posting_json_metadata ? (
+                <div
+                  style={{
+                    background: "#2C3136",
+                    color: "#fff",
+                    marginTop: "25px",
+                    borderRadius: "10px",
+                    padding: "20px",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    textAlign: "center",
+                  }}
+                >
+                  <h3>Posting JSON metadata</h3>
+                  <pre
+                    style={{
+                      borderRadius: "10px",
+                      background: "#18003fef",
+                      wordWrap: "break-word",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      padding: "10px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <HighlightedJSON
+                      json={JSON.parse(user_info?.posting_json_metadata)}
+                    />
+                  </pre>
+                </div>
+              ) : (
+                ""
+              )}
+              {user_info?.owner?.key_auths ? (
+                <div
+                  style={{
+                    background: "#2C3136",
+                    color: "#fff",
+                    marginTop: "25px",
+                    borderRadius: "10px",
+                    padding: "20px",
+                    // wordWrap: "break-word",
+                    // whiteSpace: "pre-wrap",
+                    // wordBreak: "break-word",
+                    textAlign: "center",
+                  }}
+                >
+                  <h3>Authorities</h3>
+                  <div
+                    style={{
+                      background: "#18003fef",
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <h5>Signinig</h5>
+                    <p
+                      style={{
+                        overflow: "auto",
+                        padding: "10px",
+                        color: "#d8fd50",
+                      }}
+                    >
+                      {user_witness?.[0]?.signing_key}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      background: "#18003fef",
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <h5>Owner</h5>
+                    <p
+                      style={{
+                        overflow: "auto",
+                        padding: "10px",
+                        color: "#d8fd50",
+                        margin: "0",
+                      }}
+                    >
+                      {user_info?.owner.key_auths[0][0]}
+                    </p>
+                    <p>
+                      Threshold :{" "}
+                      <span style={{ color: "#d8fd50" }}>
+                        {user_info?.owner.key_auths[0][1]}
+                      </span>
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      background: "#18003fef",
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <h5>Active</h5>
+                    <p
+                      style={{
+                        overflow: "auto",
+                        padding: "10px",
+                        color: "#d8fd50",
+                        margin: "0",
+                      }}
+                    >
+                      {user_info?.active.key_auths[0][0]}
+                    </p>
+                    <p>
+                      Threshold :{" "}
+                      <span style={{ color: "#d8fd50" }}>
+                        {user_info?.active.key_auths[0][1]}
+                      </span>
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      background: "#18003fef",
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <h5>Posting</h5>
+                    <p
+                      style={{
+                        overflow: "auto",
+                        padding: "10px",
+                        color: "#d8fd50",
+                        margin: "0",
+                      }}
+                    >
+                      {user_info?.posting.key_auths[0][0]}
+                    </p>
+                    <p>
+                      Threshold :{" "}
+                      <span style={{ color: "#d8fd50" }}>
+                        {user_info?.posting.key_auths[0][1]}
+                      </span>
+                    </p>
+                    <div
+                      style={{
+                        textAlign: "left",
+                        padding: "10px 20px 10px 10px",
+                      }}
+                    >
+                      <ul style={{ listStyle: "none" }}>
+                        {user_info?.posting.account_auths.map((acc) => (
+                          <Row>
+                            <Col classsName="d-flex justify-content-center">
+                              <li>
+                                <a
+                                  style={{ textDecoration: "none" }}
+                                  href={`/user/${acc[0]}`}
+                                >
+                                  {acc[0]}
+                                </a>
+                              </li>
+                            </Col>
+                            <Col className="d-flex justify-content-end">
+                              <li> {acc[1]}</li>
+                            </Col>
+                          </Row>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      background: "#18003fef",
+                      borderRadius: "10px",
+                      marginTop: "20px",
+                    }}
+                  >
+                    <h5>Memo</h5>
+                    <p
+                      style={{
+                        overflow: "auto",
+                        padding: "10px",
+                        color: "#d8fd50",
+                        margin: "0",
+                      }}
+                    >
+                      {user_info?.memo_key}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                ""
+              )}
+              {user_info?.posting_json_metadata ? (
+                <div
+                  style={{
+                    background: "#2C3136",
+                    color: "#fff",
+                    marginTop: "25px",
+                    borderRadius: "10px",
+                    padding: "20px",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    textAlign: "center",
+                  }}
+                >
+                  <h3>Witness Properties</h3>
+                  <UserInfoTable user_info={user_witness?.[0]} />
+                </div>
+              ) : (
+                ""
+              )}
+              {user_info?.witness_votes?.length !== 0 ? (
+                <div
+                  style={{
+                    background: "#2C3136",
+                    color: "#fff",
+                    marginTop: "25px",
+                    borderRadius: "10px",
+                    padding: "20px",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    textAlign: "center",
+                  }}
+                >
+                  <h3>Witness Votes</h3>
+                  <ul style={{ listStyle: "none" }}>
+                    {user_info?.witness_votes?.map((w, i) => (
+                      <li>
+                        {i + 1}.{" "}
+                        <a
+                          style={{ textDecoration: "none" }}
+                          href={`/user/${w}`}
+                        >
+                          {w}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                ""
+              )}
             </Col>
 
-            <Col sm={12} md={8}>
-              <Row style={{ textAlign: "center", margin: "10px 0 10px 0" }}>
-                <h1>Operations</h1>
-              </Row>
+            <Col>
               <Row>
-                <Col className="d-flex justify-content-end">
-                  <Button
-                    variant="secondary"
-                    onClick={() => set_show_filters(!show_filters)}
-                  >
-                    Filters
-                  </Button>
-                  <MultiSelectFilters
-                    show_filters={show_filters}
-                    set_show_filters={set_show_filters}
-                  />
-                </Col>
-              </Row>
-              <Row>
-                <Col className="d-flex justify-content-center">
-                  {op_filters.length === 0 ? (
+                <Col className="d-flex justify-content-between">
+                  <div className="op_count">
+                    <p>
+                      Operations :{" "}
+                      {filtered_ops_sum === 0
+                        ? user_profile_data?.length
+                        : filtered_ops_sum}
+                    </p>
+                  </div>
+                  {op_filters.length === 0 &&
+                  startDateState === null &&
+                  endDateState === null ? (
                     <Pagination
                       onClick={(e) =>
                         set_pagination(
@@ -141,13 +417,78 @@ export default function User_Page({ user, setTitle }) {
                       <Button onClick={handlePrevPage}>
                         <ArrowBackIosNewIcon />
                       </Button>
-                      <Button onClick={handleNextPage}>
-                        <ArrowForwardIosIcon />
+
+                      {user_profile_data?.length !== acc_history_limit ? (
+                        " "
+                      ) : (
+                        <Button onClick={handleNextPage}>
+                          <ArrowForwardIosIcon />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  <div>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() => set_show_filters(!show_filters)}
+                    >
+                      Filters
+                    </Button>
+                    <MultiSelectFilters
+                      show_filters={show_filters}
+                      set_show_filters={set_show_filters}
+                    />
+                  </div>
+                </Col>
+
+                {/* <Col sm={1}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => set_show_filters(!show_filters)}
+                  >
+                    Filters
+                  </Button>
+                  <MultiSelectFilters
+                    show_filters={show_filters}
+                    set_show_filters={set_show_filters}
+                  />
+                </Col> */}
+              </Row>
+              {/* <Row>
+                <Col className="d-flex justify-content-center">
+                  {op_filters.length === 0 &&
+                  startDateState === null &&
+                  endDateState === null ? (
+                    <Pagination
+                      onClick={(e) =>
+                        set_pagination(
+                          get_max_trx_num -
+                            (Number(e.target.innerText) - 1) * acc_history_limit
+                        )
+                      }
+                      count={page_count}
+                      color="secondary"
+                      hidePrevButton
+                      hideNextButton
+                    />
+                  ) : (
+                    <>
+                      <Button onClick={handlePrevPage}>
+                        <ArrowBackIosNewIcon />
                       </Button>
+
+                      {user_profile_data?.length !== acc_history_limit ? (
+                        " "
+                      ) : (
+                        <Button onClick={handleNextPage}>
+                          <ArrowForwardIosIcon />
+                        </Button>
+                      )}
                     </>
                   )}
                 </Col>
-              </Row>
+              </Row> */}
 
               <Row>
                 {user_profile_data?.map((profile, i) => {

@@ -10,20 +10,22 @@ import { Link } from "react-router-dom";
 
 const red_bold = {
   fontWeight: "bold",
-  color: "red",
-  fontSize: "20px",
+  // color: "red",
+  fontSize: "15px",
 };
 const green_bold = {
   fontWeight: "bold",
-  color: "green",
-  fontSize: "20px",
+  // color: "green",
+  fontSize: "15px",
 };
 const blue_bold = {
   fontWeight: "bold",
-  color: "blue",
-  fontSize: "20px",
+  // color: "blue",
+  fontSize: "15px",
 };
-
+const p_styles = {
+  margin: "0px",
+};
 const show_json_button = {
   textTransform: "upperCase",
   background: "inherit",
@@ -46,16 +48,14 @@ const img_style = {
 const link_text = { color: "pink", textTransform: "none" };
 const boolean = { color: "#34f0c7" };
 
-export default function GetOperations({
-  value,
-  type,
-  // showJson,
-  // setShowJson,
-  index,
-  full_trx,
-}) {
+export default function GetOperations({ value, type, full_trx }) {
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
   const keys = Object.keys(type.value);
+  const [showJson, setShowJson] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  // const [showJson, setShowJson] = useState(false);
+  // const [showDetails, setShowDetails] = useState(false);
   // const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
   // const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
   // const operation_value = JSON.stringify(type.value, null, 2);
@@ -72,48 +72,69 @@ export default function GetOperations({
 
   function prettyViewCard() {
     return (
-      <div style={{ marginTop: "20px" }}>
-        {keys.map((key) => (
-          <Card style={{ width: "50%" }}>
-            <Card.Body
-              style={{
-                color: "#fcff31",
-                background: "#091B4B",
-                padding: "5px",
-              }}
-            >
-              <Row>
-                <Col>{key}</Col>
-                <Col>{JSON.stringify(type.value[key])}</Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        ))}
-      </div>
+      <Row className="d-flex">
+        <Col xs={2} />
+        <Col
+          xs={8}
+          style={{
+            marginTop: "20px",
+            // display: "flex",
+            // flexDirection: "column",
+            textAlign: "left",
+          }}
+        >
+          {keys.map((key, i) => (
+            <Card key={i}>
+              <Card.Body
+                style={{
+                  // width: "60%",
+                  color: "#fcff31",
+                  background: "#2C3136",
+                  padding: "5px",
+                }}
+              >
+                <Row>
+                  <Col xs={6}>{key}</Col>
+                  <Col xs={6}>{JSON.stringify(type.value[key])}</Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          ))}
+        </Col>
+        <Col xs={2} />
+      </Row>
     );
   }
 
-  const more_detailed_view = () => (
-    <>
-      <span>
-        <button onClick={() => setShowJson(!showJson)} style={show_json_button}>
-          Show JSON
-        </button>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          style={show_details_button}
+  function more_detailed_view() {
+    return (
+      <>
+        <span>
+          <button
+            onClick={() => setShowJson(!showJson)}
+            style={show_json_button}
+          >
+            Show JSON
+          </button>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            style={show_details_button}
+          >
+            Show details
+          </button>
+        </span>
+        <div
+          style={{ marginTop: "20px", textAlign: "left" }}
+          hidden={!showJson}
         >
-          Show details
-        </button>
-      </span>
-      <div hidden={!showJson}>
-        <pre style={{ color: "#3aff33" }}>
-          {JSON.stringify(full_trx, null, 2)}{" "}
-        </pre>
-      </div>
-      <div hidden={!showDetails}>{prettyViewCard()}</div>
-    </>
-  );
+          <pre style={{ color: "#3aff33" }}>
+            {JSON.stringify(full_trx, null, 2)}{" "}
+          </pre>
+        </div>
+        <div hidden={!showDetails}>{prettyViewCard()}</div>
+      </>
+    );
+  }
   // const [showJson, setShowJson] = useState(false);
 
   // const calculateHivePower = (account_vests) => {
@@ -124,19 +145,20 @@ export default function GetOperations({
   function linkToUserAccount(user) {
     return (
       <>
-        <Link style={{ textDecoration: "none" }} to={`/user/${user}`}>
+        <Link
+          style={{ textDecoration: "none", color: "red" }}
+          to={`/user/${user}`}
+        >
           {user}
         </Link>
       </>
     );
   }
 
-  const [showJson, setShowJson] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   switch (value) {
     case "vote_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.voter)}</span>,
           author :{" "}
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>,
@@ -155,9 +177,9 @@ export default function GetOperations({
       );
     case "comment_operation":
       return !type.value.parent_author || !type.value.parent_permlink ? (
-        <p>
+        <p style={p_styles}>
           <span red_bold={red_bold}>
-            {linkToUserAccount(type.value.author)}{" "}
+            {linkToUserAccount(type.value.author)}
           </span>
           authored permlink :
           <span red_bold={red_bold}>
@@ -172,7 +194,7 @@ export default function GetOperations({
           {more_detailed_view()}
         </p>
       ) : (
-        <p>
+        <p style={p_styles}>
           <span red_bold={red_bold}>
             {linkToUserAccount(type.value.author)}
           </span>{" "}
@@ -195,7 +217,7 @@ export default function GetOperations({
       );
     case "transfer_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           transfered{" "}
           <span style={blue_bold}>{type.value.amount?.amount / 1000}</span> HIVE
@@ -205,7 +227,7 @@ export default function GetOperations({
       );
     case "transfer_to_vesting_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={blue_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           vest{" "}
           <span style={green_bold}> {type.value.amount?.amount / 1000}</span>{" "}
@@ -215,7 +237,7 @@ export default function GetOperations({
     // account withdraw verting_shares (convert to HP) from vesting (show details json)
     case "withdraw_vesting_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={blue_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           withdraw{" "}
           <span style={green_bold}>
@@ -230,7 +252,7 @@ export default function GetOperations({
       );
     case "limit_order_create_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={blue_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           wants receive amount :{" "}
           <span style={red_bold}>
@@ -245,14 +267,14 @@ export default function GetOperations({
       );
     case "limit_order_cancel_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={blue_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           cancel order ID : <span style={red_bold}>{type.value.orderid}</span>
         </p>
       );
     case "feed_publish_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={blue_bold}>
             {linkToUserAccount(type.value.publisher)}
           </span>{" "}
@@ -268,7 +290,7 @@ export default function GetOperations({
       );
     case "convert_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           conversion request :{" "}
           <span style={blue_bold}>
@@ -279,7 +301,7 @@ export default function GetOperations({
       );
     case "account_create_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           create account :{" "}
           <span style={green_bold}>
@@ -290,21 +312,21 @@ export default function GetOperations({
       );
     case "account_update_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           update account data {more_detailed_view()}
         </p>
       );
     case "witness_update_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           update witness {more_detailed_view()}
         </p>
       );
     case "account_witness_vote_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           approve witness{" "}
           <span style={blue_bold}>{linkToUserAccount(type.value.witness)}</span>{" "}
@@ -313,7 +335,7 @@ export default function GetOperations({
       );
     case "account_witness_proxy_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           set <span style={blue_bold}>{type.value.proxy}</span> as proxy{" "}
           {more_detailed_view()}
@@ -321,7 +343,7 @@ export default function GetOperations({
       );
     case "pow_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.worker_account)}
           </span>{" "}
@@ -330,7 +352,7 @@ export default function GetOperations({
       );
     case "custom_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.required_auths)}
           </span>{" "}
@@ -347,10 +369,12 @@ export default function GetOperations({
         </p>
       );
     case "report_over_production_operation":
-      return <p> report over production {more_detailed_view()} </p>;
+      return (
+        <p style={p_styles}> report over production {more_detailed_view()} </p>
+      );
     case "delete_comment_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           deleted comment permlink :{" "}
           <span>
@@ -380,7 +404,7 @@ export default function GetOperations({
       );
     case "comment_options_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           max payout :{" "}
           <span style={green_bold}>
@@ -401,7 +425,7 @@ export default function GetOperations({
       );
     case "set_withdraw_vesting_route_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.from_account)}
           </span>{" "}
@@ -417,21 +441,21 @@ export default function GetOperations({
       );
     case "limit_order_create2_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           limit order create 2 {more_detailed_view()}
         </p>
       );
     case "claim_account_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           claim account {more_detailed_view()}
         </p>
       );
     case "create_claimed_account_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           claimed new account{" "}
           <span style={blue_bold}>
@@ -442,7 +466,7 @@ export default function GetOperations({
       );
     case "request_account_recovery_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.account_to_recover)}
           </span>{" "}
@@ -455,7 +479,7 @@ export default function GetOperations({
       );
     case "recover_account_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.account_to_recover)}
           </span>{" "}
@@ -464,7 +488,7 @@ export default function GetOperations({
       );
     case "change_recovery_account_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.account_to_recover)}
           </span>{" "}
@@ -477,7 +501,7 @@ export default function GetOperations({
       );
     case "escrow_transfer_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           escrow transfer to :{" "}
           <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span> ,
@@ -488,7 +512,7 @@ export default function GetOperations({
       );
     case "escrow_dispute_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           escrow dispute to :{" "}
           <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span> ,
@@ -499,7 +523,7 @@ export default function GetOperations({
       );
     case "escrow_release_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           escrow release to :{" "}
           <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span> ,
@@ -510,7 +534,7 @@ export default function GetOperations({
       );
     case "pow2_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {" "}
             {linkToUserAccount(type.value.work.value.input.worker_account)}
@@ -520,14 +544,14 @@ export default function GetOperations({
       );
     case "escrow_approve_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           escrow approve {more_detailed_view()}
         </p>
       );
     case "transfer_to_savings_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value?.from)}</span>{" "}
           transfer to savings :{" "}
           <span style={red_bold}>
@@ -538,7 +562,7 @@ export default function GetOperations({
       );
     case "transfer_from_savings_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value?.from)}</span>{" "}
           transfer from savings :{" "}
           <span style={red_bold}>
@@ -549,27 +573,27 @@ export default function GetOperations({
       );
     case "cancel_transfer_from_savings_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           cancel transfer from savings {more_detailed_view()}
         </p>
       );
     case "custom_binary_operation":
-      return <p>Custom binary {more_detailed_view()}</p>;
+      return <p style={p_styles}>Custom binary {more_detailed_view()}</p>;
     case "decline_voting_rights_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           decline voting rights {more_detailed_view()}
         </p>
       );
     case "reset_account_operation":
-      return <p>reset account</p>;
+      return <p style={p_styles}>reset account</p>;
     case "set_reset_account_operation":
-      return <p>set reset account</p>;
+      return <p style={p_styles}>set reset account</p>;
     case "claim_reward_balance_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           claim reward :{" "}
           <span style={blue_bold}>
@@ -593,7 +617,7 @@ export default function GetOperations({
       );
     case "delegate_vesting_shares_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.delegator)}
           </span>{" "}
@@ -615,7 +639,7 @@ export default function GetOperations({
       );
     case "account_create_with_delegation_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           create account{" "}
           <span style={blue_bold}>
@@ -626,21 +650,21 @@ export default function GetOperations({
       );
     case "witness_set_properties_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           witness set properties {more_detailed_view()}
         </p>
       );
     case "account_update2_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           account update2 {more_detailed_view()}
         </p>
       );
     case "create_proposal_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           create proposal subject :{" "}
           <span style={blue_bold}>{type.value.subject}</span>{" "}
@@ -649,14 +673,14 @@ export default function GetOperations({
       );
     case "update_proposal_votes_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.voter)}</span>{" "}
           update proposal votes {more_detailed_view()}
         </p>
       );
     case "remove_proposal_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.proposal_owner)}
           </span>{" "}
@@ -665,14 +689,14 @@ export default function GetOperations({
       );
     case "update_proposal_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.creator)}</span>{" "}
           update proposal {more_detailed_view()}
         </p>
       );
     case "collateralized_convert_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           collateralized convert amount :{" "}
           <span style={blue_bold}>
@@ -683,7 +707,7 @@ export default function GetOperations({
       );
     case "recurrent_transfer_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           recurrent transfer to{" "}
           <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span>,
@@ -696,7 +720,7 @@ export default function GetOperations({
       );
     case "fill_convert_request_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           fill convert request, amount in :
           <span style={green_bold}>
@@ -711,7 +735,7 @@ export default function GetOperations({
       );
     case "author_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           author reward :
           <span style={green_bold}>
@@ -741,7 +765,7 @@ export default function GetOperations({
       );
     case "curation_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.curator)}</span>{" "}
           curation reward{" "}
           <span style={green_bold}>
@@ -771,7 +795,7 @@ export default function GetOperations({
       );
     case "comment_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           comment reward{" "}
           <span style={green_bold}>
@@ -792,7 +816,7 @@ export default function GetOperations({
       );
     case "liquidity_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           liquidity reward{" "}
           <span style={green_bold}>
@@ -803,7 +827,7 @@ export default function GetOperations({
       );
     case "interest_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           collect{" "}
           <span style={green_bold}>
@@ -814,7 +838,7 @@ export default function GetOperations({
       );
     case "fill_vesting_withdraw_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.from_account)}
           </span>{" "}
@@ -842,7 +866,7 @@ export default function GetOperations({
       );
     case "fill_order_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.current_owner)}
           </span>{" "}
@@ -855,14 +879,14 @@ export default function GetOperations({
       );
     case "shutdown_witness_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
           shutdown witness {more_detailed_view()}
         </p>
       );
     case "fill_transfer_from_savings_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
           fill transfer from savings{" "}
           <span style={red_bold}>
@@ -873,7 +897,7 @@ export default function GetOperations({
       );
     case "hardfork_operation":
       return (
-        <p>
+        <p style={p_styles}>
           Hardfork ID: <span style={red_bold}>{type.value.hardfork_id}</span>{" "}
           {more_detailed_view()}
         </p>
@@ -881,14 +905,14 @@ export default function GetOperations({
 
     case "comment_payout_update_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           comment payout update {more_detailed_view()}
         </p>
       );
     case "return_vesting_delegation_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           return of{" "}
           <span style={blue_bold}>
@@ -904,7 +928,7 @@ export default function GetOperations({
       );
     case "comment_benefactor_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.benefactor)}
           </span>{" "}
@@ -936,7 +960,7 @@ export default function GetOperations({
       );
     case "producer_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.producer)}</span>{" "}
           producer reward :{" "}
           <span style={green_bold}>
@@ -952,7 +976,7 @@ export default function GetOperations({
       );
     case "clear_null_account_balance_operation":
       return (
-        <p>
+        <p style={p_styles}>
           Clear null account balance, total cleared:{" "}
           <span style={red_bold}>
             {calculate_hive_hbd(type.value.total_cleared[0].amount)} HIVE{" "}
@@ -970,7 +994,7 @@ export default function GetOperations({
       );
     case "proposal_pay_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.receiver)}</span>{" "}
           receive{" "}
           <span style={blue_bold}>
@@ -981,7 +1005,7 @@ export default function GetOperations({
       );
     case "sps_fund_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.fund_account)}
           </span>{" "}
@@ -994,7 +1018,7 @@ export default function GetOperations({
       );
     case "hardfork_hive_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           hardfork hive{" "}
           <span>
@@ -1007,7 +1031,7 @@ export default function GetOperations({
       );
     case "hardfork_hive_restore_operation":
       return (
-        <p>
+        <p style={p_styles}>
           {" "}
           <span style={red_bold}>
             {linkToUserAccount(type.value.account)}
@@ -1023,14 +1047,14 @@ export default function GetOperations({
       );
     case "delayed_voting_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.voter)}</span>{" "}
           delayer voting {more_detailed_view()}
         </p>
       );
     case "consolidate_treasury_balance_operation":
       return (
-        <p>
+        <p style={p_styles}>
           Consolidate treasury balance{" "}
           <span>
             <pre style={{ color: "#37e8ff" }}>
@@ -1042,14 +1066,14 @@ export default function GetOperations({
       );
     case "effective_comment_vote_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.voter)}</span>{" "}
           effective comment vote {more_detailed_view()}
         </p>
       );
     case "ineffective_delete_comment_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.author)}</span>{" "}
           ineffective delete comment permlink :{" "}
           <span>
@@ -1066,7 +1090,7 @@ export default function GetOperations({
       );
     case "sps_convert_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>
             {linkToUserAccount(type.value.fund_account)}
           </span>{" "}
@@ -1082,10 +1106,10 @@ export default function GetOperations({
         </p>
       );
     case "expired_account_notification_operation":
-      return <p>Expired account notification</p>;
+      return <p style={p_styles}>Expired account notification</p>;
     case "changed_recovery_account_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.account)}</span>{" "}
           change recovery account , old account :{" "}
           <span style={blue_bold}>
@@ -1101,20 +1125,20 @@ export default function GetOperations({
     case "transfer_to_vesting_completed_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             {" "}
             <span style={red_bold}>
               {linkToUserAccount(type.value.from_account)}
             </span>{" "}
             transfer to vesting completed.
           </p>
-          <p>
+          <p style={p_styles}>
             Hive vested :{" "}
             <span style={blue_bold}>
               {calculate_hive_hbd(type.value.hive_vested.amount)} HIVE
             </span>
           </p>
-          <p>
+          <p style={p_styles}>
             Vesting shares received :{" "}
             <span style={blue_bold}>
               {calculate_vests(type.value.vesting_shares_received.amount)} VESTS
@@ -1125,7 +1149,7 @@ export default function GetOperations({
       );
     case "pow_reward_operation":
       return (
-        <p>
+        <p style={p_styles}>
           <span style={red_bold}>{linkToUserAccount(type.value.worker)}</span>{" "}
           pow reward{" "}
           <span style={blue_bold}>
@@ -1137,18 +1161,18 @@ export default function GetOperations({
     case "vesting_shares_split_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
             vesting shares split{" "}
           </p>
-          <p>
+          <p style={p_styles}>
             Vesting shares before split :{" "}
             <span style={blue_bold}>
               {calculate_vests(type.value.vesting_shares_before_split.amount)}{" "}
               VESTS
             </span>
           </p>
-          <p>
+          <p style={p_styles}>
             Vesting shares after split :{" "}
             <span style={blue_bold}>
               {calculate_vests(type.value.vesting_shares_after_split.amount)}{" "}
@@ -1179,7 +1203,7 @@ export default function GetOperations({
     case "account_created_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             Created new account name{" "}
             <span style={red_bold}>
               {linkToUserAccount(type.value.new_account_name)}
@@ -1209,23 +1233,23 @@ export default function GetOperations({
     case "fill_collateralized_convert_request_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             <span style={red_bold}>{linkToUserAccount(type.value.owner)}</span>{" "}
             fill collateralized convert request
           </p>
-          <p>
+          <p style={p_styles}>
             Amount in:{" "}
             <span style={blue_bold}>
               {calculate_hive_hbd(type.value.amount_in.amount)} HIVE
             </span>
           </p>
-          <p>
+          <p style={p_styles}>
             Amount out:{" "}
             <span style={blue_bold}>
               {calculate_hive_hbd(type.value.amount_out.amount)} HBD
             </span>
           </p>
-          <p>
+          <p style={p_styles}>
             Excess collateral:{" "}
             <span style={blue_bold}>
               {calculate_hive_hbd(type.value.excess_collateral.amount)} HIVE
@@ -1237,7 +1261,7 @@ export default function GetOperations({
     case "system_warning_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             System warning message : <br></br>
             <span style={red_bold}>{type.value.message}</span>
           </p>{" "}
@@ -1247,12 +1271,12 @@ export default function GetOperations({
     case "fill_recurrent_transfer_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
             fill recurrent transfer to{" "}
             <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span>
           </p>
-          <p>
+          <p style={p_styles}>
             Amount :{" "}
             <span style={red_bold}>
               {calculate_hive_hbd(type.value.amount.amount)} HIVE
@@ -1264,12 +1288,12 @@ export default function GetOperations({
     case "failed_recurrent_transfer_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             <span style={red_bold}>{linkToUserAccount(type.value.from)}</span>{" "}
             failed recurrent transfer to{" "}
             <span style={blue_bold}>{linkToUserAccount(type.value.to)}</span>
           </p>
-          <p>
+          <p style={p_styles}>
             Amount :{" "}
             <span style={red_bold}>
               {calculate_hive_hbd(type.value.amount.amount)} HIVE
@@ -1281,11 +1305,11 @@ export default function GetOperations({
     case "limit_order_cancelled_operation":
       return (
         <>
-          <p>
+          <p style={p_styles}>
             <span style={red_bold}>{linkToUserAccount(type.value.seller)}</span>{" "}
             limit order cancelled
           </p>
-          <p>
+          <p style={p_styles}>
             Amount back :{" "}
             <span style={red_bold}>
               {calculate_hive_hbd(type.value.amount_back.amount)} HIVE

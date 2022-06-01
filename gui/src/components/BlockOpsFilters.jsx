@@ -23,10 +23,15 @@ const MenuProps = {
 };
 const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual", "All"];
 
-export default function BlockOpsFilters({ show_modal, set_show_modal }) {
+export default function BlockOpsFilters({
+  show_modal,
+  set_show_modal,
+  vfilters,
+  set_v_filters,
+}) {
   const { block_op_types, block_op_filters, set_block_op_filters } =
     useContext(BlockContext);
-  const [vfilters, set_v_filters] = useState("");
+  // const [vfilters, set_v_filters] = useState("");
 
   const handleChange = (event) => {
     const {

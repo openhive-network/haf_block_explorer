@@ -70,22 +70,31 @@ export default function Main_Page({ setTitle }) {
                 </Link>
               </h4>
               <h4>
-                <Link to="/witnesses">Top Wintesses</Link>
+                <Link to="/witnesses">Top Witnesses</Link>
               </h4>
             </Col>
           </Row>
-          <Row className="justify-content-center">
+          <Row className="d-flex justify-content-center">
             <h3>Last Transactions (3 sec)</h3>
 
-            <Col xs={12} sm={8}>
-              {head_block_data?.map((block, index) => {
-                return <OpCard block={block} index={index} full_trx={block} />;
-              })}
+            <Col xs={12} sm={6}>
+              {/* <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                
+              > */}
+              {head_block_data?.map((block, index) => (
+                <OpCard block={block} index={index} full_trx={block} />
+              ))}
+              {/* </div> */}
             </Col>
-            {/* <Col sm={1} /> */}
+            {/* <Col sm={3} /> */}
             <Col
               xs={12}
-              sm={4}
+              sm={5}
               className="main__top-witness"
               // style={{ border: "2px solid blue", height: "100vh" }}
             >
@@ -94,7 +103,7 @@ export default function Main_Page({ setTitle }) {
                 {witnessData?.map((w, i) => (
                   <ListGroup key={i}>
                     <ListGroup.Item
-                      style={{ width: "400px" }}
+                      // style={{ width: "400px" }}
                       action
                       href={`/user/${w.owner}`}
                     >

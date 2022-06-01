@@ -10,6 +10,7 @@ import { UserProfileContext } from "../../contexts/userProfileContext";
 import { BlockContext } from "../../contexts/blockContext";
 import { TranasctionContext } from "../../contexts/transactionContext";
 import { useLocation } from "react-router-dom";
+import "./content.css";
 export default function Content() {
   const { userProfile, setUserProfile } = useContext(UserProfileContext);
   const { blockNumber, setBlockNumber } = useContext(BlockContext);

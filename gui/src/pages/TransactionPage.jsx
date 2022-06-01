@@ -28,8 +28,9 @@ export default function Transaction_Page({ transaction, setTitle }) {
       will be shown in : {seconds}{" "}
     </p>
   ) : ( */
-
+  // console.log(transData);
   // <>
+
   return (
     <>
       {!transData ? (
@@ -37,12 +38,12 @@ export default function Transaction_Page({ transaction, setTitle }) {
       ) : transData === null ? (
         "No data"
       ) : (
-        <div>
+        <>
           <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
           <Row className="mt-5 justify-content-center">
             <Col sm={6}>
               {transData?.operations?.map((op, i) => (
-                <OpCard block={op} index={i} full_trx={transData} />
+                <OpCard block={op} index={i} full_trx={transData} trx_id={transaction} />
               ))}
             </Col>
           </Row>
@@ -65,7 +66,7 @@ export default function Transaction_Page({ transaction, setTitle }) {
               </div>
             </Col>
           </Row> */}
-        </div>
+        </>
       )}
     </>
   );

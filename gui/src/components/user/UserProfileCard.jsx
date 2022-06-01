@@ -12,7 +12,7 @@ import axios from "axios";
 
 // import hive from "@hiveio/hive-js";
 
-export default function UserProfileCard({ handleShow, user }) {
+export default function UserProfileCard({ user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
   const [costs, setCosts] = useState(null);
@@ -222,11 +222,11 @@ export default function UserProfileCard({ handleShow, user }) {
         </p>
         <p> {timeDelta(user_info?.next_vesting_withdrawal)}</p>
       </div>
-      <div className="user-currency-amount justify-content-center">
+      <div className="user-currency-amount justify-content-center text-center">
         <ul
           style={{
             padding: "0",
-            display: "flex",
+            // display: "flex",
             listStyle: "none",
             justifyContent: "space-around",
           }}
@@ -311,7 +311,7 @@ export default function UserProfileCard({ handleShow, user }) {
           />
         </div>
       </div>
-      <div
+      {/* <div
         style={{
           display: "flex",
           flexDirection: "column",
@@ -323,13 +323,15 @@ export default function UserProfileCard({ handleShow, user }) {
       >
         <p style={{ margin: "0" }}>Reputation</p>
         <p>100</p>
-      </div>
+      </div> */}
       <div>
-        Enough credits for aproximately
-        <p>{resourceBudgetComments()} comments</p>
-        <p>{resourceBudgetVotes()} votes</p>
-        <p>{resourceBudgetTransfers()} transfers</p>
-        <p>{resourceBudgetClaimAccounts()} account claims</p>
+        <p>Enough credits for aproximately</p>
+        <ul>
+          <li> {resourceBudgetComments()} comments</li>
+          <li>{resourceBudgetVotes()} votes</li>
+          <li>{resourceBudgetTransfers()} transfers</li>
+          <li>{resourceBudgetClaimAccounts()} account claims</li>
+        </ul>
       </div>
       <div className="more-details d-flex justify-content-center">
         {/* <Button

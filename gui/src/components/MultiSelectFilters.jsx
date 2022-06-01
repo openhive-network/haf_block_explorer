@@ -16,6 +16,7 @@ import { UserProfileContext } from "../contexts/userProfileContext";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { MobileDatePicker } from "@mui/x-date-pickers/MobileDatePicker";
+import moment from "moment";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -31,8 +32,15 @@ const MenuProps = {
 const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual", "All"];
 
 export default function MultiSelectFilters({ show_filters, set_show_filters }) {
-  const { op_types, set_op_filters, op_filters } =
-    useContext(UserProfileContext);
+  const {
+    op_types,
+    set_op_filters,
+    op_filters,
+    startDateState,
+    setStartDateState,
+    endDateState,
+    setEndDateState,
+  } = useContext(UserProfileContext);
   const [vfilters, set_v_filters] = useState("");
 
   const handleChange = (event) => {
@@ -79,16 +87,14 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
 
   //Calendar
   const [dateSelectError, setDateSelectError] = useState("");
-  const [startDateState, setStartDateState] = useState(null);
 
   const changeStartDate = (e) => {
     setStartDateState(e);
   };
-  const [endDateState, setEndDateState] = useState(null);
   const changeEndDate = (e) => {
     setEndDateState(e);
   };
-  // const trimDate = (date) => date?.toISOString().split("T")[0];
+  const trimDate = (date) => moment(date?._d).format().split("T")[0];
 
   const handleFilterBtn = () => {
     set_show_filters(false);
@@ -98,7 +104,8 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
       setDateSelectError("End date can't be higher than start date ");
     }
   };
-  // console.log(trimDate(startDateState?._d));
+  // console.log(trimDate(startDateState));
+  // console.log(trimDate(endDateState));
   return (
     <div>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>
@@ -157,14 +164,14 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
                 <Stack spacing={3}>
                   <MobileDatePicker
                     label="Start Date"
-                    inputFormat="MM/dd/yyyy"
+                    inputFormat="DD/MM/yyyy"
                     value={startDateState}
                     onChange={changeStartDate}
                     renderInput={(params) => <TextField {...params} />}
                   />
                   <MobileDatePicker
                     label="End Date"
-                    inputFormat="MM/dd/yyyy"
+                    inputFormat="DD/MM/yyyy"
                     value={endDateState}
                     onChange={changeEndDate}
                     renderInput={(params) => <TextField {...params} />}

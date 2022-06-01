@@ -127,12 +127,12 @@ margin: 0; */
 
 .key {
     margin-right: 0.5rem;
-    color: black;
+    color: rgb(0, 217, 255);
     font-weight: 600;
 }
 
 .string {
-    color: rgb(175, 44, 44);
+    color: rgb(252, 252, 252);
 }
 
 .number {
