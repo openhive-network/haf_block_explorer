@@ -190,37 +190,40 @@ export default function DataTable() {
                           <StyledTableCell component="th" scope="apr">
                             {Number(witness.props.hbd_interest_rate) / 100}%
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="price_feed">
                             {witness.hbd_exchange_rate.base.split("HBD")[0]}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="bias">
                             ???
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="price_hive">
                             ???
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="price_hbd">
                             ???
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="feed_age">
                             {moment(witness.last_hbd_exchange_update).fromNow()}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="ac_fee">
                             {witness.props.account_creation_fee}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
-                            ???
+                          <StyledTableCell component="th" scope="ac_avail">
+                            {Math.round(
+                              witness?.available_witness_account_subsidies /
+                                10000
+                            )}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="ac_budget">
                             {tidyNumber(witness.props.account_subsidy_budget)}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="ac_decay">
                             {tidyNumber(witness.props.account_subsidy_decay)}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="block_size">
                             {tidyNumber(witness.props.maximum_block_size)}
                           </StyledTableCell>
-                          <StyledTableCell component="th" scope="witness">
+                          <StyledTableCell component="th" scope="version">
                             {witness.hardfork_version_vote}
                           </StyledTableCell>
                         </StyledTableRow>

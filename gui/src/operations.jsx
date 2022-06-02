@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { HeadBlockContext } from "./contexts/headBlockContext";
 import {
   calculate_hive_hbd,
@@ -53,7 +53,16 @@ export default function GetOperations({ value, type, full_trx }) {
   const keys = Object.keys(type.value);
   const [showJson, setShowJson] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [is_page_trx, set_is_page_trx] = useState(null);
+  const trx_page = document.location.href.includes("transaction");
 
+  useEffect(() => {
+    if (trx_page === true) {
+      set_is_page_trx(false);
+    } else {
+      set_is_page_trx(true);
+    }
+  }, [trx_page]);
   // const [showJson, setShowJson] = useState(false);
   // const [showDetails, setShowDetails] = useState(false);
   // const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
@@ -125,13 +134,15 @@ export default function GetOperations({ value, type, full_trx }) {
         </span>
         <div
           style={{ marginTop: "20px", textAlign: "left" }}
-          hidden={!showJson}
+          hidden={is_page_trx === false ? false : !showJson}
         >
           <pre style={{ color: "#3aff33" }}>
             {JSON.stringify(full_trx, null, 2)}{" "}
           </pre>
         </div>
-        <div hidden={!showDetails}>{prettyViewCard()}</div>
+        <div hidden={is_page_trx === false ? false : !showDetails}>
+          {prettyViewCard()}
+        </div>
       </>
     );
   }

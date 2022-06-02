@@ -194,140 +194,168 @@ export default function User_Page({ user, setTitle }) {
                   }}
                 >
                   <h3>Authorities</h3>
-                  <div
-                    style={{
-                      background: "#18003fef",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    <h5>Signinig</h5>
-                    <p
-                      style={{
-                        overflow: "auto",
-                        padding: "10px",
-                        color: "#d8fd50",
-                      }}
-                    >
-                      {user_witness?.[0]?.signing_key}
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      background: "#18003fef",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    <h5>Owner</h5>
-                    <p
-                      style={{
-                        overflow: "auto",
-                        padding: "10px",
-                        color: "#d8fd50",
-                        margin: "0",
-                      }}
-                    >
-                      {user_info?.owner.key_auths[0][0]}
-                    </p>
-                    <p>
-                      Threshold :{" "}
-                      <span style={{ color: "#d8fd50" }}>
-                        {user_info?.owner.key_auths[0][1]}
-                      </span>
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      background: "#18003fef",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    <h5>Active</h5>
-                    <p
-                      style={{
-                        overflow: "auto",
-                        padding: "10px",
-                        color: "#d8fd50",
-                        margin: "0",
-                      }}
-                    >
-                      {user_info?.active.key_auths[0][0]}
-                    </p>
-                    <p>
-                      Threshold :{" "}
-                      <span style={{ color: "#d8fd50" }}>
-                        {user_info?.active.key_auths[0][1]}
-                      </span>
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      background: "#18003fef",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    <h5>Posting</h5>
-                    <p
-                      style={{
-                        overflow: "auto",
-                        padding: "10px",
-                        color: "#d8fd50",
-                        margin: "0",
-                      }}
-                    >
-                      {user_info?.posting.key_auths[0][0]}
-                    </p>
-                    <p>
-                      Threshold :{" "}
-                      <span style={{ color: "#d8fd50" }}>
-                        {user_info?.posting.key_auths[0][1]}
-                      </span>
-                    </p>
+                  {user_witness?.[0]?.signing_key !== undefined ? (
                     <div
                       style={{
-                        textAlign: "left",
-                        padding: "10px 20px 10px 10px",
+                        background: "#18003fef",
+                        borderRadius: "10px",
                       }}
                     >
-                      <ul style={{ listStyle: "none" }}>
-                        {user_info?.posting.account_auths.map((acc) => (
-                          <Row>
-                            <Col classsName="d-flex justify-content-center">
-                              <li>
-                                <a
-                                  style={{ textDecoration: "none" }}
-                                  href={`/user/${acc[0]}`}
-                                >
-                                  {acc[0]}
-                                </a>
-                              </li>
-                            </Col>
-                            <Col className="d-flex justify-content-end">
-                              <li> {acc[1]}</li>
-                            </Col>
-                          </Row>
-                        ))}
-                      </ul>
+                      <h5>Signinig</h5>
+                      <p
+                        style={{
+                          overflow: "auto",
+                          padding: "10px",
+                          color: "#d8fd50",
+                        }}
+                      >
+                        {user_witness?.[0]?.signing_key}
+                      </p>
                     </div>
-                  </div>
-                  <div
-                    style={{
-                      background: "#18003fef",
-                      borderRadius: "10px",
-                      marginTop: "20px",
-                    }}
-                  >
-                    <h5>Memo</h5>
-                    <p
+                  ) : (
+                    ""
+                  )}
+
+                  {user_info?.owner.key_auths !== undefined ? (
+                    <div
                       style={{
-                        overflow: "auto",
-                        padding: "10px",
-                        color: "#d8fd50",
-                        margin: "0",
+                        background: "#18003fef",
+                        borderRadius: "10px",
                       }}
                     >
-                      {user_info?.memo_key}
-                    </p>
-                  </div>
+                      <h5>Owner</h5>
+                      <p
+                        style={{
+                          overflow: "auto",
+                          padding: "10px",
+                          color: "#d8fd50",
+                          margin: "0",
+                        }}
+                      >
+                        {user_info?.owner.key_auths[0][0]}
+                      </p>
+                      <p>
+                        Threshold :{" "}
+                        <span style={{ color: "#d8fd50" }}>
+                          {user_info?.owner.key_auths[0][1]}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {user_info?.active.key_auths !== undefined ? (
+                    <div
+                      style={{
+                        background: "#18003fef",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <h5>Active</h5>
+                      <p
+                        style={{
+                          overflow: "auto",
+                          padding: "10px",
+                          color: "#d8fd50",
+                          margin: "0",
+                        }}
+                      >
+                        {user_info?.active.key_auths[0][0]}
+                      </p>
+                      <p>
+                        Threshold :{" "}
+                        <span style={{ color: "#d8fd50" }}>
+                          {user_info?.active.key_auths[0][1]}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {user_info?.posting.key_auths !== undefined ? (
+                    <div
+                      style={{
+                        background: "#18003fef",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <h5>Posting</h5>
+                      <p
+                        style={{
+                          overflow: "auto",
+                          padding: "10px",
+                          color: "#d8fd50",
+                          margin: "0",
+                        }}
+                      >
+                        {user_info?.posting.key_auths[0][0]}
+                      </p>
+                      <p>
+                        Threshold :{" "}
+                        <span style={{ color: "#d8fd50" }}>
+                          {user_info?.posting.key_auths[0][1]}
+                        </span>
+                      </p>
+                      {user_info?.posting.account_auths !== undefined ? (
+                        <div
+                          style={{
+                            textAlign: "left",
+                            padding: "10px 20px 10px 10px",
+                          }}
+                        >
+                          <ul style={{ listStyle: "none" }}>
+                            {user_info?.posting.account_auths.map((acc) => (
+                              <Row>
+                                <Col classsName="d-flex justify-content-center">
+                                  <li>
+                                    <a
+                                      style={{ textDecoration: "none" }}
+                                      href={`/user/${acc[0]}`}
+                                    >
+                                      {acc[0]}
+                                    </a>
+                                  </li>
+                                </Col>
+                                <Col className="d-flex justify-content-end">
+                                  <li> {acc[1]}</li>
+                                </Col>
+                              </Row>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        ""
+                      )}
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {user_info?.memo_key !== undefined ? (
+                    <div
+                      style={{
+                        background: "#18003fef",
+                        borderRadius: "10px",
+                        marginTop: "20px",
+                      }}
+                    >
+                      <h5>Memo</h5>
+                      <p
+                        style={{
+                          overflow: "auto",
+                          padding: "10px",
+                          color: "#d8fd50",
+                          margin: "0",
+                        }}
+                      >
+                        {user_info?.memo_key}
+                      </p>
+                    </div>
+                  ) : (
+                    ""
+                  )}
                 </div>
               ) : (
                 ""

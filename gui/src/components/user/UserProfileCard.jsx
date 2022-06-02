@@ -153,7 +153,7 @@ export default function UserProfileCard({ user }) {
       return null;
     }
   }
-
+  console.log();
   return (
     <div
       className="user-info-div"
@@ -271,25 +271,27 @@ export default function UserProfileCard({ user }) {
             now={votePower()}
           />
         </div>
-        <div
-          style={{
-            // marginTop: "20px",
-            width: "100%",
-            textAlign: "center",
-          }}
-          className="downvote-power"
-        >
-          <p style={{ color: "blue", fontWeight: "bold", margin: "0" }}>
-            Downvote Power
-          </p>
-          <p style={{ margin: "0" }}>{downvotePowerPct()} %</p>
-          <ProgressBar
-            variant="danger"
-            style={{ margin: "10px 0 10px 0" }}
-            animated
-            now={downvotePowerPct()}
-          />
-        </div>
+        {downvotePowerPct() !== "NaN" && (
+          <div
+            style={{
+              // marginTop: "20px",
+              width: "100%",
+              textAlign: "center",
+            }}
+            className="downvote-power"
+          >
+            <p style={{ color: "blue", fontWeight: "bold", margin: "0" }}>
+              Downvote Power
+            </p>
+            <p style={{ margin: "0" }}>{downvotePowerPct()} %</p>
+            <ProgressBar
+              variant="danger"
+              style={{ margin: "10px 0 10px 0" }}
+              animated
+              now={downvotePowerPct()}
+            />
+          </div>
+        )}
 
         <div
           style={{
