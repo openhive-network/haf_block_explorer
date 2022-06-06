@@ -153,7 +153,19 @@ export default function UserProfileCard({ user }) {
       return null;
     }
   }
-  console.log();
+  function calculateReputation(reputation) {
+    if (reputation == null) return reputation;
+    let neg = reputation < 0;
+    let rep = String(reputation);
+    rep = neg ? rep.substring(1) : rep;
+    let v = Math.log10((rep > 0 ? rep : -rep) - 10) - 9;
+    v = neg ? -v : v;
+    return parseInt(v * 9 + 25);
+  }
+  console.log(
+    tidyNumber(vestsToHive(parseInt(user_info?.vesting_withdraw_rate))) ===
+      "0.000"
+  );
   return (
     <div
       className="user-info-div"
@@ -207,21 +219,29 @@ export default function UserProfileCard({ user }) {
         <p>Vote Weight</p>
         <h3>{tidyNumber(vestsToHive(effectiveVests()))} HP</h3>
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          flexDirection: "column",
-        }}
-        className="user-vote-weight"
-      >
-        <p>
-          Next power down :{" "}
-          {tidyNumber(vestsToHive(parseInt(user_info?.vesting_withdraw_rate)))}{" "}
-          HIVE <br></br>
-        </p>
-        <p> {timeDelta(user_info?.next_vesting_withdrawal)}</p>
-      </div>
+      {tidyNumber(vestsToHive(parseInt(user_info?.vesting_withdraw_rate))) ===
+      "0.000" ? (
+        " "
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+          }}
+          className="user-vote-weight"
+        >
+          <p>
+            Next power down :{" "}
+            {tidyNumber(
+              vestsToHive(parseInt(user_info?.vesting_withdraw_rate))
+            )}{" "}
+            HIVE <br></br>
+          </p>
+          <p> {timeDelta(user_info?.next_vesting_withdrawal)}</p>
+        </div>
+      )}
+
       <div className="user-currency-amount justify-content-center text-center">
         <ul
           style={{
@@ -246,31 +266,34 @@ export default function UserProfileCard({ user }) {
         </ul>
       </div>
       <div className="power-by-proc">
-        <div
-          style={{
-            // marginTop: "20px",
-            width: "100%",
-            textAlign: "center",
-          }}
-          className="voting-power"
-        >
-          <p
+        {votePower() !== "NaN" && (
+          <div
             style={{
-              color: "green",
-              fontWeight: "bold",
-              margin: "0",
+              // marginTop: "20px",
+              width: "100%",
+              textAlign: "center",
             }}
+            className="voting-power"
           >
-            Voting Power
-          </p>
-          <p style={{ margin: "0" }}>{votePower()} %</p>
-          <ProgressBar
-            variant="danger"
-            style={{ margin: "10px 0 10px 0" }}
-            animated
-            now={votePower()}
-          />
-        </div>
+            <p
+              style={{
+                color: "green",
+                fontWeight: "bold",
+                margin: "0",
+              }}
+            >
+              Voting Power
+            </p>
+            <p style={{ margin: "0" }}>{votePower()} %</p>
+            <ProgressBar
+              variant="danger"
+              style={{ margin: "10px 0 10px 0" }}
+              animated
+              now={votePower()}
+            />
+          </div>
+        )}
+
         {downvotePowerPct() !== "NaN" && (
           <div
             style={{
@@ -292,40 +315,46 @@ export default function UserProfileCard({ user }) {
             />
           </div>
         )}
-
+        {calcResourseCredits() !== "NaN" && (
+          <div
+            style={{
+              // marginTop: "20px",
+              width: "100%",
+              textAlign: "center",
+            }}
+            className="resource-credits"
+          >
+            <p style={{ color: "red", fontWeight: "bold", margin: "0" }}>
+              Resource Credits
+            </p>
+            <p style={{ margin: "0" }}>{calcResourseCredits()} %</p>
+            <ProgressBar
+              variant="danger"
+              style={{ margin: "10px 0 10px 0" }}
+              animated
+              now={calcResourseCredits()}
+            />
+          </div>
+        )}
+      </div>
+      {!user_info?.reputation ? (
+        ""
+      ) : (
         <div
           style={{
-            // marginTop: "20px",
-            width: "100%",
-            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            fontWeight: "bold",
+            marginTop: "20px",
           }}
-          className="resource-credits"
+          className="reputation "
         >
-          <p style={{ color: "red", fontWeight: "bold", margin: "0" }}>
-            Resource Credits
-          </p>
-          <p style={{ margin: "0" }}>{calcResourseCredits()} %</p>
-          <ProgressBar
-            variant="danger"
-            style={{ margin: "10px 0 10px 0" }}
-            animated
-            now={calcResourseCredits()}
-          />
+          <p style={{ margin: "0" }}>Reputation</p>
+          <p>{calculateReputation(user_info?.reputation)}</p>
         </div>
-      </div>
-      {/* <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          fontWeight: "bold",
-          marginTop: "20px",
-        }}
-        className="reputation "
-      >
-        <p style={{ margin: "0" }}>Reputation</p>
-        <p>100</p>
-      </div> */}
+      )}
+
       <div>
         <p>Enough credits for aproximately</p>
         <ul>

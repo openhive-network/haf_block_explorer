@@ -74,12 +74,12 @@ export default function Block_Page({ block_nr, setTitle }) {
           >
             <Col className="text-center">
               <h1
-                style={{
-                  background: "#000",
-                  color: "#fff",
-                  padding: "10px",
-                  margin: "25px 0 25px 0",
-                }}
+              // style={{
+              //   background: "#000",
+              //   color: "#fff",
+              //   padding: "10px",
+              //   margin: "25px 0 25px 0",
+              // }}
               >
                 Virtual Operations
               </h1>

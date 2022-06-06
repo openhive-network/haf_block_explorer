@@ -13,6 +13,8 @@ import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
 // import GetOperation from "../operations";
 import OpCard from "../components/OpCard";
+// import hive from "@hiveio/hive-js";
+// import { Hive } from "@hiveio/dhive";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -33,6 +35,8 @@ export default function User_Page({ user, setTitle }) {
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
   const user_witness = witnessData?.filter((w) => w.owner === user);
+  // const hiveClient = new Hive("https://api.hive.blog");
+  // console.log(hiveClient);
   // console.log(user_info?.witness_votes);
   // console.log(user_witness?.[0].signing_key);
   // const { setTransactionId } = useContext(TranasctionContext);
@@ -48,7 +52,7 @@ export default function User_Page({ user, setTitle }) {
   const get_max_trx_num = localStorage.getItem("trx_count_max");
   const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
   const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
-
+  // console.log(hive.formatter(484841544));
   //Transactions per page
   // const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
   // Operation  filters
@@ -94,7 +98,8 @@ export default function User_Page({ user, setTitle }) {
     <>
       {user_info === "" ||
       witnessData === null ||
-      user_profile_data === null ? (
+      user_profile_data === null ||
+      user_profile_data.length === 0 ? (
         <h1>Loading ...</h1>
       ) : (
         <Container fluid>
