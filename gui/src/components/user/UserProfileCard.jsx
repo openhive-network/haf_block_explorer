@@ -10,7 +10,7 @@ import { HeadBlockContext } from "../../contexts/headBlockContext";
 import moment from "moment";
 import axios from "axios";
 
-// import hive from "@hiveio/hive-js";
+
 
 export default function UserProfileCard({ user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
@@ -162,10 +162,7 @@ export default function UserProfileCard({ user }) {
     v = neg ? -v : v;
     return parseInt(v * 9 + 25);
   }
-  console.log(
-    tidyNumber(vestsToHive(parseInt(user_info?.vesting_withdraw_rate))) ===
-      "0.000"
-  );
+
   return (
     <div
       className="user-info-div"

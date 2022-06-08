@@ -30,30 +30,35 @@ export default function Content() {
   }, [user, block, transaction]);
 
   return (
-    <Routes>
-      <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
-      <Route
-        path={`block/${blockNumber}`}
-        element={
-          <BlockPage
-            setBlockNumber={setBlockNumber}
-            setTitle={setTitle}
-            block_nr={blockNumber}
-          />
-        }
-      />
-      <Route
-        path={`user/${userProfile}`}
-        element={<UserPage setTitle={setTitle} user={userProfile} />}
-      />
-      <Route
-        path={`transaction/${transactionId}`}
-        element={
-          <TransactionPage setTitle={setTitle} transaction={transactionId} />
-        }
-      />
-      <Route path="witnesses" element={<WitnessesPage setTitle={setTitle} />} />
-      <Route path="error" element={<ErrorPage setTitle={setTitle} />} />
-    </Routes>
+    <div className="content">
+      <Routes>
+        <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
+        <Route
+          path={`block/${blockNumber}`}
+          element={
+            <BlockPage
+              setBlockNumber={setBlockNumber}
+              setTitle={setTitle}
+              block_nr={blockNumber}
+            />
+          }
+        />
+        <Route
+          path={`user/${userProfile}`}
+          element={<UserPage setTitle={setTitle} user={userProfile} />}
+        />
+        <Route
+          path={`transaction/${transactionId}`}
+          element={
+            <TransactionPage setTitle={setTitle} transaction={transactionId} />
+          }
+        />
+        <Route
+          path="witnesses"
+          element={<WitnessesPage setTitle={setTitle} />}
+        />
+        <Route path="error" element={<ErrorPage setTitle={setTitle} />} />
+      </Routes>
+    </div>
   );
 }

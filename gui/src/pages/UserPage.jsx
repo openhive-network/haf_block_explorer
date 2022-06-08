@@ -61,6 +61,9 @@ export default function User_Page({ user, setTitle }) {
   };
 
   // const handleShow = () => setShowUserModal(false);
+  // console.log(startDateState);
+  // console.log(endDateState);
+  // console.log(user_profile_data);
   return (
     <>
       {user_info === "" ||
