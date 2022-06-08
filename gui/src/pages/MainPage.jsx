@@ -5,13 +5,15 @@ import { BlockContext } from "../contexts/blockContext";
 import { WitnessContext } from "../contexts/witnessContext";
 import { Link } from "react-router-dom";
 import { Container, Col, Row } from "react-bootstrap";
+import { tidyNumber } from "../functions";
 import OpCard from "../components/OpCard";
 
 export default function Main_Page({ setTitle }) {
   // setTitle((document.title = "HAF Blocks"));
   const { witnessData } = useContext(WitnessContext);
   const { setBlockNumber } = useContext(BlockContext);
-  const { head_block, head_block_data } = useContext(HeadBlockContext);
+  const { head_block, head_block_data, reward_fund, feed_price } =
+    useContext(HeadBlockContext);
   const { setUserProfile } = useContext(UserProfileContext);
   const current_head_block = head_block.head_block_number;
   const operations_count_per_block = head_block_data?.length;
@@ -20,6 +22,63 @@ export default function Main_Page({ setTitle }) {
     return `https://images.hive.blog/u/${user}/avatar`;
   };
   const trim_witness_array = witnessData?.slice(0, 20);
+  const calc_reward_fund_to_dol = () => {
+    const result = calc_reward_fund() * calc_feed_price();
+    return result.toFixed(0);
+  };
+
+  const calc_feed_price = () => {
+    const result =
+      Number(feed_price?.base?.amount) / Number(feed_price?.quote?.amount);
+    return result;
+  };
+
+  const calc_reward_fund = () => {
+    const result = Number(reward_fund?.reward_balance?.amount) / 1000;
+    return result.toFixed(0);
+  };
+
+  const calc_current_supply = () => {
+    const result = Number(head_block?.current_supply?.amount) / 1000;
+    return result.toFixed(0);
+  };
+  const calc_current_supply_hbd = () => {
+    const result = Number(head_block?.current_hbd_supply?.amount) / 1000;
+    return result.toFixed(0);
+  };
+  const calc_virtual_supply = () => {
+    const result = Number(head_block?.virtual_supply?.amount) / 1000;
+    return result.toFixed(0);
+  };
+
+  const head_block_value_styles = {
+    textAlign: "right",
+    color: "#75ffff",
+    margin: "5px",
+  };
+  const modify_obj_key = (key) => {
+    const remove_underscore = key.split("_").join(" ");
+    const first_upper_letter =
+      remove_underscore.slice(0, 1).toUpperCase() + remove_underscore.slice(1);
+    return first_upper_letter;
+  };
+
+  const calc_obj_numbers = (key) => {
+    return tidyNumber(Number(head_block[key]?.amount).toFixed(3) / 1000);
+  };
+  const modify_obj_hbd = (key) => {
+    return Number(head_block[key]?.amount).toFixed(3);
+  };
+  const modify_obj_number = (key) => {
+    const result =
+      head_block[key] !== 0
+        ? tidyNumber(Number(head_block[key]))
+        : Number(head_block[key]);
+    return result;
+  };
+  const modify_obj_date = (key) => {
+    return head_block[key]?.split("T").join(" ");
+  };
   return (
     <>
       {operations_count_per_block === 0 ? (
@@ -44,9 +103,10 @@ export default function Main_Page({ setTitle }) {
                     operations_count_per_block}
                 </p>
                 <p>
-                  Current witness :
+                  Current witness
                   <Link to={`/user/${head_block?.current_witness}`}>
                     <p
+                      style={{ textAlign: "right" }}
                       onClick={() =>
                         setUserProfile(head_block?.current_witness)
                       }
@@ -64,11 +124,150 @@ export default function Main_Page({ setTitle }) {
                     </p>
                   </Link>
                 </p>
-                <p style={{ fontSize: "20px", color: "#e5ff00 " }}>
+                <p
+                  style={{
+                    fontSize: "20px",
+                    color: "#e5ff00 ",
+                    textAlign: "center",
+                  }}
+                >
                   Properties{" "}
                 </p>
                 <ul style={{ listStyle: "none", padding: "0" }}>
-                  <li>Blockchain time : {head_block?.time}</li>
+                  <li>Feed price </li>
+                  <li style={head_block_value_styles}>
+                    ${calc_feed_price()}/HIVE
+                  </li>
+                  <li className="head_block_key">Blockchain time</li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    {modify_obj_date("time")}
+                  </li>
+                  <li className="head_block_key">Rewards fund</li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    {tidyNumber(calc_reward_fund())} HIVE
+                  </li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    $ {tidyNumber(calc_reward_fund_to_dol())}
+                  </li>
+                  <li className="head_block_key">Current Supply</li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    {tidyNumber(calc_current_supply())} HIVE
+                  </li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    {tidyNumber(calc_current_supply_hbd())} HBD
+                  </li>
+                  <li className="head_block_key">Virtual Supply</li>
+                  <li
+                    className="head_block_value"
+                    style={head_block_value_styles}
+                  >
+                    {tidyNumber(calc_virtual_supply())} HIVE
+                  </li>
+
+                  {Object.keys(head_block).map((key, i) => {
+                    if (
+                      [
+                        "next_daily_maintenance_time",
+                        "next_maintenance_time",
+                        "last_budget_time",
+                      ].includes(key)
+                    ) {
+                      return (
+                        <>
+                          {" "}
+                          <li>{modify_obj_key(key)}</li>{" "}
+                          <li style={head_block_value_styles}>
+                            {modify_obj_date(key)}
+                          </li>
+                        </>
+                      );
+                    }
+                    if (
+                      [
+                        "hbd_stop_percent",
+                        "hbd_start_percent",
+                        "available_account_subsidies",
+                        "last_irreversible_block_num",
+                        "hbd_interest_rate",
+                        "hbd_print_rate",
+                        "required_actions_partition_percent",
+                        "content_reward_percent",
+                        "vesting_reward_percent",
+                        "sps_fund_percent",
+                        "current_remove_threshold",
+                        "early_voting_seconds",
+                        "mid_voting_seconds",
+                        "max_consecutive_recurrent_transfer_failures",
+                        "max_recurrent_transfer_end_date",
+                        "min_recurrent_transfers_recurrence",
+                        "max_open_recurrent_transfers",
+                        "downvote_pool_percent",
+                      ].includes(key)
+                    ) {
+                      return (
+                        <>
+                          <li>{modify_obj_key(key)}</li>{" "}
+                          <li style={head_block_value_styles}>
+                            {modify_obj_number(key)}
+                          </li>
+                        </>
+                      );
+                    }
+                    if (["init_hbd_supply"].includes(key)) {
+                      return (
+                        <>
+                          <li>{modify_obj_key(key)}</li>
+                          <li style={head_block_value_styles}>
+                            {modify_obj_hbd(key)} HBD
+                          </li>
+                        </>
+                      );
+                    }
+                    if (
+                      ["current_hbd_supply", "sps_interval_ledger"].includes(
+                        key
+                      )
+                    ) {
+                      return (
+                        <>
+                          <li>{modify_obj_key(key)}</li>
+                          <li style={head_block_value_styles}>
+                            {calc_obj_numbers(key)} HBD
+                          </li>
+                        </>
+                      );
+                    }
+                    if (
+                      [
+                        "total_vesting_fund_hive",
+                        "pending_rewarded_vesting_hive",
+                      ].includes(key)
+                    ) {
+                      return (
+                        <>
+                          <li>{modify_obj_key(key)}</li>
+                          <li style={head_block_value_styles}>
+                            {calc_obj_numbers(key)} HIVE
+                          </li>
+                        </>
+                      );
+                    }
+                  })}
                 </ul>
               </div>
             </Col>

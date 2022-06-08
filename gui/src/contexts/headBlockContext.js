@@ -5,9 +5,37 @@ export const HeadBlockContext = createContext();
 export const HeadBlockContextProvider = ({ children }) => {
   const [head_block, setHead_block] = useState("");
   const [head_block_data, setHead_block_data] = useState([]);
+  const [feed_price, set_feed_price] = useState("");
+  const [reward_fund, set_reward_fund] = useState("");
 
   // 192.168.5.118 -steem7
   // 192.168.4.250 -steem10
+  // Get reward funds
+
+  useEffect(() => {
+    axios({
+      method: "post",
+      url: "https://api.hive.blog",
+      data: {
+        jsonrpc: "2.0",
+        method: "database_api.get_reward_funds",
+        id: 1,
+      },
+    }).then((res) => set_reward_fund(res?.data?.result.funds[0]));
+  }, []);
+  // Get feed price
+  useEffect(() => {
+    axios({
+      method: "post",
+      url: "https://api.hive.blog",
+      data: {
+        jsonrpc: "2.0",
+        method: "database_api.get_current_price_feed",
+        id: 1,
+      },
+    }).then((res) => set_feed_price(res?.data?.result));
+  }, []);
+
   //   Get head block number
   useEffect(() => {
     axios({
@@ -43,6 +71,8 @@ export const HeadBlockContextProvider = ({ children }) => {
   return (
     <HeadBlockContext.Provider
       value={{
+        reward_fund: reward_fund,
+        feed_price: feed_price,
         vesting_fund: vesting_fund,
         vesting_shares: vesting_shares,
         head_block: head_block,
