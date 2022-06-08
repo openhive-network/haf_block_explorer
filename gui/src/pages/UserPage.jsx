@@ -8,40 +8,23 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import "./userPage.css";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoTable from "../components/user/UserInfoTable";
-// import { Link } from "react-router-dom";
 import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
-// import GetOperation from "../operations";
 import OpCard from "../components/OpCard";
-// import hive from "@hiveio/hive-js";
-// import { Hive } from "@hiveio/dhive";
 
 export default function User_Page({ user, setTitle }) {
   const {
     user_profile_data,
-    // setUser_profile_data,
-    // set_acc_history_limit,
     acc_history_limit,
-    // op_types,
     op_filters,
-    // set_op_filters,
     set_pagination,
     pagination,
-    // userProfile,
-    // resource_credits,
     user_info,
     startDateState,
     endDateState,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
   const user_witness = witnessData?.filter((w) => w.owner === user);
-  // const hiveClient = new Hive("https://api.hive.blog");
-  // console.log(hiveClient);
-  // console.log(user_info?.witness_votes);
-  // console.log(user_witness?.[0].signing_key);
-  // const { setTransactionId } = useContext(TranasctionContext);
-  // setTitle(`HAF | User | ${user}`);
-  // console.log(getOperation("vote_operation"));
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
@@ -52,25 +35,13 @@ export default function User_Page({ user, setTitle }) {
   const get_max_trx_num = localStorage.getItem("trx_count_max");
   const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
   const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
-  // console.log(hive.formatter(484841544));
-  //Transactions per page
-  // const countTransPerPage = ["10", "25", "50", "100", "500", "1000"];
-  // Operation  filters
-  // const [show_json, set_show_json] = useState(false);
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
   const [showUserModal, setShowUserModal] = useState(true);
-  // const [filters_length, set_filters_length] = useState(op_filters.length);
-  // const [filters_length_names, set_filters_length_names] = useState(
-  //   filered_op_names.length
-  // );
-  // console.log(user_profile_data);
-  // console.log(witnessData);
 
   const check_op_type = user_profile_data?.map(
     (history) => history.operations.type
   );
-  // const set_op = [...new Set(check_op_type)];
   const count_same = {};
   check_op_type?.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
 
@@ -89,11 +60,7 @@ export default function User_Page({ user, setTitle }) {
     set_pagination(page.pop());
   };
 
-  // const handleClose = () => setShowUserModal(true);
-  const handleShow = () => setShowUserModal(false);
-  // const meta_data = JSON?.parse(user_info?.json_metadata);
-  // console.log(user_info);
-  // console.log(...user_info?.owner.key_auths[0]);
+  // const handleShow = () => setShowUserModal(false);
   return (
     <>
       {user_info === "" ||
@@ -103,15 +70,6 @@ export default function User_Page({ user, setTitle }) {
         <h1>Loading ...</h1>
       ) : (
         <Container fluid>
-          {/* <div className="op_count">
-            <p>
-              Showing op_types per page :
-              {filtered_ops_sum === 0
-                ? user_profile_data?.length
-                : filtered_ops_sum}
-            </p>
-          </div> */}
-
           <Row className="d-flex mt-5">
             <Col sm={12} md={3}>
               <UserProfileCard user={user} />
@@ -192,9 +150,6 @@ export default function User_Page({ user, setTitle }) {
                     marginTop: "25px",
                     borderRadius: "10px",
                     padding: "20px",
-                    // wordWrap: "break-word",
-                    // whiteSpace: "pre-wrap",
-                    // wordBreak: "break-word",
                     textAlign: "center",
                   }}
                 >

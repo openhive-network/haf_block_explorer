@@ -12,13 +12,14 @@
     background-color:'red' 
 }  */
 .nav-bar {
-    margin: 0px 0 20px 0;
+    margin: 0;
     /* height: 80px; */
     justify-content: center;
     align-items: center;
     display: flex;
     width: 100vw;
     background-color: #000;
+
     /* border-bottom: 5px solid red; */
     /* z-index: 0 !important; */
 }

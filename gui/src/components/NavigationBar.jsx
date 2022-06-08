@@ -72,14 +72,16 @@ export default function NavigationBar() {
   // console.log(value);
   //Check data type
   useEffect(() => {
-    axios({
-      method: "post",
-      url: "http://192.168.4.169:3002/rpc/get_input_type",
-      headers: { "Content-Type": "application/json" },
-      data: { _input: value },
-    })
-      .then((res) => set_check_input(res.data))
-      .catch((err) => set_check_input("No data"));
+    if (value !== "") {
+      axios({
+        method: "post",
+        url: "http://192.168.4.250:3002/rpc/get_input_type",
+        headers: { "Content-Type": "application/json" },
+        data: { _input: value },
+      })
+        .then((res) => set_check_input(res.data))
+        .catch((err) => set_check_input("No data"));
+    }
   }, [value]);
   // Navigate to correct page
   useEffect(() => {

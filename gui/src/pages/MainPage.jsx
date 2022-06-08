@@ -28,6 +28,7 @@ export default function Main_Page({ setTitle }) {
   // const is_data_loading =
   //   transactions_of_block === undefined || transactions_of_block.length === 0;
   // console.log(head_block_data.op);
+  // console.log(head_block);
 
   return (
     <>
@@ -37,7 +38,7 @@ export default function Main_Page({ setTitle }) {
         <Container fluid className="main">
           <Row>
             <Col>
-              <h1>
+              <h3>
                 Head Block :
                 <Link
                   onClick={() => setBlockNumber(current_head_block)}
@@ -45,38 +46,37 @@ export default function Main_Page({ setTitle }) {
                 >
                   {current_head_block}
                 </Link>
-              </h1>
-              <h4>
+              </h3>
+              <p>
                 Operations per block :
                 {operations_count_per_block !== 0 && operations_count_per_block}
-              </h4>
-              <h4>
+              </p>
+              <p>
                 Current witness :
                 <Link to={`/user/${head_block?.current_witness}`}>
                   <p
                     onClick={() => setUserProfile(head_block?.current_witness)}
                   >
                     {/* <img
-                  src={`https://images.hive.blog/u/${head_block.current_witness}/avatar`}
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    margin: "5px",
-                    borderRadius: "50%",
-                  }}
-                />{" "} */}
+                      src={`https://images.hive.blog/u/${head_block.current_witness}/avatar`}
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        margin: "5px",
+                        borderRadius: "50%",
+                      }}
+                    />{" "} */}
                     {head_block.current_witness}
                   </p>
                 </Link>
-              </h4>
-              <h4>
+              </p>
+              <p>
                 <Link to="/witnesses">Top Witnesses</Link>
-              </h4>
+              </p>
+              <p>Last Transactions (3 sec)</p>
             </Col>
           </Row>
           <Row className="d-flex justify-content-center">
-            <h3>Last Transactions (3 sec)</h3>
-
             <Col xs={12} sm={6}>
               {/* <div
                 style={{
