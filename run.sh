@@ -14,11 +14,11 @@ create_api() {
 create_indexes() {
     echo "Creating indexes, this might take a while."
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp, id, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, id, fork_id)"
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp, id)"
 
 }
 
