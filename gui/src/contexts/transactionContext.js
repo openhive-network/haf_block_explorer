@@ -18,7 +18,7 @@ export const TranasctionContextProvider = ({ children }) => {
         data: { _trx_hash: transactionId },
       }).then((res) => setTransData(res?.data));
     }
-  }, [transactionId]);
+  }, [transactionId, setTransData]);
 
   return (
     <TranasctionContext.Provider

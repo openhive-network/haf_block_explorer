@@ -11,6 +11,7 @@ import UserInfoTable from "../components/user/UserInfoTable";
 import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
 import OpCard from "../components/OpCard";
+import Loader from "../components/loader/Loader";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -70,7 +71,7 @@ export default function User_Page({ user, setTitle }) {
       witnessData === null ||
       user_profile_data === null ||
       user_profile_data.length === 0 ? (
-        <h1>Loading ...</h1>
+        <Loader />
       ) : (
         <Container fluid>
           <Row className="d-flex mt-5">

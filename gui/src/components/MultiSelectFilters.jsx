@@ -104,18 +104,19 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
       setDateSelectError("End date can't be higher than start date ");
     }
   };
-  // console.log(trimDate(startDateState));
-  // console.log(trimDate(endDateState));
+  console.log(op_types);
   return (
     <div>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>
         <Modal.Header closeButton>
-          <h5 className="modal-title">Modal title</h5>
+          <h5 className="modal-title">Filters</h5>
         </Modal.Header>
         <Modal.Body>
           <FormControl sx={{ m: 1, width: 300 }}>
             <InputLabel id="demo-multiple-checkbox-label">
-              Operations
+              {op_types?.length == 0 || op_types == null
+                ? "Operations loading ..."
+                : "Operations"}
             </InputLabel>
             <Select
               labelId="demo-multiple-checkbox-label"
@@ -123,7 +124,15 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               multiple
               value={op_filters}
               onChange={handleChange}
-              input={<OutlinedInput label="Operations" />}
+              input={
+                <OutlinedInput
+                  label={
+                    op_types?.length == 0 || op_types == null
+                      ? "Operations loading ..."
+                      : "Operations"
+                  }
+                />
+              }
               renderValue={(selected) => "Active filters : " + selected.length}
               MenuProps={MenuProps}
             >
@@ -138,27 +147,34 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               })}
             </Select>
           </FormControl>
-          <FormControl sx={{ m: 1, width: 300 }}>
-            <InputLabel id="demo-multiple-checkbox-label2">
-              Check virtual
-            </InputLabel>
-            <Select
-              labelId="demo-multiple-checkbox-label2"
-              id="demo-multiple-checkbox2"
-              value={vfilters}
-              onChange={handleVirtual}
-              input={<OutlinedInput label="Check virtual" />}
-              MenuProps={MenuProps}
-            >
-              {VIRTUAL_FILTERS.map((filter, i) => {
-                return (
-                  <MenuItem key={i} value={filter}>
-                    {filter}
-                  </MenuItem>
-                );
-              })}
-            </Select>
 
+          <FormControl sx={{ m: 1, width: 300 }}>
+            {op_types?.length == 0 ||
+              (op_types == null ? (
+                ""
+              ) : (
+                <>
+                  <InputLabel id="demo-multiple-checkbox-label2">
+                    Check virtual
+                  </InputLabel>
+                  <Select
+                    labelId="demo-multiple-checkbox-label2"
+                    id="demo-multiple-checkbox2"
+                    value={vfilters}
+                    onChange={handleVirtual}
+                    input={<OutlinedInput label="Check virtual" />}
+                    MenuProps={MenuProps}
+                  >
+                    {VIRTUAL_FILTERS.map((filter, i) => {
+                      return (
+                        <MenuItem key={i} value={filter}>
+                          {filter}
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </>
+              ))}
             <div className="mt-4">
               <LocalizationProvider dateAdapter={AdapterMoment}>
                 <Stack spacing={3}>

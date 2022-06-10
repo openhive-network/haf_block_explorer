@@ -13,6 +13,7 @@ import { WitnessContext } from "../contexts/witnessContext";
 import moment from "moment";
 import Button from "@mui/material/Button";
 import { Link } from "react-router-dom";
+import Loader from "../components/loader/Loader";
 export default function DataTable() {
   const { witnessData, setWitnessData } = useContext(WitnessContext);
   const cell_names = [
@@ -143,7 +144,7 @@ export default function DataTable() {
   return (
     <>
       {witnessData === null ? (
-        "Loading ... "
+        <Loader />
       ) : (
         <Container>
           <Row>

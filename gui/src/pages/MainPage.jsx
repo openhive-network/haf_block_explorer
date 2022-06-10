@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Container, Col, Row } from "react-bootstrap";
 import { tidyNumber } from "../functions";
 import OpCard from "../components/OpCard";
+import Loader from "../components/loader/Loader";
 
 export default function Main_Page({ setTitle }) {
   // setTitle((document.title = "HAF Blocks"));
@@ -82,7 +83,7 @@ export default function Main_Page({ setTitle }) {
   return (
     <>
       {/* {operations_count_per_block === 0 ? (
-        <h1>Loading...</h1>
+        <Loader/>
       ) : ( */}
       <Container fluid className="main">
         <Row className="d-flex justify-content-center">
@@ -198,7 +199,6 @@ export default function Main_Page({ setTitle }) {
                     [
                       "hbd_stop_percent",
                       "hbd_start_percent",
-                      "available_account_subsidies",
                       "last_irreversible_block_num",
                       "hbd_interest_rate",
                       "hbd_print_rate",
@@ -258,6 +258,16 @@ export default function Main_Page({ setTitle }) {
                         <li>{modify_obj_key(key)}</li>
                         <li style={head_block_value_styles}>
                           {calc_obj_numbers(key)} HIVE
+                        </li>
+                      </>
+                    );
+                  }
+                  if (["available_account_subsidies"].includes(key)) {
+                    return (
+                      <>
+                        <li>{modify_obj_key(key)}</li>
+                        <li style={head_block_value_styles}>
+                          {tidyNumber((head_block[key] / 1000).toFixed(0))}
                         </li>
                       </>
                     );

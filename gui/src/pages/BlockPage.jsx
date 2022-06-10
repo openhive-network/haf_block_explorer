@@ -4,6 +4,7 @@ import { Row, Col, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import OpCard from "../components/OpCard";
 import BlockOpsFilters from "../components/BlockOpsFilters";
+import Loader from "../components/loader/Loader";
 
 export default function Block_Page({ block_nr, setTitle }) {
   const { block_data, setBlockNumber, blockNumber, block_op_types } =
@@ -29,7 +30,7 @@ export default function Block_Page({ block_nr, setTitle }) {
   return (
     <>
       {block_data === null || block_data.length === 0 ? (
-        <h1>Loading...</h1>
+        <Loader />
       ) : (
         <div>
           <Row>
