@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Toast, Row, Col } from "react-bootstrap";
-import GetOperations from "../operations";
+import Operation from "./Operation";
 export default function OpCard({ block, index, full_trx, trx_id }) {
   const type =
     block?.operations?.type === undefined
@@ -59,7 +59,7 @@ export default function OpCard({ block, index, full_trx, trx_id }) {
           </Row>
           <Row>
             <Col className="text-center">
-              <GetOperations
+              <Operation
                 value={
                   block?.operations?.type === undefined
                     ? block.type

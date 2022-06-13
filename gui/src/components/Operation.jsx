@@ -1,10 +1,10 @@
 import { useContext, useState, useEffect } from "react";
-import { HeadBlockContext } from "./contexts/headBlockContext";
+import { HeadBlockContext } from "../contexts/headBlockContext";
 import {
   calculate_hive_hbd,
   calculate_vests,
   calculateHivePower,
-} from "./functions";
+} from "../functions/calculations";
 import { Card, Col, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
@@ -48,7 +48,7 @@ const img_style = {
 const link_text = { color: "pink", textTransform: "none" };
 const boolean = { color: "#34f0c7" };
 
-export default function GetOperations({ value, type, full_trx }) {
+export default function Operation({ value, type, full_trx }) {
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
   const keys = Object.keys(type.value);
   const [showJson, setShowJson] = useState(false);
@@ -63,21 +63,6 @@ export default function GetOperations({ value, type, full_trx }) {
       set_is_page_trx(true);
     }
   }, [trx_page]);
-  // const [showJson, setShowJson] = useState(false);
-  // const [showDetails, setShowDetails] = useState(false);
-  // const vesting_fund = Number(head_block?.total_vesting_fund_hive?.amount);
-  // const vesting_shares = Number(head_block?.total_vesting_shares?.amount);
-  // const operation_value = JSON.stringify(type.value, null, 2);
-
-  // const calculate_hive_hbd = (value) => {
-  //   const res = Number(value) / 1000;
-  //   return res.toFixed(2);
-  // };
-
-  // const calculate_vests = (value) => {
-  //   const res = Number(value) / 1000000;
-  //   return res.toFixed(2);
-  // };
 
   function prettyViewCard() {
     return (
@@ -146,13 +131,7 @@ export default function GetOperations({ value, type, full_trx }) {
       </>
     );
   }
-  // const [showJson, setShowJson] = useState(false);
 
-  // const calculateHivePower = (account_vests) => {
-  //   const vest_sum = vesting_fund * (Number(account_vests) / vesting_shares);
-  //   const hive_power = vest_sum / 1000;
-  //   return hive_power.toFixed(2);
-  // };
   function linkToUserAccount(user) {
     return (
       <>

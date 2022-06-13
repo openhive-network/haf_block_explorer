@@ -7,15 +7,16 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import { tidyNumber } from "../functions";
+import { tidyNumber } from "../functions/calculations";
 import { Container, Row, Col } from "react-bootstrap";
 import { WitnessContext } from "../contexts/witnessContext";
 import moment from "moment";
 import Button from "@mui/material/Button";
 import { Link } from "react-router-dom";
 import Loader from "../components/loader/Loader";
+import { sort } from "../functions/witness_page_func";
 export default function DataTable() {
-  const { witnessData, setWitnessData } = useContext(WitnessContext);
+  const { witnessData } = useContext(WitnessContext);
   const cell_names = [
     "Name",
     "Votes (M)",
@@ -57,90 +58,11 @@ export default function DataTable() {
     },
   }));
 
-  function sortNumber(object_key) {
-    if (count % 2 === 0) {
-      return witnessData?.sort(
-        (a, b) => parseInt(b[object_key]) - parseInt(a[object_key])
-      );
-    } else {
-      return witnessData?.sort(
-        (a, b) => parseInt(a[object_key]) - parseInt(b[object_key])
-      );
-    }
-  }
-  function sortString(object_key) {
-    if (count % 2 === 0) {
-      witnessData?.sort((a, b) => (a[object_key] < b[object_key] ? 1 : -1));
-    } else {
-      witnessData?.sort((a, b) => (a[object_key] > b[object_key] ? 1 : -1));
-    }
-  }
-  function sortNestedObj(object_key) {
-    if (count % 2 === 0) {
-      return witnessData?.sort(
-        (a, b) => Number(b.props[object_key]) - Number(a.props[object_key])
-      );
-    } else {
-      return witnessData?.sort(
-        (a, b) => Number(a.props[object_key]) - Number(b.props[object_key])
-      );
-    }
-  }
-
-  const sort = (name) => {
-    switch (name) {
-      case "Name":
-        sortString("owner");
-        break;
-      case "Votes (M)":
-        sortNumber("votes");
-        break;
-      case "Missed":
-        sortNumber("total_missed");
-        break;
-      case "Last_block":
-        sortNumber("last_confirmed_block_num");
-        break;
-      case "Feed_age":
-        sortNumber("last_hbd_exchange_update");
-        break;
-      case "Price_feed":
-        if (count % 2 === 0) {
-          return witnessData?.sort(
-            (a, b) =>
-              Number(b.hbd_exchange_rate.base.split("HBD")[0]) -
-              Number(a.hbd_exchange_rate.base.split("HBD")[0])
-          );
-        } else {
-          return witnessData?.sort(
-            (a, b) =>
-              Number(a.hbd_exchange_rate.base.split("HBD")[0]) -
-              Number(b.hbd_exchange_rate.base.split("HBD")[0])
-          );
-        }
-        break;
-      case "Ac_budget":
-        sortNestedObj("account_subsidy_budget");
-        break;
-      case "Ac_decay":
-        sortNestedObj("account_subsidy_decay");
-
-        break;
-      case "Block_size":
-        sortNestedObj("maximum_block_size");
-        break;
-      case "Version":
-        sortNumber("hardfork_version_vote");
-        break;
-      default:
-    }
-  };
-
   const click = (name) => {
     setCount(count + 1);
-    sort(name);
+    sort(name, count, witnessData);
   };
-  console.log(witnessData);
+  // console.log(witnessData);
   return (
     <>
       {witnessData === null ? (

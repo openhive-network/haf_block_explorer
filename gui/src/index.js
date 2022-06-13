@@ -10,20 +10,22 @@ import { BrowserRouter } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 ReactDOM.render(
-  <ErrorBoundary>
-    <HeadBlockContextProvider>
-      <UserProfileContextProvider>
-        <BlockContextProvider>
-          <TranasctionContextProvider>
-            <WitnessContextProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-            </WitnessContextProvider>
-          </TranasctionContextProvider>
-        </BlockContextProvider>
-      </UserProfileContextProvider>
-    </HeadBlockContextProvider>
-  </ErrorBoundary>,
+  <React.StrictMode>
+    <ErrorBoundary>
+      <HeadBlockContextProvider>
+        <UserProfileContextProvider>
+          <BlockContextProvider>
+            <TranasctionContextProvider>
+              <WitnessContextProvider>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </WitnessContextProvider>
+            </TranasctionContextProvider>
+          </BlockContextProvider>
+        </UserProfileContextProvider>
+      </HeadBlockContextProvider>
+    </ErrorBoundary>
+  </React.StrictMode>,
   document.getElementById("root")
 );

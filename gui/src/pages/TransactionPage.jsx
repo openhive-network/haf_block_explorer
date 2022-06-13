@@ -1,9 +1,6 @@
 import React, { useContext } from "react";
 import { Row, Col } from "react-bootstrap";
-// import { Link } from "react-router-dom";
-// import HighlightedJSON from "../components/HighlightedJSON";
 import { TranasctionContext } from "../contexts/transactionContext";
-// import GetOperations from "../operations";
 import OpCard from "../components/OpCard";
 import Loader from "../components/loader/Loader";
 
@@ -51,29 +48,8 @@ export default function Transaction_Page({ transaction, setTitle }) {
               ))}
             </Col>
           </Row>
-          {/* <Row className="mt-5 justify-content-center">
-            <Col sm={6}>
-              <div
-                style={{
-                  // width: "50vw",
-                  height: "60vh",
-                  wordBreak: "break-word",
-                  whiteSpace: "pre-wrap",
-                  overflow: "auto",
-                  background: "#091B4B",
-                  borderRadius: "25px",
-                  padding: "20px",
-                }}
-                className="transaction__json"
-              >
-                <HighlightedJSON json={transData} />
-              </div>
-            </Col>
-          </Row> */}
         </>
       )}
     </>
   );
-
-  /* )} */
 }

@@ -19,6 +19,7 @@ export const UserProfileContextProvider = ({ children }) => {
   // console.log(userProfile);
   // 192.168.5.118 -steem7
   // 192.168.4.250 -steem10
+
   //Get available operation types for current user
   useEffect(() => {
     if (userProfile !== "") {
@@ -90,6 +91,7 @@ export const UserProfileContextProvider = ({ children }) => {
     set_resource_credits,
     startDateState,
     endDateState,
+    calc_limit,
   ]);
 
   return (

@@ -5,6 +5,11 @@ import { useNavigate } from "react-router-dom";
 import OpCard from "../components/OpCard";
 import BlockOpsFilters from "../components/BlockOpsFilters";
 import Loader from "../components/loader/Loader";
+import {
+  handleNextBlock,
+  handlePreviousBlock,
+  handleFilters,
+} from "../functions/block_page_func";
 
 export default function Block_Page({ block_nr, setTitle }) {
   const { block_data, setBlockNumber, blockNumber, block_op_types } =
@@ -16,16 +21,16 @@ export default function Block_Page({ block_nr, setTitle }) {
   //Block counter
   const navigate = useNavigate();
 
-  const handleNextBlock = () => {
-    navigate(`/block/${blockNumber + 1}`);
-    setBlockNumber(blockNumber + 1);
-  };
-  const handlePreviousBlock = () => {
-    navigate(`/block/${blockNumber - 1}`);
-    setBlockNumber(blockNumber - 1);
-  };
+  // const handleNextBlock = () => {
+  //   navigate(`/block/${blockNumber + 1}`);
+  //   setBlockNumber(blockNumber + 1);
+  // };
+  // const handlePreviousBlock = () => {
+  //   navigate(`/block/${blockNumber - 1}`);
+  //   setBlockNumber(blockNumber - 1);
+  // };
   // console.log(block_op_types);
-  const handleFilters = () => set_show_modal(!show_modal);
+  // const handleFilters = () => set_show_modal(!show_modal);
   // console.log(block_op_types);
   return (
     <>
@@ -37,14 +42,27 @@ export default function Block_Page({ block_nr, setTitle }) {
             <Col className="d-flex flex-column justify-content-center align-items-center">
               <h1>Block {block_nr} </h1>
               <div>
-                <Button className="m-3" onClick={handlePreviousBlock}>
+                <Button
+                  className="m-3"
+                  onClick={() =>
+                    handlePreviousBlock(navigate, setBlockNumber, blockNumber)
+                  }
+                >
                   Prev Block
                 </Button>
-                <Button onClick={handleNextBlock}>Next Block</Button>
+                <Button
+                  onClick={() =>
+                    handleNextBlock(navigate, setBlockNumber, blockNumber)
+                  }
+                >
+                  Next Block
+                </Button>
               </div>
 
               <p> Transactions in block : {block_data?.length}</p>
-              <Button onClick={handleFilters}>Filters</Button>
+              <Button onClick={() => handleFilters(set_show_modal, show_modal)}>
+                Filters
+              </Button>
             </Col>
 
             <BlockOpsFilters

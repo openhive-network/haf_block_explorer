@@ -4,64 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { BlockContext } from "../contexts/blockContext";
 import { UserProfileContext } from "../contexts/userProfileContext";
 import { TranasctionContext } from "../contexts/transactionContext";
-// import { getAccounts, getBlog, getTransaction } from "../functions";
 import { Link } from "react-router-dom";
 import axios from "axios";
-// import { FaAdn } from "react-icons/fa";
-// import IconButton from "@mui/material/IconButton";
 
 export default function NavigationBar() {
   const navigate = useNavigate();
   const form_value = useRef("");
   const [value, setValue] = useState("");
-
-  // const [accName, setAccName] = useState("");
-  // const [blockNr, setBlockNr] = useState("");
-  // const [transNr, setTransNr] = useState("");
-  // const [isAccountFound, setIsAccountFound] = useState(null);
-  // const [isBlockFound, setIsBlockFound] = useState(null);
-  // const [isTransactionFound, setIsTransactionFound] = useState(null);
-
-  // const { setUserProfile, setTransactionId } = useContext(ApiContext);
   const { setBlockNumber } = useContext(BlockContext);
   const { setUserProfile } = useContext(UserProfileContext);
   const { setTransactionId } = useContext(TranasctionContext);
 
-  // Find what user typed into search input and navigate him to correct page
-  // useEffect(() => {
-  //   if (value !== "") {
-  //     getAccounts(value, setAccName, setIsAccountFound);
-  //     getBlog(value, setBlockNr, setIsBlockFound);
-  //     getTransaction(value, setTransNr, setIsTransactionFound);
-  //     if (isAccountFound === true) {
-  //       setUserProfile(accName);
-  //       navigate(`user/${accName}`);
-  //     }
-  //     if (isBlockFound === true) {
-  //       setBlockNumber(blockNr);
-  //       navigate(`block/${blockNr}`);
-  //     }
-  //     if (isTransactionFound === true) {
-  //       setTransactionId(transNr);
-  //       navigate(`transaction/${transNr}`);
-  //     }
-  //     if (
-  //       isAccountFound === false &&
-  //       isBlockFound === false &&
-  //       isTransactionFound === false
-  //     ) {
-  //       navigate("/error");
-  //     }
-  //   }
-  // }, [
-  //   value,
-  //   accName,
-  //   blockNr,
-  //   transNr,
-  //   isAccountFound,
-  //   isBlockFound,
-  //   isTransactionFound,
-  // ]);
   const [check_input, set_check_input] = useState("");
   function handleSubmit(e) {
     e.preventDefault();
@@ -69,7 +22,7 @@ export default function NavigationBar() {
     setValue(val);
     form_value.current.value = "";
   }
-  // console.log(value);
+
   //Check data type
   useEffect(() => {
     if (value !== "") {
@@ -83,6 +36,7 @@ export default function NavigationBar() {
         .catch((err) => set_check_input("No data"));
     }
   }, [value]);
+
   // Navigate to correct page
   useEffect(() => {
     if (check_input.input_type === "block_num") {

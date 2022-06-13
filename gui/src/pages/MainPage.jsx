@@ -5,7 +5,20 @@ import { BlockContext } from "../contexts/blockContext";
 import { WitnessContext } from "../contexts/witnessContext";
 import { Link } from "react-router-dom";
 import { Container, Col, Row } from "react-bootstrap";
-import { tidyNumber } from "../functions";
+import {
+  tidyNumber,
+  calc_reward_fund_to_dol,
+  calc_feed_price,
+  calc_reward_fund,
+  calc_current_supply,
+  calc_current_supply_hbd,
+  calc_virtual_supply,
+  modify_obj_key,
+  calc_obj_numbers,
+  modify_obj_hbd,
+  modify_obj_number,
+  modify_obj_date,
+} from "../functions/calculations";
 import OpCard from "../components/OpCard";
 import Loader from "../components/loader/Loader";
 
@@ -23,62 +36,11 @@ export default function Main_Page({ setTitle }) {
     return `https://images.hive.blog/u/${user}/avatar`;
   };
   const trim_witness_array = witnessData?.slice(0, 20);
-  const calc_reward_fund_to_dol = () => {
-    const result = calc_reward_fund() * calc_feed_price();
-    return result.toFixed(0);
-  };
-
-  const calc_feed_price = () => {
-    const result =
-      Number(feed_price?.base?.amount) / Number(feed_price?.quote?.amount);
-    return result;
-  };
-
-  const calc_reward_fund = () => {
-    const result = Number(reward_fund?.reward_balance?.amount) / 1000;
-    return result.toFixed(0);
-  };
-
-  const calc_current_supply = () => {
-    const result = Number(head_block?.current_supply?.amount) / 1000;
-    return result.toFixed(0);
-  };
-  const calc_current_supply_hbd = () => {
-    const result = Number(head_block?.current_hbd_supply?.amount) / 1000;
-    return result.toFixed(0);
-  };
-  const calc_virtual_supply = () => {
-    const result = Number(head_block?.virtual_supply?.amount) / 1000;
-    return result.toFixed(0);
-  };
-
+  // };
   const head_block_value_styles = {
     textAlign: "right",
     color: "#75ffff",
     margin: "5px",
-  };
-  const modify_obj_key = (key) => {
-    const remove_underscore = key.split("_").join(" ");
-    const first_upper_letter =
-      remove_underscore.slice(0, 1).toUpperCase() + remove_underscore.slice(1);
-    return first_upper_letter;
-  };
-
-  const calc_obj_numbers = (key) => {
-    return tidyNumber(Number(head_block[key]?.amount).toFixed(3) / 1000);
-  };
-  const modify_obj_hbd = (key) => {
-    return Number(head_block[key]?.amount).toFixed(3);
-  };
-  const modify_obj_number = (key) => {
-    const result =
-      head_block[key] !== 0
-        ? tidyNumber(Number(head_block[key]))
-        : Number(head_block[key]);
-    return result;
-  };
-  const modify_obj_date = (key) => {
-    return head_block[key]?.split("T").join(" ");
   };
   return (
     <>
@@ -134,47 +96,48 @@ export default function Main_Page({ setTitle }) {
               <ul style={{ listStyle: "none", padding: "0" }}>
                 <li>Feed price </li>
                 <li style={head_block_value_styles}>
-                  ${calc_feed_price()}/HIVE
+                  ${calc_feed_price(feed_price)}/HIVE
                 </li>
                 <li className="head_block_key">Blockchain time</li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  {modify_obj_date("time")}
+                  {modify_obj_date("time", head_block)}
                 </li>
                 <li className="head_block_key">Rewards fund</li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  {tidyNumber(calc_reward_fund())} HIVE
+                  {tidyNumber(calc_reward_fund(reward_fund))} HIVE
                 </li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  $ {tidyNumber(calc_reward_fund_to_dol())}
+                  $
+                  {tidyNumber(calc_reward_fund_to_dol(reward_fund, feed_price))}
                 </li>
                 <li className="head_block_key">Current Supply</li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  {tidyNumber(calc_current_supply())} HIVE
+                  {tidyNumber(calc_current_supply(head_block))} HIVE
                 </li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  {tidyNumber(calc_current_supply_hbd())} HBD
+                  {tidyNumber(calc_current_supply_hbd(head_block))} HBD
                 </li>
                 <li className="head_block_key">Virtual Supply</li>
                 <li
                   className="head_block_value"
                   style={head_block_value_styles}
                 >
-                  {tidyNumber(calc_virtual_supply())} HIVE
+                  {tidyNumber(calc_virtual_supply(head_block))} HIVE
                 </li>
 
                 {Object.keys(head_block).map((key, i) => {
@@ -186,13 +149,12 @@ export default function Main_Page({ setTitle }) {
                     ].includes(key)
                   ) {
                     return (
-                      <>
-                        {" "}
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>{" "}
                         <li style={head_block_value_styles}>
-                          {modify_obj_date(key)}
+                          {modify_obj_date(key, head_block)}
                         </li>
-                      </>
+                      </div>
                     );
                   }
                   if (
@@ -217,34 +179,34 @@ export default function Main_Page({ setTitle }) {
                     ].includes(key)
                   ) {
                     return (
-                      <>
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>{" "}
                         <li style={head_block_value_styles}>
-                          {modify_obj_number(key)}
+                          {modify_obj_number(key, head_block)}
                         </li>
-                      </>
+                      </div>
                     );
                   }
                   if (["init_hbd_supply"].includes(key)) {
                     return (
-                      <>
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>
                         <li style={head_block_value_styles}>
-                          {modify_obj_hbd(key)} HBD
+                          {modify_obj_hbd(key, head_block)} HBD
                         </li>
-                      </>
+                      </div>
                     );
                   }
                   if (
                     ["current_hbd_supply", "sps_interval_ledger"].includes(key)
                   ) {
                     return (
-                      <>
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>
                         <li style={head_block_value_styles}>
-                          {calc_obj_numbers(key)} HBD
+                          {calc_obj_numbers(key, head_block)} HBD
                         </li>
-                      </>
+                      </div>
                     );
                   }
                   if (
@@ -254,22 +216,22 @@ export default function Main_Page({ setTitle }) {
                     ].includes(key)
                   ) {
                     return (
-                      <>
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>
                         <li style={head_block_value_styles}>
-                          {calc_obj_numbers(key)} HIVE
+                          {calc_obj_numbers(key, head_block)} HIVE
                         </li>
-                      </>
+                      </div>
                     );
                   }
                   if (["available_account_subsidies"].includes(key)) {
                     return (
-                      <>
+                      <div key={i}>
                         <li>{modify_obj_key(key)}</li>
                         <li style={head_block_value_styles}>
-                          {tidyNumber((head_block[key] / 1000).toFixed(0))}
+                          {tidyNumber((head_block[key] / 10000).toFixed(0))}
                         </li>
-                      </>
+                      </div>
                     );
                   }
                 })}
@@ -291,18 +253,20 @@ export default function Main_Page({ setTitle }) {
             <div className="top-witness__list">
               <h3>Top Witnesses</h3>
               <ol style={{ textAlign: "left" }}>
-                {trim_witness_array?.map((w, i) => (
-                  <li style={{ margin: "10px" }}>
-                    <img
-                      style={{
-                        width: "40px",
-                        borderRadius: "50%",
-                        margin: "5px",
-                      }}
-                      src={profile_picture(w.owner)}
-                    />
-                    <Link to={`/user/${w.owner}`}>{w.owner}</Link>
-                  </li>
+                {trim_witness_array?.map((w) => (
+                  <div key={w.id}>
+                    <li style={{ margin: "10px" }}>
+                      <img
+                        style={{
+                          width: "40px",
+                          borderRadius: "50%",
+                          margin: "5px",
+                        }}
+                        src={profile_picture(w.owner)}
+                      />
+                      <Link to={`/user/${w.owner}`}>{w.owner}</Link>
+                    </li>
+                  </div>
                 ))}
               </ol>
 

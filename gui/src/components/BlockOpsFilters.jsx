@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useContext } from "react";
 import { Modal } from "react-bootstrap";
 import {
   FormControl,
@@ -10,18 +10,12 @@ import {
   ListItemText,
 } from "@mui/material";
 import { BlockContext } from "../contexts/blockContext";
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
-const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual", "All"];
+import {
+  handle_filters,
+  handle_virtual_filters,
+  MenuProps,
+  VIRTUAL_FILTERS,
+} from "../functions/operation_filters_func";
 
 export default function BlockOpsFilters({
   show_modal,
@@ -31,35 +25,6 @@ export default function BlockOpsFilters({
 }) {
   const { block_op_types, block_op_filters, set_block_op_filters } =
     useContext(BlockContext);
-  // const [vfilters, set_v_filters] = useState("");
-
-  const handleChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    set_block_op_filters(value);
-  };
-
-  const handleVirtual = (event) => {
-    const {
-      target: { value },
-    } = event;
-    const notVirtualOps = block_op_types?.map((op) => op[2] === false && op[0]);
-    const virtualOps = block_op_types?.map((op) => op[2] === true && op[0]);
-    const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
-    const trim_virtual = virtualOps?.filter((m) => m !== false);
-
-    set_v_filters(value);
-    if (value === "Virtual") {
-      set_block_op_filters(trim_virtual);
-    }
-    if (value === "Not-Virtual") {
-      set_block_op_filters(trim_not_virtual);
-    }
-    if (value === "All") {
-      set_block_op_filters([]);
-    }
-  };
 
   return (
     <div>
@@ -77,7 +42,7 @@ export default function BlockOpsFilters({
               id="demo-multiple-checkbox"
               multiple
               value={block_op_filters}
-              onChange={handleChange}
+              onChange={(event) => handle_filters(event, set_block_op_filters)}
               input={<OutlinedInput label="Operations" />}
               renderValue={(selected) => "Active filters : " + selected.length}
               MenuProps={MenuProps}
@@ -103,7 +68,14 @@ export default function BlockOpsFilters({
               labelId="demo-multiple-checkbox-label2"
               id="demo-multiple-checkbox2"
               value={vfilters}
-              onChange={handleVirtual}
+              onChange={(event) =>
+                handle_virtual_filters(
+                  event,
+                  block_op_types,
+                  set_v_filters,
+                  set_block_op_filters
+                )
+              }
               input={<OutlinedInput label="Check virtual" />}
               MenuProps={MenuProps}
             >

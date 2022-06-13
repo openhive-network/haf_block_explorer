@@ -12,6 +12,7 @@ import HighlightedJSON from "../components/HighlightedJSON";
 import MultiSelectFilters from "../components/MultiSelectFilters";
 import OpCard from "../components/OpCard";
 import Loader from "../components/loader/Loader";
+import { handleNextPage, handlePrevPage } from "../functions/user_page_func";
 
 export default function User_Page({ user, setTitle }) {
   const {
@@ -38,7 +39,7 @@ export default function User_Page({ user, setTitle }) {
   const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
   const [show_filters, set_show_filters] = useState(false);
   const [filered_op_names, set_filtered_op_names] = useState([]);
-  const [showUserModal, setShowUserModal] = useState(true);
+  // const [showUserModal, setShowUserModal] = useState(true);
 
   const check_op_type = user_profile_data?.map(
     (history) => history.operations.type
@@ -51,20 +52,6 @@ export default function User_Page({ user, setTitle }) {
 
   const page_count = Math.ceil(get_max_trx_num / acc_history_limit);
   const [page, setPage] = useState([]);
-  const handleNextPage = () => {
-    set_pagination(get_last_trx_on_page);
-    setPage((prev) => [...prev, get_first_trx_on_page]);
-  };
-
-  const handlePrevPage = () => {
-    setPage(page.slice(0, -1));
-    set_pagination(page.pop());
-  };
-
-  // const handleShow = () => setShowUserModal(false);
-  // console.log(startDateState);
-  // console.log(endDateState);
-  // console.log(user_profile_data);
   return (
     <>
       {user_info === "" ||
@@ -406,14 +393,27 @@ export default function User_Page({ user, setTitle }) {
                     />
                   ) : (
                     <>
-                      <Button onClick={handlePrevPage}>
+                      <Button
+                        onClick={() =>
+                          handlePrevPage(setPage, page, set_pagination)
+                        }
+                      >
                         <ArrowBackIosNewIcon />
                       </Button>
 
                       {user_profile_data?.length !== acc_history_limit ? (
                         " "
                       ) : (
-                        <Button onClick={handleNextPage}>
+                        <Button
+                          onClick={() =>
+                            handleNextPage(
+                              set_pagination,
+                              get_last_trx_on_page,
+                              setPage,
+                              get_first_trx_on_page
+                            )
+                          }
+                        >
                           <ArrowForwardIosIcon />
                         </Button>
                       )}

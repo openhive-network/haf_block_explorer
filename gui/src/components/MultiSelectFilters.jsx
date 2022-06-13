@@ -16,20 +16,15 @@ import { UserProfileContext } from "../contexts/userProfileContext";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { MobileDatePicker } from "@mui/x-date-pickers/MobileDatePicker";
-import moment from "moment";
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
-
-const VIRTUAL_FILTERS = ["Virtual", "Not-Virtual", "All"];
+import {
+  handle_filters,
+  handle_virtual_filters,
+  change_start_date,
+  change_end_date,
+  handle_date_filter_btn,
+  MenuProps,
+  VIRTUAL_FILTERS,
+} from "../functions/operation_filters_func";
 
 export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const {
@@ -42,68 +37,8 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     setEndDateState,
   } = useContext(UserProfileContext);
   const [vfilters, set_v_filters] = useState("");
-
-  const handleChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    set_op_filters(value);
-  };
-  const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
-  const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
-  const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
-  const trim_virtual = virtualOps?.filter((m) => m !== false);
-
-  const handleVirtual = (event) => {
-    const {
-      target: { value },
-    } = event;
-
-    set_v_filters(value);
-    if (value === "Virtual") {
-      set_op_filters(trim_virtual);
-    }
-    if (value === "Not-Virtual") {
-      set_op_filters(trim_not_virtual);
-    }
-    if (value === "All") {
-      set_op_filters([]);
-    }
-  };
-
-  // const notVirtualOps = op_types?.map((op) => op[2] === false && op[0]);
-  // const virtualOps = op_types?.map((op) => op[2] === true && op[0]);
-  // const trim_not_virtual = notVirtualOps?.filter((m) => m !== false);
-  // const trim_virtual = virtualOps?.filter((m) => m !== false);
-
-  // useEffect(() => {
-  //   if (vfilters === "Virtual") {
-  //     set_op_filters(trim_virtual);
-  //   }
-  //   if (vfilters === "Not-Virtual") {
-  //     set_op_filters(trim_not_virtual);
-  //   }
-  // }, [vfilters, set_op_filters, trim_virtual, trim_not_virtual]);
-
-  //Calendar
   const [dateSelectError, setDateSelectError] = useState("");
 
-  const changeStartDate = (e) => {
-    setStartDateState(e);
-  };
-  const changeEndDate = (e) => {
-    setEndDateState(e);
-  };
-  const trimDate = (date) => moment(date?._d).format().split("T")[0];
-
-  const handleFilterBtn = () => {
-    set_show_filters(false);
-    setDateSelectError("");
-    if (startDateState?._d > endDateState?._d) {
-      set_show_filters(true);
-      setDateSelectError("End date can't be higher than start date ");
-    }
-  };
   console.log(op_types);
   return (
     <div>
@@ -123,7 +58,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               id="demo-multiple-checkbox"
               multiple
               value={op_filters}
-              onChange={handleChange}
+              onChange={(event) => handle_filters(event, set_op_filters)}
               input={
                 <OutlinedInput
                   label={
@@ -161,7 +96,14 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
                     labelId="demo-multiple-checkbox-label2"
                     id="demo-multiple-checkbox2"
                     value={vfilters}
-                    onChange={handleVirtual}
+                    onChange={(event) =>
+                      handle_virtual_filters(
+                        event,
+                        op_types,
+                        set_v_filters,
+                        set_op_filters
+                      )
+                    }
                     input={<OutlinedInput label="Check virtual" />}
                     MenuProps={MenuProps}
                   >
@@ -182,14 +124,18 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
                     label="Start Date"
                     inputFormat="DD/MM/yyyy"
                     value={startDateState}
-                    onChange={changeStartDate}
+                    onChange={(event) =>
+                      change_start_date(event, setStartDateState)
+                    }
                     renderInput={(params) => <TextField {...params} />}
                   />
                   <MobileDatePicker
                     label="End Date"
                     inputFormat="DD/MM/yyyy"
                     value={endDateState}
-                    onChange={changeEndDate}
+                    onChange={(event) =>
+                      change_end_date(event, setEndDateState)
+                    }
                     renderInput={(params) => <TextField {...params} />}
                   />
                 </Stack>
@@ -199,7 +145,18 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
           </FormControl>
         </Modal.Body>
         <Modal.Footer>
-          <Button onClick={handleFilterBtn}>Filter</Button>
+          <Button
+            onClick={() =>
+              handle_date_filter_btn(
+                set_show_filters,
+                setDateSelectError,
+                startDateState,
+                endDateState
+              )
+            }
+          >
+            Filter
+          </Button>
         </Modal.Footer>
       </Modal>
     </div>
