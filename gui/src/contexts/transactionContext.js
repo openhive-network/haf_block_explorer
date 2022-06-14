@@ -13,7 +13,7 @@ export const TranasctionContextProvider = ({ children }) => {
     if (transactionId !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_transaction",
+        url: "http://192.168.5.126:3002/rpc/get_transaction",
         headers: { "Content-Type": "application/json" },
         data: { _trx_hash: transactionId },
       }).then((res) => setTransData(res?.data));

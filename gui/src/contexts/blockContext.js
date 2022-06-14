@@ -24,13 +24,14 @@ export const BlockContextProvider = ({ children }) => {
   // }, [blockNumber]);
   // 192.168.5.118 -steem7
   // // 192.168.4.250 -steem10
+  // 192.168.5.126 shed14
   // getBlockData
   // console.log(block_data);
   useEffect(() => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_block_op_types",
+        url: "http://192.168.5.126:3002/rpc/get_block_op_types",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,
@@ -43,7 +44,7 @@ export const BlockContextProvider = ({ children }) => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_ops_by_block",
+        url: "http://192.168.5.126:3002/rpc/get_ops_by_block",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,

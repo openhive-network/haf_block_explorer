@@ -2,36 +2,30 @@ import React, { useContext, useState } from "react";
 import { BlockContext } from "../contexts/blockContext";
 import { Row, Col, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import OpCard from "../components/OpCard";
-import BlockOpsFilters from "../components/BlockOpsFilters";
+import OpCard from "../components/operations/OpCard";
+import BlockOpsFilters from "../components/operations/filters/BlockOpsFilters";
 import Loader from "../components/loader/Loader";
 import {
   handleNextBlock,
   handlePreviousBlock,
   handleFilters,
 } from "../functions/block_page_func";
+import { useEffect } from "react";
 
 export default function Block_Page({ block_nr, setTitle }) {
-  const { block_data, setBlockNumber, blockNumber, block_op_types } =
-    useContext(BlockContext);
+  const { block_data, setBlockNumber, blockNumber } = useContext(BlockContext);
   const [show_modal, set_show_modal] = useState(false);
   const [vfilters, set_v_filters] = useState("");
 
   // setTitle(`HAF | Block | ${block_nr}`);
-  //Block counter
   const navigate = useNavigate();
 
-  // const handleNextBlock = () => {
-  //   navigate(`/block/${blockNumber + 1}`);
-  //   setBlockNumber(blockNumber + 1);
-  // };
-  // const handlePreviousBlock = () => {
-  //   navigate(`/block/${blockNumber - 1}`);
-  //   setBlockNumber(blockNumber - 1);
-  // };
-  // console.log(block_op_types);
-  // const handleFilters = () => set_show_modal(!show_modal);
-  // console.log(block_op_types);
+  const details_style = {
+    color: "#ada9a9dc",
+    fontSize: "20px",
+  };
+  const style = { color: "#160855", fontWeight: "bold" };
+
   return (
     <>
       {block_data === null || block_data.length === 0 ? (
@@ -40,9 +34,12 @@ export default function Block_Page({ block_nr, setTitle }) {
         <div>
           <Row>
             <Col className="d-flex flex-column justify-content-center align-items-center">
-              <h1>Block {block_nr} </h1>
+              <h3 style={details_style}>
+                Block <span style={style}>{block_nr}</span>
+              </h3>
               <div>
                 <Button
+                  size="sm"
                   className="m-3"
                   onClick={() =>
                     handlePreviousBlock(navigate, setBlockNumber, blockNumber)
@@ -51,6 +48,7 @@ export default function Block_Page({ block_nr, setTitle }) {
                   Prev Block
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() =>
                     handleNextBlock(navigate, setBlockNumber, blockNumber)
                   }
@@ -59,8 +57,15 @@ export default function Block_Page({ block_nr, setTitle }) {
                 </Button>
               </div>
 
-              <p> Transactions in block : {block_data?.length}</p>
-              <Button onClick={() => handleFilters(set_show_modal, show_modal)}>
+              <p style={details_style}>
+                <span style={style}>{block_data?.length}</span> transactions
+                produced in this block at{" "}
+                <span style={style}>{block_data?.[0]?.timestamp} UTC</span>
+              </p>
+              <Button
+                size="sm"
+                onClick={() => handleFilters(set_show_modal, show_modal)}
+              >
                 Filters
               </Button>
             </Col>
@@ -92,16 +97,17 @@ export default function Block_Page({ block_nr, setTitle }) {
             hidden={vfilters === "Not-Virtual" ? true : false}
           >
             <Col className="text-center">
-              <h1
-              // style={{
-              //   background: "#000",
-              //   color: "#fff",
-              //   padding: "10px",
-              //   margin: "25px 0 25px 0",
-              // }}
+              <h3
+                style={details_style}
+                // style={{
+                //   background: "#000",
+                //   color: "#fff",
+                //   padding: "10px",
+                //   margin: "25px 0 25px 0",
+                // }}
               >
                 Virtual Operations
-              </h1>
+              </h3>
               {block_data?.map((single, i) => {
                 if (single.virtual_op === true) {
                   return (

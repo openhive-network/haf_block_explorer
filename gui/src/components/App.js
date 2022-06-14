@@ -1,9 +1,9 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // import { useContext } from "react";
-import Header from "./layout/Header";
-import Content from "./layout/Content";
-// import Footer from "./layout/Footer";
+import Header from "./layout/header/Header";
+import Content from "./layout/content/Content";
+import Footer from "./layout/footer/Footer";
 import "../styles/App.css";
 
 // import { HeadBlockContext } from "../contexts/headBlockContext";
@@ -23,7 +23,7 @@ export default function App() {
     <>
       <Header />
       <Content />
-      {/* <Footer /> */}
+      <Footer />
     </>
     //   )}
     // </div>

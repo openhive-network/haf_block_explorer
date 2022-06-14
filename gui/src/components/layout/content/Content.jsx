@@ -1,14 +1,14 @@
 import React, { useContext, useEffect, useState } from "react";
-import MainPage from "../../pages/MainPage";
-import BlockPage from "../../pages/BlockPage";
-import UserPage from "../../pages/UserPage";
-import TransactionPage from "../../pages/TransactionPage";
-import WitnessesPage from "../../pages/WitnessesPage";
+import MainPage from "../../../pages/MainPage";
+import BlockPage from "../../../pages/BlockPage";
+import UserPage from "../../../pages/UserPage";
+import TransactionPage from "../../../pages/TransactionPage";
+import WitnessesPage from "../../../pages/WitnessesPage";
 import { Routes, Route } from "react-router-dom";
-import ErrorPage from "../../pages/ErrorPage";
-import { UserProfileContext } from "../../contexts/userProfileContext";
-import { BlockContext } from "../../contexts/blockContext";
-import { TranasctionContext } from "../../contexts/transactionContext";
+import ErrorPage from "../../../pages/ErrorPage";
+import { UserProfileContext } from "../../../contexts/userProfileContext";
+import { BlockContext } from "../../../contexts/blockContext";
+import { TranasctionContext } from "../../../contexts/transactionContext";
 import { useLocation } from "react-router-dom";
 import "./content.css";
 export default function Content() {

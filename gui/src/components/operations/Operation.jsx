@@ -1,10 +1,10 @@
 import { useContext, useState, useEffect } from "react";
-import { HeadBlockContext } from "../contexts/headBlockContext";
+import { HeadBlockContext } from "../../contexts/headBlockContext";
 import {
   calculate_hive_hbd,
   calculate_vests,
   calculateHivePower,
-} from "../functions/calculations";
+} from "../../functions/calculations";
 import { Card, Col, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
@@ -103,20 +103,23 @@ export default function Operation({ value, type, full_trx }) {
   function more_detailed_view() {
     return (
       <>
-        <span>
-          <button
-            onClick={() => setShowJson(!showJson)}
-            style={show_json_button}
-          >
-            Show JSON
-          </button>
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            style={show_details_button}
-          >
-            Show details
-          </button>
-        </span>
+        {trx_page === false && (
+          <span>
+            <button
+              onClick={() => setShowJson(!showJson)}
+              style={show_json_button}
+            >
+              Show JSON
+            </button>
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              style={show_details_button}
+            >
+              Show details
+            </button>
+          </span>
+        )}
+
         <div
           style={{ marginTop: "20px", textAlign: "left" }}
           hidden={is_page_trx === false ? false : !showJson}

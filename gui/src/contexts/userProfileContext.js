@@ -25,7 +25,7 @@ export const UserProfileContextProvider = ({ children }) => {
     if (userProfile !== "") {
       axios({
         method: "post",
-        url: "http://192.168.4.250:3002/rpc/get_acc_op_types",
+        url: "http://192.168.5.126:3002/rpc/get_acc_op_types",
         headers: { "Content-Type": "application/json" },
         data: {
           _account: userProfile,
@@ -49,7 +49,7 @@ export const UserProfileContextProvider = ({ children }) => {
       axios({
         method: "post",
         // url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
-        url: "http://192.168.4.250:3002/rpc/get_ops_by_account",
+        url: "http://192.168.5.126:3002/rpc/get_ops_by_account",
         headers: { "Content-Type": "application/json" },
         data: {
           _account: userProfile,

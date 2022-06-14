@@ -12,7 +12,7 @@ import {
   Stack,
   TextField,
 } from "@mui/material";
-import { UserProfileContext } from "../contexts/userProfileContext";
+import { UserProfileContext } from "../../../contexts/userProfileContext";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { MobileDatePicker } from "@mui/x-date-pickers/MobileDatePicker";
@@ -24,7 +24,7 @@ import {
   handle_date_filter_btn,
   MenuProps,
   VIRTUAL_FILTERS,
-} from "../functions/operation_filters_func";
+} from "../../../functions/operation_filters_func";
 
 export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const {
@@ -39,7 +39,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const [vfilters, set_v_filters] = useState("");
   const [dateSelectError, setDateSelectError] = useState("");
 
-  console.log(op_types);
+  // console.log(op_types);
   return (
     <div>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>
@@ -49,7 +49,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
         <Modal.Body>
           <FormControl sx={{ m: 1, width: 300 }}>
             <InputLabel id="demo-multiple-checkbox-label">
-              {op_types?.length == 0 || op_types == null
+              {op_types?.length === 0 || op_types === null
                 ? "Operations loading ..."
                 : "Operations"}
             </InputLabel>
@@ -62,7 +62,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               input={
                 <OutlinedInput
                   label={
-                    op_types?.length == 0 || op_types == null
+                    op_types?.length === 0 || op_types === null
                       ? "Operations loading ..."
                       : "Operations"
                   }
@@ -84,8 +84,8 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
           </FormControl>
 
           <FormControl sx={{ m: 1, width: 300 }}>
-            {op_types?.length == 0 ||
-              (op_types == null ? (
+            {op_types?.length === 0 ||
+              (op_types === null ? (
                 ""
               ) : (
                 <>

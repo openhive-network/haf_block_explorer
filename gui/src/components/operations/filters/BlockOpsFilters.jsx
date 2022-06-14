@@ -9,13 +9,13 @@ import {
   Checkbox,
   ListItemText,
 } from "@mui/material";
-import { BlockContext } from "../contexts/blockContext";
+import { BlockContext } from "../../../contexts/blockContext";
 import {
   handle_filters,
   handle_virtual_filters,
   MenuProps,
   VIRTUAL_FILTERS,
-} from "../functions/operation_filters_func";
+} from "../../../functions/operation_filters_func";
 
 export default function BlockOpsFilters({
   show_modal,

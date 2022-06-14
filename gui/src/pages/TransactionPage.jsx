@@ -1,12 +1,15 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { Row, Col } from "react-bootstrap";
 import { TranasctionContext } from "../contexts/transactionContext";
-import OpCard from "../components/OpCard";
+import { BlockContext } from "../contexts/blockContext";
+import OpCard from "../components/operations/OpCard";
 import Loader from "../components/loader/Loader";
+import { tidyNumber } from "../functions/calculations";
 
 export default function Transaction_Page({ transaction, setTitle }) {
   // setTitle(`HAF | Transaction`);
   const { transData } = useContext(TranasctionContext);
+  const { block_data, setBlockNumber } = useContext(BlockContext);
   // const trnasToJson = JSON.stringify(transData, null, 2);
 
   // const [seconds, setSeconds] = useState(60);
@@ -26,18 +29,44 @@ export default function Transaction_Page({ transaction, setTitle }) {
       will be shown in : {seconds}{" "}
     </p>
   ) : ( */
-  console.log(transData);
+  useEffect(() => {
+    if (transData || transData !== null) {
+      setBlockNumber(transData?.block_num);
+    }
+  }, [transData]);
+  const block_time = block_data?.[0]?.timestamp;
   // <>
+  const details_style = {
+    color: "#ada9a9dc",
+    fontSize: "20px",
+  };
+  const style = { color: "#160855", fontWeight: "bold" };
 
   return (
     <>
-      {!transData || transData === null ? (
+      {!transData ||
+      transData === null ||
+      block_data === null ||
+      block_data.length === 0 ? (
         <Loader />
       ) : (
-        <>
-          <h1>Transaction Page</h1> <h4>Transaction ID : {transaction}</h4>
+        <div
+          style={{
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <p style={details_style}>
+            Transaction <span style={style}>{transaction}</span> <br></br>
+            Included in block{" "}
+            <span style={style}>
+              {tidyNumber(transData?.block_num)}{" "}
+            </span>at <span style={style}>{block_time} UTC</span>
+          </p>
+
           <Row className="mt-5 justify-content-center">
-            <Col sm={6}>
+            <Col md={6}>
               {transData?.operations?.map((op, i) => (
                 <OpCard
                   block={op}
@@ -48,7 +77,7 @@ export default function Transaction_Page({ transaction, setTitle }) {
               ))}
             </Col>
           </Row>
-        </>
+        </div>
       )}
     </>
   );

@@ -5,12 +5,12 @@ import { Container, Col, Row } from "react-bootstrap";
 import { Button, Pagination } from "@mui/material";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import "./userPage.css";
+import "../styles/userPage.css";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserInfoTable from "../components/user/UserInfoTable";
 import HighlightedJSON from "../components/HighlightedJSON";
-import MultiSelectFilters from "../components/MultiSelectFilters";
-import OpCard from "../components/OpCard";
+import MultiSelectFilters from "../components/operations/filters/MultiSelectFilters";
+import OpCard from "../components/operations/OpCard";
 import Loader from "../components/loader/Loader";
 import { handleNextPage, handlePrevPage } from "../functions/user_page_func";
 
@@ -52,6 +52,12 @@ export default function User_Page({ user, setTitle }) {
 
   const page_count = Math.ceil(get_max_trx_num / acc_history_limit);
   const [page, setPage] = useState([]);
+
+  const style = {
+    color: "#160855",
+    fontWeight: "bold",
+    fontSize: "18px",
+  };
   return (
     <>
       {user_info === "" ||
@@ -62,7 +68,7 @@ export default function User_Page({ user, setTitle }) {
       ) : (
         <Container fluid>
           <Row className="d-flex mt-5">
-            <Col sm={12} md={3}>
+            <Col sm={12} md={5} lg={5} xl={3}>
               <UserProfileCard user={user} />
               <UserInfoTable user_info={user_info} />
               {user_info?.json_metadata ? (
@@ -365,11 +371,11 @@ export default function User_Page({ user, setTitle }) {
               )}
             </Col>
 
-            <Col>
-              <Row>
+            <Col sm={12} md={7} lg={7} xl={9}>
+              <Row className="mt-3">
                 <Col className="d-flex justify-content-between">
                   <div className="op_count">
-                    <p>
+                    <p style={style}>
                       Operations :{" "}
                       {filtered_ops_sum === 0
                         ? user_profile_data?.length
@@ -482,15 +488,15 @@ export default function User_Page({ user, setTitle }) {
                 </Col>
               </Row> */}
 
-              <Row>
-                {user_profile_data?.map((profile, i) => {
-                  return (
-                    <Col key={profile.operation_id} sm={12}>
+              {user_profile_data?.map((profile, i) => {
+                return (
+                  <Row>
+                    <Col key={profile.operation_id}>
                       <OpCard block={profile} index={i} full_trx={profile} />
                     </Col>
-                  );
-                })}
-              </Row>
+                  </Row>
+                );
+              })}
             </Col>
           </Row>
         </Container>
