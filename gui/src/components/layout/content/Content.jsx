@@ -1,8 +1,8 @@
-import React, { useContext, useEffect, useState } from "react";
-import MainPage from "../../../pages/MainPage";
-import BlockPage from "../../../pages/BlockPage";
-import UserPage from "../../../pages/UserPage";
-import TransactionPage from "../../../pages/TransactionPage";
+import React, { useContext, useEffect } from "react";
+import MainPage from "../../../pages/mainPage/MainPage";
+import BlockPage from "../../../pages/blockPage/BlockPage";
+import UserPage from "../../../pages/userPage/UserPage";
+import TransactionPage from "../../../pages/transactionPage/TransactionPage";
 import WitnessesPage from "../../../pages/WitnessesPage";
 import { Routes, Route } from "react-router-dom";
 import ErrorPage from "../../../pages/ErrorPage";
@@ -10,7 +10,7 @@ import { UserProfileContext } from "../../../contexts/userProfileContext";
 import { BlockContext } from "../../../contexts/blockContext";
 import { TranasctionContext } from "../../../contexts/transactionContext";
 import { useLocation } from "react-router-dom";
-import "./content.css";
+import styles from "./content.module.css";
 export default function Content() {
   const { userProfile, setUserProfile } = useContext(UserProfileContext);
   const { blockNumber, setBlockNumber } = useContext(BlockContext);
@@ -20,44 +20,48 @@ export default function Content() {
   const user = location.pathname.split("/user/").pop();
   const block = Number(location.pathname.split("/block/").pop());
   const transaction = location.pathname.split("/transaction/").pop();
-  // console.log(location);
-  const [title, setTitle] = useState("");
-  document.title = title;
   useEffect(() => {
-    setUserProfile(user);
-    setBlockNumber(block);
-    setTransactionId(transaction);
-  }, [user, block, transaction]);
+    if ((user && transaction) !== "/" && block !== "NaN") {
+      if (location.pathname.includes("user")) {
+        setUserProfile(user);
+      }
+      if (location.pathname.includes("block")) {
+        setBlockNumber(block);
+      }
+      if (location.pathname.includes("transaction")) {
+        setTransactionId(transaction);
+      }
+    }
+  }, [
+    user,
+    block,
+    location,
+    transaction,
+    setUserProfile,
+    setBlockNumber,
+    setTransactionId,
+  ]);
 
   return (
-    <div className="content">
+    <div className={styles.content}>
       <Routes>
-        <Route exact path="/" element={<MainPage setTitle={setTitle} />} />
+        <Route exact path="/" element={<MainPage />} />
         <Route
           path={`block/${blockNumber}`}
           element={
-            <BlockPage
-              setBlockNumber={setBlockNumber}
-              setTitle={setTitle}
-              block_nr={blockNumber}
-            />
+            <BlockPage setBlockNumber={setBlockNumber} block_nr={blockNumber} />
           }
         />
         <Route
           path={`user/${userProfile}`}
-          element={<UserPage setTitle={setTitle} user={userProfile} />}
+          element={<UserPage user={userProfile} />}
         />
         <Route
           path={`transaction/${transactionId}`}
-          element={
-            <TransactionPage setTitle={setTitle} transaction={transactionId} />
-          }
+          element={<TransactionPage transaction={transactionId} />}
         />
-        <Route
-          path="witnesses"
-          element={<WitnessesPage setTitle={setTitle} />}
-        />
-        <Route path="error" element={<ErrorPage setTitle={setTitle} />} />
+        <Route path="witnesses" element={<WitnessesPage />} />
+        <Route path="error" element={<ErrorPage />} />
       </Routes>
     </div>
   );

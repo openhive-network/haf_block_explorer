@@ -1,8 +1,7 @@
 import React from "react";
-import JSONPretty from "react-json-pretty";
-import "react-json-pretty/themes/monikai.css";
+import styles from "./customJson.module.css";
 
-export default function HighlightedJSON({ json, showJson }) {
+export default function HighlightedJSON({ json }) {
   const highlightedJSON = (jsonObj) => {
     return Object.keys(jsonObj).map((key, i) => {
       const value = jsonObj[key];
@@ -13,10 +12,10 @@ export default function HighlightedJSON({ json, showJson }) {
         valueType = "null";
       }
       return (
-        <div key={key} className="line">
-          <span className="key">{key === "json" ? "" : key}:</span>
+        <div key={key} className={styles.line}>
+          <span className={styles.key}>{key === "json" ? "" : key}:</span>
           {isSimpleValue ? (
-            <span className={valueType}>{value}</span>
+            <span className={styles[`${valueType}`]}>{value}</span>
           ) : (
             highlightedJSON(value)
           )}
@@ -24,10 +23,6 @@ export default function HighlightedJSON({ json, showJson }) {
       );
     });
   };
-  // return <div className="json">{highlightedJSON(json)}</div>;
-  // const pretty_json = JSON?.stringify(json, 2, 2);
-
-  // return <div>{highlightedJSON(json)}</div>;
 
   return <div>{highlightedJSON(json)}</div>;
 }

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { styled } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 import Loader from "../components/loader/Loader";
 import { sort } from "../functions/witness_page_func";
 export default function DataTable() {
+  document.title = "HAF | Witnesses";
   const { witnessData } = useContext(WitnessContext);
   const cell_names = [
     "Name",
@@ -62,7 +63,6 @@ export default function DataTable() {
     setCount(count + 1);
     sort(name, count, witnessData);
   };
-  // console.log(witnessData);
   return (
     <>
       {witnessData === null ? (
@@ -80,8 +80,8 @@ export default function DataTable() {
                 >
                   <TableHead>
                     <TableRow>
-                      {cell_names.map((name) => (
-                        <StyledTableCell>
+                      {cell_names.map((name, i) => (
+                        <StyledTableCell key={i}>
                           <Button onClick={() => click(name)}>{name}</Button>
                         </StyledTableCell>
                       ))}

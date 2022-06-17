@@ -59,7 +59,6 @@ export const sort = (name, count, witnessData) => {
             Number(b.hbd_exchange_rate.base.split("HBD")[0])
         );
       }
-      break;
     case "Ac_budget":
       sortNestedObj("account_subsidy_budget", count, witnessData);
       break;

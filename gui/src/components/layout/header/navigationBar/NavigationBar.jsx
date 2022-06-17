@@ -2,20 +2,17 @@ import React, { useEffect, useRef, useState, useContext } from "react";
 import {
   Form,
   FormControl,
-  Col,
-  Row,
   Button,
   Container,
   Nav,
   Navbar,
-  NavDropdown,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { BlockContext } from "../../../contexts/blockContext";
-import { UserProfileContext } from "../../../contexts/userProfileContext";
-import { TranasctionContext } from "../../../contexts/transactionContext";
-import { Link } from "react-router-dom";
+import { BlockContext } from "../../../../contexts/blockContext";
+import { UserProfileContext } from "../../../../contexts/userProfileContext";
+import { TranasctionContext } from "../../../../contexts/transactionContext";
 import axios from "axios";
+import styles from "./navigationBar.module.css";
 
 export default function NavigationBar() {
   const navigate = useNavigate();
@@ -33,7 +30,7 @@ export default function NavigationBar() {
     form_value.current.value = "";
   }
 
-  //Check data type
+  //Get input type
   useEffect(() => {
     if (value !== "") {
       axios({
@@ -80,40 +77,22 @@ export default function NavigationBar() {
 
   return (
     <>
-      <Navbar style={{ width: "100vw" }} bg="dark" expand="xl">
+      <Navbar className={styles.navbar} bg="dark" expand="xl">
         <Container fluid>
           <Navbar.Brand href="/">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
+            <div className={styles.navbarBrand}>
               <img
                 alt="hive-logo"
-                style={{ width: "50px" }}
+                className={styles.navbarLogo}
                 src="https://hive.blog/images/favicons/favicon-196x196.png"
               />
             </div>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="navbarScroll" />
           <Navbar.Collapse id="navbarScroll">
-            <Nav
-              className="me-auto my-2 my-lg-0"
-              style={{ maxHeight: "100px" }}
-              navbarScroll
-            >
+            <Nav className={`me-auto my-2 my-lg-0 `} navbarScroll>
               <Nav.Link href="/">
-                <p
-                  style={{
-                    margin: "10px",
-                    color: "#fff",
-                    fontSize: "20px",
-                  }}
-                >
-                  HAF Blocks
-                </p>
+                <p className={styles.navLink}>HAF Blocks</p>
               </Nav.Link>
             </Nav>
             <Form className="d-flex" onSubmit={handleSubmit}>

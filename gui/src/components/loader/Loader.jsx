@@ -1,15 +1,14 @@
-import React from "react";
-import "./loader.css";
+import styles from "./loader.module.css";
 
 export default function Loader() {
   return (
-    <div className="loader">
-      <div className="gooey">
-        <span className="dot"></span>
-        <div className="dots">
-          <span className="x1"></span>
-          <span className="x1"></span>
-          <span className="x1"></span>
+    <div className={styles.loader}>
+      <div className={styles.gooey}>
+        <span className={styles.dot}></span>
+        <div className={styles.dots}>
+          <span className={styles.x1}></span>
+          <span className={styles.x1}></span>
+          <span className={styles.x1}></span>
         </div>
       </div>
     </div>

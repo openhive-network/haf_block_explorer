@@ -8,6 +8,7 @@ import {
   MenuItem,
   Checkbox,
   ListItemText,
+  Button,
 } from "@mui/material";
 import { BlockContext } from "../../../contexts/blockContext";
 import {
@@ -30,7 +31,7 @@ export default function BlockOpsFilters({
     <div>
       <Modal show={show_modal} onHide={() => set_show_modal(false)}>
         <Modal.Header closeButton>
-          <h5 className="modal-title">Modal title</h5>
+          <h5 className="modal-title">Operations filters</h5>
         </Modal.Header>
         <Modal.Body>
           <FormControl sx={{ m: 1, width: 300 }}>
@@ -89,7 +90,16 @@ export default function BlockOpsFilters({
             </Select>
           </FormControl>
         </Modal.Body>
-        <Modal.Footer></Modal.Footer>
+        <Modal.Footer>
+          {" "}
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => set_show_modal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );

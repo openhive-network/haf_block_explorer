@@ -12,3 +12,13 @@ export const handlePrevPage = (setPage, page, set_pagination) => {
   setPage(page.slice(0, -1));
   set_pagination(page.pop());
 };
+
+export const clearFilters = (
+  setEndDateState,
+  setStartDateState,
+  set_op_filters
+) => {
+  setEndDateState(null);
+  setStartDateState(null);
+  set_op_filters([]);
+};

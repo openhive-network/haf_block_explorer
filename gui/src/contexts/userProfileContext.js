@@ -34,12 +34,7 @@ export const UserProfileContextProvider = ({ children }) => {
     }
   }, [userProfile, set_op_types]);
 
-  // const trimDate = (date) => moment(date?._d).format().split("T")[0];
-
-  // const start_date = trimDate(startDateState);
-  // const end_date = trimDate(endDateState);
-  // console.log(start_date);
-  //  Get user profile data #2
+  //  Get user profile data, user info, resource accounts
   const calc_limit =
     pagination !== -1 && acc_history_limit > pagination
       ? pagination
@@ -48,7 +43,6 @@ export const UserProfileContextProvider = ({ children }) => {
     if (userProfile !== "") {
       axios({
         method: "post",
-        // url: "http://192.168.5.118:3002/rpc/get_ops_by_account",
         url: "http://192.168.5.126:3002/rpc/get_ops_by_account",
         headers: { "Content-Type": "application/json" },
         data: {

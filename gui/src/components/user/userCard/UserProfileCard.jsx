@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { ProgressBar } from "react-bootstrap";
-import { UserProfileContext } from "../../contexts/userProfileContext";
+import { UserProfileContext } from "../../../contexts/userProfileContext";
 import {
   effectiveVests,
   downvotePowerPct,
@@ -15,10 +15,11 @@ import {
   calculateReputation,
   tidyNumber,
   calculateHivePower,
-} from "../../functions/calculations";
-import { HeadBlockContext } from "../../contexts/headBlockContext";
+} from "../../../functions/calculations";
+import { HeadBlockContext } from "../../../contexts/headBlockContext";
 import moment from "moment";
 import axios from "axios";
+import styles from "./userCard.module.css";
 
 export default function UserProfileCard({ user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
@@ -33,55 +34,20 @@ export default function UserProfileCard({ user }) {
   }, []);
 
   return (
-    <div
-      className="user-info-div"
-      style={{
-        // height: "400px",
-        minWidth: "300px",
-        // border: "5px solid black",
-        borderRadius: "20px",
-        background: "#2C3136",
-        color: "#fff",
-        padding: "30px",
-      }}
-    >
-      <div
-        className="user-pic-name"
-        style={{
-          display: "flex",
-          marginBottom: "20px",
-        }}
-      >
-        <div
-          className="user-pic"
-          style={{
-            width: "70px",
-            height: "70px",
-            border: "4px solid red",
-            borderRadius: "50%",
-            // margin: "20px",
-          }}
-        >
+    <div className={styles.userCardContainer}>
+      <div className={styles.nameContainer}>
+        <div className={styles.userPictureContainer}>
           <img
-            style={{ width: "62px", borderRadius: "50%" }}
+            className={styles.userPicture}
             src={profile_picture}
-            alt="user picture"
+            alt="user avarar"
           />
         </div>
-        <div className="username" style={{ margin: "20px 0 0 20px" }}>
-          <p style={{ fontSize: "20px", textTransform: "capitalize" }}>
-            {user}
-          </p>
+        <div className={styles.username}>
+          <p>{user}</p>
         </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          flexDirection: "column",
-        }}
-        className="user-vote-weight"
-      >
+      <div className={styles.voteWeightContainer}>
         <p>Vote Weight</p>
         <h3>
           {tidyNumber(
@@ -99,14 +65,7 @@ export default function UserProfileCard({ user }) {
       ) === "0.000" ? (
         " "
       ) : (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            flexDirection: "column",
-          }}
-          className="user-vote-weight"
-        >
+        <div className={styles.voteWeightContainer}>
           <p>
             Next power down :{" "}
             {tidyNumber(
@@ -122,15 +81,8 @@ export default function UserProfileCard({ user }) {
         </div>
       )}
 
-      <div className="user-currency-amount justify-content-center text-center">
-        <ul
-          style={{
-            padding: "0",
-            // display: "flex",
-            listStyle: "none",
-            justifyContent: "space-around",
-          }}
-        >
+      <div className={styles.currencyContainer}>
+        <ul className={styles.currencyUL}>
           <li>{tidyNumber(user_info?.hbd_balance)}</li>
           <li>{tidyNumber(user_info?.balance)}</li>
           <li>
@@ -145,29 +97,14 @@ export default function UserProfileCard({ user }) {
           </li>
         </ul>
       </div>
-      <div className="power-by-proc">
+      <div>
         {votePower(user_info) !== "NaN" && (
-          <div
-            style={{
-              // marginTop: "20px",
-              width: "100%",
-              textAlign: "center",
-            }}
-            className="voting-power"
-          >
-            <p
-              style={{
-                color: "green",
-                fontWeight: "bold",
-                margin: "0",
-              }}
-            >
-              Voting Power
-            </p>
-            <p style={{ margin: "0" }}>{votePower(user_info)} %</p>
+          <div className={styles.votingPowerContainer}>
+            <p className={styles.votingPowerText}>Voting Power</p>
+            <p>{votePower(user_info)} %</p>
             <ProgressBar
+              className={styles.votingPowerBar}
               variant="danger"
-              style={{ margin: "10px 0 10px 0" }}
               animated
               now={votePower(user_info)}
             />
@@ -175,44 +112,24 @@ export default function UserProfileCard({ user }) {
         )}
 
         {downvotePowerPct(user_info) !== "NaN" && (
-          <div
-            style={{
-              // marginTop: "20px",
-              width: "100%",
-              textAlign: "center",
-            }}
-            className="downvote-power"
-          >
-            <p style={{ color: "blue", fontWeight: "bold", margin: "0" }}>
-              Downvote Power
-            </p>
-            <p style={{ margin: "0" }}>{downvotePowerPct(user_info)} %</p>
+          <div className={styles.votingPowerContainer}>
+            <p className={styles.downvotePowerText}>Downvote Power</p>
+            <p>{downvotePowerPct(user_info)} %</p>
             <ProgressBar
               variant="danger"
-              style={{ margin: "10px 0 10px 0" }}
+              className={styles.votingPowerBar}
               animated
               now={downvotePowerPct(user_info)}
             />
           </div>
         )}
         {calcResourseCredits(resource_credits) !== "NaN" && (
-          <div
-            style={{
-              // marginTop: "20px",
-              width: "100%",
-              textAlign: "center",
-            }}
-            className="resource-credits"
-          >
-            <p style={{ color: "red", fontWeight: "bold", margin: "0" }}>
-              Resource Credits
-            </p>
-            <p style={{ margin: "0" }}>
-              {calcResourseCredits(resource_credits)} %
-            </p>
+          <div className={styles.votingPowerContainer}>
+            <p className={styles.RCText}>Resource Credits</p>
+            <p>{calcResourseCredits(resource_credits)} %</p>
             <ProgressBar
               variant="danger"
-              style={{ margin: "10px 0 10px 0" }}
+              className={styles.votingPowerBar}
               animated
               now={calcResourseCredits(resource_credits)}
             />
@@ -222,17 +139,8 @@ export default function UserProfileCard({ user }) {
       {!user_info?.reputation ? (
         ""
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            fontWeight: "bold",
-            marginTop: "20px",
-          }}
-          className="reputation "
-        >
-          <p style={{ margin: "0" }}>Reputation</p>
+        <div className={styles.reputationContainer}>
+          <p>Reputation</p>
           <p>{calculateReputation(user_info?.reputation)}</p>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import {
   FormControl,
@@ -21,7 +21,7 @@ import {
   handle_virtual_filters,
   change_start_date,
   change_end_date,
-  handle_date_filter_btn,
+  // handle_date_filter_btn,
   MenuProps,
   VIRTUAL_FILTERS,
 } from "../../../functions/operation_filters_func";
@@ -37,14 +37,18 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     setEndDateState,
   } = useContext(UserProfileContext);
   const [vfilters, set_v_filters] = useState("");
-  const [dateSelectError, setDateSelectError] = useState("");
+  useEffect(() => {
+    if (endDateState?._d < startDateState?._d) {
+      setStartDateState(null);
+      setEndDateState(null);
+    }
+  }, [endDateState, startDateState, setStartDateState, setEndDateState]);
 
-  // console.log(op_types);
   return (
     <div>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>
         <Modal.Header closeButton>
-          <h5 className="modal-title">Filters</h5>
+          <h5 className="modal-title">Operations filters</h5>
         </Modal.Header>
         <Modal.Body>
           <FormControl sx={{ m: 1, width: 300 }}>
@@ -84,39 +88,36 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
           </FormControl>
 
           <FormControl sx={{ m: 1, width: 300 }}>
-            {op_types?.length === 0 ||
-              (op_types === null ? (
-                ""
-              ) : (
-                <>
-                  <InputLabel id="demo-multiple-checkbox-label2">
-                    Check virtual
-                  </InputLabel>
-                  <Select
-                    labelId="demo-multiple-checkbox-label2"
-                    id="demo-multiple-checkbox2"
-                    value={vfilters}
-                    onChange={(event) =>
-                      handle_virtual_filters(
-                        event,
-                        op_types,
-                        set_v_filters,
-                        set_op_filters
-                      )
-                    }
-                    input={<OutlinedInput label="Check virtual" />}
-                    MenuProps={MenuProps}
-                  >
-                    {VIRTUAL_FILTERS.map((filter, i) => {
-                      return (
-                        <MenuItem key={i} value={filter}>
-                          {filter}
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </>
-              ))}
+            <InputLabel id="demo-multiple-checkbox-label2">
+              {op_types?.length === 0 || op_types === null
+                ? "Virtual operations loading ..."
+                : "Virtual operations"}
+            </InputLabel>
+            <Select
+              labelId="demo-multiple-checkbox-label2"
+              id="demo-multiple-checkbox2"
+              value={vfilters}
+              onChange={(event) =>
+                handle_virtual_filters(
+                  event,
+                  op_types,
+                  set_v_filters,
+                  set_op_filters
+                )
+              }
+              input={<OutlinedInput label="Virtual operations" />}
+              MenuProps={MenuProps}
+            >
+              {VIRTUAL_FILTERS.map((filter, i) => {
+                return (
+                  <MenuItem key={i} value={filter}>
+                    {filter}
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
+          <FormControl sx={{ m: 1, width: 300 }}>
             <div className="mt-4">
               <LocalizationProvider dateAdapter={AdapterMoment}>
                 <Stack spacing={3}>
@@ -140,22 +141,16 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
                   />
                 </Stack>
               </LocalizationProvider>
-              <p style={{ color: "red" }}>{dateSelectError}</p>
             </div>
           </FormControl>
         </Modal.Body>
         <Modal.Footer>
           <Button
-            onClick={() =>
-              handle_date_filter_btn(
-                set_show_filters,
-                setDateSelectError,
-                startDateState,
-                endDateState
-              )
-            }
+            variant="contained"
+            color="secondary"
+            onClick={() => set_show_filters(false)}
           >
-            Filter
+            Close
           </Button>
         </Modal.Footer>
       </Modal>

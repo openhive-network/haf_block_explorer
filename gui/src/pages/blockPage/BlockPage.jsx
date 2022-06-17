@@ -1,30 +1,25 @@
 import React, { useContext, useState } from "react";
-import { BlockContext } from "../contexts/blockContext";
+import { BlockContext } from "../../contexts/blockContext";
 import { Row, Col, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import OpCard from "../components/operations/OpCard";
-import BlockOpsFilters from "../components/operations/filters/BlockOpsFilters";
-import Loader from "../components/loader/Loader";
+import OpCard from "../../components/operations/operationCard/OpCard";
+import BlockOpsFilters from "../../components/operations/filters/BlockOpsFilters";
+import Loader from "../../components/loader/Loader";
 import {
   handleNextBlock,
   handlePreviousBlock,
   handleFilters,
-} from "../functions/block_page_func";
-import { useEffect } from "react";
+} from "../../functions/block_page_func";
+import { tidyNumber } from "../../functions/calculations";
+import styles from "./blockPage.module.css";
 
-export default function Block_Page({ block_nr, setTitle }) {
+export default function Block_Page({ block_nr }) {
+  document.title = `HAF | Block ${block_nr}`;
   const { block_data, setBlockNumber, blockNumber } = useContext(BlockContext);
   const [show_modal, set_show_modal] = useState(false);
   const [vfilters, set_v_filters] = useState("");
 
-  // setTitle(`HAF | Block | ${block_nr}`);
   const navigate = useNavigate();
-
-  const details_style = {
-    color: "#ada9a9dc",
-    fontSize: "20px",
-  };
-  const style = { color: "#160855", fontWeight: "bold" };
 
   return (
     <>
@@ -34,8 +29,9 @@ export default function Block_Page({ block_nr, setTitle }) {
         <div>
           <Row>
             <Col className="d-flex flex-column justify-content-center align-items-center">
-              <h3 style={details_style}>
-                Block <span style={style}>{block_nr}</span>
+              <h3 className={styles.text}>
+                Block{" "}
+                <span className={styles.number}>{tidyNumber(block_nr)}</span>
               </h3>
               <div>
                 <Button
@@ -57,10 +53,12 @@ export default function Block_Page({ block_nr, setTitle }) {
                 </Button>
               </div>
 
-              <p style={details_style}>
-                <span style={style}>{block_data?.length}</span> transactions
-                produced in this block at{" "}
-                <span style={style}>{block_data?.[0]?.timestamp} UTC</span>
+              <p className={styles.text}>
+                <span className={styles.number}>{block_data?.length}</span>{" "}
+                transactions produced in this block at{" "}
+                <span className={styles.number}>
+                  {block_data?.[0]?.timestamp} UTC
+                </span>
               </p>
               <Button
                 size="sm"
@@ -84,40 +82,27 @@ export default function Block_Page({ block_nr, setTitle }) {
                   return (
                     <Row key={i} className="justify-content-center">
                       <Col sm={8}>
-                        <OpCard block={single} index={i} full_trx={single} />
+                        <OpCard block={single} full_trx={single} />
                       </Col>
                     </Row>
                   );
-                }
+                } else return "";
               })}
             </Col>
           </Row>
-          <Row
-            // style={{ borderTop: "20px solid red" }}
-            hidden={vfilters === "Not-Virtual" ? true : false}
-          >
+          <Row hidden={vfilters === "Not-Virtual" ? true : false}>
             <Col className="text-center">
-              <h3
-                style={details_style}
-                // style={{
-                //   background: "#000",
-                //   color: "#fff",
-                //   padding: "10px",
-                //   margin: "25px 0 25px 0",
-                // }}
-              >
-                Virtual Operations
-              </h3>
+              <h3 className={styles.text}>Virtual Operations</h3>
               {block_data?.map((single, i) => {
                 if (single.virtual_op === true) {
                   return (
                     <Row key={i} className="justify-content-center">
                       <Col sm={8}>
-                        <OpCard block={single} index={i} full_trx={single} />
+                        <OpCard block={single} full_trx={single} />
                       </Col>
                     </Row>
                   );
-                }
+                } else return "";
               })}
             </Col>
           </Row>
