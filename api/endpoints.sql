@@ -46,12 +46,12 @@ BEGIN
 
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
-  ELSIF _input SIMILAR TO '([a-f0-9]{40})' THEN
-    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = _input::BYTEA) IS NOT NULL THEN
-      __input_type = 'transaction_hash';
-    ELSIF (SELECT hash FROM hive.blocks WHERE hash = _input::BYTEA) IS NOT NULL THEN
-      __input_type = 'block_hash';
-      __input_value = hafbe_endpoints.get_block_num(_input);
+  IF _input SIMILAR TO '([a-f0-9]{40})' THEN
+    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = ('\x' || _input)::BYTEA LIMIT 1) IS NOT NULL THEN
+      RETURN json_build_object(
+        'input_type', 'transaction_hash',
+        'input_value', _input
+      );
     ELSE
       __block_num = hafbe_backend.get_block_num(('\x' || _input)::BYTEA);
     END IF;
@@ -86,8 +86,10 @@ RETURNS INT
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __account_id INT = hafbe_backend.get_account_id(_account);
 BEGIN
-  RETURN hafbe_backend.get_head_block_num();
+  RETURN hafbe_backend.get_acc_op_types(__account_id);
 END
 $$
 ;
@@ -116,48 +118,11 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_operation_types()
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN hafbe_backend.get_operation_types();
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __account_id INT = hafbe_backend.get_account_id(_account);
-BEGIN
-  RETURN hafbe_backend.get_acc_op_types(__account_id);
-END
-$$
-;
-
 CREATE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
-BEGIN
-  RETURN hafbe_backend.get_block_op_types(_block_num);
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account VARCHAR, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _head_block BIGINT = NULL)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __account_id INT;
 BEGIN
   RETURN hafbe_backend.get_block_op_types(_block_num);
 END
@@ -180,12 +145,8 @@ BEGIN
     _limit = 1000;
   END IF;
 
-  IF _start < (_limit - 1) THEN
-    RETURN hafbe_exceptions.raise_ops_limit_exception(_start, _limit);
-  END IF;
-
-  IF _head_block IS NULL THEN
-    SELECT hafbe_endpoints.get_head_block_num() INTO _head_block;
+  IF _top_op_id < (_limit - 1) THEN
+    RETURN hafbe_exceptions.raise_ops_limit_exception(_top_op_id, _limit);
   END IF;
 
   IF _filter IS NULL THEN
@@ -194,7 +155,7 @@ BEGIN
 
   SELECT hafbe_backend.get_account_id(_account) INTO __account_id;
 
-  RETURN hafbe_backend.get_ops_by_account(__account_id, _start, _limit, _filter, _head_block);
+  RETURN hafbe_backend.get_ops_by_account(__account_id, _top_op_id, _limit, _filter, _date_start, _date_end);
 END
 $$
 ;
@@ -210,71 +171,41 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _start BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
+CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  IF _start IS NULL OR _start < 0 THEN
-    _start = 9223372036854775807;
+  IF _top_op_id IS NULL OR _top_op_id < 0 THEN
+    _top_op_id = 9223372036854775807;
   END IF;
 
   IF _limit IS NULL OR _limit <= 0 THEN
     _limit = 1000;
   END IF;
 
-  IF _start < (_limit - 1) THEN
-    RETURN hafbe_exceptions.raise_ops_limit_exception(_start, _limit);
+  IF _top_op_id < (_limit - 1) THEN
+    RETURN hafbe_exceptions.raise_ops_limit_exception(_top_op_id, _limit);
   END IF;
 
   IF _filter IS NULL THEN
     _filter = ARRAY[]::SMALLINT[];
   END IF;
 
-  RETURN hafbe_backend.get_ops_by_block(_block_num, _start, _limit, _filter);
+  RETURN hafbe_backend.get_ops_by_block(_block_num, _top_op_id, _limit, _filter);
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash BYTEA, _include_reversible BOOLEAN = FALSE)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __witness_id INT = hafbe_backend.get_account_id(_witness);
-BEGIN
-  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit);
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.get_top_witnesses(_witnesses_number INT = 50)
+CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  IF _witnesses_number IS NULL OR _witnesses_number <= 0 THEN
-    _witnesses_number = FALSE;
-  END IF;
-
-  RETURN json_agg(witness->>'owner')
-  FROM (
-    SELECT json_array_elements(hafbe_backend.get_top_witnesses(_witnesses_number)) AS witness
-  ) result;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN hafbe_backend.get_witness_by_account(_account);
+  -- _trx_hash TEXT -> BYTEA, __include_reversible = TRUE, __is_legacy_style = FALSE
+  RETURN hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA, TRUE, FALSE);
 END
 $$
 ;
@@ -301,7 +232,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account VARCHAR)
+CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -312,18 +243,24 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_account(_account VARCHAR)
+CREATE FUNCTION hafbe_endpoints.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
   __account_data JSON = hafbe_backend.get_account(_account);
+  __profile_image TEXT;
 BEGIN
+  SELECT hafbe_backend.parse_profile_picture(__account_data, 'json_metadata') INTO __profile_image;
+  IF __profile_image IS NULL THEN
+    SELECT hafbe_backend.parse_profile_picture(__account_data, 'posting_json_metadata') INTO __profile_image;
+  END IF;
+  
   RETURN json_build_object(
     'id', __account_data->>'id',
     'name', _account,
-    'profile_image', __account_data->'json_metadata'->>'profile_image',
+    'profile_image', __profile_image,
     'last_owner_update', __account_data->>'last_owner_update',
     'last_account_update', __account_data->>'last_account_update',
     'created', __account_data->>'created',
