@@ -19,8 +19,8 @@ export const UserProfileContextProvider = ({ children }) => {
   // console.log(userProfile);
   // 192.168.5.118 -steem7
   // 192.168.4.250 -steem10
-
   //Get available operation types for current user
+  // console.log(endDateState);
   useEffect(() => {
     if (userProfile !== "") {
       axios({
@@ -50,8 +50,8 @@ export const UserProfileContextProvider = ({ children }) => {
           _top_op_id: pagination,
           _limit: calc_limit,
           _filter: op_filters,
-          _date_start: startDateState?._d,
-          _date_end: endDateState?._d,
+          _date_start: startDateState,
+          _date_end: endDateState,
         },
       }).then((res) => setUser_profile_data(res.data));
       axios({

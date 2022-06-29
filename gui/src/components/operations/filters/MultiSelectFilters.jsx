@@ -10,21 +10,19 @@ import {
   ListItemText,
   Button,
   Stack,
-  TextField,
 } from "@mui/material";
 import { UserProfileContext } from "../../../contexts/userProfileContext";
-import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { MobileDatePicker } from "@mui/x-date-pickers/MobileDatePicker";
 import {
   handle_filters,
   handle_virtual_filters,
   change_start_date,
   change_end_date,
-  // handle_date_filter_btn,
   MenuProps,
   VIRTUAL_FILTERS,
 } from "../../../functions/operation_filters_func";
+import "react-calendar/dist/Calendar.css";
+import Calendar from "react-calendar";
+import moment from "moment";
 
 export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const {
@@ -35,14 +33,49 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
     setStartDateState,
     endDateState,
     setEndDateState,
+    set_pagination,
+    user_profile_data,
   } = useContext(UserProfileContext);
   const [vfilters, set_v_filters] = useState("");
+  const [endValue, endOnChange] = useState(new Date());
+  const [startValue, startOnChange] = useState(new Date());
+  const [hideEndDateCalendar, setHideEndDateCalendar] = useState(true);
+  const [hideStartDateCalendar, setHideStartDateCalendar] = useState(true);
+  const trimEndValue = moment(endDateState).format().split("T")[0];
+  const trimStartValue = moment(startDateState).format().split("T")[0];
+  const [endDateBtn, setEndDateBtn] = useState("select end date");
+  const [startDateBtn, setStartDateBtn] = useState("select start date");
+
+  const [errorMessage, setErrorMessage] = useState("");
   useEffect(() => {
-    if (endDateState?._d < startDateState?._d) {
-      setStartDateState(null);
-      setEndDateState(null);
+    if (endDateState) {
+      setEndDateBtn("loading ...");
+      if (
+        user_profile_data[0]?.timestamp.split(" ")[0] ===
+        endDateState.toISOString().split("T")[0]
+      ) {
+        setEndDateBtn(`End date : ${trimEndValue}`);
+      }
     }
-  }, [endDateState, startDateState, setStartDateState, setEndDateState]);
+    if (startDateState) {
+      setStartDateBtn(`Start date : ${trimStartValue}`);
+    }
+    if (endDateState && startDateState >= endDateState) {
+      setErrorMessage("End date can't be higher or equal to start date");
+      setEndDateBtn("Please change date");
+    }
+    if (user_profile_data.length === 0) {
+      setEndDateBtn("Please change date");
+    } else {
+      setErrorMessage("");
+    }
+  }, [
+    startDateState,
+    endDateState,
+    trimEndValue,
+    trimStartValue,
+    user_profile_data,
+  ]);
 
   return (
     <div>
@@ -117,32 +150,53 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
               })}
             </Select>
           </FormControl>
-          <FormControl sx={{ m: 1, width: 300 }}>
-            <div className="mt-4">
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <Stack spacing={3}>
-                  <MobileDatePicker
-                    label="Start Date"
-                    inputFormat="DD/MM/yyyy"
-                    value={startDateState}
-                    onChange={(event) =>
-                      change_start_date(event, setStartDateState)
-                    }
-                    renderInput={(params) => <TextField {...params} />}
-                  />
-                  <MobileDatePicker
-                    label="End Date"
-                    inputFormat="DD/MM/yyyy"
-                    value={endDateState}
-                    onChange={(event) =>
-                      change_end_date(event, setEndDateState)
-                    }
-                    renderInput={(params) => <TextField {...params} />}
-                  />
-                </Stack>
-              </LocalizationProvider>
+          <Stack spacing={3}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                color: "red",
+                fontSize: "20px",
+              }}
+            >
+              <p>{errorMessage}</p>
             </div>
-          </FormControl>
+
+            <Button
+              onClick={() => setHideStartDateCalendar(!hideStartDateCalendar)}
+            >
+              {startDateBtn}
+            </Button>
+            <div
+              style={{ display: "flex", justifyContent: "center" }}
+              hidden={hideStartDateCalendar}
+            >
+              <Calendar
+                onChange={(e) => {
+                  startOnChange(e);
+                  change_start_date(e, setStartDateState, set_pagination);
+                }}
+                value={startValue}
+              />
+            </div>
+            <Button
+              onClick={() => setHideEndDateCalendar(!hideEndDateCalendar)}
+            >
+              {endDateBtn}
+            </Button>
+            <div
+              style={{ display: "flex", justifyContent: "center" }}
+              hidden={hideEndDateCalendar}
+            >
+              <Calendar
+                onChange={(e) => {
+                  endOnChange(e);
+                  change_end_date(e, setEndDateState, set_pagination);
+                }}
+                value={endValue}
+              />
+            </div>
+          </Stack>
         </Modal.Body>
         <Modal.Footer>
           <Button

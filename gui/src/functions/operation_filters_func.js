@@ -44,10 +44,12 @@ export const handle_virtual_filters = (
   }
 };
 //Date filters
-export const change_start_date = (e, setStartDateState) => {
+export const change_start_date = (e, setStartDateState, set_pagination) => {
+  set_pagination(-1);
   setStartDateState(e);
 };
-export const change_end_date = (e, setEndDateState) => {
+export const change_end_date = (e, setEndDateState, set_pagination) => {
+  set_pagination(-1);
   setEndDateState(e);
 };
 export const trim_date = (date, moment) =>

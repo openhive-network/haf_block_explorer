@@ -57,13 +57,11 @@ export default function User_Page({ user }) {
   check_op_type?.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
   const page_count = Math.ceil(get_max_trx_num / acc_history_limit);
   const [page, setPage] = useState([]);
-
   return (
     <>
       {user_info === "" ||
       witnessData === null ||
-      user_profile_data === null ||
-      user_profile_data.length === 0 ? (
+      user_profile_data === null ? (
         <Loader />
       ) : (
         <Container fluid>
@@ -176,15 +174,15 @@ export default function User_Page({ user }) {
                   )}
                 </Col>
               </Row>
-              {user_profile_data?.map((profile) => {
-                return (
-                  <Row key={profile.operation_id}>
-                    <Col>
-                      <OpCard block={profile} full_trx={profile} />
-                    </Col>
-                  </Row>
-                );
-              })}
+              {user_profile_data.length === 0
+                ? "No operations found"
+                : user_profile_data.map((profile) => (
+                    <Row key={profile.operation_id}>
+                      <Col>
+                        <OpCard block={profile} full_trx={profile} />
+                      </Col>
+                    </Row>
+                  ))}
             </Col>
           </Row>
         </Container>
