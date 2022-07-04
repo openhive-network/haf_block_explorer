@@ -19,10 +19,17 @@ BEGIN
     witness TEXT NOT NULL,
     voter TEXT NOT NULL,
     vote INT NOT NULL
-    ) INHERITS (hive.hafbe_app);
+  ) INHERITS (hive.hafbe_app);
 
   CREATE INDEX IF NOT EXISTS witness_votes_witness ON hafbe_app.witness_votes USING btree (witness);
   CREATE INDEX IF NOT EXISTS witness_votes_voter ON hafbe_app.witness_votes USING btree (voter);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
+    account TEXT NOT NULL,
+    data JSON NOT NULL,
+
+    CONSTRAINT pk_hived_account_cache PRIMARY KEY (account)
+  );
 
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
