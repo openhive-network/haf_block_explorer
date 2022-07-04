@@ -3,6 +3,17 @@
 set -e
 set -o pipefail
 
+drop_db() {
+    psql -d haf_block_log -c "SELECT hive.app_remove_context('$hive_app_name');"
+    psql -d haf_block_log -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
+}
+
+create_db() {
+    n_blocks=$1
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f db/hafbe_app.sql
+    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "\timing" -c "CALL hafbe_app.main('$hive_app_name', $n_blocks);"
+}
+
 create_api() {
     postgrest_dir=$PWD/api
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
@@ -85,8 +96,14 @@ jmeter_v=5.4.3
 DB_NAME=haf_block_log
 CONFIG_PATH=$PWD/postgrest.conf
 
+hive_app_name="hafbe_app"
+
 if [ "$1" = "start" ]; then
     start_webserver $2
+elif [ "$1" = "drop-db" ]; then
+    drop_db
+elif [ "$1" = "create-db" ]; then
+    create_db $2
 elif [ "$1" = "re-start" ]; then
     create_api
     create_indexes
