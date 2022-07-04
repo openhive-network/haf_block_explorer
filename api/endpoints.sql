@@ -208,6 +208,19 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __witness_id INT = hafbe_backend.get_account_id(_witness);
+BEGIN
+  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit);
+END
+$$
+;
+
 CREATE FUNCTION hafbe_endpoints.get_top_witnesses(_witnesses_number INT = 50)
 RETURNS JSON
 LANGUAGE 'plpgsql'

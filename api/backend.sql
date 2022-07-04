@@ -260,7 +260,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __block_api_data JSON = (hafbe_backend.get_block_api_data(_block_num));
+  __block_api_data JSON = (((SELECT hafbe_backend.get_block_api_data(_block_num))->'result')->'block');
 BEGIN
   RETURN json_build_object(
     'block_num', _block_num,
@@ -290,7 +290,7 @@ $$
           -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
         """ % _block_num
       ], shell=True).decode('utf-8')
-    )['result']['block']
+    )
   )
 $$
 ;
@@ -344,6 +344,31 @@ BEGIN
       SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
     ) arr
   ) result;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN json_agg(account_id)::JSON FROM (
+    SELECT account_id FROM (
+      SELECT DISTINCT ON (account_id)
+        account_id,
+        SUM(vote) AS voted
+      FROM
+        hafbe_app.witness_votes
+      WHERE
+        witness_id = _witness_id
+      GROUP BY account_id
+    ) votes
+    WHERE
+      voted = 1
+    LIMIT _limit
+  ) voters;
 END
 $$
 ;
