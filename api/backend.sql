@@ -104,10 +104,9 @@ BEGIN
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
-    SELECT op_type_id
+    SELECT DISTINCT op_type_id
     FROM hive.account_operations_view
     WHERE account_id = _account_id
-    GROUP BY op_type_id
   ) haov
 
   JOIN LATERAL (
@@ -142,10 +141,9 @@ BEGIN
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
-    SELECT op_type_id
+    SELECT DISTINCT op_type_id
     FROM hive.operations_view
     WHERE block_num = _block_num
-    GROUP BY op_type_id
   ) hov
 
   JOIN LATERAL (
@@ -363,7 +361,6 @@ BEGIN
         hafbe_app.witness_votes
       WHERE
         witness_id = _witness_id
-      GROUP BY account_id
     ) votes
     WHERE
       voted = 1

@@ -4,14 +4,14 @@ set -e
 set -o pipefail
 
 drop_db() {
-    psql -d haf_block_log -c "SELECT hive.app_remove_context('$hive_app_name');"
-    psql -d haf_block_log -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
+    psql -d $DB_NAME -c "SELECT hive.app_remove_context('$hive_app_name');"
+    psql -d $DB_NAME -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
 }
 
 create_db() {
     n_blocks=$1
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -f db/hafbe_app.sql
-    psql -a -v "ON_ERROR_STOP=1" -d haf_block_log -c "\timing" -c "CALL hafbe_app.main('$hive_app_name', $n_blocks);"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CALL hafbe_app.main('$hive_app_name', $n_blocks);"
 }
 
 create_api() {
@@ -31,6 +31,8 @@ create_indexes() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp, id)"
 
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_reversible_uq2 ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_uq2 ON hive.account_operations USING btree (account_id, op_type_id, operation_id)"
 }
 
 start_webserver() {
