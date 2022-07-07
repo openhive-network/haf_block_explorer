@@ -16,13 +16,14 @@ BEGIN
   VALUES (True, 0);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes (
-    witness TEXT NOT NULL,
-    voter TEXT NOT NULL,
-    vote INT NOT NULL
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
+    approve BOOLEAN NOT NULL,
+    timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS witness_votes_witness ON hafbe_app.witness_votes USING btree (witness);
-  CREATE INDEX IF NOT EXISTS witness_votes_voter ON hafbe_app.witness_votes USING btree (voter);
+  CREATE INDEX IF NOT EXISTS witness_votes_witness_id ON hafbe_app.witness_votes USING btree (witness_id);
+  CREATE INDEX IF NOT EXISTS witness_votes_voter_id ON hafbe_app.witness_votes USING btree (voter_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -105,13 +106,16 @@ BEGIN
   FOR b IN _from .. _to
   LOOP
 
-    INSERT INTO hafbe_app.witness_votes (witness, voter, vote)
+    INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, timestamp)
     SELECT
-      body_value->>'witness',
-      body_value->>'account',
-      CASE WHEN (body_value->>'approve')::BOOLEAN IS TRUE THEN 1 ELSE -1 END
+      hafbe_backend.get_account_id(body_value->>'witness'),
+      hafbe_backend.get_account_id(body_value->>'account'),
+      (body_value->>'approve')::BOOLEAN,
+      timestamp
     FROM (
-      SELECT (body::JSON)->'value' AS body_value
+      SELECT
+        (body::JSON)->'value' AS body_value,
+        timestamp
       FROM hive.operations_view
       WHERE op_type_id = 12 AND block_num = b
     ) hov

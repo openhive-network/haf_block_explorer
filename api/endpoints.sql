@@ -221,7 +221,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_top_witnesses(_witnesses_number INT = 50)
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_witnesses_number INT = 50)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -231,21 +231,7 @@ BEGIN
     _witnesses_number = FALSE;
   END IF;
 
-  RETURN json_agg(witness->>'owner')
-  FROM (
-    SELECT json_array_elements(hafbe_backend.get_top_witnesses(_witnesses_number)) AS witness
-  ) result;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_endpoints.get_witness_by_account(_account TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN hafbe_backend.get_witness_by_account(_account);
+  RETURN hafbe_backend.get_witnesses(_account);
 END
 $$
 ;

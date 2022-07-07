@@ -357,45 +357,29 @@ RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __result JSON;
 BEGIN
-  RETURN json_agg(account_id)::JSON FROM (
-    SELECT account_id FROM (
-      SELECT DISTINCT ON (account_id)
-        account_id,
-        SUM(vote) AS voted
-      FROM
-        hafbe_app.witness_votes
-      WHERE
-        witness_id = _witness_id
+  SELECT INTO __result json_agg(acc.name)::JSON
+  FROM (
+    SELECT DISTINCT ON (voter_id)
+      voter_id, approve
+    FROM (
+      SELECT voter_id, approve
+      FROM hafbe_app.witness_votes
+      WHERE witness_id = _witness_id
+      ORDER BY timestamp DESC
     ) votes
-    WHERE
-      voted = 1
-    LIMIT _limit
-  ) voters;
+  ) voters
+  JOIN LATERAL (
+    SELECT name, id
+    FROM hive.accounts_view
+  ) acc ON acc.id = voters.voter_id
+  WHERE voters.approve IS TRUE
+  LIMIT _limit;
+
+  RETURN CASE WHEN __result IS NULL THEN '[]' ELSE __result END;
 END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.get_top_witnesses(_witnesses_number INT)
-RETURNS JSON
-LANGUAGE 'plpython3u'
-AS 
-$$
-  import subprocess
-  import json
-
-  return json.dumps(
-    json.loads(
-      subprocess.check_output([
-        
-      """
-      curl -X POST https://api.hive.blog \
-        -H 'Content-Type: application/json' \
-        -d '{"jsonrpc": "2.0", "method": "condenser_api.get_witnesses_by_vote", "params": [null, %d], "id": null}'
-      """ % _witnesses_number
-      ], shell=True).decode('utf-8')
-    )['result']
-  )
 $$
 ;
 
