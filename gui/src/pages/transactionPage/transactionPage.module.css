@@ -1,0 +1,16 @@
+.container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    word-break: break-all;
+}
+
+.number {
+    color: #160855;
+    font-weight: bold
+}
+
+.text {
+    color: #ada9a9dc;
+    font-size: 20px,
+}
