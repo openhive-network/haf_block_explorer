@@ -365,11 +365,20 @@ BEGIN
       SELECT DISTINCT ON (voter_id)
         voter_id, approve
       FROM (
-        SELECT voter_id, approve
-        FROM hafbe_app.witness_votes
-        WHERE witness_id = _witness_id
+        SELECT
+          votes.voter_id AS voter_id,
+          votes.approve AS approve
+        FROM (
+          SELECT voter_id, approve, operation_id
+          FROM hafbe_app.witness_votes
+          WHERE witness_id = _witness_id
+        ) votes
+        JOIN LATERAL (
+          SELECT timestamp, id
+          FROM hive.operations_view
+        ) hov ON votes.operation_id = hov.id
         ORDER BY timestamp DESC
-      ) votes
+      ) votes_ordered
     ) voters
     JOIN LATERAL (
       SELECT name, id

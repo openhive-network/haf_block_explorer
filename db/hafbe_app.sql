@@ -19,19 +19,22 @@ BEGIN
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
-    timestamp TIMESTAMP NOT NULL
+    operation_id INT NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE INDEX IF NOT EXISTS witness_votes_witness_id ON hafbe_app.witness_votes USING btree (witness_id);
   CREATE INDEX IF NOT EXISTS witness_votes_voter_id ON hafbe_app.witness_votes USING btree (voter_id);
+  CREATE INDEX IF NOT EXISTS witness_votes_operation_id ON hafbe_app.witness_votes USING btree (operation_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies (
-    proxy_id INT NOT NULL,
-    account_id INT NOT NULL
+    account_id INT NOT NULL,
+    proxy_id INT,
+    operation_id INT NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS account_proxies_proxy_id ON hafbe_app.account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS account_proxies_account_id ON hafbe_app.account_proxies USING btree (account_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_proxy_id ON hafbe_app.account_proxies USING btree (proxy_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_operation_id ON hafbe_app.account_proxies USING btree (operation_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -109,38 +112,38 @@ AS
 $$
 DECLARE
   __last_reported_block INT := 0;
-  __block_api_data JSON;
-  __proxy_operation JSON;
 BEGIN
   FOR b IN _from .. _to
   LOOP
 
-    INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, timestamp)
+    INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, operation_id)
     SELECT
       hafbe_backend.get_account_id(approve_operation->>'witness'),
       hafbe_backend.get_account_id(approve_operation->>'account'),
       (approve_operation->>'approve')::BOOLEAN,
-      timestamp
+      id
     FROM (
       SELECT
         (body::JSON)->'value' AS approve_operation,
-        timestamp
+        id
       FROM hive.operations_view
       WHERE op_type_id = 12 AND block_num = b
     ) hov
     ON CONFLICT DO NOTHING;
 
-    SELECT (body::JSON)->'value' FROM hive.operations_view WHERE op_type_id = 13 AND block_num = b INTO __proxy_operation;
-    
-    IF length(__proxy_operation->>'proxy') != 0 THEN
-      INSERT INTO hafbe_app.account_proxies (proxy_id, account_id)
+    INSERT INTO hafbe_app.account_proxies (account_id, proxy_id, operation_id)
+    SELECT
+      hafbe_backend.get_account_id(proxy_operation->>'account'),
+      hafbe_backend.get_account_id(proxy_operation->>'proxy'),
+      id
+    FROM (
       SELECT
-        hafbe_backend.get_account_id(__proxy_operation->>'proxy'),
-        hafbe_backend.get_account_id(__proxy_operation->>'account')
-      ON CONFLICT DO NOTHING;
-    ELSE
-      DELETE FROM hafbe_app.account_proxies WHERE proxy_id = hafbe_backend.get_account_id(__proxy_operation->>'proxy');
-    END IF;
+        (body::JSON)->'value' AS proxy_operation,
+        id
+      FROM hive.operations_view
+      WHERE op_type_id = 13 AND block_num = b
+    ) hov
+    ON CONFLICT DO NOTHING;
 
     /*
     IF __balance_change.source_op_block % _report_step = 0 AND __last_reported_block != __balance_change.source_op_block THEN
