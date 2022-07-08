@@ -86,10 +86,8 @@ RETURNS INT
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __account_id INT = hafbe_backend.get_account_id(_account);
 BEGIN
-  RETURN hafbe_backend.get_acc_op_types(__account_id);
+  RETURN hafbe_backend.get_head_block_num();
 END
 $$
 ;
@@ -210,15 +208,24 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_top_witnesses(_witnesses_number INT = 50)
+CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __account_data JSON;
-  __profile_image TEXT;
-  __response_data JSON;
+  __witness_id INT = hafbe_backend.get_account_id(_witness);
+BEGIN
+  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit);
+END
+$$
+;
+
+CREATE FUNCTION hafbe_endpoints.get_top_witnesses(_witnesses_number INT = 50)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
 BEGIN
   IF _witnesses_number IS NULL OR _witnesses_number <= 0 THEN
     _witnesses_number = FALSE;
@@ -249,51 +256,66 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __account_data JSON = hafbe_backend.get_account(_account);
+  __account_data JSON;
   __profile_image TEXT;
+  __response_data JSON;
 BEGIN
-  SELECT hafbe_backend.parse_profile_picture(__account_data, 'json_metadata') INTO __profile_image;
-  IF __profile_image IS NULL THEN
-    SELECT hafbe_backend.parse_profile_picture(__account_data, 'posting_json_metadata') INTO __profile_image;
+  SELECT data FROM hafbe_app.hived_account_cache WHERE account = _account INTO __response_data;
+
+  IF __response_data IS NOT NULL THEN
+    RETURN __response_data;
+  ELSE
+    SELECT hafbe_backend.get_account(_account) INTO __account_data;
+
+    SELECT hafbe_backend.parse_profile_picture(__account_data, 'json_metadata') INTO __profile_image;
+    IF __profile_image IS NULL THEN
+      SELECT hafbe_backend.parse_profile_picture(__account_data, 'posting_json_metadata') INTO __profile_image;
+    END IF;
+    
+    SELECT json_build_object(
+      'id', __account_data->>'id',
+      'name', _account,
+      'profile_image', __profile_image,
+      'last_owner_update', __account_data->>'last_owner_update',
+      'last_account_update', __account_data->>'last_account_update',
+      'created', __account_data->>'created',
+      'mined', __account_data->>'mined',
+      'recovery_account', __account_data->>'recovery_account',
+      'comment_count', __account_data->>'comment_count',
+      'post_count', __account_data->>'post_count',
+      'can_vote', __account_data->>'can_vote',
+      'voting_manabar', __account_data->'voting_manabar',
+      'downvote_manabar', __account_data->'downvote_manabar',
+      'voting_power', __account_data->>'voting_power',
+      'balance', __account_data->>'balance',
+      'savings_balance', __account_data->>'savings_balance',
+      'hbd_balance', __account_data->>'hbd_balance',
+      'savings_withdraw_requests', __account_data->>'savings_withdraw_requests',
+      'reward_hbd_balance', __account_data->>'reward_hbd_balance',
+      'reward_hive_balance', __account_data->>'reward_hive_balance',
+      'reward_vesting_balance', __account_data->>'reward_vesting_balance',
+      'reward_vesting_hive', __account_data->>'reward_vesting_hive',
+      'vesting_shares', __account_data->>'vesting_shares',
+      'delegated_vesting_shares', __account_data->>'delegated_vesting_shares',
+      'received_vesting_shares', __account_data->>'received_vesting_shares',
+      'vesting_withdraw_rate', __account_data->>'vesting_withdraw_rate',
+      'post_voting_power', __account_data->>'post_voting_power',
+      'posting_rewards', __account_data->>'posting_rewards',
+      'proxied_vsf_votes', __account_data->'proxied_vsf_votes',
+      'witnesses_voted_for', __account_data->>'witnesses_voted_for',
+      'last_post', __account_data->>'last_post',
+      'last_root_post', __account_data->>'last_root_post',
+      'last_vote_time', __account_data->>'last_vote_time',
+      'vesting_balance', __account_data->>'vesting_balance',
+      'reputation', __account_data->>'reputation'
+    ) INTO __response_data;
+
+    INSERT INTO hafbe_app.hived_account_cache (account, data)
+    SELECT _account, __response_data
+    ON CONFLICT DO NOTHING;
+
+    RETURN __response_data;
   END IF;
-  
-  RETURN json_build_object(
-    'id', __account_data->>'id',
-    'name', _account,
-    'profile_image', __profile_image,
-    'last_owner_update', __account_data->>'last_owner_update',
-    'last_account_update', __account_data->>'last_account_update',
-    'created', __account_data->>'created',
-    'mined', __account_data->>'mined',
-    'recovery_account', __account_data->>'recovery_account',
-    'comment_count', __account_data->>'comment_count',
-    'post_count', __account_data->>'post_count',
-    'can_vote', __account_data->>'can_vote',
-    'voting_manabar', __account_data->'voting_manabar',
-    'downvote_manabar', __account_data->'downvote_manabar',
-    'voting_power', __account_data->>'voting_power',
-    'balance', __account_data->>'balance',
-    'savings_balance', __account_data->>'savings_balance',
-    'hbd_balance', __account_data->>'hbd_balance',
-    'savings_withdraw_requests', __account_data->>'savings_withdraw_requests',
-    'reward_hbd_balance', __account_data->>'reward_hbd_balance',
-    'reward_hive_balance', __account_data->>'reward_hive_balance',
-    'reward_vesting_balance', __account_data->>'reward_vesting_balance',
-    'reward_vesting_hive', __account_data->>'reward_vesting_hive',
-    'vesting_shares', __account_data->>'vesting_shares',
-    'delegated_vesting_shares', __account_data->>'delegated_vesting_shares',
-    'received_vesting_shares', __account_data->>'received_vesting_shares',
-    'vesting_withdraw_rate', __account_data->>'vesting_withdraw_rate',
-    'post_voting_power', __account_data->>'post_voting_power',
-    'posting_rewards', __account_data->>'posting_rewards',
-    'proxied_vsf_votes', __account_data->'proxied_vsf_votes',
-    'witnesses_voted_for', __account_data->>'witnesses_voted_for',
-    'last_post', __account_data->>'last_post',
-    'last_root_post', __account_data->>'last_root_post',
-    'last_vote_time', __account_data->>'last_vote_time',
-    'vesting_balance', __account_data->>'vesting_balance',
-    'reputation', __account_data->>'reputation'
-  );
 END
 $$
 ;
