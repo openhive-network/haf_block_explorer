@@ -1,0 +1,27 @@
+.navbar {
+    width: 100vw;
+    padding: 0 50px 0px 50px;
+}
+
+.navbarBrand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.navbarLogo {
+    width: 50px;
+    height: 50px;
+}
+
+.navLink {
+    margin: 10px;
+    color: #fff;
+    font-size: 20px;
+}
+
+@media only screen and (max-width: 1200px) {
+    .navbar {
+        padding: 0 50px 20px 50px;
+    }
+}

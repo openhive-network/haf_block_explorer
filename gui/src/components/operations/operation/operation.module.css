@@ -1,0 +1,42 @@
+.bold {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.text {
+    margin: 0px;
+}
+
+.jsonButton {
+    text-transform: upperCase;
+    background: inherit;
+    border: 0px;
+    color: lime;
+}
+
+.detailsButton {
+    text-transform: upperCase;
+    background: inherit;
+    border: 0px;
+    color: red;
+}
+
+.link {
+    color: #64ffaa;
+    text-decoration: none;
+}
+
+.boolean {
+    color: #34f0c7;
+}
+
+.prettyCard {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.prettyCardBody {
+    color: #fcff31;
+    background: #2C3136;
+    padding: 5px;
+}
