@@ -352,37 +352,39 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
-RETURNS TABLE (
-  _voter_id INT,
-  _vests NUMERIC,
-  _account_vests BIGINT,
-  _proxied_vests NUMERIC
-)
+CREATE TYPE hafbe_backend.witness_voters AS (
+  voter_id INT,
+  vests NUMERIC,
+  account_vests BIGINT,
+  proxied_vests NUMERIC
+);
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT)
+RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
 BEGIN
   RETURN QUERY SELECT
-    voter_id,
-    vests,
-    account_vests,
-    proxied_vests
+    v_voter_id,
+    vests_sum,
+    cab_account_vests,
+    f_proxied_vests
   FROM (
     SELECT
-      voter_id,
-      account_vests + proxied_vests AS vests,
-      account_vests,
-      proxied_vests
+      v_voter_id,
+      cab_account_vests + f_proxied_vests AS vests_sum,
+      cab_account_vests,
+      f_proxied_vests
     FROM (
       SELECT
-        voter_id,
-        CASE WHEN is_proxied IS TRUE THEN 0 ELSE account_vests END AS account_vests,
-        proxied_vests
+        v_voter_id,
+        CASE WHEN is_proxied IS TRUE THEN 0 ELSE cab_account_vests END AS cab_account_vests,
+        f_proxied_vests
       FROM (
         SELECT
-          voters.voter_id AS voter_id,
-          cab.balance AS account_vests,
-          hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests,
+          voters.voter_id AS v_voter_id,
+          cab.balance AS cab_account_vests,
+          hafbe_backend.get_proxied_vests(voters.voter_id) AS f_proxied_vests,
           hafbe_backend.is_voter_proxied(voters.voter_id) AS is_proxied
         FROM (
           SELECT DISTINCT ON (voter_id)
@@ -403,17 +405,32 @@ BEGIN
           FROM btracker_app.current_account_balances
         ) cab ON cab.account = acc.name
         WHERE voters.approve IS TRUE AND cab.nai = 37
-        LIMIT _limit
       ) vests
     ) is_proxied
   ) vests_sum
-  ORDER BY vests DESC;
+  ORDER BY vests_sum DESC
+  LIMIT _limit;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN to_json(arr) FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_witness_voters(_witness_id, _limit))
+    ) arr
+  ) result;
+END
+$$
 ;
 
 -- TODO: create helper functions for repeated code
@@ -439,7 +456,7 @@ BEGIN
       FROM hive.accounts_view
     ) hav ON hav.name = cab.account
     JOIN LATERAL (
-      SELECT DISTINCT ON (proxy_id)
+      SELECT DISTINCT ON (account_id)
         account_id, proxy_id, operation_id
       FROM (
         SELECT account_id, proxy_id, operation_id
@@ -447,12 +464,12 @@ BEGIN
         WHERE proxy_id = _voter_id AND proxy IS TRUE
         ORDER BY operation_id DESC
       ) proxy_ops
-      LIMIT 1
     ) ap ON ap.account_id = hav.id
     WHERE (
-      SELECT 1
+      SELECT account_id
       FROM hafbe_app.account_proxies
       WHERE account_id = ap.account_id AND proxy_id = ap.proxy_id AND proxy IS FALSE AND operation_id > ap.operation_id
+      LIMIT 1
     ) IS NULL AND cab.nai = 37
   ) is_null;
 END
@@ -473,14 +490,10 @@ BEGIN
   RETURN QUERY SELECT CASE WHEN (
     SELECT proxy_id
     FROM (
-      SELECT DISTINCT ON (proxy_id)
-        account_id, proxy_id, operation_id
-      FROM (
-        SELECT account_id, proxy_id, operation_id
-        FROM hafbe_app.account_proxies
-        WHERE account_id = _voter_id AND proxy IS TRUE
-        ORDER BY operation_id DESC
-      ) proxy_ops
+      SELECT account_id, proxy_id, operation_id
+      FROM hafbe_app.account_proxies
+      WHERE account_id = _voter_id AND proxy IS TRUE
+      ORDER BY operation_id DESC
       LIMIT 1
     ) ap
     WHERE (
