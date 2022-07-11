@@ -19,7 +19,7 @@ BEGIN
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
-    operation_id INT NOT NULL
+    operation_id BIGINT NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE INDEX IF NOT EXISTS witness_votes_witness_id ON hafbe_app.witness_votes USING btree (witness_id);
@@ -29,7 +29,8 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies (
     account_id INT NOT NULL,
     proxy_id INT,
-    operation_id INT NOT NULL
+    proxy BOOLEAN,
+    operation_id BIGINT NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE INDEX IF NOT EXISTS account_proxies_account_id ON hafbe_app.account_proxies USING btree (account_id);
@@ -112,6 +113,8 @@ AS
 $$
 DECLARE
   __last_reported_block INT := 0;
+  __unproxy_op RECORD;
+  __last_op_id BIGINT;
 BEGIN
   FOR b IN _from .. _to
   LOOP
@@ -131,20 +134,44 @@ BEGIN
     ) hov
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO hafbe_app.account_proxies (account_id, proxy_id, operation_id)
+    SELECT operation_id FROM hafbe_app.account_proxies ORDER BY operation_id DESC LIMIT 1 INTO __last_op_id;
+    
+    INSERT INTO hafbe_app.account_proxies (account_id, proxy_id, proxy, operation_id)
     SELECT
-      hafbe_backend.get_account_id(proxy_operation->>'account'),
-      hafbe_backend.get_account_id(proxy_operation->>'proxy'),
+      account_id,
+      proxy_id,
+      CASE WHEN proxy_id IS NULL THEN FALSE ELSE TRUE END,
       id
     FROM (
       SELECT
-        (body::JSON)->'value' AS proxy_operation,
+        hafbe_backend.get_account_id(proxy_operation->>'account') AS account_id,
+        hafbe_backend.get_account_id(proxy_operation->>'proxy') AS proxy_id,
         id
-      FROM hive.operations_view
-      WHERE op_type_id = 13 AND block_num = b
-    ) hov
+      FROM (
+        SELECT
+          (body::JSON)->'value' AS proxy_operation,
+          id
+        FROM hive.operations_view
+        WHERE op_type_id = 13 AND block_num = b
+      ) hov
+    ) acc_ids
     ON CONFLICT DO NOTHING;
 
+    -- postprocessing to fill null values of proxy_id when account does unproxy
+    FOR __unproxy_op IN
+      SELECT account_id, operation_id
+      FROM hafbe_app.account_proxies
+      WHERE operation_id > __last_op_id AND proxy_id IS NULL
+    LOOP
+      UPDATE hafbe_app.account_proxies
+      SET proxy_id = (SELECT proxy_id
+      FROM hafbe_app.account_proxies
+      WHERE operation_id < __unproxy_op.operation_id AND account_id = __unproxy_op.account_id AND proxy_id IS NOT NULL
+      ORDER BY operation_id DESC
+      LIMIT 1)
+      WHERE account_id = __unproxy_op.account_id AND proxy_id IS NULL;
+    END LOOP;
+    
     /*
     IF __balance_change.source_op_block % _report_step = 0 AND __last_reported_block != __balance_change.source_op_block THEN
       RAISE NOTICE 'Processed data for block: %', __balance_change.source_op_block;

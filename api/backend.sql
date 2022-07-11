@@ -353,43 +353,137 @@ $$
 ;
 
 CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
+RETURNS TABLE (
+  _voter_id INT,
+  _vests NUMERIC,
+  _account_vests BIGINT,
+  _proxied_vests NUMERIC
+)
 AS
-$$
+$function$
 BEGIN
-  RETURN CASE WHEN res IS NULL THEN '[]' ELSE res END 
+  RETURN QUERY SELECT
+    voter_id,
+    account_vests + proxied_vests,
+    account_vests,
+    proxied_vests
   FROM (
-    SELECT json_agg(acc.name)::JSON AS res
+    SELECT
+      voters.voter_id AS voter_id,
+      cab.balance AS account_vests,
+      hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests
     FROM (
       SELECT DISTINCT ON (voter_id)
         voter_id, approve
       FROM (
-        SELECT
-          votes.voter_id AS voter_id,
-          votes.approve AS approve
-        FROM (
-          SELECT voter_id, approve, operation_id
-          FROM hafbe_app.witness_votes
-          WHERE witness_id = _witness_id
-        ) votes
-        JOIN LATERAL (
-          SELECT timestamp, id
-          FROM hive.operations_view
-        ) hov ON votes.operation_id = hov.id
-        ORDER BY timestamp DESC
+        SELECT voter_id, approve
+        FROM hafbe_app.witness_votes
+        WHERE witness_id = _witness_id
+        ORDER BY operation_id
       ) votes_ordered
     ) voters
     JOIN LATERAL (
       SELECT name, id
       FROM hive.accounts_view
     ) acc ON acc.id = voters.voter_id
-    WHERE voters.approve IS TRUE
+    JOIN LATERAL (
+      SELECT balance, account, nai
+      FROM btracker_app.current_account_balances
+    ) cab ON cab.account = acc.name
+    WHERE voters.approve IS TRUE AND cab.nai = 37
     LIMIT _limit
-  ) result;
+  ) vests;
 END
-$$
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
+
+-- TODO: create helper functions for repeated code
+CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
+RETURNS TABLE (
+  _balance NUMERIC
+)
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT CASE WHEN balance IS NULL THEN 0 ELSE balance END
+  FROM (
+    SELECT SUM(cab.balance) AS balance
+    FROM (
+      SELECT
+        CASE WHEN balance < 0 THEN 0 ELSE balance END,
+        account,
+        nai
+      FROM btracker_app.current_account_balances
+    ) cab
+    JOIN LATERAL (
+      SELECT name, id
+      FROM hive.accounts_view
+    ) hav ON hav.name = cab.account
+    JOIN LATERAL (
+      SELECT DISTINCT ON (proxy_id)
+        account_id, proxy_id, operation_id
+      FROM (
+        SELECT account_id, proxy_id, operation_id
+        FROM hafbe_app.account_proxies
+        WHERE proxy_id = _voter_id AND proxy IS TRUE
+        ORDER BY operation_id DESC
+      ) proxy_ops
+    ) ap ON ap.account_id = hav.id
+    WHERE (
+      SELECT 1
+      FROM hafbe_app.account_proxies
+      WHERE account_id = ap.account_id AND proxy_id = ap.proxy_id AND proxy IS FALSE AND operation_id > ap.operation_id
+    ) IS NULL AND cab.nai = 37
+  ) is_null;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
+RETURNS TABLE (
+  proxied BOOLEAN
+)
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT CASE WHEN (
+    SELECT proxy_id
+    FROM (
+      SELECT DISTINCT ON (proxy_id)
+        account_id, proxy_id, operation_id
+      FROM (
+        SELECT account_id, proxy_id, operation_id
+        FROM hafbe_app.account_proxies
+        WHERE account_id = _voter_id AND proxy IS TRUE
+        ORDER BY operation_id DESC
+      ) proxy_ops
+    ) ap
+    WHERE (
+      SELECT 1
+      FROM hafbe_app.account_proxies
+      WHERE account_id = ap.account_id AND proxy_id = ap.proxy_id AND proxy IS FALSE AND operation_id > ap.operation_id
+    ) IS NULL
+  )
+  IS NOT NULL THEN TRUE ELSE FALSE END;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+/*
+RETURN CASE WHEN res IS NULL THEN '[]' ELSE res END 
+*/
 
 CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
