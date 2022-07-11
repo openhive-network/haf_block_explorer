@@ -249,7 +249,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
       SELECT to_json(hafbe_backend.get_set_of_ops_by_account(_account_id, _top_op_id, _limit, _filter, _date_start, _date_end))
     ) arr
@@ -343,7 +343,7 @@ LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
       SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
     ) arr
@@ -424,7 +424,7 @@ LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
-  RETURN to_json(arr) FROM (
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
       SELECT to_json(hafbe_backend.get_set_of_witness_voters(_witness_id, _limit))
     ) arr
@@ -433,7 +433,21 @@ END
 $$
 ;
 
--- TODO: create helper functions for repeated code
+CREATE OR REPLACE FUNCTION hafbe_backend.was_acc_unproxied(_account_id INT, _proxy_id INT, _operation_id BIGINT)
+RETURNS TABLE (
+  one INT
+)
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN QUERY SELECT 1
+  FROM hafbe_app.account_proxies
+  WHERE account_id = _account_id AND proxy_id = _proxy_id AND proxy IS FALSE AND operation_id > _operation_id;
+END
+$$
+;
+
 CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
 RETURNS TABLE (
   _balance NUMERIC
@@ -465,12 +479,7 @@ BEGIN
         ORDER BY operation_id DESC
       ) proxy_ops
     ) ap ON ap.account_id = hav.id
-    WHERE (
-      SELECT account_id
-      FROM hafbe_app.account_proxies
-      WHERE account_id = ap.account_id AND proxy_id = ap.proxy_id AND proxy IS FALSE AND operation_id > ap.operation_id
-      LIMIT 1
-    ) IS NULL AND cab.nai = 37
+    WHERE (SELECT hafbe_backend.was_acc_unproxied(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL AND cab.nai = 37
   ) is_null;
 END
 $function$
@@ -496,11 +505,7 @@ BEGIN
       ORDER BY operation_id DESC
       LIMIT 1
     ) ap
-    WHERE (
-      SELECT 1
-      FROM hafbe_app.account_proxies
-      WHERE account_id = ap.account_id AND proxy_id = ap.proxy_id AND proxy IS FALSE AND operation_id > ap.operation_id
-    ) IS NULL
+    WHERE (SELECT hafbe_backend.was_acc_unproxied(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL
   )
   IS NOT NULL THEN TRUE ELSE FALSE END;
 END
@@ -510,10 +515,6 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
-
-/*
-RETURN CASE WHEN res IS NULL THEN '[]' ELSE res END 
-*/
 
 CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
