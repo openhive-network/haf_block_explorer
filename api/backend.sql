@@ -364,35 +364,50 @@ $function$
 BEGIN
   RETURN QUERY SELECT
     voter_id,
-    account_vests + proxied_vests,
+    vests,
     account_vests,
     proxied_vests
   FROM (
     SELECT
-      voters.voter_id AS voter_id,
-      cab.balance AS account_vests,
-      hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests
+      voter_id,
+      account_vests + proxied_vests AS vests,
+      account_vests,
+      proxied_vests
     FROM (
-      SELECT DISTINCT ON (voter_id)
-        voter_id, approve
+      SELECT
+        voter_id,
+        CASE WHEN is_proxied IS TRUE THEN 0 ELSE account_vests END AS account_vests,
+        proxied_vests
       FROM (
-        SELECT voter_id, approve
-        FROM hafbe_app.witness_votes
-        WHERE witness_id = _witness_id
-        ORDER BY operation_id
-      ) votes_ordered
-    ) voters
-    JOIN LATERAL (
-      SELECT name, id
-      FROM hive.accounts_view
-    ) acc ON acc.id = voters.voter_id
-    JOIN LATERAL (
-      SELECT balance, account, nai
-      FROM btracker_app.current_account_balances
-    ) cab ON cab.account = acc.name
-    WHERE voters.approve IS TRUE AND cab.nai = 37
-    LIMIT _limit
-  ) vests;
+        SELECT
+          voters.voter_id AS voter_id,
+          cab.balance AS account_vests,
+          hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests,
+          hafbe_backend.is_voter_proxied(voters.voter_id) AS is_proxied
+        FROM (
+          SELECT DISTINCT ON (voter_id)
+            voter_id, approve
+          FROM (
+            SELECT voter_id, approve
+            FROM hafbe_app.witness_votes
+            WHERE witness_id = _witness_id
+            ORDER BY operation_id
+          ) votes_ordered
+        ) voters
+        JOIN LATERAL (
+          SELECT name, id
+          FROM hive.accounts_view
+        ) acc ON acc.id = voters.voter_id
+        JOIN LATERAL (
+          SELECT balance, account, nai
+          FROM btracker_app.current_account_balances
+        ) cab ON cab.account = acc.name
+        WHERE voters.approve IS TRUE AND cab.nai = 37
+        LIMIT _limit
+      ) vests
+    ) is_proxied
+  ) vests_sum
+  ORDER BY vests DESC;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -432,6 +447,7 @@ BEGIN
         WHERE proxy_id = _voter_id AND proxy IS TRUE
         ORDER BY operation_id DESC
       ) proxy_ops
+      LIMIT 1
     ) ap ON ap.account_id = hav.id
     WHERE (
       SELECT 1
@@ -465,6 +481,7 @@ BEGIN
         WHERE account_id = _voter_id AND proxy IS TRUE
         ORDER BY operation_id DESC
       ) proxy_ops
+      LIMIT 1
     ) ap
     WHERE (
       SELECT 1
