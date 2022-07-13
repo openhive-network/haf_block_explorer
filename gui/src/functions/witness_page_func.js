@@ -33,19 +33,19 @@ export const sort = (name, count, witnessData) => {
     case "Name":
       sortString("owner", count, witnessData);
       break;
-    case "Votes (M)":
+    case "Votes":
       sortNumber("votes", count, witnessData);
       break;
     case "Missed":
       sortNumber("total_missed", count, witnessData);
       break;
-    case "Last_block":
+    case "Last Block":
       sortNumber("last_confirmed_block_num", count, witnessData);
       break;
-    case "Feed_age":
+    case "Feed Age":
       sortNumber("last_hbd_exchange_update", count, witnessData);
       break;
-    case "Price_feed":
+    case "Price Feed":
       if (count % 2 === 0) {
         return witnessData?.sort(
           (a, b) =>
@@ -59,14 +59,14 @@ export const sort = (name, count, witnessData) => {
             Number(b.hbd_exchange_rate.base.split("HBD")[0])
         );
       }
-    case "Ac_budget":
+    case "AC budget":
       sortNestedObj("account_subsidy_budget", count, witnessData);
       break;
-    case "Ac_decay":
+    case "AC decay":
       sortNestedObj("account_subsidy_decay", count, witnessData);
 
       break;
-    case "Block_size":
+    case "Block Size":
       sortNestedObj("maximum_block_size", count, witnessData);
       break;
     case "Version":
