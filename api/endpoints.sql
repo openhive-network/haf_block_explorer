@@ -208,7 +208,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000)
+CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -216,7 +216,25 @@ $$
 DECLARE
   __witness_id INT = hafbe_backend.get_account_id(_witness);
 BEGIN
-  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit);
+  IF _limit IS NULL OR _limit <= 0 THEN
+    _limit = 1000;
+  END IF;
+
+  IF _order_by NOT SIMILAR TO '(account|vests|account_vests|proxied_vests|timestamp)' THEN
+    RETURN hafbe_exceptions.raise_no_such_column_exception(_order_by);
+  END IF;
+  IF _order_by IS NULL THEN
+    _order_by = 'vests';
+  END IF;
+
+  IF _order_is NOT SIMILAR TO '(asc|desc)' THEN
+    RETURN hafbe_exceptions.raise_no_such_order_exception(_order_is);
+  END IF;
+  IF _order_is IS NULL THEN
+    _order_is = 'desc';
+  END IF;
+
+  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit, _order_by, _order_is);
 END
 $$
 ;

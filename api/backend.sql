@@ -353,44 +353,45 @@ $$
 ;
 
 CREATE TYPE hafbe_backend.witness_voters AS (
-  voter_id INT,
+  account TEXT,
   vests NUMERIC,
   account_vests BIGINT,
-  proxied_vests NUMERIC
+  proxied_vests NUMERIC,
+  timestamp TIMESTAMP
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT)
+-- TODO: order by timestamp too slow
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
 RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT
-    v_voter_id,
-    vests_sum,
-    cab_account_vests,
-    f_proxied_vests
+  RETURN QUERY SELECT account, vests, account_vests, proxied_vests, timestamp
   FROM (
     SELECT
-      v_voter_id,
-      cab_account_vests + f_proxied_vests AS vests_sum,
-      cab_account_vests,
-      f_proxied_vests
+      account,
+      account_vests + proxied_vests AS vests,
+      account_vests,
+      proxied_vests,
+      timestamp
     FROM (
       SELECT
-        v_voter_id,
-        CASE WHEN is_proxied IS TRUE THEN 0 ELSE cab_account_vests END AS cab_account_vests,
-        f_proxied_vests
+        account,
+        CASE WHEN is_proxied IS TRUE THEN 0 ELSE account_vests END AS account_vests,
+        proxied_vests,
+        hov.timestamp AS timestamp
       FROM (
         SELECT
-          voters.voter_id AS v_voter_id,
-          cab.balance AS cab_account_vests,
-          hafbe_backend.get_proxied_vests(voters.voter_id) AS f_proxied_vests,
-          hafbe_backend.is_voter_proxied(voters.voter_id) AS is_proxied
+          acc.name::TEXT AS account,
+          cab.balance AS account_vests,
+          hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests,
+          hafbe_backend.is_voter_proxied(voters.voter_id) AS is_proxied,
+          voters.operation_id AS operation_id
         FROM (
           SELECT DISTINCT ON (voter_id)
-            voter_id, approve
+            voter_id, approve, operation_id
           FROM (
-            SELECT voter_id, approve
+            SELECT voter_id, approve, operation_id
             FROM hafbe_app.witness_votes
             WHERE witness_id = _witness_id
             ORDER BY operation_id
@@ -406,10 +407,12 @@ BEGIN
         ) cab ON cab.account = acc.name
         WHERE voters.approve IS TRUE AND cab.nai = 37
       ) vests
+      JOIN LATERAL (
+        SELECT timestamp, id
+        FROM hive.operations_view
+      ) hov ON hov.id = vests.operation_id
     ) is_proxied
-  ) vests_sum
-  ORDER BY vests_sum DESC
-  LIMIT _limit;
+  ) vests_sum;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -418,7 +421,27 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_backend.witness_voters
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+      SELECT account, vests, account_vests, proxied_vests, timestamp
+      FROM hafbe_backend.get_set_of_witness_voters(%L)
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      LIMIT %L;
+    $query$, _witness_id, _order_is, _order_by, _order_is, _order_by, _limit
+  ) res;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -426,7 +449,7 @@ $$
 BEGIN
   RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_witness_voters(_witness_id, _limit))
+      SELECT hafbe_backend.get_witness_voters_ordered(_witness_id, _limit, _order_by, _order_is)
     ) arr
   ) result;
 END

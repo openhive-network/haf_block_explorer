@@ -73,3 +73,31 @@ BEGIN
 END
 $$
 ;
+
+CREATE FUNCTION hafbe_exceptions.raise_no_such_column_exception(_order_by TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN hafbe_exceptions.raise_exception(406, 5, 'Not Acceptable',
+    'Provided ''_order_by'' column does not exist',
+    format('''%s'' not in (account, vests, account_vests, proxied_vests, timestamp)',  _order_by)
+  );
+END
+$$
+;
+
+CREATE FUNCTION hafbe_exceptions.raise_no_such_order_exception(_order_is TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN hafbe_exceptions.raise_exception(406, 6, 'Not Acceptable',
+    'Provided ''_order_is'' does not exist',
+    format('''%s'' is not ''asc'' or ''desc''',  _order_is)
+  );
+END
+$$
+;
