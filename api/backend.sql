@@ -472,7 +472,8 @@ $$
 BEGIN
   RETURN QUERY SELECT 1
   FROM hafbe_app.account_proxies
-  WHERE account_id = _account_id AND proxy_id = _proxy_id AND proxy IS FALSE AND operation_id > _operation_id;
+  WHERE account_id = _account_id AND proxy_id = _proxy_id AND proxy IS FALSE AND operation_id > _operation_id
+  LIMIT 1;
 END
 $$
 ;
