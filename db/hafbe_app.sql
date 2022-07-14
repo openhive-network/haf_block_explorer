@@ -44,6 +44,17 @@ BEGIN
     CONSTRAINT pk_hived_account_cache PRIMARY KEY (account)
   );
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_operation_cache (
+    uq_key TEXT NOT NULL,
+    account_id INT NOT NULL,
+    op_type_id INT NOT NULL,
+
+    CONSTRAINT uq_account_operation_cache UNIQUE (uq_key)
+  ) INHERITS (hive.hafbe_app);
+
+  CREATE INDEX IF NOT EXISTS account_operation_cache_account_id ON hafbe_app.account_operation_cache USING btree (account_id);
+  CREATE INDEX IF NOT EXISTS account_operation_cache_op_type_id ON hafbe_app.account_operation_cache USING btree (op_type_id);
+
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
@@ -171,6 +182,16 @@ BEGIN
       LIMIT 1)
       WHERE account_id = __unproxy_op.account_id AND proxy_id IS NULL;
     END LOOP;
+
+
+    INSERT INTO hafbe_app.account_operation_cache (uq_key, account_id, op_type_id)
+    SELECT
+      account_id::TEXT || '-' || op_type_id::TEXT,
+      account_id,
+      op_type_id
+    FROM hive.account_operations_view haov
+    WHERE block_num = b
+    ON CONFLICT DO NOTHING;
     
     /*
     IF __balance_change.source_op_block % _report_step = 0 AND __last_reported_block != __balance_change.source_op_block THEN

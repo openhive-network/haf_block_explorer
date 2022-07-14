@@ -54,13 +54,13 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN ('[' || _operation_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']')::JSON;
+  RETURN ('[' || _operation_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']');
 END
 $$
 ;
 
 CREATE TYPE hafbe_backend.op_types AS (
-  operation_id BIGINT,
+  op_type_id INT,
   operation_name TEXT,
   is_virtual BOOLEAN
 );
@@ -72,7 +72,7 @@ AS
 $$
 BEGIN
   RETURN QUERY SELECT
-    id::BIGINT,
+    id::INT,
     name::TEXT,
     is_virtual::BOOLEAN
   FROM hive.operation_types
@@ -87,8 +87,10 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
-  FROM hafbe_backend.get_set_of_op_types();
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_backend.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_op_types()
+  ) res;
 END
 $$
 ;
@@ -100,20 +102,20 @@ AS
 $$
 BEGIN
   RETURN QUERY SELECT
-    haov.op_type_id::BIGINT,
+    aoc.op_type_id,
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
-    SELECT DISTINCT op_type_id
-    FROM hive.account_operations_view
+    SELECT op_type_id
+    FROM hafbe_app.account_operation_cache
     WHERE account_id = _account_id
-  ) haov
+  ) aoc
 
   JOIN LATERAL (
     SELECT id, name, is_virtual
     FROM hive.operation_types
-  ) hot ON hot.id = haov.op_type_id
-  ORDER BY haov.op_type_id ASC;
+  ) hot ON hot.id = aoc.op_type_id
+  ORDER BY aoc.op_type_id ASC;
 END
 $$
 ;
@@ -124,8 +126,10 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
-  FROM hafbe_backend.get_set_of_acc_op_types(_account_id);
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_backend.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_acc_op_types(_account_id)
+  ) res;
 END
 $$
 ;
@@ -137,7 +141,7 @@ AS
 $$
 BEGIN
   RETURN QUERY SELECT
-    hov.op_type_id::BIGINT,
+    hot.id::INT,
     hot.name::TEXT,
     hot.is_virtual::BOOLEAN
   FROM (
@@ -161,8 +165,10 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN json_agg(hafbe_backend.format_op_types(operation_id, operation_name, is_virtual))
-  FROM hafbe_backend.get_set_of_block_op_types(_block_num);
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_backend.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_block_op_types(_block_num)
+  ) res;
 END
 $$
 ;

@@ -33,6 +33,9 @@ create_indexes() {
 
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_reversible_uq2 ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id)"
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_uq2 ON hive.account_operations USING btree (account_id, op_type_id, operation_id)"
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_block_num ON hive.account_operations_reversible USING btree (block_num, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_account_operations_block_num ON hive.account_operations USING btree (block_num)"
 }
 
 start_webserver() {
