@@ -366,7 +366,6 @@ CREATE TYPE hafbe_backend.witness_voters AS (
   timestamp TIMESTAMP
 );
 
--- TODO: order by timestamp too slow
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
 RETURNS SETOF hafbe_backend.witness_voters
 AS
@@ -400,7 +399,7 @@ BEGIN
             SELECT voter_id, approve, operation_id
             FROM hafbe_app.witness_votes
             WHERE witness_id = _witness_id
-            ORDER BY operation_id
+            ORDER BY operation_id DESC
           ) votes_ordered
         ) voters
         JOIN LATERAL (
@@ -538,6 +537,24 @@ BEGIN
     WHERE (SELECT hafbe_backend.was_acc_unproxied(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL
   )
   IS NOT NULL THEN TRUE ELSE FALSE END;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.top_witnesses(_limit INT)
+RETURNS TABLE (
+  _witness_id INT
+)
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT witness_id
+  FROM hafbe_app.witness_votes
+  LIMIT _limit;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
