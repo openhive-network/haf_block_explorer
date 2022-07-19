@@ -239,17 +239,17 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_witnesses_number INT = 50)
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  IF _witnesses_number IS NULL OR _witnesses_number <= 0 THEN
-    _witnesses_number = FALSE;
+  IF _limit IS NULL OR _limit <= 0 THEN
+    _limit = 50;
   END IF;
 
-  RETURN hafbe_backend.get_witnesses(_account);
+  RETURN hafbe_backend.get_witnesses(_limit);
 END
 $$
 ;

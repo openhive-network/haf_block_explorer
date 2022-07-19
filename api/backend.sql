@@ -477,7 +477,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
 RETURNS TABLE (
   _balance NUMERIC
 )
@@ -518,7 +518,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
 RETURNS TABLE (
   proxied BOOLEAN
 )
@@ -545,15 +545,44 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.top_witnesses(_limit INT)
-RETURNS TABLE (
-  _witness_id INT
-)
+CREATE TYPE hafbe_backend.witnesses AS (
+  witness TEXT,
+  url TEXT,
+  voters_num INT,
+  voters_num_change INT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
+RETURNS SETOF hafbe_backend.witnesses
 AS
 $function$
+DECLARE
+  __first_op_today BIGINT = (SELECT id FROM hive.operations_view WHERE timestamp >= 'today'::TIMESTAMP ORDER BY id LIMIT 1);
 BEGIN
-  RETURN QUERY SELECT witness_id
-  FROM hafbe_app.witness_votes
+  RETURN QUERY SELECT
+    witness::TEXT,
+    url,
+    voters_num,
+    hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change
+  FROM (
+    SELECT
+      witness,
+      witness_id,
+      url,
+      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, FALSE) AS voters_num
+    FROM (
+      SELECT DISTINCT ON (witness_id)
+        witness_id,
+        hav.name AS witness,
+        hafbe_backend.get_witness_url(witness_id) AS url
+      FROM hafbe_app.witness_votes
+      JOIN (
+        SELECT name, id
+        FROM hive.accounts_view
+      ) hav ON hav.id = witness_id
+    ) uq_witness
+  ) num_of_voters
+  ORDER BY voters_num DESC
   LIMIT _limit;
 END
 $function$
@@ -563,7 +592,70 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(_limit INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_set_of_witnesses(_limit)
+    ) arr
+  ) result;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT, _first_op_today BIGINT, _include_today BOOLEAN)
+RETURNS TABLE (
+  n_voters INT
+)
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    COUNT(*)::INT
+  FROM (
+    SELECT DISTINCT voter_id
+    FROM (
+      SELECT witness_id, voter_id, approve, operation_id
+      FROM hafbe_app.witness_votes
+      WHERE witness_id = _witness_id
+      ORDER BY operation_id DESC
+    ) votes_ordered
+    WHERE
+      approve IS TRUE AND
+      operation_id < (CASE WHEN _include_today IS FALSE THEN _first_op_today ELSE 9223372036854775808 END)
+  ) votes_by_op;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_url(_witness_id INT)
+RETURNS TABLE (
+  _BODY TEXT
+)
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    (body::JSON)->'value'->>'url'
+  FROM hive.operations_view
+  JOIN (
+    SELECT operation_id
+    FROM hive.account_operations_view
+    WHERE account_id = _witness_id AND op_type_id = 11
+    ORDER BY operation_id DESC
+    LIMIT 1
+  ) haov ON id = haov.operation_id;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -585,7 +677,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
