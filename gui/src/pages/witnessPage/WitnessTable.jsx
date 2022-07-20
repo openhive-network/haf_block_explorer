@@ -20,10 +20,7 @@ const TABLE_HEAD = [
   "Price Feed",
   "Bias",
   "Feed Age",
-  "AC Fee",
-  "AC avail",
-  "AC budget",
-  "AC decay",
+  "Account Fee",
   "Block Size",
   "Version",
 ];
@@ -76,7 +73,7 @@ export default function WitnessTable({
             return (
               <tr key={witness.id}>
                 <td className={styles.rank_col}>{i + 1}</td>
-                <td className={styles.name_col}></td>
+                <td className={styles.name_col}>{witness.owner}</td>
                 <td className={styles.votes_col}>
                   {tidyNumber(Math.round(witness.votes / 1000000 / 1000000))}{" "}
                   <span style={{ color: "#0fbb2c" }}>+- 99</span>
@@ -144,17 +141,6 @@ export default function WitnessTable({
                 </td>
                 <td className={styles.ac_free_col}>
                   {witness.props.account_creation_fee}
-                </td>
-                <td className={styles.ac_budget_col}>
-                  {tidyNumber(witness.props.account_subsidy_budget)}
-                </td>
-                <td className={styles.ac_avail_col}>
-                  {Math.round(
-                    witness?.available_witness_account_subsidies / 10000
-                  )}
-                </td>
-                <td className={styles.ac_decay_col}>
-                  {tidyNumber(witness.props.account_subsidy_decay)}
                 </td>
                 <td className={styles.block_size}>
                   {tidyNumber(witness.props.maximum_block_size)}
