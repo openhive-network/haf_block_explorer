@@ -94,6 +94,9 @@ export default function NavigationBar() {
               <Nav.Link href="/">
                 <p className={styles.navLink}>HAF Blocks</p>
               </Nav.Link>
+              <Nav.Link href="/witnesses" target="_blank">
+                <p className={styles.linkWitnesses}>HAF Witnesses</p>
+              </Nav.Link>
             </Nav>
             <Form className="d-flex" onSubmit={handleSubmit}>
               <FormControl

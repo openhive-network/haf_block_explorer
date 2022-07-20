@@ -1,6 +1,6 @@
 .navbar {
     width: 100vw;
-    padding: 0 50px 0px 50px;
+    padding: 10px 50px;
 }
 
 .navbarBrand {
@@ -14,14 +14,22 @@
     height: 50px;
 }
 
-.navLink {
+.navLink,
+.linkWitnesses {
     margin: 10px;
     color: #fff;
     font-size: 20px;
 }
 
+.navLink:hover,
+.linkWitnesses:hover {
+    color: rgb(238, 66, 66);
+}
+
+
 @media only screen and (max-width: 1200px) {
     .navbar {
-        padding: 0 50px 20px 50px;
+        padding: 10px 50px;
+
     }
 }
