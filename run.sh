@@ -66,7 +66,7 @@ install_postgrest() {
 
 install_plpython() {
     sudo apt-get update -y
-    sudo apt-get -y install python3 postgresql-plpython3-12
+    sudo apt-get -y install python3 postgresql-plpython3-14
 }
 
 install_jmeter() {

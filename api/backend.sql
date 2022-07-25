@@ -635,7 +635,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_url(_witness_id INT)
 RETURNS TABLE (
-  _BODY TEXT
+  _url TEXT
 )
 LANGUAGE 'plpgsql'
 AS
@@ -651,6 +651,86 @@ BEGIN
     ORDER BY operation_id DESC
     LIMIT 1
   ) haov ON id = haov.operation_id;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  IF _last_op_id IS NULL THEN
+    SELECT id FROM hive.operations_view ORDER BY id DESC LIMIT 1 INTO _last_op_id;
+  END IF;
+
+  RETURN
+    CASE WHEN op_type_id = 42 THEN
+      hafbe_backend.unpack_from_vector(exchange_rate)
+    ELSE
+      exchange_rate
+    END
+  FROM (
+    SELECT
+      CASE WHEN exchange_rate IS NULL THEN
+        hafbe_backend.get_witness_exchange_rate(_witness_id, op_id - 1)
+      ELSE
+        exchange_rate
+      END AS exchange_rate,
+      op_type_id
+    FROM (
+      SELECT
+        CASE WHEN op_type_id = 42 THEN
+          ((op->'props')->0)->>1
+        ELSE
+          op->>'exchange_rate'
+        END AS exchange_rate,
+        op_type_id,
+        id AS op_id
+      FROM (
+        SELECT
+          (body::JSON)->'value' AS op,
+          op_type_id,
+          id
+        FROM hive.operations_view
+        JOIN (
+          SELECT operation_id
+          FROM hive.account_operations_view
+          WHERE account_id = _witness_id
+        ) haov ON id = haov.operation_id
+        WHERE
+          (op_type_id = 42 OR op_type_id = 7) AND id = 3937555428
+        ORDER BY id DESC
+        LIMIT 1
+      ) op
+    ) price
+  ) recur;
+END
+$$
+;
+
+
+CREATE OR REPLACE FUNCTION hafbe_backend.unpack_from_vector(_exchange_rate TEXT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __half_vector_len INT;
+  __quarter_vector_len INT;
+  __base TEXT;
+  __quote TEXT;
+BEGIN 
+  SELECT LENGTH(_exchange_rate) / 2 INTO __half_vector_len;
+  SELECT __half_vector_len / 2 INTO __quarter_vector_len;
+
+  SELECT substring(_exchange_rate for __half_vector_len) INTO __base;
+  SELECT substring(_exchange_rate from __half_vector_len) INTO __quote;
+
+  -- TODO: add vector unpacking code
+
+  RETURN _exchange_rate;
 END
 $$
 ;
