@@ -549,7 +549,9 @@ CREATE TYPE hafbe_backend.witnesses AS (
   witness TEXT,
   url TEXT,
   voters_num INT,
-  voters_num_change INT
+  voters_num_change INT,
+  feed_price TEXT, --JSON
+  feed_age INTERVAL
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
@@ -563,24 +565,55 @@ BEGIN
     witness::TEXT,
     url,
     voters_num,
-    hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change
+    hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
+    feed_data->>'exchange_rate' AS feed_price,
+    (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age
   FROM (
     SELECT
       witness,
       witness_id,
-      url,
-      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, FALSE) AS voters_num
+      hov.url AS url,
+      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, FALSE) AS voters_num,
+      hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data
     FROM (
       SELECT DISTINCT ON (witness_id)
+        witness,
         witness_id,
-        hav.name AS witness,
-        hafbe_backend.get_witness_url(witness_id) AS url
-      FROM hafbe_app.witness_votes
-      JOIN (
-        SELECT name, id
-        FROM hive.accounts_view
-      ) hav ON hav.id = witness_id
-    ) uq_witness
+        url_op_id
+      FROM (
+        SELECT
+          witness,
+          witness_id,
+          haov.operation_id AS url_op_id
+        FROM (
+          SELECT
+            wv.witness_id AS witness_id,
+            hav.name AS witness
+          FROM (
+            SELECT DISTINCT witness_id
+            FROM hafbe_app.witness_votes
+          ) wv
+          JOIN (
+            SELECT name, id
+            FROM hive.accounts_view
+          ) hav ON hav.id = wv.witness_id
+        ) uq_witness
+        JOIN (
+          SELECT account_id, operation_id
+          FROM hive.account_operations_view
+          WHERE op_type_id = 11
+        ) haov ON haov.account_id = witness_id
+        ORDER BY haov.operation_id DESC
+      ) url_ops
+    ) last_url_update
+
+    JOIN (
+      SELECT
+        id,
+        (body::JSON)->'value'->>'url' AS url
+      FROM hive.operations_view
+    ) hov ON hov.id = url_op_id
+
   ) num_of_voters
   ORDER BY voters_num DESC
   LIMIT _limit;
@@ -633,30 +666,8 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_url(_witness_id INT)
-RETURNS TABLE (
-  _url TEXT
-)
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN QUERY SELECT
-    (body::JSON)->'value'->>'url'
-  FROM hive.operations_view
-  JOIN (
-    SELECT operation_id
-    FROM hive.account_operations_view
-    WHERE account_id = _witness_id AND op_type_id = 11
-    ORDER BY operation_id DESC
-    LIMIT 1
-  ) haov ON id = haov.operation_id;
-END
-$$
-;
-
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
-RETURNS TEXT
+RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -665,71 +676,64 @@ BEGIN
     SELECT id FROM hive.operations_view ORDER BY id DESC LIMIT 1 INTO _last_op_id;
   END IF;
 
-  RETURN
-    CASE WHEN op_type_id = 42 THEN
-      hafbe_backend.unpack_from_vector(exchange_rate)
-    ELSE
-      exchange_rate
-    END
-  FROM (
+  RETURN to_json(result) FROM (
     SELECT
-      CASE WHEN exchange_rate IS NULL THEN
-        hafbe_backend.get_witness_exchange_rate(_witness_id, op_id - 1)
+      CASE WHEN op_type_id = 42 THEN
+        hafbe_backend.unpack_from_vector(exchange_rate)
       ELSE
         exchange_rate
       END AS exchange_rate,
-      op_type_id
+      timestamp
     FROM (
       SELECT
-        CASE WHEN op_type_id = 42 THEN
-          ((op->'props')->0)->>1
+        CASE WHEN exchange_rate IS NULL THEN
+          (SELECT f->>'exchange_rate' FROM hafbe_backend.get_witness_exchange_rate(_witness_id, op_id - 1) f)
         ELSE
-          op->>'exchange_rate'
+          exchange_rate
         END AS exchange_rate,
         op_type_id,
-        id AS op_id
+        timestamp
       FROM (
         SELECT
-          (body::JSON)->'value' AS op,
+          CASE WHEN op_type_id = 42 THEN
+            ((op->'props')->0)->>1
+          ELSE
+            op->>'exchange_rate'
+          END AS exchange_rate,
           op_type_id,
-          id
-        FROM hive.operations_view
-        JOIN (
-          SELECT operation_id
-          FROM hive.account_operations_view
-          WHERE account_id = _witness_id
-        ) haov ON id = haov.operation_id
-        WHERE
-          (op_type_id = 42 OR op_type_id = 7) AND id = 3937555428
-        ORDER BY id DESC
-        LIMIT 1
-      ) op
-    ) price
-  ) recur;
+          id AS op_id,
+          timestamp
+        FROM (
+          SELECT
+            (body::JSON)->'value' AS op,
+            op_type_id,
+            id,
+            timestamp
+          FROM hive.operations_view
+          JOIN (
+            SELECT operation_id
+            FROM hive.account_operations_view
+            WHERE account_id = _witness_id
+          ) haov ON id = haov.operation_id
+          WHERE
+            (op_type_id = 42 OR op_type_id = 7) AND id <= _last_op_id
+          ORDER BY id DESC
+          LIMIT 1
+        ) op
+      ) price
+    ) recur
+  ) result;
 END
 $$
 ;
-
 
 CREATE OR REPLACE FUNCTION hafbe_backend.unpack_from_vector(_exchange_rate TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __half_vector_len INT;
-  __quarter_vector_len INT;
-  __base TEXT;
-  __quote TEXT;
 BEGIN 
-  SELECT LENGTH(_exchange_rate) / 2 INTO __half_vector_len;
-  SELECT __half_vector_len / 2 INTO __quarter_vector_len;
-
-  SELECT substring(_exchange_rate for __half_vector_len) INTO __base;
-  SELECT substring(_exchange_rate from __half_vector_len) INTO __quote;
-
-  -- TODO: add vector unpacking code
-
+  -- TODO: to be replaced by hive fork manager method
   RETURN _exchange_rate;
 END
 $$
