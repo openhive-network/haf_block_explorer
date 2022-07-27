@@ -562,61 +562,60 @@ DECLARE
   __first_op_today BIGINT = (SELECT id FROM hive.operations_view WHERE timestamp >= 'today'::TIMESTAMP ORDER BY id LIMIT 1);
 BEGIN
   RETURN QUERY SELECT
-    witness::TEXT,
-    url,
-    voters_num,
-    hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
+    witness::TEXT, url, voters_num, voters_num_change,
     feed_data->>'exchange_rate' AS feed_price,
     (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age
-  FROM (
+  FROM(
     SELECT
-      witness,
-      witness_id,
-      hov.url AS url,
-      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, FALSE) AS voters_num,
+      witness, url, voters_num,
+      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
       hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data
     FROM (
-      SELECT DISTINCT ON (witness_id)
-        witness,
-        witness_id,
-        url_op_id
+      SELECT
+        witness, witness_id,
+        hov.url AS url,
+        hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, FALSE) AS voters_num
       FROM (
-        SELECT
-          witness,
-          witness_id,
-          haov.operation_id AS url_op_id
+        SELECT DISTINCT ON (witness_id)
+          witness, witness_id, url_op_id
         FROM (
           SELECT
-            wv.witness_id AS witness_id,
-            hav.name AS witness
+            witness, witness_id,
+            haov.operation_id AS url_op_id
           FROM (
-            SELECT DISTINCT witness_id
-            FROM hafbe_app.witness_votes
-          ) wv
+            SELECT
+              wv.witness_id AS witness_id,
+              hav.name AS witness
+            FROM (
+              SELECT DISTINCT witness_id
+              FROM hafbe_app.witness_votes
+            ) wv
+
+            JOIN (
+              SELECT name, id
+              FROM hive.accounts_view
+            ) hav ON hav.id = wv.witness_id
+          ) uq_witness
+
           JOIN (
-            SELECT name, id
-            FROM hive.accounts_view
-          ) hav ON hav.id = wv.witness_id
-        ) uq_witness
-        JOIN (
-          SELECT account_id, operation_id
-          FROM hive.account_operations_view
-          WHERE op_type_id = 11
-        ) haov ON haov.account_id = witness_id
-        ORDER BY haov.operation_id DESC
-      ) url_ops
-    ) last_url_update
+            SELECT account_id, operation_id
+            FROM hive.account_operations_view
+            WHERE op_type_id = 11
+          ) haov ON haov.account_id = witness_id
+          ORDER BY haov.operation_id DESC
+        ) url_ops
+      ) last_url_update
 
-    JOIN (
-      SELECT
-        id,
-        (body::JSON)->'value'->>'url' AS url
-      FROM hive.operations_view
-    ) hov ON hov.id = url_op_id
-
-  ) num_of_voters
+      JOIN (
+        SELECT
+          id,
+          (body::JSON)->'value'->>'url' AS url
+        FROM hive.operations_view
+      ) hov ON hov.id = url_op_id
+    ) num_of_voters
   ORDER BY voters_num DESC
-  LIMIT _limit;
+  LIMIT _limit
+  ) num_change_feed_upd;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
