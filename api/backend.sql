@@ -550,8 +550,10 @@ CREATE TYPE hafbe_backend.witnesses AS (
   url TEXT,
   voters_num INT,
   voters_num_change INT,
-  feed_price TEXT, --JSON
-  feed_age INTERVAL
+  price_feed TEXT, --JSON,
+  bias INT,
+  feed_age INTERVAL,
+  signing_key TEXT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
@@ -563,13 +565,18 @@ DECLARE
 BEGIN
   RETURN QUERY SELECT
     witness::TEXT, url, voters_num, voters_num_change,
-    feed_data->>'exchange_rate' AS feed_price,
-    (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age
+    feed_data->>'exchange_rate' AS price_feed,
+    --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
+    0 AS bias,
+    (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
+    signing_data->>'signing_key' AS signing_key
   FROM(
     SELECT
+      -- todo: maybe url is also in set witness props operation
       witness, url, voters_num,
       hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
-      hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data
+      hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data,
+      hafbe_backend.get_witness_signing_key(witness_id) AS signing_data
     FROM (
       SELECT
         witness, witness_id,
@@ -665,37 +672,57 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE OR REPLACE FUNCTION hafbe_backend.latest_op_id()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
+  RETURN id FROM hive.operations_view ORDER BY id DESC LIMIT 1;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN props->>1
+  FROM (
+    SELECT json_array_elements(_op_value->'props') AS props
+  ) to_arr
+  WHERE props->>0 = _attr_name;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
+RETURNS JSON
+AS
+$function$
+BEGIN
   IF _last_op_id IS NULL THEN
-    SELECT id FROM hive.operations_view ORDER BY id DESC LIMIT 1 INTO _last_op_id;
+    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
   END IF;
 
   RETURN to_json(result) FROM (
     SELECT
-      CASE WHEN op_type_id = 42 THEN
+      CASE WHEN op_type_id = 42 AND exchange_rate IS NOT NULL THEN
         hafbe_backend.unpack_from_vector(exchange_rate)
-      ELSE
-        exchange_rate
-      END AS exchange_rate,
+      ELSE exchange_rate END AS exchange_rate,
       timestamp
     FROM (
       SELECT
-        CASE WHEN exchange_rate IS NULL THEN
+        CASE WHEN op_type_id = 42 AND exchange_rate IS NULL THEN
           (SELECT f->>'exchange_rate' FROM hafbe_backend.get_witness_exchange_rate(_witness_id, op_id - 1) f)
-        ELSE
-          exchange_rate
-        END AS exchange_rate,
-        op_type_id,
-        timestamp
+        ELSE exchange_rate END AS exchange_rate,
+        op_type_id, timestamp
       FROM (
         SELECT
           CASE WHEN op_type_id = 42 THEN
-            ((op->'props')->0)->>1
+            hafbe_backend.parse_witness_set_props(op, 'hbd_exchange_rate')
           ELSE
             op->>'exchange_rate'
           END AS exchange_rate,
@@ -705,25 +732,26 @@ BEGIN
         FROM (
           SELECT
             (body::JSON)->'value' AS op,
-            op_type_id,
-            id,
-            timestamp
+            op_type_id, id, timestamp
           FROM hive.operations_view
+
           JOIN (
             SELECT operation_id
             FROM hive.account_operations_view
-            WHERE account_id = _witness_id
+            WHERE account_id = _witness_id AND (op_type_id = 42 OR op_type_id = 7) AND operation_id <= _last_op_id
+            ORDER BY operation_id DESC
+            LIMIT 1
           ) haov ON id = haov.operation_id
-          WHERE
-            (op_type_id = 42 OR op_type_id = 7) AND id <= _last_op_id
-          ORDER BY id DESC
-          LIMIT 1
         ) op
       ) price
     ) recur
   ) result;
 END
-$$
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.unpack_from_vector(_exchange_rate TEXT)
@@ -736,6 +764,60 @@ BEGIN
   RETURN _exchange_rate;
 END
 $$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_signing_key(_witness_id INT, _last_op_id BIGINT = NULL)
+RETURNS JSON
+AS
+$function$
+BEGIN
+  IF _last_op_id IS NULL THEN
+    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+  END IF;
+
+  RETURN to_json(result) FROM (
+    SELECT
+      CASE WHEN op_type_id = 42 AND signing_key IS NULL THEN
+        (SELECT f->>'signing_key' FROM hafbe_backend.get_witness_signing_key(_witness_id, op_id - 1) f)
+      ELSE signing_key END AS signing_key
+    FROM (
+      SELECT
+        CASE WHEN op_type_id = 42 AND signing_key IS NULL THEN
+          hafbe_backend.parse_witness_set_props(signing_key::JSON, 'key')
+        ELSE signing_key END AS signing_key,
+        op_type_id, op_id
+      FROM (
+        SELECT
+          CASE WHEN op_type_id = 42 THEN
+            hafbe_backend.parse_witness_set_props(op, 'new_signing_key')
+          ELSE
+            op->>'block_signing_key'
+          END AS signing_key,
+          op_type_id,
+          id AS op_id
+        FROM (
+          SELECT
+            (body::JSON)->'value' AS op,
+            op_type_id, id
+          FROM hive.operations_view
+
+          JOIN (
+            SELECT operation_id
+            FROM hive.account_operations_view
+            WHERE account_id = _witness_id AND (op_type_id = 42 OR op_type_id = 11) AND operation_id <= _last_op_id
+            ORDER BY operation_id DESC
+            LIMIT 1
+          ) haov ON id = haov.operation_id
+        ) key_op
+      ) new_key_val
+    ) key_val
+  ) result;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
