@@ -553,6 +553,7 @@ CREATE TYPE hafbe_backend.witnesses AS (
   price_feed TEXT, --JSON,
   bias INT,
   feed_age INTERVAL,
+  block_size INT,
   signing_key TEXT
 );
 
@@ -572,6 +573,7 @@ BEGIN
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
     (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
+    (block_size_data->>'block_size')::INT AS block_size,
     signing_data->>'signing_key' AS signing_key
   FROM(
     SELECT
@@ -579,6 +581,7 @@ BEGIN
       hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
       hafbe_backend.get_witness_url(witness_id) AS url_data,
       hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data,
+      hafbe_backend.get_witness_block_size(witness_id) AS block_size_data,
       hafbe_backend.get_witness_signing_key(witness_id) AS signing_data
     FROM (
       SELECT
@@ -729,6 +732,60 @@ BEGIN
           ) haov ON id = haov.operation_id
         ) op
         ) price
+    ) recur
+  ) result;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_block_size(_witness_id INT, _last_op_id BIGINT = NULL)
+RETURNS JSON
+AS
+$function$
+BEGIN
+  IF _last_op_id IS NULL THEN
+    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+  END IF;
+
+  RETURN to_json(result) FROM (
+    SELECT
+      CASE WHEN op_type_id = 42 AND block_size IS NOT NULL THEN
+        hafbe_backend.unpack_from_vector(block_size)
+      ELSE block_size END AS block_size
+    FROM (
+      SELECT
+        CASE WHEN op_type_id = 42 AND block_size IS NULL THEN
+          (SELECT f->>'block_size' FROM hafbe_backend.get_witness_block_size(_witness_id, op_id - 1) f)
+        ELSE block_size END AS block_size,
+        op_type_id
+      FROM (
+        SELECT
+          CASE WHEN op_type_id = 42 THEN
+            hafbe_backend.parse_witness_set_props(op, 'maximum_block_size')
+          ELSE
+            op->'props'->>'maximum_block_size'
+          END AS block_size,
+          op_type_id,
+          id AS op_id
+        FROM (
+          SELECT
+            (body::JSON)->'value' AS op,
+            op_type_id, id, timestamp
+          FROM hive.operations_view
+
+          JOIN (
+            SELECT operation_id
+            FROM hive.account_operations_view
+            WHERE account_id = _witness_id AND op_type_id = ANY('{42,30,14,11}'::INT[]) AND operation_id <= _last_op_id
+            ORDER BY operation_id DESC
+            LIMIT 1
+          ) haov ON id = haov.operation_id
+        ) op
+      ) price
     ) recur
   ) result;
 END
