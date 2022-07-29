@@ -402,15 +402,17 @@ BEGIN
             ORDER BY operation_id DESC
           ) votes_ordered
         ) voters
+        
         JOIN LATERAL (
           SELECT name, id
           FROM hive.accounts_view
         ) acc ON acc.id = voters.voter_id
         JOIN LATERAL (
-          SELECT balance, account, nai
+          SELECT balance, account
           FROM btracker_app.current_account_balances
+          WHERE nai = 37
         ) cab ON cab.account = acc.name
-        WHERE voters.approve IS TRUE AND cab.nai = 37
+        WHERE voters.approve IS TRUE
       ) vests
       JOIN LATERAL (
         SELECT timestamp, id
@@ -548,13 +550,16 @@ SET from_collapse_limit=16
 CREATE TYPE hafbe_backend.witnesses AS (
   witness TEXT,
   url TEXT,
+  votes INT,
+  votes_daily_change INT,
   voters_num INT,
   voters_num_change INT,
   price_feed TEXT, --JSON,
   bias INT,
   feed_age INTERVAL,
   block_size INT,
-  signing_key TEXT
+  signing_key TEXT,
+  version TEXT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
@@ -566,41 +571,53 @@ DECLARE
 BEGIN
   RETURN QUERY SELECT
     witness::TEXT,
-    url_data->>'url',
+    url_data->>'url' AS url,
+    votes,
+    (votes_change_data->>'votes')::INT - votes AS votes_daily_change,
     voters_num,
-    voters_num_change,
+    (votes_change_data->>'voters_num')::INT - voters_num AS voters_num_change,
     feed_data->>'exchange_rate' AS price_feed,
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
     (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
     (block_size_data->>'block_size')::INT AS block_size,
-    signing_data->>'signing_key' AS signing_key
-  FROM(
+    signing_data->>'signing_key' AS signing_key,
+    '1.25.0' AS version
+  FROM (
     SELECT
-      witness, voters_num,
-      hafbe_backend.get_witness_voters_num(witness_id, __first_op_today, TRUE) - voters_num AS voters_num_change,
+      witness,
+      votes,
+      voters_num,
+      hafbe_backend.get_witness_votes(witness_id) AS votes_change_data,
       hafbe_backend.get_witness_url(witness_id) AS url_data,
       hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data,
       hafbe_backend.get_witness_block_size(witness_id) AS block_size_data,
       hafbe_backend.get_witness_signing_key(witness_id) AS signing_data
     FROM (
       SELECT
-        wv.witness_id AS witness_id,
-        hav.name AS witness,
-        hafbe_backend.get_witness_voters_num(wv.witness_id, __first_op_today, FALSE) AS voters_num
+        witness_id,
+        witness,
+        (votes_data->>'votes')::INT AS votes,
+        (votes_data->>'voters_num')::INT AS voters_num
       FROM (
-        SELECT DISTINCT witness_id
-        FROM hafbe_app.witness_votes
-      ) wv
+        SELECT
+          wv.witness_id AS witness_id,
+          hav.name AS witness,
+          hafbe_backend.get_witness_votes(wv.witness_id, __first_op_today, FALSE) AS votes_data
+        FROM (
+          SELECT DISTINCT witness_id
+          FROM hafbe_app.witness_votes
+        ) wv
 
-      JOIN (
-        SELECT name, id
-        FROM hive.accounts_view
-      ) hav ON hav.id = wv.witness_id
-    ) num_of_voters
-  ORDER BY voters_num DESC
-  LIMIT _limit
-  ) num_change_feed_upd;
+        JOIN (
+          SELECT name, id
+          FROM hive.accounts_view
+        ) hav ON hav.id = wv.witness_id
+      ) witness_votes
+    ) votes_and_num
+    ORDER BY votes DESC
+    LIMIT _limit
+  ) daily_change;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -624,30 +641,23 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT, _first_op_today BIGINT, _include_today BOOLEAN)
-RETURNS TABLE (
-  n_voters INT
-)
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes(_witness_id INT, _first_op_today BIGINT = NULL, _include_today BOOLEAN = TRUE)
+RETURNS JSON
 AS
-$$
+$function$
 BEGIN
-  RETURN QUERY SELECT
-    COUNT(*)::INT
-  FROM (
-    SELECT DISTINCT voter_id
-    FROM (
-      SELECT witness_id, voter_id, approve, operation_id
-      FROM hafbe_app.witness_votes
-      WHERE witness_id = _witness_id
-      ORDER BY operation_id DESC
-    ) votes_ordered
-    WHERE
-      approve IS TRUE AND
-      operation_id < (CASE WHEN _include_today IS FALSE THEN _first_op_today ELSE 9223372036854775808 END)
-  ) votes_by_op;
+  RETURN to_json(result) FROM (
+    -- TODO: split is_voter_proxied() and reuse code for witness votes and voters_num
+    SELECT
+      0 AS votes,
+      0 AS voters_num
+  ) result;
 END
-$$
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.latest_op_id()
