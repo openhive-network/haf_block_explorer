@@ -387,30 +387,34 @@ BEGIN
       SELECT
         acc.name AS account,
         cab.balance AS account_vests,
-        hafbe_backend.get_proxied_vests(voters.voter_id) AS proxied_vests,
-        hafbe_backend.is_voter_proxied(voters.voter_id) AS is_proxied,
-        voters.operation_id AS operation_id
+        hafbe_backend.get_proxied_vests(voter_id) AS proxied_vests,
+        hafbe_backend.is_voter_proxied(voter_id) AS is_proxied,
+        operation_id
       FROM (
-        SELECT DISTINCT ON (voter_id)
-          voter_id, approve, operation_id
+        SELECT
+          voter_id, operation_id
         FROM (
-          SELECT voter_id, approve, operation_id
-          FROM hafbe_app.witness_votes
-          WHERE witness_id = _witness_id
-          ORDER BY operation_id DESC
-        ) votes_ordered
-      ) voters
-      
-      JOIN LATERAL (
+          SELECT DISTINCT ON (voter_id)
+            voter_id, approve, operation_id
+          FROM (
+            SELECT voter_id, approve, operation_id
+            FROM hafbe_app.witness_votes
+            WHERE witness_id = _witness_id
+            ORDER BY operation_id DESC
+          ) votes_ordered
+        ) voters
+        WHERE approve IS TRUE
+      ) approved
+
+      JOIN (
         SELECT name, id
         FROM hive.accounts_view
-      ) acc ON acc.id = voters.voter_id
-      JOIN LATERAL (
+      ) acc ON acc.id = approved.voter_id
+      JOIN (
         SELECT balance, account
         FROM btracker_app.current_account_balances
         WHERE nai = 37
       ) cab ON cab.account = acc.name
-      WHERE voters.approve IS TRUE
     ) vests
   ) result;
 END
