@@ -173,7 +173,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
+CREATE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS 
@@ -249,7 +249,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE FUNCTION hafbe_backend.get_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -305,7 +305,7 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
@@ -343,7 +343,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE FUNCTION hafbe_backend.get_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -358,92 +358,66 @@ END
 $$
 ;
 
-CREATE TYPE hafbe_backend.witness_voters_vests AS (
-  account TEXT,
-  vests NUMERIC,
-  account_vests NUMERIC,
-  proxied_vests NUMERIC,
-  operation_id BIGINT
-);
-
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_vests(_witness_id INT)
-RETURNS SETOF hafbe_backend.witness_voters_vests
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT
-    account::TEXT,
-    (account_vests + proxied_vests)::NUMERIC AS vests,
-    account_vests::NUMERIC,
-    proxied_vests::NUMERIC,
-    operation_id
-  FROM (
-    SELECT
-      account,
-      CASE WHEN is_proxied IS TRUE THEN 0 ELSE account_vests END AS account_vests,
-      proxied_vests,
-      operation_id
-    FROM (
-      SELECT
-        acc.name AS account,
-        cab.balance AS account_vests,
-        hafbe_backend.get_proxied_vests(voter_id) AS proxied_vests,
-        hafbe_backend.is_voter_proxied(voter_id) AS is_proxied,
-        operation_id
-      FROM (
-        SELECT
-          voter_id, operation_id
-        FROM (
-          SELECT DISTINCT ON (voter_id)
-            voter_id, approve, operation_id
-          FROM (
-            SELECT voter_id, approve, operation_id
-            FROM hafbe_app.witness_votes
-            WHERE witness_id = _witness_id
-            ORDER BY operation_id DESC
-          ) votes_ordered
-        ) voters
-        WHERE approve IS TRUE
-      ) approved
-
-      JOIN (
-        SELECT name, id
-        FROM hive.accounts_view
-      ) acc ON acc.id = approved.voter_id
-      JOIN (
-        SELECT balance, account
-        FROM btracker_app.current_account_balances
-        WHERE nai = 37
-      ) cab ON cab.account = acc.name
-    ) vests
-  ) result;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
 CREATE TYPE hafbe_backend.witness_voters AS (
   account TEXT,
   vests NUMERIC,
-  account_vests NUMERIC,
+  account_vests BIGINT,
   proxied_vests NUMERIC,
+  operation_id BIGINT,
   timestamp TIMESTAMP
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _get_timestamp BOOLEAN = FALSE)
 RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT account, vests, account_vests, proxied_vests, hov.timestamp
-  FROM hafbe_backend.get_set_of_witness_voters_vests(_witness_id)
+  RETURN QUERY SELECT
+    acc.name::TEXT AS account,
+    CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END + proxied_vests AS vests,
+    CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END AS account_vests,
+    proxied_vests,
+    operation_id,
+    timestamp
+  FROM (
+    SELECT
+      voter_id, operation_id
+    FROM (
+      SELECT
+        ROW_NUMBER() OVER (PARTITION BY voter_id ORDER BY operation_id DESC) AS row_n,
+        voter_id, approve, operation_id
+      FROM hafbe_app.witness_votes
+      WHERE witness_id = _witness_id
+    ) row_count
+    WHERE row_n = 1 AND approve = TRUE
+  ) prox
+
   JOIN LATERAL (
-    SELECT timestamp, id
+    SELECT proxied_vests
+    FROM hafbe_backend.get_proxied_vests(voter_id)
+  ) prox_vests ON TRUE
+
+  JOIN (
+    SELECT name, id
+    FROM hive.accounts_view
+  ) acc ON acc.id = prox.voter_id
+
+  JOIN LATERAL (
+    SELECT proxied
+    FROM hafbe_backend.is_voter_proxied(voter_id)
+  ) is_prox ON TRUE
+
+  LEFT JOIN LATERAL (
+    SELECT balance
+    FROM btracker_app.current_account_balances cab
+    WHERE nai = 37 AND acc.name = account
+  ) cab ON proxied = FALSE
+  
+  LEFT JOIN LATERAL (
+    SELECT timestamp
     FROM hive.operations_view
-  ) hov ON hov.id = operation_id;
+    WHERE id = operation_id
+  ) hov ON _get_timestamp = TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -452,7 +426,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
+CREATE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_backend.witness_voters
 LANGUAGE 'plpgsql'
 AS 
@@ -460,8 +434,8 @@ $$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
-      SELECT account, vests, account_vests, proxied_vests, timestamp
-      FROM hafbe_backend.get_set_of_witness_voters(%L)
+      SELECT account, vests, account_vests, proxied_vests, 0::BIGINT, timestamp
+      FROM hafbe_backend.get_set_of_witness_voters(%L, TRUE)
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -472,7 +446,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
+CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -487,7 +461,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.was_acc_unproxied(_account_id INT, _proxy_id INT, _operation_id BIGINT)
+CREATE FUNCTION hafbe_backend.was_acc_unproxied(_account_id INT, _proxy_id INT, _operation_id BIGINT)
 RETURNS TABLE (
   one INT
 )
@@ -503,9 +477,9 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
+CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
 RETURNS TABLE (
-  _balance NUMERIC
+  proxied_vests NUMERIC
 )
 AS
 $function$
@@ -544,7 +518,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
+CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
 RETURNS TABLE (
   proxied BOOLEAN
 )
@@ -586,7 +560,7 @@ CREATE TYPE hafbe_backend.witnesses AS (
   version TEXT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
+CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
 RETURNS SETOF hafbe_backend.witnesses
 AS
 $function$
@@ -650,7 +624,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(_limit INT)
+CREATE FUNCTION hafbe_backend.get_witnesses(_limit INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS 
@@ -665,7 +639,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_stats(_witness_id INT, _first_op_today BIGINT = 9223372036854775807)
+CREATE FUNCTION hafbe_backend.get_witness_votes_stats(_witness_id INT, _first_op_today BIGINT = 9223372036854775807)
 RETURNS JSON
 AS
 $function$
@@ -674,7 +648,7 @@ BEGIN
     SELECT
       SUM(vests) AS votes,
       COUNT(*) AS voters_num
-    FROM hafbe_backend.get_set_of_witness_voters_vests(_witness_id)
+    FROM hafbe_backend.get_set_of_witness_voters(_witness_id)
     WHERE operation_id < _first_op_today
   ) result;
 END
@@ -685,7 +659,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.latest_op_id()
+CREATE FUNCTION hafbe_backend.latest_op_id()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -696,7 +670,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
+CREATE FUNCTION hafbe_backend.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
@@ -711,7 +685,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.unpack_from_vector(_vector TEXT)
+CREATE FUNCTION hafbe_backend.unpack_from_vector(_vector TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
@@ -723,7 +697,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_url(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE FUNCTION hafbe_backend.get_witness_url(_witness_id INT, _last_op_id BIGINT = NULL)
 RETURNS JSON
 AS
 $function$
@@ -777,7 +751,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_block_size(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE FUNCTION hafbe_backend.get_witness_block_size(_witness_id INT, _last_op_id BIGINT = NULL)
 RETURNS JSON
 AS
 $function$
@@ -831,7 +805,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
 RETURNS JSON
 AS
 $function$
@@ -887,7 +861,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_signing_key(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE FUNCTION hafbe_backend.get_witness_signing_key(_witness_id INT, _last_op_id BIGINT = NULL)
 RETURNS JSON
 AS
 $function$
@@ -941,7 +915,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
+CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 
@@ -963,7 +937,7 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
+CREATE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
