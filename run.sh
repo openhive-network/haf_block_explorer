@@ -9,8 +9,12 @@ drop_db() {
 }
 
 create_db() {
-    n_blocks=$1
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
+    process_blocks $@
+}
+
+process_blocks() {
+    n_blocks="${1:-null}"
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CALL hafbe_app.main('$hive_app_name', $n_blocks);"
 }
 
@@ -23,6 +27,7 @@ create_api() {
 }
 
 create_indexes() {
+    # creating indexes CONCURRENTLY inside sql function is not allowed, they must be created from script
     echo "Creating indexes, this might take a while."
 
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id)"
@@ -39,6 +44,8 @@ create_indexes() {
 
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, fork_id)"
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp)"
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS btracker_app_account_current_account_balances_nai ON btracker_app.current_account_balances(nai)"
 }
 
 start_webserver() {
@@ -117,6 +124,10 @@ elif [ "$1" = "re-start" ]; then
     create_indexes
     echo 'SUCCESS: Users and API recreated'
     start_webserver $2
+elif [ "$1" =  "create-indexes" ]; then
+    create_indexes
+elif [ "$1" =  "continue-processing" ]; then
+    create_indexes
 elif [ "$1" =  "install-postgrest" ]; then
     install_postgrest
 elif [ "$1" =  "install-plpython" ]; then

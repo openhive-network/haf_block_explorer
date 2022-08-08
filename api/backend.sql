@@ -363,11 +363,10 @@ CREATE TYPE hafbe_backend.witness_voters AS (
   vests NUMERIC,
   account_vests BIGINT,
   proxied_vests NUMERIC,
-  operation_id BIGINT,
-  timestamp TIMESTAMP
+  operation_id BIGINT
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _get_timestamp BOOLEAN = FALSE)
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
 RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
@@ -377,8 +376,7 @@ BEGIN
     CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END + proxied_vests AS vests,
     CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END AS account_vests,
     proxied_vests,
-    operation_id,
-    timestamp
+    operation_id
   FROM (
     SELECT
       voter_id, operation_id
@@ -397,27 +395,22 @@ BEGIN
     FROM hafbe_backend.get_proxied_vests(voter_id)
   ) prox_vests ON TRUE
 
-  JOIN (
-    SELECT name, id
+  JOIN LATERAL (
+    SELECT name
     FROM hive.accounts_view
-  ) acc ON acc.id = prox.voter_id
+    WHERE id = prox.voter_id
+  ) acc ON TRUE
 
   JOIN LATERAL (
     SELECT proxied
-    FROM hafbe_backend.is_voter_proxied(voter_id)
+    FROM hafbe_backend.is_voter_proxied(voter_id, _witness_id)
   ) is_prox ON TRUE
 
   LEFT JOIN LATERAL (
     SELECT balance
     FROM btracker_app.current_account_balances cab
-    WHERE nai = 37 AND acc.name = account
-  ) cab ON proxied = FALSE
-  
-  LEFT JOIN LATERAL (
-    SELECT timestamp
-    FROM hive.operations_view
-    WHERE id = operation_id
-  ) hov ON _get_timestamp = TRUE;
+    WHERE account = acc.name AND nai = 37
+  ) cab ON proxied = FALSE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -426,16 +419,30 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
+CREATE TYPE hafbe_backend.witness_voters_history AS (
+  account TEXT,
+  vests NUMERIC,
+  account_vests BIGINT,
+  proxied_vests NUMERIC,
+  timestamp TIMESTAMP
+);
+
 CREATE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_backend.witness_voters
+RETURNS SETOF hafbe_backend.witness_voters_history
 LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
-      SELECT account, vests, account_vests, proxied_vests, 0::BIGINT, timestamp
-      FROM hafbe_backend.get_set_of_witness_voters(%L, TRUE)
+      SELECT account, vests, account_vests, proxied_vests, hov.timestamp
+      FROM hafbe_backend.get_set_of_witness_voters(%L)
+      
+      JOIN LATERAL (
+        SELECT timestamp
+        FROM hive.operations_view
+        WHERE id = operation_id
+      ) hov ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -461,15 +468,15 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.was_acc_unproxied(_account_id INT, _proxy_id INT, _operation_id BIGINT)
+CREATE FUNCTION hafbe_backend.get_acc_unproxy_op(_account_id INT, _proxy_id INT, _operation_id BIGINT)
 RETURNS TABLE (
-  one INT
+  _unprox_op_id BIGINT
 )
 LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
-  RETURN QUERY SELECT 1
+  RETURN QUERY SELECT operation_id
   FROM hafbe_app.account_proxies
   WHERE account_id = _account_id AND proxy_id = _proxy_id AND proxy IS FALSE AND operation_id > _operation_id
   LIMIT 1;
@@ -508,7 +515,7 @@ BEGIN
         ORDER BY operation_id DESC
       ) proxy_ops
     ) ap ON ap.account_id = hav.id
-    WHERE (SELECT hafbe_backend.was_acc_unproxied(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL AND cab.nai = 37
+    WHERE (SELECT hafbe_backend.get_acc_unproxy_op(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL AND cab.nai = 37
   ) is_null;
 END
 $function$
@@ -518,7 +525,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
+CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT, _witness_id INT)
 RETURNS TABLE (
   proxied BOOLEAN
 )
@@ -530,11 +537,15 @@ BEGIN
     FROM (
       SELECT account_id, proxy_id, operation_id
       FROM hafbe_app.account_proxies
-      WHERE account_id = _voter_id AND proxy IS TRUE
+      WHERE proxy_id = _witness_id AND account_id = _voter_id AND proxy IS TRUE
       ORDER BY operation_id DESC
       LIMIT 1
     ) ap
-    WHERE (SELECT hafbe_backend.was_acc_unproxied(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL
+    JOIN LATERAL (
+      SELECT _unprox_op_id
+      FROM hafbe_backend.get_acc_unproxy_op(account_id, proxy_id, operation_id)
+      WHERE _unprox_op_id IS NULL
+    ) unprox ON TRUE
   )
   IS NOT NULL THEN TRUE ELSE FALSE END;
 END
@@ -640,14 +651,20 @@ $$
 ;
 
 CREATE FUNCTION hafbe_backend.get_witness_votes_stats(_witness_id INT, _first_op_today BIGINT = 9223372036854775807)
-RETURNS JSON
+RETURNS TABLE (
+  votes NUMERIC,
+  voters_num INT
+)
 AS
 $function$
 BEGIN
-  RETURN to_json(result) FROM (
+  RETURN QUERY SELECT
+    CASE WHEN votes IS NULL THEN 0 ELSE votes END,
+    voters_num
+  FROM (
     SELECT
-      SUM(vests) AS votes,
-      COUNT(*) AS voters_num
+      SUM(vests)::NUMERIC AS votes,
+      COUNT(*)::INT AS voters_num
     FROM hafbe_backend.get_set_of_witness_voters(_witness_id)
     WHERE operation_id < _first_op_today
   ) result;

@@ -36,6 +36,8 @@ BEGIN
   CREATE INDEX IF NOT EXISTS account_proxies_account_id ON hafbe_app.account_proxies USING btree (account_id);
   CREATE INDEX IF NOT EXISTS account_proxies_proxy_id ON hafbe_app.account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS account_proxies_operation_id ON hafbe_app.account_proxies USING btree (operation_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_operation_id_account_id_proxy ON hafbe_app.account_proxies USING btree (operation_id, account_id, proxy);
+  CREATE INDEX IF NOT EXISTS account_proxies_proxy_id_account_id_proxy ON hafbe_app.account_proxies USING btree (proxy_id, account_id, proxy);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -284,7 +286,7 @@ $$
   - creates HAF application context,
   - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = 0)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULLy)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -311,6 +313,10 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'Entering application main loop...';
+
+  IF _maxBlockLimit IS NULL THEN
+    _maxBlockLimit = 2147483647;
+  END IF;
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
     __next_block_range := hive.app_next_block(_appContext);
