@@ -117,6 +117,17 @@ END
 $$
 ;
 
+CREATE FUNCTION hafbe_app.get_account_id(_account TEXT)
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN id FROM hive.accounts_view WHERE name = _account;
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT, _report_step INT = 1000)
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -132,8 +143,8 @@ BEGIN
 
     INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, operation_id)
     SELECT
-      hafbe_backend.get_account_id(approve_operation->>'witness'),
-      hafbe_backend.get_account_id(approve_operation->>'account'),
+      hafbe_app.get_account_id(approve_operation->>'witness'),
+      hafbe_app.get_account_id(approve_operation->>'account'),
       (approve_operation->>'approve')::BOOLEAN,
       id
     FROM (
@@ -155,8 +166,8 @@ BEGIN
       id
     FROM (
       SELECT
-        hafbe_backend.get_account_id(proxy_operation->>'account') AS account_id,
-        hafbe_backend.get_account_id(proxy_operation->>'proxy') AS proxy_id,
+        hafbe_app.get_account_id(proxy_operation->>'account') AS account_id,
+        hafbe_app.get_account_id(proxy_operation->>'proxy') AS proxy_id,
         id
       FROM (
         SELECT
