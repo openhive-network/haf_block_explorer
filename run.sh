@@ -25,20 +25,20 @@ create_api() {
 create_indexes() {
     echo "Creating indexes, this might take a while."
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp_id ON hive.operations_reversible USING btree (timestamp, id, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp_id ON hive.operations USING btree (timestamp, id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_timestamp_id ON hive.operations_reversible USING btree (timestamp, id, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_timestamp_id ON hive.operations USING btree (timestamp, id)"
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_reversible_uq2 ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_uq2 ON hive.account_operations USING btree (account_id, op_type_id, operation_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_reversible_uq2 ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_uq2 ON hive.account_operations USING btree (account_id, op_type_id, operation_id)"
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_block_num ON hive.account_operations_reversible USING btree (block_num, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_account_operations_block_num ON hive.account_operations USING btree (block_num)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_reversible_block_num ON hive.account_operations_reversible USING btree (block_num, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_block_num ON hive.account_operations USING btree (block_num)"
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, fork_id)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp)"
 }
 
 start_webserver() {
