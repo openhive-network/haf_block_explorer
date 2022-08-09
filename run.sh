@@ -44,8 +44,6 @@ create_indexes() {
 
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, fork_id)"
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp)"
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS btracker_app_account_current_account_balances_nai ON btracker_app.current_account_balances(nai)"
 }
 
 start_webserver() {

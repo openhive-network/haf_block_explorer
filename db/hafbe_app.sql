@@ -55,6 +55,13 @@ BEGIN
   CREATE INDEX IF NOT EXISTS account_operation_cache_account_id ON hafbe_app.account_operation_cache USING btree (account_id);
   CREATE INDEX IF NOT EXISTS account_operation_cache_op_type_id ON hafbe_app.account_operation_cache USING btree (op_type_id);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
+    account_id INT NOT NULL,
+    vests BIGINT NOT NULL,
+
+    CONSTRAINT pk_account_vests_account PRIMARY KEY (account_id)
+  ) INHERITS (hive.hafbe_app);
+
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
@@ -117,13 +124,13 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_app.get_account_id(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_app.get_account_id(_account TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN id FROM hive.accounts_view WHERE name = _account;
+  RETURN id FROM hive.btracker_app_accounts_view WHERE name = _account;
 END
 $$
 ;
@@ -137,10 +144,10 @@ DECLARE
   __last_reported_block INT := 0;
   __unproxy_op RECORD;
   __last_op_id BIGINT;
+  __balance_change RECORD;
 BEGIN
   FOR b IN _from .. _to
   LOOP
-
     INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, operation_id)
     SELECT
       hafbe_app.get_account_id(approve_operation->>'witness'),
@@ -151,7 +158,7 @@ BEGIN
       SELECT
         (body::JSON)->'value' AS approve_operation,
         id
-      FROM hive.operations_view
+      FROM hive.btracker_app_operations_view
       WHERE op_type_id = 12 AND block_num = b
     ) hov
     ON CONFLICT DO NOTHING;
@@ -173,43 +180,65 @@ BEGIN
         SELECT
           (body::JSON)->'value' AS proxy_operation,
           id
-        FROM hive.operations_view
+        FROM hive.btracker_app_operations_view
         WHERE op_type_id = 13 AND block_num = b
       ) hov
     ) acc_ids
     ON CONFLICT DO NOTHING;
-
-    -- postprocessing to fill null values of proxy_id when account does unproxy
-    FOR __unproxy_op IN
-      SELECT account_id, operation_id
-      FROM hafbe_app.account_proxies
-      WHERE operation_id > __last_op_id AND proxy_id IS NULL
-    LOOP
-      UPDATE hafbe_app.account_proxies
-      SET proxy_id = (SELECT proxy_id
-      FROM hafbe_app.account_proxies
-      WHERE operation_id < __unproxy_op.operation_id AND account_id = __unproxy_op.account_id AND proxy_id IS NOT NULL
-      ORDER BY operation_id DESC
-      LIMIT 1)
-      WHERE account_id = __unproxy_op.account_id AND proxy_id IS NULL;
-    END LOOP;
-
-
+  
     INSERT INTO hafbe_app.account_operation_cache (uq_key, account_id, op_type_id)
     SELECT
       account_id::TEXT || '-' || op_type_id::TEXT,
       account_id,
       op_type_id
-    FROM hive.account_operations_view haov
+    FROM hive.btracker_app_account_operations_view haov
     WHERE block_num = b
     ON CONFLICT DO NOTHING;
-    
-    /*
-    IF __balance_change.source_op_block % _report_step = 0 AND __last_reported_block != __balance_change.source_op_block THEN
-      RAISE NOTICE 'Processed data for block: %', __balance_change.source_op_block;
-      __last_reported_block := __balance_change.source_op_block;
-    END IF;
-    */
+  END LOOP;
+
+  -- postprocessing to fill null values of proxy_id when account does unproxy
+  FOR __unproxy_op IN
+    SELECT account_id, operation_id
+    FROM hafbe_app.account_proxies
+    WHERE operation_id > __last_op_id AND proxy_id IS NULL
+  LOOP
+    UPDATE hafbe_app.account_proxies
+    SET proxy_id = (
+      SELECT proxy_id
+      FROM hafbe_app.account_proxies
+      WHERE operation_id < __unproxy_op.operation_id AND account_id = __unproxy_op.account_id AND proxy_id IS NOT NULL
+      ORDER BY operation_id DESC
+      LIMIT 1
+    )
+    WHERE account_id = __unproxy_op.account_id AND proxy_id IS NULL;
+  END LOOP;
+  
+  FOR __balance_change IN
+    WITH balance_impacting_ops AS (
+      SELECT hot.id
+      FROM hive.operation_types hot
+      WHERE hot.name IN (SELECT * FROM hive.get_balance_impacting_operations())
+    )
+
+    SELECT bio.account_name AS account, bio.amount AS vests
+    FROM hive.btracker_app_operations_view hov
+    JOIN balance_impacting_ops b ON hov.op_type_id = b.id
+    JOIN LATERAL (
+      SELECT account_name, amount
+      FROM hive.get_impacted_balances(hov.body, TRUE) -- TODO: lookout for hardfork op
+      WHERE asset_symbol_nai = 37
+    ) bio ON TRUE
+    WHERE hov.block_num BETWEEN _from AND _to
+    ORDER BY hov.block_num, hov.id
+
+  LOOP
+    INSERT INTO hafbe_app.account_vests (account_id, vests)
+    SELECT hav.id, __balance_change.vests
+    FROM hive.btracker_app_accounts_view hav
+    WHERE hav.name = __balance_change.account
+
+    ON CONFLICT ON CONSTRAINT pk_account_vests_account DO 
+    UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests;
   END LOOP;
 END
 $$
@@ -284,7 +313,7 @@ $$
   - creates HAF application context,
   - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULLy)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULL)
 LANGUAGE 'plpgsql'
 AS
 $$

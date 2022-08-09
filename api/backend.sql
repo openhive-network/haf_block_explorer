@@ -373,8 +373,8 @@ $function$
 BEGIN
   RETURN QUERY SELECT
     hav.name::TEXT AS account,
-    CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END + proxied_vests AS vests,
-    CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END AS account_vests,
+    CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests AS vests,
+    CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
     proxied_vests,
     operation_id
   FROM (
@@ -406,10 +406,9 @@ BEGIN
   ) hav ON hav.id = voter_id
 
   LEFT JOIN (
-    SELECT balance, account
-    FROM btracker_app.current_account_balances
-    WHERE nai = 37
-  ) cab ON is_prox.proxied IS FALSE AND cab.account = hav.name;
+    SELECT account_id, vests
+    FROM hafbe_app.account_vests
+  ) av ON is_prox.proxied IS FALSE AND av.account_id = voter_id;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -498,27 +497,19 @@ RETURNS TABLE (
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT (SUM(cab.balance))::NUMERIC
+  RETURN QUERY SELECT (SUM(av.vests))::NUMERIC
   FROM (
     SELECT
       ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY operation_id DESC) AS row_n,
       account_id, proxy, operation_id
-    FROM hafbe_app.account_proxies
+    FROM hafbe_app.account_proxies ap
     WHERE proxy_id = _voter_id
   ) row_count
 
   JOIN (
-    SELECT name, id
-    FROM hive.accounts_view
-  ) hav ON hav.id = account_id
-
-  JOIN (
-    SELECT
-      CASE WHEN balance < 0 THEN 0 ELSE balance END AS balance,
-      account
-    FROM btracker_app.current_account_balances cab
-    WHERE nai = 37
-  ) cab ON cab.account = hav.name
+    SELECT account_id, vests
+    FROM hafbe_app.account_vests
+  ) av ON av.account_id = row_count.account_id
 
   WHERE row_n = 1 AND proxy = TRUE;
 END
