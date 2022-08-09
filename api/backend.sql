@@ -372,7 +372,7 @@ AS
 $function$
 BEGIN
   RETURN QUERY SELECT
-    acc.name::TEXT AS account,
+    hav.name::TEXT AS account,
     CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END + proxied_vests AS vests,
     CASE WHEN cab.balance IS NULL THEN 0 ELSE cab.balance END AS account_vests,
     proxied_vests,
@@ -388,7 +388,7 @@ BEGIN
       WHERE witness_id = _witness_id
     ) row_count
     WHERE row_n = 1 AND approve = TRUE
-  ) prox
+  ) wv
 
   JOIN LATERAL (
     SELECT proxied_vests
@@ -396,21 +396,20 @@ BEGIN
   ) prox_vests ON TRUE
 
   JOIN LATERAL (
-    SELECT name
-    FROM hive.accounts_view
-    WHERE id = prox.voter_id
-  ) acc ON TRUE
-
-  JOIN LATERAL (
     SELECT proxied
-    FROM hafbe_backend.is_voter_proxied(voter_id, _witness_id)
+    FROM hafbe_backend.is_voter_proxied(voter_id)
   ) is_prox ON TRUE
 
-  LEFT JOIN LATERAL (
-    SELECT balance
-    FROM btracker_app.current_account_balances cab
-    WHERE account = acc.name AND nai = 37
-  ) cab ON proxied = FALSE;
+  JOIN (
+    SELECT name, id
+    FROM hive.accounts_view
+  ) hav ON hav.id = voter_id
+
+  LEFT JOIN (
+    SELECT balance, account
+    FROM btracker_app.current_account_balances
+    WHERE nai = 37
+  ) cab ON is_prox.proxied IS FALSE AND cab.account = hav.name;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -468,20 +467,28 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_acc_unproxy_op(_account_id INT, _proxy_id INT, _operation_id BIGINT)
+CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
 RETURNS TABLE (
-  _unprox_op_id BIGINT
+  proxied BOOLEAN
 )
-LANGUAGE 'plpgsql'
-AS 
-$$
+AS
+$function$
 BEGIN
-  RETURN QUERY SELECT operation_id
-  FROM hafbe_app.account_proxies
-  WHERE account_id = _account_id AND proxy_id = _proxy_id AND proxy IS FALSE AND operation_id > _operation_id
-  LIMIT 1;
+  RETURN QUERY SELECT proxy
+  FROM (
+    SELECT
+      ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY operation_id DESC) AS row_n,
+      proxy
+    FROM hafbe_app.account_proxies
+    WHERE account_id = _voter_id
+  ) row_count
+  WHERE row_n = 1;
 END
-$$
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 ;
 
 CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
@@ -491,63 +498,29 @@ RETURNS TABLE (
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT CASE WHEN balance IS NULL THEN 0 ELSE balance END
+  RETURN QUERY SELECT (SUM(cab.balance))::NUMERIC
   FROM (
-    SELECT SUM(cab.balance) AS balance
-    FROM (
-      SELECT
-        CASE WHEN balance < 0 THEN 0 ELSE balance END,
-        account,
-        nai
-      FROM btracker_app.current_account_balances
-    ) cab
-    JOIN LATERAL (
-      SELECT name, id
-      FROM hive.accounts_view
-    ) hav ON hav.name = cab.account
-    JOIN LATERAL (
-      SELECT DISTINCT ON (account_id)
-        account_id, proxy_id, operation_id
-      FROM (
-        SELECT account_id, proxy_id, operation_id
-        FROM hafbe_app.account_proxies
-        WHERE proxy_id = _voter_id AND proxy IS TRUE
-        ORDER BY operation_id DESC
-      ) proxy_ops
-    ) ap ON ap.account_id = hav.id
-    WHERE (SELECT hafbe_backend.get_acc_unproxy_op(ap.account_id, ap.proxy_id, ap.operation_id)) IS NULL AND cab.nai = 37
-  ) is_null;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
+    SELECT
+      ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY operation_id DESC) AS row_n,
+      account_id, proxy, operation_id
+    FROM hafbe_app.account_proxies
+    WHERE proxy_id = _voter_id
+  ) row_count
 
-CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT, _witness_id INT)
-RETURNS TABLE (
-  proxied BOOLEAN
-)
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT CASE WHEN (
-    SELECT proxy_id
-    FROM (
-      SELECT account_id, proxy_id, operation_id
-      FROM hafbe_app.account_proxies
-      WHERE proxy_id = _witness_id AND account_id = _voter_id AND proxy IS TRUE
-      ORDER BY operation_id DESC
-      LIMIT 1
-    ) ap
-    JOIN LATERAL (
-      SELECT _unprox_op_id
-      FROM hafbe_backend.get_acc_unproxy_op(account_id, proxy_id, operation_id)
-      WHERE _unprox_op_id IS NULL
-    ) unprox ON TRUE
-  )
-  IS NOT NULL THEN TRUE ELSE FALSE END;
+  JOIN (
+    SELECT name, id
+    FROM hive.accounts_view
+  ) hav ON hav.id = account_id
+
+  JOIN (
+    SELECT
+      CASE WHEN balance < 0 THEN 0 ELSE balance END AS balance,
+      account
+    FROM btracker_app.current_account_balances cab
+    WHERE nai = 37
+  ) cab ON cab.account = hav.name
+
+  WHERE row_n = 1 AND proxy = TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
