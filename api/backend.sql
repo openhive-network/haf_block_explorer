@@ -4,6 +4,10 @@ CREATE SCHEMA IF NOT EXISTS hafbe_backend;
 
 CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;
 
+/*
+general
+*/
+
 CREATE FUNCTION hafbe_backend.get_head_block_num()
 RETURNS INT
 LANGUAGE 'plpgsql'
@@ -47,6 +51,10 @@ BEGIN
 END
 $$
 ;
+
+/*
+operation types
+*/
 
 CREATE FUNCTION hafbe_backend.format_op_types(_operation_id BIGINT, _operation_name TEXT, _is_virtual BOOLEAN)
 RETURNS JSON
@@ -173,6 +181,10 @@ END
 $$
 ;
 
+/*
+operations
+*/
+
 CREATE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
@@ -264,47 +276,6 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __block_api_data JSON = (((SELECT hafbe_backend.get_block_api_data(_block_num))->'result')->'block');
-BEGIN
-  RETURN json_build_object(
-    'block_num', _block_num,
-    'block_hash', __block_api_data->>'block_id',
-    'timestamp', __block_api_data->>'timestamp',
-    'witness', __block_api_data->>'witness',
-    'signing_key', __block_api_data->>'signing_key'
-  );
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.get_block_api_data(_block_num INT)
-RETURNS JSON
-LANGUAGE 'plpython3u'
-AS 
-$$
-  import subprocess
-  import json
-
-  return json.dumps(
-    json.loads(
-      subprocess.check_output([
-        """
-        curl -X POST https://api.hive.blog \
-          -H 'Content-Type: application/json' \
-          -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
-        """ % _block_num
-      ], shell=True).decode('utf-8')
-    )
-  )
-$$
-;
-
 CREATE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
 RETURNS SETOF hafbe_backend.operations 
 AS
@@ -358,12 +329,83 @@ END
 $$
 ;
 
+/*
+Block stats
+*/
+
+CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __block_api_data JSON = (((SELECT hafbe_backend.get_block_api_data(_block_num))->'result')->'block');
+BEGIN
+  RETURN json_build_object(
+    'block_num', _block_num,
+    'block_hash', __block_api_data->>'block_id',
+    'timestamp', __block_api_data->>'timestamp',
+    'witness', __block_api_data->>'witness',
+    'signing_key', __block_api_data->>'signing_key'
+  );
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_block_api_data(_block_num INT)
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "block_api.get_block", "params": {"block_num": %d}, "id": null}'
+        """ % _block_num
+      ], shell=True).decode('utf-8')
+    )
+  )
+$$
+;
+
+/*
+witnesses and voters
+*/
+
+CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
+RETURNS TABLE (
+  proxied_vests NUMERIC
+)
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT SUM(av.vests)
+  FROM hafbe_app.current_account_proxies cap
+  JOIN (
+    SELECT account_id, vests
+    FROM hafbe_app.account_vests
+  ) av ON av.account_id = cap.account_id
+  WHERE proxy_id = _voter_id AND proxy = TRUE;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
 CREATE TYPE hafbe_backend.witness_voters AS (
   account TEXT,
   vests NUMERIC,
   account_vests BIGINT,
   proxied_vests NUMERIC,
-  operation_id BIGINT
+  timestamp TIMESTAMP
 );
 
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
@@ -376,28 +418,19 @@ BEGIN
     CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests AS vests,
     CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
     proxied_vests,
-    operation_id
-  FROM (
-    SELECT
-      voter_id, operation_id
-    FROM (
-      SELECT
-        ROW_NUMBER() OVER (PARTITION BY voter_id ORDER BY operation_id DESC) AS row_n,
-        voter_id, approve, operation_id
-      FROM hafbe_app.witness_votes
-      WHERE witness_id = _witness_id
-    ) row_count
-    WHERE row_n = 1 AND approve = TRUE
-  ) wv
+    timestamp
+  FROM hafbe_app.witness_votes_history
 
   JOIN LATERAL (
-    SELECT proxied_vests
+    SELECT CASE WHEN proxied_vests IS NULL THEN 0 ELSE proxied_vests END AS proxied_vests
     FROM hafbe_backend.get_proxied_vests(voter_id)
   ) prox_vests ON TRUE
 
   JOIN LATERAL (
-    SELECT proxied
-    FROM hafbe_backend.is_voter_proxied(voter_id)
+    SELECT CASE WHEN proxy IS NULL THEN FALSE ELSE TRUE END AS proxied
+    FROM hafbe_app.current_account_proxies
+    WHERE account_id = voter_id AND proxy = TRUE
+    LIMIT 1
   ) is_prox ON TRUE
 
   JOIN (
@@ -408,7 +441,9 @@ BEGIN
   LEFT JOIN (
     SELECT account_id, vests
     FROM hafbe_app.account_vests
-  ) av ON is_prox.proxied IS FALSE AND av.account_id = voter_id;
+  ) av ON is_prox.proxied IS FALSE AND av.account_id = voter_id
+  
+  WHERE witness_id = _witness_id AND approve = TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -417,30 +452,16 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE TYPE hafbe_backend.witness_voters_history AS (
-  account TEXT,
-  vests NUMERIC,
-  account_vests BIGINT,
-  proxied_vests NUMERIC,
-  timestamp TIMESTAMP
-);
-
 CREATE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_backend.witness_voters_history
+RETURNS SETOF hafbe_backend.witness_voters
 LANGUAGE 'plpgsql'
 AS 
 $$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
-      SELECT account, vests, account_vests, proxied_vests, hov.timestamp
+      SELECT account, vests, account_vests, proxied_vests, timestamp
       FROM hafbe_backend.get_set_of_witness_voters(%L)
-      
-      JOIN LATERAL (
-        SELECT timestamp
-        FROM hive.operations_view
-        WHERE id = operation_id
-      ) hov ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -464,60 +485,6 @@ BEGIN
   ) result;
 END
 $$
-;
-
-CREATE FUNCTION hafbe_backend.is_voter_proxied(_voter_id INT)
-RETURNS TABLE (
-  proxied BOOLEAN
-)
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT proxy
-  FROM (
-    SELECT
-      ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY operation_id DESC) AS row_n,
-      proxy
-    FROM hafbe_app.account_proxies
-    WHERE account_id = _voter_id
-  ) row_count
-  WHERE row_n = 1;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
-RETURNS TABLE (
-  proxied_vests NUMERIC
-)
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT (SUM(av.vests))::NUMERIC
-  FROM (
-    SELECT
-      ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY operation_id DESC) AS row_n,
-      account_id, proxy, operation_id
-    FROM hafbe_app.account_proxies ap
-    WHERE proxy_id = _voter_id
-  ) row_count
-
-  JOIN (
-    SELECT account_id, vests
-    FROM hafbe_app.account_vests
-  ) av ON av.account_id = row_count.account_id
-
-  WHERE row_n = 1 AND proxy = TRUE;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
 ;
 
 CREATE TYPE hafbe_backend.witnesses AS (
@@ -895,6 +862,10 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
+
+/*
+account data
+*/
 
 CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON

@@ -15,27 +15,49 @@ BEGIN
   INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block)
   VALUES (True, 0);
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes (
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
-    operation_id BIGINT NOT NULL
+    timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS witness_votes_witness_id ON hafbe_app.witness_votes USING btree (witness_id);
-  CREATE INDEX IF NOT EXISTS witness_votes_voter_id ON hafbe_app.witness_votes USING btree (voter_id);
-  CREATE INDEX IF NOT EXISTS witness_votes_operation_id ON hafbe_app.witness_votes USING btree (operation_id);
+  CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id ON hafbe_app.witness_votes_history USING btree (witness_id);
+  CREATE INDEX IF NOT EXISTS witness_votes_history_voter_id ON hafbe_app.witness_votes_history USING btree (voter_id);
+  CREATE INDEX IF NOT EXISTS witness_votes_history_timestamp ON hafbe_app.witness_votes_history USING btree (timestamp);
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies (
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
+    approve BOOLEAN NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+
+    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
+  ) INHERITS (hive.hafbe_app);
+
+  CREATE INDEX IF NOT EXISTS current_witness_votes_approve ON hafbe_app.current_witness_votes USING btree (approve);
+  CREATE INDEX IF NOT EXISTS current_witness_votes_timestamp ON hafbe_app.current_witness_votes USING btree (timestamp);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
     proxy_id INT,
     proxy BOOLEAN,
-    operation_id BIGINT NOT NULL
+    timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS account_proxies_account_id ON hafbe_app.account_proxies USING btree (account_id);
-  CREATE INDEX IF NOT EXISTS account_proxies_proxy_id ON hafbe_app.account_proxies USING btree (proxy_id);
-  CREATE INDEX IF NOT EXISTS account_proxies_operation_id ON hafbe_app.account_proxies USING btree (operation_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_account_id ON hafbe_app.account_proxies_history USING btree (account_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_proxy_id ON hafbe_app.account_proxies_history USING btree (proxy_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp ON hafbe_app.account_proxies_history USING btree (timestamp);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
+    account_id INT NOT NULL,
+    proxy_id INT,
+    proxy BOOLEAN NOT NULL,
+
+    CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id, proxy_id)
+  ) INHERITS (hive.hafbe_app);
+
+  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy ON hafbe_app.current_account_proxies USING btree (proxy);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -45,15 +67,11 @@ BEGIN
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_operation_cache (
-    uq_key TEXT NOT NULL,
     account_id INT NOT NULL,
     op_type_id INT NOT NULL,
 
-    CONSTRAINT uq_account_operation_cache UNIQUE (uq_key)
+    CONSTRAINT pk_account_operation_cache PRIMARY KEY (account_id, op_type_id)
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS account_operation_cache_account_id ON hafbe_app.account_operation_cache USING btree (account_id);
-  CREATE INDEX IF NOT EXISTS account_operation_cache_op_type_id ON hafbe_app.account_operation_cache USING btree (op_type_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
     account_id INT NOT NULL,
@@ -143,76 +161,112 @@ $$
 DECLARE
   __last_reported_block INT := 0;
   __unproxy_op RECORD;
-  __last_op_id BIGINT;
+  __last_op_time TIMESTAMP;
   __balance_change RECORD;
+  __hardfork_one_block_num INT = 905693;
 BEGIN
+  SELECT INTO __last_op_time CASE WHEN timestamp IS NULL THEN to_timestamp(0) ELSE timestamp END
+  FROM hafbe_app.account_proxies_history ORDER BY timestamp DESC LIMIT 1;
+
+  -- main processing loop
   FOR b IN _from .. _to
   LOOP
-    INSERT INTO hafbe_app.witness_votes (witness_id, voter_id, approve, operation_id)
+    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
     SELECT
-      hafbe_app.get_account_id(approve_operation->>'witness'),
-      hafbe_app.get_account_id(approve_operation->>'account'),
-      (approve_operation->>'approve')::BOOLEAN,
-      id
+      hafbe_app.get_account_id((body::JSON)->'value'->>'witness'),
+      hafbe_app.get_account_id((body::JSON)->'value'->>'account'),
+      ((body::JSON)->'value'->>'approve')::BOOLEAN,
+      timestamp
+    FROM hive.btracker_app_operations_view
+    WHERE op_type_id = 12 AND block_num = b;
+
+    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
+    SELECT witness_id, voter_id, approve, timestamp
     FROM (
       SELECT
-        (body::JSON)->'value' AS approve_operation,
-        id
-      FROM hive.btracker_app_operations_view
-      WHERE op_type_id = 12 AND block_num = b
-    ) hov
-    ON CONFLICT DO NOTHING;
-
-    SELECT operation_id FROM hafbe_app.account_proxies ORDER BY operation_id DESC LIMIT 1 INTO __last_op_id;
+        -- must take latest op in block, in case voter does vote/unvote on same block
+        ROW_NUMBER() OVER (PARTITION BY witness_id, voter_id ORDER BY timestamp DESC) AS row_n,
+        witness_id, voter_id, approve, timestamp
+      FROM (
+        SELECT
+          hafbe_app.get_account_id((body::JSON)->'value'->>'witness') AS witness_id,
+          hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS voter_id,
+          ((body::JSON)->'value'->>'approve')::BOOLEAN AS approve,
+          timestamp
+        FROM hive.btracker_app_operations_view
+        WHERE op_type_id = 12 AND block_num = b
+      ) cur_votes
+    ) row_count
+    WHERE row_n = 1 AND approve = TRUE
     
-    INSERT INTO hafbe_app.account_proxies (account_id, proxy_id, proxy, operation_id)
+    ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
+      witness_id = EXCLUDED.witness_id,
+      voter_id = EXCLUDED.voter_id,
+      approve = EXCLUDED.approve,
+      timestamp = EXCLUDED.timestamp
+    ;
+    
+    INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
     SELECT
-      account_id,
-      proxy_id,
+      account_id, proxy_id,
       CASE WHEN proxy_id IS NULL THEN FALSE ELSE TRUE END,
-      id
+      timestamp
     FROM (
       SELECT
         hafbe_app.get_account_id(proxy_operation->>'account') AS account_id,
         hafbe_app.get_account_id(proxy_operation->>'proxy') AS proxy_id,
-        id
+        timestamp
       FROM (
         SELECT
           (body::JSON)->'value' AS proxy_operation,
-          id
+          timestamp
         FROM hive.btracker_app_operations_view
         WHERE op_type_id = 13 AND block_num = b
       ) hov
-    ) acc_ids
-    ON CONFLICT DO NOTHING;
+    ) acc_ids;
   
-    INSERT INTO hafbe_app.account_operation_cache (uq_key, account_id, op_type_id)
-    SELECT
-      account_id::TEXT || '-' || op_type_id::TEXT,
-      account_id,
-      op_type_id
-    FROM hive.btracker_app_account_operations_view haov
+    INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
+    SELECT account_id, op_type_id
+    FROM hive.btracker_app_account_operations_view
     WHERE block_num = b
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
   END LOOP;
 
   -- postprocessing to fill null values of proxy_id when account does unproxy
   FOR __unproxy_op IN
-    SELECT account_id, operation_id
-    FROM hafbe_app.account_proxies
-    WHERE operation_id > __last_op_id AND proxy_id IS NULL
+    SELECT account_id, timestamp
+    FROM hafbe_app.account_proxies_history
+    WHERE timestamp > __last_op_time AND proxy_id IS NULL
   LOOP
-    UPDATE hafbe_app.account_proxies
+    UPDATE hafbe_app.account_proxies_history
     SET proxy_id = (
       SELECT proxy_id
-      FROM hafbe_app.account_proxies
-      WHERE operation_id < __unproxy_op.operation_id AND account_id = __unproxy_op.account_id AND proxy_id IS NOT NULL
-      ORDER BY operation_id DESC
+      FROM hafbe_app.account_proxies_history
+      WHERE timestamp < __unproxy_op.timestamp AND account_id = __unproxy_op.account_id AND proxy_id IS NOT NULL
+      ORDER BY timestamp DESC
       LIMIT 1
     )
     WHERE account_id = __unproxy_op.account_id AND proxy_id IS NULL;
   END LOOP;
-  
+
+  -- create data from account_proxies_history, after null values are filled
+  INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, proxy)
+  SELECT account_id, proxy_id, proxy
+  FROM (
+    SELECT
+      ROW_NUMBER() OVER (PARTITION BY account_id, proxy_id ORDER BY timestamp DESC) AS row_n,
+      account_id, proxy_id, proxy
+    FROM hafbe_app.account_proxies_history
+    WHERE timestamp > __last_op_time
+  ) row_count
+  WHERE row_n = 1 AND proxy = TRUE
+  ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
+    account_id = EXCLUDED.account_id,
+    proxy_id = EXCLUDED.proxy_id,
+    proxy = EXCLUDED.proxy
+  ;
+
+  -- get impacted vests balance for block range and update account_vests
   FOR __balance_change IN
     WITH balance_impacting_ops AS (
       SELECT hot.id
@@ -225,7 +279,10 @@ BEGIN
     JOIN balance_impacting_ops b ON hov.op_type_id = b.id
     JOIN LATERAL (
       SELECT account_name, amount
-      FROM hive.get_impacted_balances(hov.body, TRUE) -- TODO: lookout for hardfork op
+      FROM hive.get_impacted_balances(
+        hov.body,
+        CASE WHEN block_num >= __hardfork_one_block_num THEN TRUE ELSE FALSE END
+      )
       WHERE asset_symbol_nai = 37
     ) bio ON TRUE
     WHERE hov.block_num BETWEEN _from AND _to
