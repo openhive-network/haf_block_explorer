@@ -408,17 +408,98 @@ CREATE TYPE hafbe_backend.witness_voters AS (
   timestamp TIMESTAMP
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT)
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT = 2147483647, _order_by TEXT = 'vests', _order_is TEXT = 'asc')
 RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
 BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+
+    SELECT account, vests, account_vests, proxied_vests, timestamp
+    FROM (
+      SELECT
+        hav.name::TEXT AS account,
+        CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests AS vests,
+        CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
+        proxied_vests, timestamp
+      FROM hafbe_app.current_witness_votes
+
+      JOIN LATERAL (
+        SELECT CASE WHEN proxied_vests IS NULL THEN 0 ELSE proxied_vests END AS proxied_vests
+        FROM hafbe_backend.get_proxied_vests(voter_id)
+      ) prox_vests ON TRUE
+
+      JOIN LATERAL (
+        SELECT CASE WHEN proxy IS NULL THEN FALSE ELSE TRUE END AS proxied
+        FROM hafbe_app.current_account_proxies
+        WHERE account_id = voter_id AND proxy = TRUE
+        LIMIT 1
+      ) is_prox ON TRUE
+
+      JOIN (
+        SELECT name, id
+        FROM hive.accounts_view
+      ) hav ON hav.id = voter_id
+
+      LEFT JOIN LATERAL (
+        SELECT vests
+        FROM hafbe_app.account_vests
+        WHERE account_id = voter_id
+      ) av ON is_prox.proxied IS FALSE
+      
+      WHERE witness_id = %L AND approve = TRUE
+    ) not_ordered
+    
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    LIMIT %L;
+
+    $query$,
+    _witness_id, _order_is, _order_by, _order_is, _order_by, _limit
+  ) res;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS 
+$$
+BEGIN
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_set_of_witness_voters(_witness_id, _limit, _order_by, _order_is)
+    ) arr
+  ) result;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_witness_voters_vests(_witness_id INT, _include_today BOOLEAN)
+RETURNS TABLE (
+  _vests NUMERIC
+)
+AS
+$function$
+DECLARE
+  __timestamp_upper_lim TIMESTAMP = (
+    SELECT CASE WHEN _include_today IS TRUE THEN
+      now() + '1 day'
+    ELSE
+      '2018-07-16 04:23:12'
+      --(SELECT timestamp FROM hive.operations_view WHERE timestamp >= 'today' ORDER BY id LIMIT 1)
+    END
+  );
+BEGIN
   RETURN QUERY SELECT
-    hav.name::TEXT AS account,
-    CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests AS vests,
-    CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
-    proxied_vests,
-    timestamp
+    CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests
   FROM hafbe_app.current_witness_votes
 
   JOIN LATERAL (
@@ -433,18 +514,15 @@ BEGIN
     LIMIT 1
   ) is_prox ON TRUE
 
-  JOIN (
-    SELECT name, id
-    FROM hive.accounts_view
-  ) hav ON hav.id = voter_id
-
   LEFT JOIN LATERAL (
     SELECT vests
     FROM hafbe_app.account_vests
     WHERE account_id = voter_id
   ) av ON is_prox.proxied IS FALSE
-  
-  WHERE witness_id = _witness_id AND approve = TRUE;
+
+  WHERE
+    witness_id = _witness_id AND approve = TRUE AND
+    timestamp < __timestamp_upper_lim;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -453,48 +531,13 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_voters_ordered(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_backend.witness_voters
-LANGUAGE 'plpgsql'
-AS 
-$$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-      SELECT account, vests, account_vests, proxied_vests, timestamp
-      FROM hafbe_backend.get_set_of_witness_voters(%L)
-      ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-      LIMIT %L;
-    $query$, _witness_id, _order_is, _order_by, _order_is, _order_by, _limit
-  ) res;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS 
-$$
-BEGIN
-  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_witness_voters_ordered(_witness_id, _limit, _order_by, _order_is)
-    ) arr
-  ) result;
-END
-$$
-;
-
 CREATE TYPE hafbe_backend.witnesses AS (
   witness TEXT,
   url TEXT,
   votes NUMERIC,
-  votes_daily_change BIGINT,
+  votes_daily_change NUMERIC,
   voters_num INT,
-  voters_num_change INT,
+  voters_num_daily_change INT,
   price_feed TEXT, --JSON,
   bias INT,
   feed_age INTERVAL,
@@ -507,16 +550,14 @@ CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
 RETURNS SETOF hafbe_backend.witnesses
 AS
 $function$
-DECLARE
-  __first_op_today BIGINT = (SELECT id FROM hive.operations_view WHERE timestamp >= 'today'::TIMESTAMP ORDER BY id LIMIT 1);
 BEGIN
   RETURN QUERY SELECT
     witness::TEXT,
     url_data->>'url' AS url,
     votes,
-    ((votes_change_data->>'votes')::NUMERIC - votes)::BIGINT AS votes_daily_change,
+    votes_daily_change,
     voters_num,
-    ((votes_change_data->>'voters_num')::INT - voters_num)::INT AS voters_num_change,
+    voters_num_daily_change,
     feed_data->>'exchange_rate' AS price_feed,
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
@@ -528,34 +569,57 @@ BEGIN
     SELECT
       witness,
       votes,
+      votes_daily_change,
       voters_num,
-      hafbe_backend.get_witness_votes_stats(witness_id, __first_op_today) AS votes_change_data,
+      voters_num_daily_change,
       hafbe_backend.get_witness_url(witness_id) AS url_data,
       hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data,
       hafbe_backend.get_witness_block_size(witness_id) AS block_size_data,
       hafbe_backend.get_witness_signing_key(witness_id) AS signing_data
     FROM (
       SELECT
-        witness_id,
-        witness,
-        (votes_data->>'votes')::NUMERIC AS votes,
-        (votes_data->>'voters_num')::INT AS voters_num
-      FROM (
-        SELECT
-          wv.witness_id AS witness_id,
-          hav.name AS witness,
-          hafbe_backend.get_witness_votes_stats(wv.witness_id) AS votes_data
-        FROM (
-          SELECT DISTINCT witness_id
-          FROM hafbe_app.witness_votes
-        ) wv
+        wv.witness_id AS witness_id,
+        hav.name AS witness,
 
-        JOIN (
-          SELECT name, id
-          FROM hive.accounts_view
-        ) hav ON hav.id = wv.witness_id
-      ) witness_votes
+        CASE WHEN all_votes.votes IS NULL THEN 0 ELSE all_votes.votes END AS votes,
+        (CASE WHEN all_votes.votes IS NULL THEN 0 ELSE all_votes.votes END)
+          -
+        (CASE WHEN not_today_votes.votes IS NULL THEN 0 ELSE not_today_votes.votes END)
+        AS votes_daily_change,
+
+        CASE WHEN all_votes.voters_num IS NULL THEN 0 ELSE all_votes.voters_num END AS voters_num,
+
+        (CASE WHEN all_votes.voters_num IS NULL THEN 0 ELSE all_votes.voters_num END)
+          -
+        (CASE WHEN not_today_votes.voters_num IS NULL THEN 0 ELSE not_today_votes.voters_num END)
+        AS voters_num_daily_change
+
+      FROM (
+        SELECT DISTINCT witness_id
+        FROM hafbe_app.current_witness_votes
+      ) wv
+
+      JOIN (
+        SELECT name, id
+        FROM hive.accounts_view
+      ) hav ON hav.id = wv.witness_id
+
+      JOIN LATERAL (
+        SELECT
+          SUM(_vests)::NUMERIC AS votes,
+          COUNT(*)::INT AS voters_num
+        FROM hafbe_backend.get_witness_voters_vests(wv.witness_id, TRUE)
+      ) all_votes ON TRUE
+
+      JOIN LATERAL (
+        SELECT
+          SUM(_vests)::NUMERIC AS votes,
+          COUNT(*)::INT AS voters_num
+        FROM hafbe_backend.get_witness_voters_vests(wv.witness_id, FALSE)
+      ) not_today_votes ON TRUE
+      
     ) votes_and_num
+
     ORDER BY votes DESC
     LIMIT _limit
   ) daily_change;
@@ -580,32 +644,6 @@ BEGIN
   ) result;
 END
 $$
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_votes_stats(_witness_id INT, _first_op_today BIGINT = 9223372036854775807)
-RETURNS TABLE (
-  votes NUMERIC,
-  voters_num INT
-)
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT
-    CASE WHEN votes IS NULL THEN 0 ELSE votes END,
-    voters_num
-  FROM (
-    SELECT
-      SUM(vests)::NUMERIC AS votes,
-      COUNT(*)::INT AS voters_num
-    FROM hafbe_backend.get_set_of_witness_voters(_witness_id)
-    WHERE operation_id < _first_op_today
-  ) result;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
 ;
 
 CREATE FUNCTION hafbe_backend.latest_op_id()

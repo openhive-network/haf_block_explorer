@@ -78,6 +78,8 @@ BEGIN
     CONSTRAINT pk_account_vests_account PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
 
+  CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
+
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
