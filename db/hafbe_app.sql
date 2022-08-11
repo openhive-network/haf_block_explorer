@@ -22,10 +22,6 @@ BEGIN
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id ON hafbe_app.witness_votes_history USING btree (witness_id);
-  CREATE INDEX IF NOT EXISTS witness_votes_history_voter_id ON hafbe_app.witness_votes_history USING btree (voter_id);
-  CREATE INDEX IF NOT EXISTS witness_votes_history_timestamp ON hafbe_app.witness_votes_history USING btree (timestamp);
-
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
@@ -34,9 +30,8 @@ BEGIN
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS current_witness_votes_approve ON hafbe_app.current_witness_votes USING btree (approve);
-  CREATE INDEX IF NOT EXISTS current_witness_votes_timestamp ON hafbe_app.current_witness_votes USING btree (timestamp);
+  
+  CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id_approve ON hafbe_app.current_witness_votes USING btree (witness_id, approve);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
@@ -44,10 +39,12 @@ BEGIN
     proxy BOOLEAN,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS account_proxies_history_account_id ON hafbe_app.account_proxies_history USING btree (account_id);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_proxy_id ON hafbe_app.account_proxies_history USING btree (proxy_id);
+  
   CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp ON hafbe_app.account_proxies_history USING btree (timestamp);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_account_id ON hafbe_app.account_proxies_history USING btree (timestamp, account_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_proxy_id ON hafbe_app.account_proxies_history USING btree (timestamp, proxy_id);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_proxy_id_proxy ON hafbe_app.account_proxies_history USING btree (timestamp, proxy_id, proxy);
+  CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_proxy_id ON hafbe_app.account_proxies_history USING btree (account_id, proxy_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
@@ -56,8 +53,9 @@ BEGIN
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id, proxy_id)
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy ON hafbe_app.current_account_proxies USING btree (proxy);
+  
+  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_proxy ON hafbe_app.current_account_proxies USING btree (proxy_id, proxy);
+  CREATE INDEX IF NOT EXISTS current_account_proxies_account_id_proxy ON hafbe_app.current_account_proxies USING btree (account_id, proxy);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -163,10 +161,18 @@ DECLARE
   __unproxy_op RECORD;
   __last_op_time TIMESTAMP;
   __balance_change RECORD;
-  __hardfork_one_block_num INT = 905693;
+  __hardfork_one_op_id INT = 1176568;
 BEGIN
   SELECT INTO __last_op_time CASE WHEN timestamp IS NULL THEN to_timestamp(0) ELSE timestamp END
   FROM hafbe_app.account_proxies_history ORDER BY timestamp DESC LIMIT 1;
+
+  IF (
+    SELECT ((body::JSON)->'value'->>'hardfork_id')::INT
+    FROM hive.operations_view
+    WHERE id = 1176568
+  ) != 1 THEN
+    SELECT id FROM hive.operations_view WHERE op_type_id = 60 ORDER BY id LIMIT 1 INTO __hardfork_one_op_id;
+  END IF;
 
   -- main processing loop
   FOR b IN _from .. _to
@@ -197,7 +203,7 @@ BEGIN
         WHERE op_type_id = 12 AND block_num = b
       ) cur_votes
     ) row_count
-    WHERE row_n = 1 AND approve = TRUE
+    WHERE row_n = 1
     
     ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
       witness_id = EXCLUDED.witness_id,
@@ -259,7 +265,8 @@ BEGIN
     FROM hafbe_app.account_proxies_history
     WHERE timestamp > __last_op_time
   ) row_count
-  WHERE row_n = 1 AND proxy = TRUE
+  WHERE row_n = 1
+
   ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
     account_id = EXCLUDED.account_id,
     proxy_id = EXCLUDED.proxy_id,
@@ -281,7 +288,7 @@ BEGIN
       SELECT account_name, amount
       FROM hive.get_impacted_balances(
         hov.body,
-        CASE WHEN block_num >= __hardfork_one_block_num THEN TRUE ELSE FALSE END
+        CASE WHEN hov.id > __hardfork_one_op_id THEN TRUE ELSE FALSE END
       )
       WHERE asset_symbol_nai = 37
     ) bio ON TRUE

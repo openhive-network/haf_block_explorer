@@ -419,7 +419,7 @@ BEGIN
     CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
     proxied_vests,
     timestamp
-  FROM hafbe_app.witness_votes_history
+  FROM hafbe_app.current_witness_votes
 
   JOIN LATERAL (
     SELECT CASE WHEN proxied_vests IS NULL THEN 0 ELSE proxied_vests END AS proxied_vests
@@ -438,10 +438,11 @@ BEGIN
     FROM hive.accounts_view
   ) hav ON hav.id = voter_id
 
-  LEFT JOIN (
-    SELECT account_id, vests
+  LEFT JOIN LATERAL (
+    SELECT vests
     FROM hafbe_app.account_vests
-  ) av ON is_prox.proxied IS FALSE AND av.account_id = voter_id
+    WHERE account_id = voter_id
+  ) av ON is_prox.proxied IS FALSE
   
   WHERE witness_id = _witness_id AND approve = TRUE;
 END
