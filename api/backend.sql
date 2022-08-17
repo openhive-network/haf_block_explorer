@@ -408,7 +408,7 @@ CREATE TYPE hafbe_backend.witness_voters AS (
   timestamp TIMESTAMP
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT = 2147483647, _order_by TEXT = 'vests', _order_is TEXT = 'asc')
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_backend.witness_voters
 AS
 $function$
@@ -538,8 +538,8 @@ BEGIN
 
     -- in case hafbe is not up to sync with head block yet
     RETURN QUERY SELECT
-      0::NUMERIC,
-      0::INT
+      NULL::NUMERIC,
+      NULL::INT
     ;
   ELSE
 
@@ -618,61 +618,59 @@ BEGIN
   END IF;
 
   RETURN QUERY SELECT
-    witness::TEXT,
-    url_data->>'url' AS url,
-    votes,
-    votes_daily_change,
-    voters_num,
-    voters_num_daily_change,
+    hav.name::TEXT,
+    url,
+    CASE WHEN all_stats.votes IS NULL THEN 0 ELSE all_stats.votes END AS votes,
+    CASE WHEN todays_votes.votes IS NULL THEN 0 ELSE todays_votes.votes END AS votes_daily_change,
+    CASE WHEN all_stats.voters_num IS NULL THEN 0 ELSE all_stats.voters_num END voters_num,
+    CASE WHEN todays_votes.voters_num IS NULL THEN 0 ELSE todays_votes.voters_num END voters_num_daily_change,
     feed_data->>'exchange_rate' AS price_feed,
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
     (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
-    (block_size_data->>'block_size')::INT AS block_size,
-    signing_data->>'signing_key' AS signing_key,
+    block_size::INT AS block_size,
+    signing_key,
     '1.25.0' AS version
   FROM (
     SELECT
-      hafbe_backend.get_witness_url(witness_id) AS url_data,
-      hafbe_backend.get_witness_exchange_rate(witness_id) AS feed_data,
-      hafbe_backend.get_witness_block_size(witness_id) AS block_size_data,
-      hafbe_backend.get_witness_signing_key(witness_id) AS signing_data,
-    
-      hav.name AS witness,
-      all_stats.votes AS votes,
-      CASE WHEN todays_votes.votes IS NULL THEN 0 ELSE todays_votes.votes END AS votes_daily_change,
-      all_stats.voters_num AS voters_num,
-      CASE WHEN todays_votes.voters_num IS NULL THEN 0 ELSE todays_votes.voters_num END voters_num_daily_change
-    FROM (
-      SELECT
-        witness_id,
-        CASE WHEN all_votes.votes IS NULL THEN 0 ELSE all_votes.votes END AS votes,
-        CASE WHEN all_votes.voters_num IS NULL THEN 0 ELSE all_votes.voters_num END AS voters_num
-      FROM (
-        SELECT DISTINCT witness_id
-        FROM hafbe_app.current_witness_votes
-      ) wv
-
-      JOIN LATERAL (
-        SELECT _votes AS votes, _voters_num AS voters_num
-        FROM hafbe_backend.get_witness_votes(witness_id)
-      ) all_votes ON TRUE
-
-      ORDER BY votes DESC
-      LIMIT _limit
-    ) all_stats
-
+      witness_id,
+      CASE WHEN all_votes.votes IS NULL THEN 0 ELSE all_votes.votes END AS votes,
+      CASE WHEN all_votes.voters_num IS NULL THEN 0 ELSE all_votes.voters_num END AS voters_num
+    FROM hafbe_app.current_witnesses
     JOIN LATERAL (
       SELECT _votes AS votes, _voters_num AS voters_num
-      FROM hafbe_backend.get_witness_votes_change(witness_id, __today)
-    ) todays_votes ON TRUE
+      FROM hafbe_backend.get_witness_votes(witness_id)
+    ) all_votes ON TRUE
 
-    JOIN (
-      SELECT name, id
-      FROM hive.accounts_view
-    ) hav ON hav.id = witness_id
+    ORDER BY votes DESC
+    LIMIT _limit
+  ) all_stats
 
-  ) daily_change_stats;
+  JOIN LATERAL (
+    SELECT _votes AS votes, _voters_num AS voters_num
+    FROM hafbe_backend.get_witness_votes_change(witness_id, __today)
+  ) todays_votes ON TRUE
+
+  JOIN (
+    SELECT name, id
+    FROM hive.accounts_view
+  ) hav ON hav.id = witness_id
+
+  JOIN LATERAL(
+    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'url', '{42,11}')->>'url' AS url
+  ) wd_url ON TRUE
+  
+  JOIN LATERAL(
+    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'exchange_rate', '{42,7}') AS feed_data
+  ) wd_rate ON TRUE
+  
+  JOIN LATERAL(
+    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'block_size', '{42,30,14,11}')->>'maximum_block_size' AS block_size
+  ) wd_size ON TRUE
+
+  JOIN LATERAL(
+    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'signing_key', '{42,11}')->>'signing_key' AS signing_key
+  ) wd_key ON TRUE;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -692,17 +690,6 @@ BEGIN
       SELECT hafbe_backend.get_set_of_witnesses(_limit)
     ) arr
   ) result;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.latest_op_id()
-RETURNS JSON
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN id FROM hive.operations_view ORDER BY id DESC LIMIT 1;
 END
 $$
 ;
@@ -734,216 +721,63 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_url(_witness_id INT, _last_op_id BIGINT = NULL)
+CREATE FUNCTION hafbe_backend.parse_and_unpack_witness_data(_witness_id INT, _attr_name TEXT, _op_type_array INT[], _last_op_id BIGINT = NULL)
 RETURNS JSON
 AS
 $function$
+DECLARE
+  __most_recent_op RECORD;
+  __result TEXT;
+  __witness_set_props_attr_name TEXT;
 BEGIN
-  IF _last_op_id IS NULL THEN
-    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+  IF _last_op_id <= 0 THEN
+    RETURN json_build_object (
+      _attr_name, NULL
+    );
   END IF;
 
-  RETURN to_json(result) FROM (
-    SELECT
-      CASE WHEN op_type_id = 42 AND url IS NOT NULL THEN
-        hafbe_backend.unpack_from_vector(url)
-      ELSE url END AS url
-    FROM (
-      SELECT
-        CASE WHEN op_type_id = 42 AND url IS NULL THEN
-          (SELECT f->>'url' FROM hafbe_backend.get_witness_url(_witness_id, op_id - 1) f)
-        ELSE url END AS url,
-        op_type_id
-      FROM (
-        SELECT
-          CASE WHEN op_type_id = 42 THEN
-            hafbe_backend.parse_witness_set_props(op, 'url')
-          ELSE
-            op->>'url'
-          END AS url,
-          op_type_id,
-          id AS op_id
-        FROM (
-          SELECT
-            (body::JSON)->'value' AS op,
-            op_type_id, id
-          FROM hive.operations_view
-
-          JOIN (
-            SELECT operation_id
-            FROM hive.account_operations_view
-            WHERE account_id = _witness_id AND (op_type_id = 42 OR op_type_id = 11) AND operation_id <= _last_op_id
-            ORDER BY operation_id DESC
-            LIMIT 1
-          ) haov ON id = haov.operation_id
-        ) op
-        ) price
-    ) recur
-  ) result;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_block_size(_witness_id INT, _last_op_id BIGINT = NULL)
-RETURNS JSON
-AS
-$function$
-BEGIN
   IF _last_op_id IS NULL THEN
-    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+    SELECT id FROM hive.operations_view ORDER BY id DESC LIMIT 1 INTO _last_op_id;
   END IF;
 
-  RETURN to_json(result) FROM (
-    SELECT
-      CASE WHEN op_type_id = 42 AND block_size IS NOT NULL THEN
-        hafbe_backend.unpack_from_vector(block_size)
-      ELSE block_size END AS block_size
-    FROM (
-      SELECT
-        CASE WHEN op_type_id = 42 AND block_size IS NULL THEN
-          (SELECT f->>'block_size' FROM hafbe_backend.get_witness_block_size(_witness_id, op_id - 1) f)
-        ELSE block_size END AS block_size,
-        op_type_id
-      FROM (
-        SELECT
-          CASE WHEN op_type_id = 42 THEN
-            hafbe_backend.parse_witness_set_props(op, 'maximum_block_size')
-          ELSE
-            op->'props'->>'maximum_block_size'
-          END AS block_size,
-          op_type_id,
-          id AS op_id
-        FROM (
-          SELECT
-            (body::JSON)->'value' AS op,
-            op_type_id, id, timestamp
-          FROM hive.operations_view
+  SELECT INTO __most_recent_op
+    (hov.body::JSON)->'value' AS value,
+    hov.op_type_id, hov.id, hov.timestamp
+  FROM hive.operations_view hov
+  WHERE (
+    SELECT operation_id
+    FROM hive.account_operations_view
+    WHERE account_id = _witness_id AND op_type_id = ANY(_op_type_array)
+    ORDER BY operation_id DESC
+    LIMIT 1
+  ) = id;
 
-          JOIN (
-            SELECT operation_id
-            FROM hive.account_operations_view
-            WHERE account_id = _witness_id AND op_type_id = ANY('{42,30,14,11}'::INT[]) AND operation_id <= _last_op_id
-            ORDER BY operation_id DESC
-            LIMIT 1
-          ) haov ON id = haov.operation_id
-        ) op
-      ) price
-    ) recur
-  ) result;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_exchange_rate(_witness_id INT, _last_op_id BIGINT = NULL)
-RETURNS JSON
-AS
-$function$
-BEGIN
-  IF _last_op_id IS NULL THEN
-    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+  IF _attr_name = 'url' THEN
+    SELECT __most_recent_op.value->>'url' INTO __result;
+    SELECT 'url' INTO __witness_set_props_attr_name;
+  ELSIF _attr_name = 'exchange_rate' THEN
+    SELECT __most_recent_op.value->>'exchange_rate' INTO __result;
+    SELECT 'hbd_exchange_rate' INTO __witness_set_props_attr_name;
+  ELSIF _attr_name = 'maximum_block_size' THEN
+    SELECT __most_recent_op.value->'props'->>'maximum_block_size' INTO __result;
+    SELECT 'maximum_block_size' INTO __witness_set_props_attr_name;
+  ELSIF _attr_name = 'signing_key' THEN
+    SELECT __most_recent_op.value->>'block_signing_key' INTO __result;
+    SELECT 'new_signing_key' INTO __witness_set_props_attr_name;
   END IF;
 
-  RETURN to_json(result) FROM (
-    SELECT
-      CASE WHEN op_type_id = 42 AND exchange_rate IS NOT NULL THEN
-        hafbe_backend.unpack_from_vector(exchange_rate)
-      ELSE exchange_rate END AS exchange_rate,
-      timestamp
-    FROM (
-      SELECT
-        CASE WHEN op_type_id = 42 AND exchange_rate IS NULL THEN
-          (SELECT f->>'exchange_rate' FROM hafbe_backend.get_witness_exchange_rate(_witness_id, op_id - 1) f)
-        ELSE exchange_rate END AS exchange_rate,
-        op_type_id, timestamp
-      FROM (
-        SELECT
-          CASE WHEN op_type_id = 42 THEN
-            hafbe_backend.parse_witness_set_props(op, 'hbd_exchange_rate')
-          ELSE
-            op->>'exchange_rate'
-          END AS exchange_rate,
-          op_type_id,
-          id AS op_id,
-          timestamp
-        FROM (
-          SELECT
-            (body::JSON)->'value' AS op,
-            op_type_id, id, timestamp
-          FROM hive.operations_view
-
-          JOIN (
-            SELECT operation_id
-            FROM hive.account_operations_view
-            WHERE account_id = _witness_id AND (op_type_id = 42 OR op_type_id = 7) AND operation_id <= _last_op_id
-            ORDER BY operation_id DESC
-            LIMIT 1
-          ) haov ON id = haov.operation_id
-        ) op
-      ) price
-    ) recur
-  ) result;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_signing_key(_witness_id INT, _last_op_id BIGINT = NULL)
-RETURNS JSON
-AS
-$function$
-BEGIN
-  IF _last_op_id IS NULL THEN
-    SELECT hafbe_backend.latest_op_id() INTO _last_op_id;
+  IF __result IS NULL AND __most_recent_op.op_type_id = 42 THEN
+    SELECT hafbe_backend.parse_witness_set_props(__most_recent_op.value, _attr_name) INTO __result;
+  ELSIF __result IS NULL AND __most_recent_op.op_type_id != 42 THEN
+    RETURN hafbe_backend.parse_and_unpack_witness_data(
+      _witness_id, __witness_set_props_attr_name, _op_type_array, __most_recent_op.id - 1)
+    ;
   END IF;
 
-  RETURN to_json(result) FROM (
-    SELECT
-      CASE WHEN op_type_id = 42 AND signing_key IS NULL THEN
-        (SELECT f->>'signing_key' FROM hafbe_backend.get_witness_signing_key(_witness_id, op_id - 1) f)
-      ELSE signing_key END AS signing_key
-    FROM (
-      SELECT
-        CASE WHEN op_type_id = 42 AND signing_key IS NULL THEN
-          hafbe_backend.parse_witness_set_props(signing_key::JSON, 'key')
-        ELSE signing_key END AS signing_key,
-        op_type_id, op_id
-      FROM (
-        SELECT
-          CASE WHEN op_type_id = 42 THEN
-            hafbe_backend.parse_witness_set_props(op, 'new_signing_key')
-          ELSE
-            op->>'block_signing_key'
-          END AS signing_key,
-          op_type_id,
-          id AS op_id
-        FROM (
-          SELECT
-            (body::JSON)->'value' AS op,
-            op_type_id, id
-          FROM hive.operations_view
-
-          JOIN (
-            SELECT operation_id
-            FROM hive.account_operations_view
-            WHERE account_id = _witness_id AND (op_type_id = 42 OR op_type_id = 11) AND operation_id <= _last_op_id
-            ORDER BY operation_id DESC
-            LIMIT 1
-          ) haov ON id = haov.operation_id
-        ) key_op
-      ) new_key_val
-    ) key_val
-  ) result;
+  RETURN json_build_object(
+    _attr_name, __result,
+    'timestamp', __most_recent_op.timestamp
+  );
 END
 $function$
 LANGUAGE 'plpgsql' STABLE

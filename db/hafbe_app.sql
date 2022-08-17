@@ -55,6 +55,12 @@ BEGIN
   
   CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id_approve ON hafbe_app.current_witness_votes USING btree (witness_id, approve);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
+    witness_id INT NOT NULL,
+
+    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
+  ) INHERITS (hive.hafbe_app);
+
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
     proxy_id INT,
@@ -182,7 +188,6 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __last_reported_block INT := 0;
   __proxy_op RECORD;
   __vote_op RECORD;
   __balance_change RECORD;
@@ -190,37 +195,40 @@ BEGIN
   -- main processing loop
   FOR b IN _from .. _to
   LOOP
-    FOR __vote_op IN
-      SELECT
-        hafbe_app.get_account_id((body::JSON)->'value'->>'witness') AS witness_id,
-        hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS voter_id,
-        ((body::JSON)->'value'->>'approve')::BOOLEAN AS approve,
-        timestamp
-      FROM hive.btracker_app_operations_view
-      WHERE op_type_id = 12 AND block_num = b
-    
-    LOOP
+    SELECT INTO __vote_op
+      hafbe_app.get_account_id((body::JSON)->'value'->>'witness') AS witness_id,
+      hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS voter_id,
+      ((body::JSON)->'value'->>'approve')::BOOLEAN AS approve,
+      timestamp
+    FROM hive.btracker_app_operations_view
+    WHERE op_type_id = 12 AND block_num = b;
+
+    IF __vote_op.witness_id IS NOT NULL THEN
       INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
       VALUES (__vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp);
 
       INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
-      SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp
+      VALUES (__vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp)
       ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
         witness_id = EXCLUDED.witness_id,
         voter_id = EXCLUDED.voter_id,
         approve = EXCLUDED.approve,
         timestamp = EXCLUDED.timestamp
       ;
-    END LOOP;
+
+      INSERT INTO hafbe_app.current_witnesses (witness_id)
+      VALUES (__vote_op.witness_id)
+      ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+    END IF;
     
-    FOR __proxy_op IN
-      SELECT
-        hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS account_id,
-        hafbe_app.get_account_id((body::JSON)->'value'->>'proxy') AS proxy_id,
-        timestamp
-      FROM hive.btracker_app_operations_view
-      WHERE op_type_id = 13 AND block_num = b
-    LOOP
+    SELECT INTO __proxy_op
+      hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS account_id,
+      hafbe_app.get_account_id((body::JSON)->'value'->>'proxy') AS proxy_id,
+      timestamp
+    FROM hive.btracker_app_operations_view
+    WHERE op_type_id = 13 AND block_num = b;
+
+    IF __proxy_op.account_id IS NOT NULL THEN
       INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
       SELECT
         __proxy_op.account_id,
@@ -236,12 +244,12 @@ BEGIN
       ;
 
       INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
-      SELECT __proxy_op.account_id, __proxy_op.proxy_id, TRUE
+      VALUES (__proxy_op.account_id, __proxy_op.proxy_id, TRUE)
       ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
         proxy_id = CASE WHEN __proxy_op.proxy_id IS NULL THEN cap.proxy_id ELSE EXCLUDED.proxy_id END,
         proxy = CASE WHEN __proxy_op.proxy_id IS NULL THEN FALSE ELSE TRUE END
       ;
-    END LOOP;
+    END IF;
 
     INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
     SELECT account_id, op_type_id
