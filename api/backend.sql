@@ -665,7 +665,7 @@ BEGIN
   ) wd_rate ON TRUE
   
   JOIN LATERAL(
-    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'block_size', '{42,30,14,11}')->>'maximum_block_size' AS block_size
+    SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'maximum_block_size', '{42,30,14,11}')->>'maximum_block_size' AS block_size
   ) wd_size ON TRUE
 
   JOIN LATERAL(
@@ -699,12 +699,26 @@ RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+  __result TEXT;
 BEGIN
-  RETURN props->>1
+  SELECT INTO __result
+    props->>1
   FROM (
     SELECT json_array_elements(_op_value->'props') AS props
   ) to_arr
   WHERE props->>0 = _attr_name;
+
+  IF _attr_name = 'new_signing_key' AND __result IS NULL THEN
+    SELECT INTO __result
+      props->>1
+    FROM (
+      SELECT json_array_elements(_op_value->'props') AS props
+    ) to_arr
+    WHERE props->>0 = 'key';
+  END IF;
+
+  RETURN __result;
 END
 $$
 ;
@@ -741,16 +755,16 @@ BEGIN
   END IF;
 
   SELECT INTO __most_recent_op
-    (hov.body::JSON)->'value' AS value,
-    hov.op_type_id, hov.id, hov.timestamp
-  FROM hive.operations_view hov
-  WHERE (
+    (body::JSON)->'value' AS value,
+    op_type_id, id, timestamp
+  FROM hive.operations_view
+  JOIN (
     SELECT operation_id
     FROM hive.account_operations_view
     WHERE account_id = _witness_id AND op_type_id = ANY(_op_type_array)
     ORDER BY operation_id DESC
-    LIMIT 1
-  ) = id;
+  ) haov ON haov.operation_id = id
+  LIMIT 1;
 
   IF _attr_name = 'url' THEN
     SELECT __most_recent_op.value->>'url' INTO __result;
@@ -767,7 +781,7 @@ BEGIN
   END IF;
 
   IF __result IS NULL AND __most_recent_op.op_type_id = 42 THEN
-    SELECT hafbe_backend.parse_witness_set_props(__most_recent_op.value, _attr_name) INTO __result;
+    SELECT hafbe_backend.parse_witness_set_props(__most_recent_op.value, __witness_set_props_attr_name) INTO __result;
   ELSIF __result IS NULL AND __most_recent_op.op_type_id != 42 THEN
     RETURN hafbe_backend.parse_and_unpack_witness_data(
       _witness_id, __witness_set_props_attr_name, _op_type_array, __most_recent_op.id - 1)
