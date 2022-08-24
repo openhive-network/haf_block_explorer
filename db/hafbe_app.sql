@@ -100,11 +100,22 @@ BEGIN
     CONSTRAINT pk_account_operation_cache PRIMARY KEY (account_id, op_type_id)
   ) INHERITS (hive.hafbe_app);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
+    op_type_id INT NOT NULL,
+
+    CONSTRAINT pk_balance_impacting_op_ids PRIMARY KEY(op_type_id)
+  );
+
+  INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_id)
+  SELECT hot.id
+  FROM hive.operation_types hot
+  WHERE hot.name IN (SELECT * FROM hive.get_balance_impacting_operations());
+
   CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
     account_id INT NOT NULL,
     vests BIGINT NOT NULL,
 
-    CONSTRAINT pk_account_vests_account PRIMARY KEY (account_id)
+    CONSTRAINT pk_account_vests PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
@@ -191,6 +202,7 @@ DECLARE
   __proxy_op RECORD;
   __vote_op RECORD;
   __balance_change RECORD;
+  __balance_impacting_ops INT[] = (SELECT array_agg(op_type_id) FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
   -- main processing loop
   FOR b IN _from .. _to
@@ -260,15 +272,9 @@ BEGIN
 
   -- get impacted vests balance for block range and update account_vests
   FOR __balance_change IN
-    WITH balance_impacting_ops AS (
-      SELECT hot.id
-      FROM hive.operation_types hot
-      WHERE hot.name IN (SELECT * FROM hive.get_balance_impacting_operations())
-    )
-
     SELECT bio.account_name AS account, bio.amount AS vests
     FROM hive.btracker_app_operations_view hov
-    JOIN balance_impacting_ops b ON hov.op_type_id = b.id
+
     JOIN LATERAL (
       SELECT account_name, amount
       FROM hive.get_impacted_balances(
@@ -279,18 +285,19 @@ BEGIN
       )
       WHERE asset_symbol_nai = 37
     ) bio ON TRUE
-    WHERE hov.block_num BETWEEN _from AND _to
+    
+    WHERE hov.op_type_id = ANY(__balance_impacting_ops) AND hov.block_num BETWEEN _from AND _to
     ORDER BY hov.block_num, hov.id
 
-  LOOP
-    INSERT INTO hafbe_app.account_vests (account_id, vests)
-    SELECT hav.id, __balance_change.vests
-    FROM hive.btracker_app_accounts_view hav
-    WHERE hav.name = __balance_change.account
+    LOOP
+      INSERT INTO hafbe_app.account_vests (account_id, vests)
+      SELECT hav.id, __balance_change.vests
+      FROM hive.btracker_app_accounts_view hav
+      WHERE hav.name = __balance_change.account
 
-    ON CONFLICT ON CONSTRAINT pk_account_vests_account DO 
-    UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests;
-  END LOOP;
+      ON CONFLICT ON CONSTRAINT pk_account_vests DO 
+      UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests;
+    END LOOP;
 END
 $$
 SET from_collapse_limit = 16

@@ -378,20 +378,48 @@ $$
 witnesses and voters
 */
 
-CREATE FUNCTION hafbe_backend.get_proxied_vests(_voter_id INT)
-RETURNS TABLE (
-  proxied_vests NUMERIC
-)
+CREATE TYPE hafbe_backend.voters_stats AS (
+  voter_id INT,
+  account_vests NUMERIC,
+  proxied_vests NUMERIC,
+  timestamp TIMESTAMP
+);
+
+CREATE FUNCTION hafbe_backend.get_set_of_voters_stats(_witness_id INT)
+RETURNS SETOF hafbe_backend.voters_stats
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT SUM(av.vests)
-  FROM hafbe_app.current_account_proxies cap
-  JOIN (
-    SELECT account_id, vests
+  RETURN QUERY SELECT
+    cwv.voter_id,
+    SUM(COALESCE(account.vests, 0)) AS account_vests,
+    SUM(COALESCE(proxied.vests, 0)) AS proxied_vests,
+    cwv.timestamp
+  FROM hafbe_app.current_witness_votes cwv
+
+  LEFT JOIN (
+    SELECT account_id, proxy_id
+    FROM hafbe_app.current_account_proxies
+    WHERE proxy = TRUE 
+  ) acc_as_proxy ON acc_as_proxy.proxy_id = cwv.voter_id
+
+  LEFT JOIN (
+    SELECT vests, account_id
     FROM hafbe_app.account_vests
-  ) av ON av.account_id = cap.account_id
-  WHERE proxy_id = _voter_id AND proxy = TRUE;
+  ) proxied ON proxied.account_id = acc_as_proxy.account_id
+
+  LEFT JOIN (
+    SELECT account_id, proxy
+    FROM hafbe_app.current_account_proxies
+  ) acc_as_proxied ON acc_as_proxied.account_id = cwv.voter_id
+
+  LEFT JOIN (
+    SELECT vests, account_id
+    FROM hafbe_app.account_vests
+  ) account ON account.account_id = acc_as_proxied.account_id AND COALESCE(acc_as_proxied.proxy, FALSE) IS FALSE
+
+  WHERE cwv.witness_id = _witness_id AND cwv.approve = TRUE
+  GROUP BY cwv.voter_id, cwv.timestamp;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -403,7 +431,7 @@ SET from_collapse_limit=16
 CREATE TYPE hafbe_backend.witness_voters AS (
   account TEXT,
   vests NUMERIC,
-  account_vests BIGINT,
+  account_vests NUMERIC,
   proxied_vests NUMERIC,
   timestamp TIMESTAMP
 );
@@ -420,36 +448,17 @@ BEGIN
     FROM (
       SELECT
         hav.name::TEXT AS account,
-        CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END + proxied_vests AS vests,
-        CASE WHEN av.vests IS NULL THEN 0 ELSE av.vests END AS account_vests,
-        proxied_vests, timestamp
-      FROM hafbe_app.current_witness_votes
-
-      JOIN LATERAL (
-        SELECT CASE WHEN proxied_vests IS NULL THEN 0 ELSE proxied_vests END AS proxied_vests
-        FROM hafbe_backend.get_proxied_vests(voter_id)
-      ) prox_vests ON TRUE
-
-      JOIN LATERAL (
-        SELECT CASE WHEN proxy IS NULL THEN FALSE ELSE TRUE END AS proxied
-        FROM hafbe_app.current_account_proxies
-        WHERE account_id = voter_id AND proxy = TRUE
-        LIMIT 1
-      ) is_prox ON TRUE
+        proxied_vests + account_vests AS vests,
+        account_vests,
+        proxied_vests,
+        timestamp
+      FROM hafbe_backend.get_set_of_voters_stats(%L)
 
       JOIN (
         SELECT name, id
         FROM hive.accounts_view
       ) hav ON hav.id = voter_id
-
-      LEFT JOIN LATERAL (
-        SELECT vests
-        FROM hafbe_app.account_vests
-        WHERE account_id = voter_id
-      ) av ON is_prox.proxied IS FALSE
-      
-      WHERE witness_id = %L AND approve = TRUE
-    ) not_ordered
+    ) voters_stats
     
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -482,116 +491,11 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_witness_votes(_witness_id INT)
-RETURNS TABLE (
-  _votes NUMERIC,
-  _voters_num INT
-)
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT
-    SUM(
-      CASE WHEN vests IS NULL THEN 0 ELSE vests END
-        +
-      CASE WHEN proxied_vests IS NULL THEN 0 ELSE proxied_vests END
-    ) AS votes,
-    COUNT(*)::INT AS voters_num
-  FROM hafbe_app.current_witness_votes
-
-  JOIN LATERAL (
-    SELECT proxied_vests
-    FROM hafbe_backend.get_proxied_vests(voter_id)
-  ) prox_vests ON TRUE
-
-  JOIN LATERAL (
-    SELECT CASE WHEN proxy IS NULL THEN FALSE ELSE TRUE END AS proxied
-    FROM hafbe_app.current_account_proxies
-    WHERE account_id = voter_id AND proxy = TRUE
-    LIMIT 1
-  ) is_prox ON TRUE
-
-  LEFT JOIN LATERAL (
-    SELECT vests
-    FROM hafbe_app.account_vests
-    WHERE account_id = voter_id
-  ) av ON is_prox.proxied IS FALSE
-
-  WHERE witness_id = _witness_id AND approve = TRUE;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_witness_votes_change(_witness_id INT, _today DATE)
-RETURNS TABLE (
-  _votes NUMERIC,
-  _voters_num INT
-)
-AS
-$function$
-BEGIN
-  IF _today IS NULL THEN
-
-    -- in case hafbe is not up to sync with head block yet
-    RETURN QUERY SELECT
-      NULL::NUMERIC,
-      NULL::INT
-    ;
-  ELSE
-
-    RETURN QUERY SELECT
-      SUM(
-        CASE WHEN vests IS NULL THEN 0 ELSE (
-          CASE WHEN approve IS TRUE THEN vests ELSE -1 * vests END
-        ) END
-          +
-        CASE WHEN proxied_vests IS NULL THEN 0 ELSE (
-          CASE WHEN approve IS TRUE THEN proxied_vests ELSE -1 * proxied_vests END
-        ) END
-      ) AS votes,
-      SUM(
-        CASE WHEN approve IS TRUE THEN 1 ELSE -1 END 
-      )::INT AS voters_num
-    FROM hafbe_app.witness_votes_history
-
-    JOIN LATERAL (
-      SELECT proxied_vests
-      FROM hafbe_backend.get_proxied_vests(voter_id)
-    ) prox_vests ON TRUE
-
-    JOIN LATERAL (
-      SELECT CASE WHEN proxy IS NULL THEN FALSE ELSE TRUE END AS proxied
-      FROM hafbe_app.current_account_proxies
-      WHERE account_id = voter_id AND proxy = TRUE
-      LIMIT 1
-    ) is_prox ON TRUE
-
-    LEFT JOIN LATERAL (
-      SELECT vests
-      FROM hafbe_app.account_vests
-      WHERE account_id = voter_id
-    ) av ON proxied IS FALSE
-
-    WHERE witness_id = _witness_id AND timestamp >= _today;
-
-  END IF;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
 CREATE TYPE hafbe_backend.witnesses AS (
   witness TEXT,
   url TEXT,
   votes NUMERIC,
-  votes_daily_change NUMERIC,
+  votes_daily_change BIGINT,
   voters_num INT,
   voters_num_daily_change INT,
   price_feed TEXT, --JSON,
@@ -618,12 +522,14 @@ BEGIN
   END IF;
 
   RETURN QUERY SELECT
-    hav.name::TEXT,
+    hav.name::TEXT AS witness,
     url,
-    CASE WHEN all_stats.votes IS NULL THEN 0 ELSE all_stats.votes END AS votes,
-    CASE WHEN todays_votes.votes IS NULL THEN 0 ELSE todays_votes.votes END AS votes_daily_change,
-    CASE WHEN all_stats.voters_num IS NULL THEN 0 ELSE all_stats.voters_num END voters_num,
-    CASE WHEN todays_votes.voters_num IS NULL THEN 0 ELSE todays_votes.voters_num END voters_num_daily_change,
+    all_votes.votes::NUMERIC AS votes,
+    --todays_votes.votes::BIGINT AS votes_daily_change,
+    0::BIGINT,
+    all_votes.voters_num::INT AS voters_num,
+    --todays_votes.voters_num::INT AS voters_num_daily_change,
+    0::INT,
     feed_data->>'exchange_rate' AS price_feed,
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
@@ -631,25 +537,24 @@ BEGIN
     block_size::INT AS block_size,
     signing_key,
     '1.25.0' AS version
-  FROM (
-    SELECT
-      witness_id,
-      CASE WHEN all_votes.votes IS NULL THEN 0 ELSE all_votes.votes END AS votes,
-      CASE WHEN all_votes.voters_num IS NULL THEN 0 ELSE all_votes.voters_num END AS voters_num
-    FROM hafbe_app.current_witnesses
-    JOIN LATERAL (
-      SELECT _votes AS votes, _voters_num AS voters_num
-      FROM hafbe_backend.get_witness_votes(witness_id)
-    ) all_votes ON TRUE
-
-    ORDER BY votes DESC
-    LIMIT _limit
-  ) all_stats
+  FROM hafbe_app.current_witnesses
 
   JOIN LATERAL (
-    SELECT _votes AS votes, _voters_num AS voters_num
-    FROM hafbe_backend.get_witness_votes_change(witness_id, __today)
+    SELECT
+      SUM(account_vests + proxied_vests) AS votes,
+      COUNT(*) AS voters_num
+    FROM hafbe_backend.get_set_of_voters_stats(witness_id)
+  ) all_votes ON TRUE
+
+  /*
+  JOIN LATERAL (
+    SELECT
+      SUM(account_vests + proxied_vests) AS votes,
+      COUNT(*) AS voters_num
+    FROM hafbe_backend.get_set_of_voters_stats(witness_id)
+    WHERE timestamp >= __today
   ) todays_votes ON TRUE
+  */
 
   JOIN (
     SELECT name, id
@@ -670,7 +575,10 @@ BEGIN
 
   JOIN LATERAL(
     SELECT hafbe_backend.parse_and_unpack_witness_data(witness_id, 'signing_key', '{42,11}')->>'signing_key' AS signing_key
-  ) wd_key ON TRUE;
+  ) wd_key ON TRUE
+
+  ORDER BY all_votes.votes DESC
+  LIMIT _limit;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
