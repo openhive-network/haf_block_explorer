@@ -44,6 +44,8 @@ BEGIN
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
+  CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id_timestamp ON hafbe_app.witness_votes_history USING btree (witness_id, timestamp);
+
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,

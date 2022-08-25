@@ -491,6 +491,61 @@ END
 $$
 ;
 
+CREATE TYPE hafbe_backend.voters_stats_change AS (
+  votes BIGINT,
+  voters_num INT
+);
+
+CREATE FUNCTION hafbe_backend.get_set_of_voters_stats_change(_witness_id INT, _today DATE)
+RETURNS SETOF hafbe_backend.voters_stats_change
+AS
+$function$
+BEGIN
+  IF _today IS NULL THEN
+    RETURN QUERY SELECT 0::INT, 0::INT;
+  ELSE
+    RETURN QUERY SELECT
+      SUM(
+        COALESCE(CASE WHEN acc_as_proxy.proxy IS FALSE THEN -1 * proxied.vests ELSE proxied.vests END, 0)
+          +
+        COALESCE(CASE WHEN acc_as_proxied.proxy IS FALSE THEN account.vests ELSE 0 END, 0)
+      )::BIGINT,
+      CASE WHEN wvh.approve IS FALSE THEN -1 ELSE 1 END
+    FROM hafbe_app.witness_votes_history wvh
+
+    LEFT JOIN (
+      SELECT account_id, proxy_id, proxy
+      FROM hafbe_app.account_proxies_history
+      WHERE timestamp >= _today
+    ) acc_as_proxy ON acc_as_proxy.proxy_id = wvh.voter_id
+
+    LEFT JOIN (
+      SELECT vests, account_id
+      FROM hafbe_app.account_vests
+    ) proxied ON proxied.account_id = acc_as_proxy.account_id
+
+    LEFT JOIN (
+      SELECT account_id, proxy
+      FROM hafbe_app.account_proxies_history
+      WHERE timestamp >= _today
+    ) acc_as_proxied ON acc_as_proxied.account_id = wvh.voter_id
+
+    LEFT JOIN (
+      SELECT vests, account_id
+      FROM hafbe_app.account_vests
+    ) account ON account.account_id = acc_as_proxied.account_id
+
+    WHERE wvh.witness_id = _witness_id AND wvh.timestamp >= _today
+    GROUP BY wvh.voter_id, wvh.timestamp, wvh.approve;
+  END IF;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
 CREATE TYPE hafbe_backend.witnesses AS (
   witness TEXT,
   url TEXT,
@@ -525,11 +580,9 @@ BEGIN
     hav.name::TEXT AS witness,
     url,
     all_votes.votes::NUMERIC AS votes,
-    --todays_votes.votes::BIGINT AS votes_daily_change,
-    0::BIGINT,
+    COALESCE(todays_votes.votes, 0)::BIGINT AS votes_daily_change,
     all_votes.voters_num::INT AS voters_num,
-    --todays_votes.voters_num::INT AS voters_num_daily_change,
-    0::INT,
+    COALESCE(todays_votes.voters_num, 0)::INT AS voters_num_daily_change,
     feed_data->>'exchange_rate' AS price_feed,
     --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     0 AS bias,
@@ -546,15 +599,12 @@ BEGIN
     FROM hafbe_backend.get_set_of_voters_stats(witness_id)
   ) all_votes ON TRUE
 
-  /*
   JOIN LATERAL (
     SELECT
-      SUM(account_vests + proxied_vests) AS votes,
-      COUNT(*) AS voters_num
-    FROM hafbe_backend.get_set_of_voters_stats(witness_id)
-    WHERE timestamp >= __today
+      SUM(votes) AS votes,
+      SUM(voters_num) AS voters_num
+    FROM hafbe_backend.get_set_of_voters_stats_change(witness_id, __today)
   ) todays_votes ON TRUE
-  */
 
   JOIN (
     SELECT name, id
