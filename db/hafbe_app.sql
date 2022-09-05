@@ -122,6 +122,99 @@ BEGIN
 
   CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
 
+  CREATE VIEW hafbe_app.voters_stats_view AS
+  SELECT
+    witness_id,
+    voter_id,
+    COALESCE(account.vests, 0)::NUMERIC AS account_vests,
+    proxied_vests::NUMERIC,
+    timestamp
+  FROM (
+    SELECT
+      witness_id AS witness_id,
+      voter_id AS voter_id,
+      COALESCE(acc_as_proxied.proxy, FALSE) AS proxy,
+      SUM(COALESCE(proxied.vests, 0)) AS proxied_vests,
+      timestamp AS timestamp
+    FROM hafbe_app.current_witness_votes
+
+    LEFT JOIN (
+      SELECT account_id, proxy_id
+      FROM hafbe_app.current_account_proxies
+      WHERE proxy = TRUE 
+    ) acc_as_proxy ON acc_as_proxy.proxy_id = voter_id
+
+    LEFT JOIN (
+      SELECT vests, account_id
+      FROM hafbe_app.account_vests
+    ) proxied ON proxied.account_id = acc_as_proxy.account_id
+
+    LEFT JOIN (
+      SELECT account_id, proxy
+      FROM hafbe_app.current_account_proxies
+    ) acc_as_proxied ON acc_as_proxied.account_id = voter_id
+    
+    WHERE approve IS TRUE
+
+    GROUP BY witness_id, voter_id, acc_as_proxied.proxy
+  ) proxy_ops
+
+  LEFT JOIN (
+    SELECT vests, account_id
+    FROM hafbe_app.account_vests
+  ) account ON account.account_id = voter_id AND proxy IS FALSE
+  ;
+
+  CREATE VIEW hafbe_app.voters_stats_change_view AS
+  SELECT
+    witness_id,
+    SUM(account_vests + proxied_vests) AS votes,
+    SUM(approve) AS voters_num,
+    timestamp
+  FROM (
+    SELECT
+      witness_id,
+      CASE WHEN approve IS FALSE THEN -1 ELSE 1 END AS approve,
+      SUM(
+        CASE WHEN COALESCE(acc_as_proxy.proxy, FALSE) IS TRUE THEN
+          COALESCE(proxied.vests, 0)
+        ELSE
+          -1 * COALESCE(proxied.vests, 0)
+        END
+      ) AS proxied_vests,
+      CASE WHEN COALESCE(acc_as_proxied.proxy, FALSE) IS FALSE THEN
+        COALESCE(account.vests, 0)
+      ELSE
+        -1 * COALESCE(account.vests, 0)
+      END AS account_vests,
+      timestamp
+    FROM hafbe_app.witness_votes_history
+
+    LEFT JOIN (
+      SELECT account_id, proxy_id, proxy
+      FROM hafbe_app.account_proxies_history
+    ) acc_as_proxy ON acc_as_proxy.proxy_id = voter_id
+
+    LEFT JOIN (
+      SELECT vests, account_id
+      FROM hafbe_app.account_vests
+    ) proxied ON proxied.account_id = acc_as_proxy.account_id
+
+    LEFT JOIN (
+      SELECT account_id, proxy
+      FROM hafbe_app.account_proxies_history
+    ) acc_as_proxied ON acc_as_proxied.account_id = voter_id
+    
+    LEFT JOIN (
+      SELECT vests, account_id
+      FROM hafbe_app.account_vests
+    ) account ON account.account_id = voter_id
+
+    GROUP BY witness_id, approve, account_vests, timestamp
+  ) proxy_ops
+
+  GROUP BY witness_id, timestamp;
+
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
@@ -190,7 +283,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN id FROM hive.btracker_app_accounts_view WHERE name = _account;
+  RETURN id FROM hive.hafbe_app_accounts_view WHERE name = _account;
 END
 $$
 ;
@@ -214,7 +307,7 @@ BEGIN
       hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS voter_id,
       ((body::JSON)->'value'->>'approve')::BOOLEAN AS approve,
       timestamp
-    FROM hive.btracker_app_operations_view
+    FROM hive.hafbe_app_operations_view
     WHERE op_type_id = 12 AND block_num = b;
 
     IF __vote_op.witness_id IS NOT NULL THEN
@@ -239,7 +332,7 @@ BEGIN
       hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS account_id,
       hafbe_app.get_account_id((body::JSON)->'value'->>'proxy') AS proxy_id,
       timestamp
-    FROM hive.btracker_app_operations_view
+    FROM hive.hafbe_app_operations_view
     WHERE op_type_id = 13 AND block_num = b;
 
     IF __proxy_op.account_id IS NOT NULL THEN
@@ -267,7 +360,7 @@ BEGIN
 
     INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
     SELECT account_id, op_type_id
-    FROM hive.btracker_app_account_operations_view
+    FROM hive.hafbe_app_account_operations_view
     WHERE block_num = b
     ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
   END LOOP;
@@ -275,7 +368,7 @@ BEGIN
   -- get impacted vests balance for block range and update account_vests
   FOR __balance_change IN
     SELECT bio.account_name AS account, bio.amount AS vests
-    FROM hive.btracker_app_operations_view hov
+    FROM hive.hafbe_app_operations_view hov
 
     JOIN LATERAL (
       SELECT account_name, amount
@@ -294,7 +387,7 @@ BEGIN
     LOOP
       INSERT INTO hafbe_app.account_vests (account_id, vests)
       SELECT hav.id, __balance_change.vests
-      FROM hive.btracker_app_accounts_view hav
+      FROM hive.hafbe_app_accounts_view hav
       WHERE hav.name = __balance_change.account
 
       ON CONFLICT ON CONSTRAINT pk_account_vests DO 
