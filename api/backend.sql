@@ -405,7 +405,7 @@ BEGIN
 
     JOIN (
       SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
-      FROM hafbe_app.voters_stats_view
+      FROM hafbe_views.voters_stats_view
       WHERE witness_id = %L
     ) vsv ON vsv.voter_id = id
     
@@ -471,61 +471,50 @@ BEGIN
   END IF;
 
   RETURN QUERY SELECT
-    hav.name::TEXT AS witness,
-    url,
-    all_votes.votes::NUMERIC AS votes,
-    COALESCE(todays_votes.votes, 0)::BIGINT AS votes_daily_change,
-    all_votes.voters_num::INT AS voters_num,
-    COALESCE(todays_votes.voters_num, 0)::INT AS voters_num_daily_change,
+    witness, URL, votes, votes_daily_change, voters_num, voters_num_daily_change,
     feed_data->>'exchange_rate' AS price_feed,
-    --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
-    0 AS bias,
+    0 AS bias, --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
     (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
-    block_size::INT AS block_size,
-    signing_key,
+    block_size, signing_key,
     '1.25.0' AS version
-  FROM hafbe_app.current_witnesses cw
-
-  JOIN (
+  FROM (
     SELECT
-      SUM(votes) AS votes,
-      SUM(voters_num) AS voters_num
-    FROM hafbe_app.voters_stats_view
-    GROUP BY witness_id
-  ) all_votes ON TRUE
+      hav.name::TEXT AS witness,
+      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'url', '{42,11}')->>'url') AS url,
+      all_votes.votes::NUMERIC AS votes,
+      COALESCE(todays_votes.votes, 0)::BIGINT AS votes_daily_change,
+      all_votes.voters_num::INT AS voters_num,
+      COALESCE(todays_votes.voters_num, 0)::INT AS voters_num_daily_change,
+      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'exchange_rate', '{42,7}')) AS feed_data,
+      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'maximum_block_size', '{42,30,14,11}')->>'maximum_block_size')::INT AS block_size,
+      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'signing_key', '{42,11}')->>'signing_key') AS signing_key
+    FROM hafbe_app.current_witnesses cw
 
-  LEFT JOIN (
-    SELECT
-      SUM(votes) AS votes,
-      SUM(voters_num) AS voters_num
-    FROM hafbe_app.voters_stats_change_view
-    WHERE timestamp >= _today
-    GROUP BY witness_id
-  ) todays_votes ON TRUE
+    JOIN (
+      SELECT
+        witness_id,
+        SUM(account_vests + proxied_vests) AS votes,
+        COUNT(voter_id) AS voters_num
+      FROM hafbe_views.voters_stats_view
+      GROUP BY witness_id
+    ) all_votes ON all_votes.witness_id = cw.witness_id
 
-  JOIN (
-    SELECT name, id
-    FROM hive.accounts_view
-  ) hav ON hav.id = cw.witness_id
+    LEFT JOIN (
+      SELECT
+        witness_id,
+        SUM(CASE WHEN approve IS TRUE THEN votes ELSE -1 * votes END) AS votes,
+        SUM(CASE WHEN approve IS TRUE THEN 1 ELSE -1 END) AS voters_num
+      FROM hafbe_views.voters_stats_change_view
+      WHERE timestamp >= __today
+      GROUP BY witness_id
+    ) todays_votes ON todays_votes.witness_id = cw.witness_id
 
-  JOIN LATERAL(
-    SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'url', '{42,11}')->>'url' AS url
-  ) wd_url ON TRUE
-  
-  JOIN LATERAL(
-    SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'exchange_rate', '{42,7}') AS feed_data
-  ) wd_rate ON TRUE
-  
-  JOIN LATERAL(
-    SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'maximum_block_size', '{42,30,14,11}')->>'maximum_block_size' AS block_size
-  ) wd_size ON TRUE
-
-  JOIN LATERAL(
-    SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'signing_key', '{42,11}')->>'signing_key' AS signing_key
-  ) wd_key ON TRUE
-
-  GROUP BY cw.witness_id
-  
+    JOIN (
+      SELECT name, id
+      FROM hive.accounts_view
+    ) hav ON hav.id = cw.witness_id
+  ) votes_stats
+  ORDER BY votes DESC
   LIMIT _limit;
 END
 $function$
@@ -619,8 +608,8 @@ BEGIN
     FROM hive.account_operations_view
     WHERE account_id = _witness_id AND op_type_id = ANY(_op_type_array)
     ORDER BY operation_id DESC
-  ) haov ON haov.operation_id = id
-  LIMIT 1;
+    LIMIT 1
+  ) haov ON haov.operation_id = id;
 
   IF _attr_name = 'url' THEN
     SELECT __most_recent_op.value->>'url' INTO __result;
