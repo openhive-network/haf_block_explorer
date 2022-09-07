@@ -513,6 +513,7 @@ BEGIN
       SELECT name, id
       FROM hive.accounts_view
     ) hav ON hav.id = cw.witness_id
+    
   ) votes_stats
   ORDER BY votes DESC
   LIMIT _limit;
@@ -537,112 +538,6 @@ BEGIN
   ) result;
 END
 $$
-;
-
-CREATE FUNCTION hafbe_backend.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
-RETURNS TEXT
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __result TEXT;
-BEGIN
-  SELECT INTO __result
-    props->>1
-  FROM (
-    SELECT json_array_elements(_op_value->'props') AS props
-  ) to_arr
-  WHERE props->>0 = _attr_name;
-
-  IF _attr_name = 'new_signing_key' AND __result IS NULL THEN
-    SELECT INTO __result
-      props->>1
-    FROM (
-      SELECT json_array_elements(_op_value->'props') AS props
-    ) to_arr
-    WHERE props->>0 = 'key';
-  END IF;
-
-  RETURN __result;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.unpack_from_vector(_vector TEXT)
-RETURNS TEXT
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN 
-  -- TODO: to be replaced by hive fork manager method
-  RETURN _vector;
-END
-$$
-;
-
-CREATE FUNCTION hafbe_backend.parse_and_unpack_witness_data(_witness_id INT, _attr_name TEXT, _op_type_array INT[], _last_op_id BIGINT = NULL)
-RETURNS JSON
-AS
-$function$
-DECLARE
-  __most_recent_op RECORD;
-  __result TEXT;
-  __witness_set_props_attr_name TEXT;
-BEGIN
-  IF _last_op_id <= 0 THEN
-    RETURN json_build_object (
-      _attr_name, NULL
-    );
-  END IF;
-
-  IF _last_op_id IS NULL THEN
-    SELECT id FROM hive.operations_view ORDER BY id DESC LIMIT 1 INTO _last_op_id;
-  END IF;
-
-  SELECT INTO __most_recent_op
-    (body::JSON)->'value' AS value,
-    op_type_id, id, timestamp
-  FROM hive.operations_view
-  JOIN (
-    SELECT operation_id
-    FROM hive.account_operations_view
-    WHERE account_id = _witness_id AND op_type_id = ANY(_op_type_array)
-    ORDER BY operation_id DESC
-    LIMIT 1
-  ) haov ON haov.operation_id = id;
-
-  IF _attr_name = 'url' THEN
-    SELECT __most_recent_op.value->>'url' INTO __result;
-    SELECT 'url' INTO __witness_set_props_attr_name;
-  ELSIF _attr_name = 'exchange_rate' THEN
-    SELECT __most_recent_op.value->>'exchange_rate' INTO __result;
-    SELECT 'hbd_exchange_rate' INTO __witness_set_props_attr_name;
-  ELSIF _attr_name = 'maximum_block_size' THEN
-    SELECT __most_recent_op.value->'props'->>'maximum_block_size' INTO __result;
-    SELECT 'maximum_block_size' INTO __witness_set_props_attr_name;
-  ELSIF _attr_name = 'signing_key' THEN
-    SELECT __most_recent_op.value->>'block_signing_key' INTO __result;
-    SELECT 'new_signing_key' INTO __witness_set_props_attr_name;
-  END IF;
-
-  IF __result IS NULL AND __most_recent_op.op_type_id = 42 THEN
-    SELECT hafbe_backend.parse_witness_set_props(__most_recent_op.value, __witness_set_props_attr_name) INTO __result;
-  ELSIF __result IS NULL AND __most_recent_op.op_type_id != 42 THEN
-    RETURN hafbe_backend.parse_and_unpack_witness_data(
-      _witness_id, __witness_set_props_attr_name, _op_type_array, __most_recent_op.id - 1)
-    ;
-  END IF;
-
-  RETURN json_build_object(
-    _attr_name, __result,
-    'timestamp', __most_recent_op.timestamp
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
 ;
 
 /*

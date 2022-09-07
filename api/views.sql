@@ -66,3 +66,21 @@ LEFT JOIN (
 ) account ON account.account_id = acc_as_proxied.account_id
 
 GROUP BY witness_id, voter_id, approve, timestamp, acc_as_proxied.proxy, account.vests;
+
+-----
+
+DROP VIEW IF EXISTS hafbe_views.witness_prop_op_view;
+CREATE VIEW hafbe_views.witness_prop_op_view AS
+SELECT
+  account_id AS witness_id,
+  (hov.body::JSON)->'value' AS value,
+  hov.timestamp AS timestamp,
+  block_num, op_type_id, operation_id
+FROM hive.account_operations_view haov
+
+JOIN (
+  SELECT body, id, timestamp
+  FROM hive.operations_view
+) hov ON hov.id = haov.operation_id
+
+ORDER BY operation_id DESC;

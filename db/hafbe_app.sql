@@ -57,10 +57,20 @@ BEGIN
   
   CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id_approve ON hafbe_app.current_witness_votes USING btree (witness_id, approve);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_prop_types (
+    prop_type_id SERIAL PRIMARY KEY,
+    prop_name TEXT NOT NULL
+  );
+
+  INSERT INTO hafbe_app.witness_prop_types (prop_name) VALUES
+  ('url'), ('price_feed'), ('bias'), ('feed_age'), ('block_size'), ('signing_key'), ('version');
+
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
     witness_id INT NOT NULL,
+    prop_type_id INT NOT NULL,
+    prop_value TEXT NOT NULL,
 
-    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
+    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id, prop_type_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
@@ -195,12 +205,55 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_app.unpack_from_vector(_vector TEXT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN 
+  -- TODO: to be replaced by hive fork manager method
+  RETURN _vector;
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __result TEXT;
+BEGIN
+  SELECT INTO __result
+    props->>1
+  FROM (
+    SELECT json_array_elements(_op_value->'props') AS props
+  ) to_arr
+  WHERE props->>0 = _attr_name;
+
+  IF _attr_name = 'new_signing_key' AND __result IS NULL THEN
+    SELECT INTO __result
+      props->>1
+    FROM (
+      SELECT json_array_elements(_op_value->'props') AS props
+    ) to_arr
+    WHERE props->>0 = 'key';
+  END IF;
+
+  RETURN hafbe_app.unpack_from_vector(__result);
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT, _report_step INT = 1000)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
+  __prop_value TEXT;
+  __prop_op RECORD;
   __proxy_op RECORD;
   __vote_op RECORD;
   __balance_change RECORD;
@@ -209,6 +262,122 @@ BEGIN
   -- main processing loop
   FOR b IN _from .. _to
   LOOP
+    -- parse witness url
+    FOR __prop_op IN
+      SELECT witness_id, value, op_type_id
+      FROM hafbe_views.witness_prop_op_view
+      WHERE block_num = b AND op_type_id = ANY('{42,11}'::INT[])
+    
+    LOOP
+      IF __prop_op.op_type_id = 42 THEN
+        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'url') INTO __prop_value;
+      ELSE
+        SELECT __prop_op.value->>'url' INTO __prop_value;
+      END IF;
+
+      IF __prop_value IS NOT NULL THEN
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'url'),
+          __prop_value
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+      END IF;
+    END LOOP;
+
+    -- parse witness feed_data
+    FOR __prop_op IN
+      SELECT witness_id, value, op_type_id, timestamp
+      FROM hafbe_views.witness_prop_op_view
+      WHERE block_num = b AND op_type_id = ANY('{42,7}'::INT[])
+    
+    LOOP
+      IF __prop_op.op_type_id = 42 THEN
+        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'hbd_exchange_rate') INTO __prop_value;
+      ELSE
+        SELECT __prop_op.value->>'exchange_rate' INTO __prop_value;
+      END IF;
+
+      IF __prop_value IS NOT NULL THEN
+        -- price_feed
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'price_feed'),
+          __prop_value
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+
+        -- bias
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'bias'),
+          --(((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::TEXT
+          0::TEXT
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+
+        -- feed_age
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'feed_age'),
+          ((NOW() - __prop_op.timestamp)::INTERVAL)::TEXT
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+      END IF;
+    END LOOP;
+
+    -- parse witness block_size
+    FOR __prop_op IN
+      SELECT witness_id, value, op_type_id
+      FROM hafbe_views.witness_prop_op_view
+      WHERE block_num = b AND op_type_id = ANY('{42,30,14,11}'::INT[])
+    
+    LOOP
+      IF __prop_op.op_type_id = 42 THEN
+        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'maximum_block_size') INTO __prop_value;
+      ELSE
+        SELECT __prop_op.value->>'maximum_block_size' INTO __prop_value;
+      END IF;
+
+      IF __prop_value IS NOT NULL THEN
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'block_size'),
+          __prop_value
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+      END IF;
+    END LOOP;
+    
+    -- parse witness signing_key
+    FOR __prop_op IN
+      SELECT witness_id, value, op_type_id
+      FROM hafbe_views.witness_prop_op_view
+      WHERE block_num = b AND op_type_id = ANY('{42,30,14,11}'::INT[])
+    
+    LOOP
+      IF __prop_op.op_type_id = 42 THEN
+        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'new_signing_key') INTO __prop_value;
+      ELSE
+        SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
+      END IF;
+
+      IF __prop_value IS NOT NULL THEN
+        INSERT INTO hafbe_app.current_witnesses (witness_id, prop_type_id, prop_value)
+        SELECT
+          __prop_op.witness_id,
+          (SELECT prop_type_id FROM hafbe_app.witness_prop_types WHERE prop_name = 'signing_key'),
+          __prop_value
+        ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+        UPDATE SET prop_value = EXCLUDED.prop_value;
+      END IF;
+    END LOOP;
+
     SELECT INTO __vote_op
       hafbe_app.get_account_id((body::JSON)->'value'->>'witness') AS witness_id,
       hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS voter_id,
@@ -229,10 +398,6 @@ BEGIN
         approve = EXCLUDED.approve,
         timestamp = EXCLUDED.timestamp
       ;
-
-      INSERT INTO hafbe_app.current_witnesses (witness_id)
-      VALUES (__vote_op.witness_id)
-      ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
     END IF;
     
     SELECT INTO __proxy_op
