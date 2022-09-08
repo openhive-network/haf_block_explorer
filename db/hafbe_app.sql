@@ -12,10 +12,13 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.app_status (
     continue_processing BOOLEAN,
-    last_processed_block INT
+    last_processed_block INT,
+    started_processing_at TIMESTAMP,
+    last_reported_at TIMESTAMP,
+    report_time BOOLEAN
   );
-  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block)
-  VALUES (True, 0);
+  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, last_reported_at, report_time)
+  VALUES (True, 0, NULL, to_timestamp(0), TRUE);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hardfork_operations (
     operation_id INT NOT NULL,
@@ -130,7 +133,7 @@ BEGIN
   CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
 
   CALL hafbe_views.create_views();
-  
+
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
@@ -468,13 +471,25 @@ BEGIN
       _last_block := _to;
     END IF;
 
-    RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
+    --RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
 
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
 
     COMMIT;
 
-    RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
+    --RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
+
+    IF (SELECT report_time FROM hafbe_app.app_status) IS TRUE AND
+      (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status))::INTERVAL >= '5 second'::INTERVAL THEN
+
+      RAISE NOTICE 'Last processed block %', _last_block;
+      RAISE NOTICE 'Block processing running for % minutes',
+        ROUND((EXTRACT(epoch FROM (
+          SELECT NOW() - started_processing_at FROM hafbe_app.app_status
+        )) / 60)::NUMERIC, 2);
+      
+      UPDATE hafbe_app.app_status SET last_reported_at = NOW();
+    END IF;
 
     EXIT WHEN NOT hafbe_app.continueProcessing();
 
@@ -547,6 +562,8 @@ BEGIN
   IF _maxBlockLimit IS NULL THEN
     _maxBlockLimit = 2147483647;
   END IF;
+
+  UPDATE hafbe_app.app_status SET started_processing_at = NOW();
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
     __next_block_range := hive.app_next_block(_appContext);

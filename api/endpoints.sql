@@ -239,7 +239,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50)
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -249,7 +249,22 @@ BEGIN
     _limit = 50;
   END IF;
 
-  RETURN hafbe_backend.get_witnesses(_limit);
+  IF _order_by NOT SIMILAR TO
+    '(witness|url|votes|votes_daily_change|voters_num|voters_num_daily_change|price_feed|bias|feed_age|block_size|signing_key|version)' THEN
+    RETURN hafbe_exceptions.raise_no_such_column_exception(_order_by);
+  END IF;
+  IF _order_by IS NULL THEN
+    _order_by = 'vests';
+  END IF;
+
+  IF _order_is NOT SIMILAR TO '(asc|desc)' THEN
+    RETURN hafbe_exceptions.raise_no_such_order_exception(_order_is);
+  END IF;
+  IF _order_is IS NULL THEN
+    _order_is = 'desc';
+  END IF;
+
+  RETURN hafbe_backend.get_witnesses(_limit, _order_by, _order_is);
 END
 $$
 ;

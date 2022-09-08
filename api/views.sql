@@ -1,4 +1,6 @@
-CREATE SCHEMA IF NOT EXISTS hafbe_views;
+DROP SCHEMA IF EXISTS hafbe_views CASCADE;
+
+CREATE SCHEMA hafbe_views;
 
 CREATE PROCEDURE hafbe_views.create_views()
 LANGUAGE 'plpgsql'

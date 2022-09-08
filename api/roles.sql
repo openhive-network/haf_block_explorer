@@ -5,6 +5,7 @@ CREATE ROLE hafbe_owner LOGIN INHERIT IN ROLE hive_applications_group;
 ALTER SCHEMA hafbe_backend OWNER TO hafbe_owner;
 ALTER SCHEMA hafbe_endpoints OWNER TO hafbe_owner;
 ALTER SCHEMA hafbe_exceptions OWNER TO hafbe_owner;
+ALTER SCHEMA hafbe_views OWNER TO hafbe_owner;
 
 -- drop priviliges of schemas user
 DO $$
@@ -29,6 +30,9 @@ GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
 
 GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
+
+GRANT USAGE ON SCHEMA hafbe_views TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_views TO hafbe_user;
 
 GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
