@@ -455,7 +455,7 @@ CREATE TYPE hafbe_backend.witnesses AS (
   version TEXT
 );
 
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT)
+CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_backend.witnesses
 AS
 $function$
@@ -470,25 +470,19 @@ BEGIN
     __today = 'today'::DATE;
   END IF;
 
-  RETURN QUERY SELECT
-    witness, URL, votes, votes_daily_change, voters_num, voters_num_daily_change,
-    feed_data->>'exchange_rate' AS price_feed,
-    0 AS bias, --(feed_data->'exchange_rate'->'quote'->>'amount')::INT - 1000 AS bias
-    (NOW() - (feed_data->>'timestamp')::TIMESTAMP)::INTERVAL AS feed_age,
-    block_size, signing_key,
-    '1.25.0' AS version
-  FROM (
+  RETURN QUERY EXECUTE format(
+    $query$
+    
     SELECT
-      hav.name::TEXT AS witness,
-      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'url', '{42,11}')->>'url') AS url,
-      all_votes.votes::NUMERIC AS votes,
-      COALESCE(todays_votes.votes, 0)::BIGINT AS votes_daily_change,
-      all_votes.voters_num::INT AS voters_num,
-      COALESCE(todays_votes.voters_num, 0)::INT AS voters_num_daily_change,
-      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'exchange_rate', '{42,7}')) AS feed_data,
-      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'maximum_block_size', '{42,30,14,11}')->>'maximum_block_size')::INT AS block_size,
-      (SELECT hafbe_backend.parse_and_unpack_witness_data(cw.witness_id, 'signing_key', '{42,11}')->>'signing_key') AS signing_key
-    FROM hafbe_app.current_witnesses cw
+      name::TEXT, url,
+      votes::NUMERIC,
+      votes_daily_change::BIGINT,
+      voters_num::INT,
+      voters_num_daily_change::INT,
+      price_feed, bias, feed_age, block_size, signing_key, version
+    FROM hive.accounts_view
+
+    JOIN hafbe_app.current_witnesses cw ON cw.witness_id = id
 
     JOIN (
       SELECT
@@ -502,21 +496,26 @@ BEGIN
     LEFT JOIN (
       SELECT
         witness_id,
-        SUM(CASE WHEN approve IS TRUE THEN votes ELSE -1 * votes END) AS votes,
-        SUM(CASE WHEN approve IS TRUE THEN 1 ELSE -1 END) AS voters_num
+        COALESCE(
+          SUM(CASE WHEN approve IS TRUE THEN votes ELSE -1 * votes END),
+        0) AS votes_daily_change,
+        COALESCE(SUM(CASE WHEN approve IS TRUE THEN 1 ELSE -1 END),
+        0) AS voters_num_daily_change
       FROM hafbe_views.voters_stats_change_view
-      WHERE timestamp >= __today
+      WHERE timestamp >= %L
       GROUP BY witness_id
     ) todays_votes ON todays_votes.witness_id = cw.witness_id
 
-    JOIN (
-      SELECT name, id
-      FROM hive.accounts_view
-    ) hav ON hav.id = cw.witness_id
-    
-  ) votes_stats
-  ORDER BY votes DESC
-  LIMIT _limit;
+    WHERE %I IS NOT NULL
+
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    LIMIT %L;
+
+    $query$,
+    __today, _order_by, _order_is, _order_by, _order_is, _order_by, _limit
+  ) res;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE

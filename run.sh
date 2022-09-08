@@ -9,6 +9,7 @@ drop_db() {
 }
 
 create_db() {
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f api/views.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
     process_blocks $@
 }
