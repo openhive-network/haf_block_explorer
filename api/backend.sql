@@ -293,10 +293,7 @@ BEGIN
     hov.body::JSON,
     hov.id::BIGINT,
     NULL::BIGINT
-  FROM (
-    SELECT block_num, op_type_id, trx_in_block, op_pos, timestamp, body, id
-    FROM hive.operations_view
-  ) hov
+  FROM hive.operations_view hov
   JOIN LATERAL (
     SELECT id, is_virtual
     FROM hive.operation_types

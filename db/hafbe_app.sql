@@ -248,14 +248,16 @@ END
 $$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.add_new_witness(witness_id INT)
+CREATE OR REPLACE PROCEDURE hafbe_app.add_new_witness(_witness_id INT)
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-  VALUES (witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0')
-  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+  IF (SELECT witness_id FROM hafbe_app.current_witnesses WHERE witness_id = _witness_id) IS NULL THEN
+    INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
+    VALUES (_witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0')
+    ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+  END IF;
 END
 $$
 ;
@@ -276,86 +278,73 @@ BEGIN
   -- main processing loop
   FOR b IN _from .. _to
   LOOP
-    -- parse witness url
     FOR __prop_op IN
-      SELECT witness_id, value, op_type_id
-      FROM hafbe_views.witness_prop_op_view
-      WHERE block_num = b AND op_type_id = ANY('{42,11}'::INT[])
-    
+      SELECT
+        haov.account_id AS witness_id,
+        (hov.body::JSON)->'value' AS value,
+        hov.op_type_id,
+        hov.timestamp
+      FROM hive.hafbe_app_operations_view hov
+      JOIN (
+        SELECT account_id, operation_id, block_num
+        FROM hive.hafbe_app_account_operations_view haov
+      ) haov ON hov.id = haov.operation_id AND hov.block_num = haov.block_num
+      WHERE hov.block_num = b AND hov.op_type_id = ANY('{42,30,14,11,7}'::INT[])
+          
     LOOP
-      IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'url') INTO __prop_value;
-      ELSE
-        SELECT __prop_op.value->>'url' INTO __prop_value;
-      END IF;
-
       CALL hafbe_app.add_new_witness(__prop_op.witness_id);
+      
+      -- parse witness url 42,11
+      IF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
+        IF __prop_op.op_type_id = 42 THEN
+          SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'url') INTO __prop_value;
+        ELSE
+          SELECT __prop_op.value->>'url' INTO __prop_value;
+        END IF;
 
-      IF __prop_value IS NOT NULL THEN
-        UPDATE hafbe_app.current_witnesses cw SET url = __prop_value WHERE witness_id = __prop_op.witness_id;
-      END IF;
-    END LOOP;
+        IF __prop_value IS NOT NULL THEN
+          UPDATE hafbe_app.current_witnesses cw SET url = __prop_value WHERE witness_id = __prop_op.witness_id;
+        END IF;
+      
+      -- parse witness feed_data 42,7
+      ELSIF __prop_op.op_type_id = ANY('{42,7}'::INT[]) THEN
+        IF __prop_op.op_type_id = 42 THEN
+          SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'hbd_exchange_rate') INTO __prop_value;
+        ELSE
+          SELECT __prop_op.value->>'exchange_rate' INTO __prop_value;
+        END IF;
 
-    -- parse witness feed_data
-    FOR __prop_op IN
-      SELECT witness_id, value, op_type_id, timestamp
-      FROM hafbe_views.witness_prop_op_view
-      WHERE block_num = b AND op_type_id = ANY('{42,7}'::INT[])
-    
-    LOOP
-      IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'hbd_exchange_rate') INTO __prop_value;
-      ELSE
-        SELECT __prop_op.value->>'exchange_rate' INTO __prop_value;
-      END IF;
+        IF __prop_value IS NOT NULL THEN
+          UPDATE hafbe_app.current_witnesses cw SET price_feed = __prop_value WHERE witness_id = __prop_op.witness_id;
+          -- (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT
+          UPDATE hafbe_app.current_witnesses cw SET bias = 0::INT WHERE witness_id = __prop_op.witness_id;
+          UPDATE hafbe_app.current_witnesses cw SET feed_age = (NOW() - __prop_op.timestamp)::INTERVAL WHERE witness_id = __prop_op.witness_id;
+        END IF;
 
-      CALL hafbe_app.add_new_witness(__prop_op.witness_id);
+      -- parse witness block_size 42,30,14,11
+      ELSIF __prop_op.op_type_id = ANY('{42,30,14,11}'::INT[]) THEN
+        IF __prop_op.op_type_id = 42 THEN
+          SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'maximum_block_size') INTO __prop_value;
+        ELSE
+          SELECT __prop_op.value->>'maximum_block_size' INTO __prop_value;
+        END IF;
 
-      IF __prop_value IS NOT NULL THEN
-        UPDATE hafbe_app.current_witnesses cw SET price_feed = __prop_value WHERE witness_id = __prop_op.witness_id;
-        -- (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT
-        UPDATE hafbe_app.current_witnesses cw SET bias = 0::INT WHERE witness_id = __prop_op.witness_id;
-        UPDATE hafbe_app.current_witnesses cw SET feed_age = (NOW() - __prop_op.timestamp)::INTERVAL WHERE witness_id = __prop_op.witness_id;
-      END IF;
-    END LOOP;
+        IF __prop_value IS NOT NULL THEN
+          UPDATE hafbe_app.current_witnesses cw SET block_size = __prop_value::INT WHERE witness_id = __prop_op.witness_id;
+        END IF;
 
-    -- parse witness block_size
-    FOR __prop_op IN
-      SELECT witness_id, value, op_type_id
-      FROM hafbe_views.witness_prop_op_view
-      WHERE block_num = b AND op_type_id = ANY('{42,30,14,11}'::INT[])
-    
-    LOOP
-      IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'maximum_block_size') INTO __prop_value;
-      ELSE
-        SELECT __prop_op.value->>'maximum_block_size' INTO __prop_value;
-      END IF;
+      -- parse witness signing_key 42,11
+      ELSIF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
+        IF __prop_op.op_type_id = 42 THEN
+          SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'new_signing_key') INTO __prop_value;
+        ELSE
+          SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
+        END IF;
 
-      CALL hafbe_app.add_new_witness(__prop_op.witness_id);
+        IF __prop_value IS NOT NULL THEN
+          UPDATE hafbe_app.current_witnesses cw SET signing_key = __prop_value WHERE witness_id = __prop_op.witness_id;
+        END IF;
 
-      IF __prop_value IS NOT NULL THEN
-        UPDATE hafbe_app.current_witnesses cw SET block_size = __prop_value WHERE witness_id = __prop_op.witness_id;
-      END IF;
-    END LOOP;
-    
-    -- parse witness signing_key
-    FOR __prop_op IN
-      SELECT witness_id, value, op_type_id
-      FROM hafbe_views.witness_prop_op_view
-      WHERE block_num = b AND op_type_id = ANY('{42,30,14,11}'::INT[])
-    
-    LOOP
-      IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'new_signing_key') INTO __prop_value;
-      ELSE
-        SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
-      END IF;
-
-      CALL hafbe_app.add_new_witness(__prop_op.witness_id);
-
-      IF __prop_value IS NOT NULL THEN
-        UPDATE hafbe_app.current_witnesses cw SET signing_key = __prop_value WHERE witness_id = __prop_op.witness_id;
       END IF;
     END LOOP;
 
@@ -365,7 +354,8 @@ BEGIN
       ((body::JSON)->'value'->>'approve')::BOOLEAN AS approve,
       timestamp
     FROM hive.hafbe_app_operations_view
-    WHERE op_type_id = 12 AND block_num = b;
+    WHERE op_type_id = 12 AND block_num = b
+    ORDER BY id ASC;
 
     IF __vote_op.witness_id IS NOT NULL THEN
       INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
@@ -380,13 +370,14 @@ BEGIN
         timestamp = EXCLUDED.timestamp
       ;
     END IF;
-    
+
     SELECT INTO __proxy_op
       hafbe_app.get_account_id((body::JSON)->'value'->>'account') AS account_id,
       hafbe_app.get_account_id((body::JSON)->'value'->>'proxy') AS proxy_id,
       timestamp
     FROM hive.hafbe_app_operations_view
-    WHERE op_type_id = 13 AND block_num = b;
+    WHERE op_type_id = 13 AND block_num = b
+    ORDER BY id ASC;
 
     IF __proxy_op.account_id IS NOT NULL THEN
       INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
