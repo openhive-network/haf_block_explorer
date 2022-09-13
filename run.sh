@@ -9,7 +9,6 @@ drop_db() {
 }
 
 create_db() {
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f api/views.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
     process_blocks $@
 }
@@ -24,7 +23,9 @@ create_api() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/views.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "CALL hafbe_views.create_views();"
 }
 
 create_indexes() {

@@ -208,7 +208,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -218,6 +218,10 @@ DECLARE
 BEGIN
   IF _limit IS NULL OR _limit <= 0 THEN
     _limit = 1000;
+  END IF;
+
+  IF _offset IS NULL OR _offset < 0 THEN
+    _offset = 0;
   END IF;
 
   IF _order_by NOT SIMILAR TO '(account|vests|account_vests|proxied_vests|timestamp)' THEN
@@ -234,12 +238,12 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit, _order_by, _order_is);
+  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit, _offset, _order_by, _order_is);
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -247,6 +251,10 @@ $$
 BEGIN
   IF _limit IS NULL OR _limit <= 0 THEN
     _limit = 50;
+  END IF;
+
+  IF _offset IS NULL OR _offset < 0 THEN
+    _offset = 0;
   END IF;
 
   IF _order_by NOT SIMILAR TO
@@ -264,7 +272,7 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN hafbe_backend.get_witnesses(_limit, _order_by, _order_is);
+  RETURN hafbe_backend.get_witnesses(_limit, _offset, _order_by, _order_is);
 END
 $$
 ;

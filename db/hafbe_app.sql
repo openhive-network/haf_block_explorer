@@ -132,8 +132,6 @@ BEGIN
 
   CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
 
-  CALL hafbe_views.create_views();
-
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
 $$
