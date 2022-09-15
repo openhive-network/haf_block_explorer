@@ -397,7 +397,7 @@ BEGIN
     JOIN (
       SELECT voter_id
       FROM hafbe_app.current_witness_votes
-      WHERE witness_id = _witness_id
+      WHERE witness_id = %L
     ) cwv ON cwv.voter_id = id
 
     JOIN (
@@ -413,7 +413,7 @@ BEGIN
     LIMIT %L;
 
     $query$,
-    _witness_id, _order_is, _order_by, _order_is, _order_by, _limit
+    _witness_id, _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit
   ) res;
 END
 $function$
