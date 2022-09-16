@@ -63,7 +63,7 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
     witness_id INT NOT NULL,
     url TEXT,
-    price_feed TEXT,
+    price_feed FLOAT,
     bias INT,
     feed_age INTERVAL,
     block_size INT,
@@ -205,47 +205,6 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.unpack_from_vector(_vector TEXT)
-RETURNS TEXT
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN 
-  -- TODO: to be replaced by hive fork manager method
-  RETURN _vector;
-END
-$$
-;
-
-CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_set_props(_op_value JSON, _attr_name TEXT)
-RETURNS TEXT
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __result TEXT;
-BEGIN
-  SELECT INTO __result
-    props->>1
-  FROM (
-    SELECT json_array_elements(_op_value->'props') AS props
-  ) to_arr
-  WHERE props->>0 = _attr_name;
-
-  IF _attr_name = 'new_signing_key' AND __result IS NULL THEN
-    SELECT INTO __result
-      props->>1
-    FROM (
-      SELECT json_array_elements(_op_value->'props') AS props
-    ) to_arr
-    WHERE props->>0 = 'key';
-  END IF;
-
-  RETURN hafbe_app.unpack_from_vector(__result);
-END
-$$
-;
-
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT, _report_step INT = 1000)
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -353,7 +312,7 @@ BEGIN
     -- parse witness url 42,11
     IF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'url') INTO __prop_value;
+        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'url' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'url' INTO __prop_value;
       END IF;
@@ -365,22 +324,23 @@ BEGIN
     -- parse witness feed_data 42,7
     ELSIF __prop_op.op_type_id = ANY('{42,7}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'hbd_exchange_rate') INTO __prop_value;
+        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'hbd_exchange_rate' INTO __prop_value;
       ELSE
-        SELECT __prop_op.value->>'exchange_rate' INTO __prop_value;
+        SELECT __prop_op.value->'exchange_rate' INTO __prop_value;
       END IF;
 
       IF __prop_value IS NOT NULL THEN
-        UPDATE hafbe_app.current_witnesses cw SET price_feed = __prop_value WHERE witness_id = __prop_op.witness_id;
-        -- (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT
-        UPDATE hafbe_app.current_witnesses cw SET bias = 0::INT WHERE witness_id = __prop_op.witness_id;
-        UPDATE hafbe_app.current_witnesses cw SET feed_age = (NOW() - __prop_op.timestamp)::INTERVAL WHERE witness_id = __prop_op.witness_id;
+        UPDATE hafbe_app.current_witnesses cw SET
+          price_feed = ((__prop_value::JSON)->'base'->>'amount')::INT / ((__prop_value::JSON)->'quote'->>'amount')::INT,
+          bias = (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT,
+          feed_age = (NOW() - __prop_op.timestamp)::INTERVAL
+        WHERE witness_id = __prop_op.witness_id;
       END IF;
 
     -- parse witness block_size 42,30,14,11
     ELSIF __prop_op.op_type_id = ANY('{42,30,14,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'maximum_block_size') INTO __prop_value;
+        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'maximum_block_size' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'maximum_block_size' INTO __prop_value;
       END IF;
@@ -392,9 +352,13 @@ BEGIN
     -- parse witness signing_key 42,11
     ELSIF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hafbe_app.parse_witness_set_props(__prop_op.value, 'new_signing_key') INTO __prop_value;
+        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'new_signing_key' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
+      END IF;
+
+      IF __prop_op.op_type_id = 42 AND __prop_value IS NULL THEN
+        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'key' INTO __prop_value;
       END IF;
 
       IF __prop_value IS NOT NULL THEN
