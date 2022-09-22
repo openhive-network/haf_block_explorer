@@ -18,34 +18,28 @@ process_blocks() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CALL hafbe_app.main('$hive_app_name', $n_blocks);"
 }
 
+stop_processing() {
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_app.stopProcessing();"
+}
+
+continue_processing() {
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_app.allowProcessing();"
+}
+
 create_api() {
     postgrest_dir=$PWD/api
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/views.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/types.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/views.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "CALL hafbe_views.create_views();"
 }
 
 create_indexes() {
-    # creating indexes CONCURRENTLY inside sql function is not allowed, they must be created from script
     echo "Creating indexes, this might take a while."
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash)"
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_timestamp_id ON hive.operations_reversible USING btree (timestamp, id, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_timestamp_id ON hive.operations USING btree (timestamp, id)"
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_reversible_uq2 ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_uq2 ON hive.account_operations USING btree (account_id, op_type_id, operation_id)"
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_reversible_block_num ON hive.account_operations_reversible USING btree (block_num, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_block_num ON hive.account_operations USING btree (block_num)"
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_reversible_operation_id_block_num ON hive.account_operations_reversible USING btree (operation_id, block_num, fork_id)"
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_account_operations_operation_id_block_num ON hive.account_operations USING btree (operation_id, block_num)"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
 }
 
 start_webserver() {
@@ -121,13 +115,14 @@ elif [ "$1" = "create-db" ]; then
     create_db $2
 elif [ "$1" = "re-start" ]; then
     create_api
-    create_indexes
     echo 'SUCCESS: Users and API recreated'
     start_webserver $2
 elif [ "$1" =  "create-indexes" ]; then
     create_indexes
+elif [ "$1" =  "stop-processing" ]; then
+    stop_processing
 elif [ "$1" =  "continue-processing" ]; then
-    create_indexes
+    continue_processing
 elif [ "$1" =  "install-postgrest" ]; then
     install_postgrest
 elif [ "$1" =  "install-plpython" ]; then

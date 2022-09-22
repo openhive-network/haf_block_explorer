@@ -17,14 +17,13 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __input_type TEXT;
-  __input_value TEXT = _input;
+  __hash BYTEA;
   __block_num INT;
   __head_block_num INT;
   __accounts_array JSON;
 BEGIN
   -- first, name existance is checked
-  IF (SELECT name FROM hive.accounts WHERE name = _input LIMIT 1) IS NOT NULL THEN
+  IF (SELECT 1 FROM hive.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
     RETURN json_build_object(
       'input_type', 'account_name',
       'input_value', _input
@@ -47,35 +46,37 @@ BEGIN
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
   IF _input SIMILAR TO '([a-f0-9]{40})' THEN
-    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = ('\x' || _input)::BYTEA LIMIT 1) IS NOT NULL THEN
+    SELECT ('\x' || _input)::BYTEA INTO __hash;
+    
+    IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
       RETURN json_build_object(
         'input_type', 'transaction_hash',
         'input_value', _input
       );
     ELSE
-      __block_num = hafbe_backend.get_block_num(('\x' || _input)::BYTEA);
+      SELECT num FROM hive.blocks_view WHERE hash = __hash LIMIT 1 INTO __block_num;
     END IF;
 
-    IF __input_type IS NULL AND __block_num IS NOT NULL THEN
+    IF __block_num IS NOT NULL THEN
       RETURN json_build_object(
         'input_type', 'block_hash',
         'input_value', __block_num
       );
-    ELSIF __input_type IS NULL AND __block_num IS NULL THEN
-      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input::TEXT);
+    ELSE
+      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input);
     END IF;
   END IF;
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT hafbe_backend.find_matching_accounts(_input::TEXT) INTO __accounts_array;
+  SELECT btracker_app.find_matching_accounts(_input) INTO __accounts_array;
   IF __accounts_array IS NOT NULL THEN
     RETURN json_build_object(
       'input_type', 'account_name_array',
       'input_value', __accounts_array
     );
   ELSE
-    RETURN hafbe_exceptions.raise_unknown_input_exception(_input::TEXT);
+    RETURN hafbe_exceptions.raise_unknown_input_exception(_input);
   END IF;
 END
 $$
@@ -92,13 +93,31 @@ END
 $$
 ;
 
+/*
+operation types
+*/
+
+CREATE FUNCTION hafbe_endpoints.format_op_types(op_type_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN ('[' || op_type_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']');
+END
+$$
+;
+
 CREATE FUNCTION hafbe_endpoints.get_op_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_op_types();
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_endpoints.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_op_types()
+  ) res;
 END
 $$
 ;
@@ -111,7 +130,10 @@ $$
 DECLARE
   __account_id INT = hafbe_backend.get_account_id(_account);
 BEGIN
-  RETURN hafbe_backend.get_acc_op_types(__account_id);
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_endpoints.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_acc_op_types(__account_id)
+  ) res;
 END
 $$
 ;
@@ -122,7 +144,10 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_block_op_types(_block_num);
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_endpoints.format_op_types(op_type_id, operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_block_op_types(_block_num)
+  ) res;
 END
 $$
 ;
@@ -153,7 +178,11 @@ BEGIN
 
   SELECT hafbe_backend.get_account_id(_account) INTO __account_id;
 
-  RETURN hafbe_backend.get_ops_by_account(__account_id, _top_op_id, _limit, _filter, _date_start, _date_end);
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(__account_id, _top_op_id, _limit, _filter, _date_start, _date_end))
+    ) arr
+  ) result;
 END
 $$
 ;
@@ -191,7 +220,11 @@ BEGIN
     _filter = ARRAY[]::SMALLINT[];
   END IF;
 
-  RETURN hafbe_backend.get_ops_by_block(_block_num, _top_op_id, _limit, _filter);
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
+    ) arr
+  ) result;
 END
 $$
 ;
@@ -238,12 +271,16 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN hafbe_backend.get_witness_voters(__witness_id, _limit, _offset, _order_by, _order_is);
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_set_of_witness_voters(__witness_id, _limit, _offset, _order_by, _order_is)
+    ) arr
+  ) result;
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc')
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -272,7 +309,11 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN hafbe_backend.get_witnesses(_limit, _offset, _order_by, _order_is);
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_set_of_witnesses(_limit, _offset, _order_by, _order_is)
+    ) arr
+  ) result;
 END
 $$
 ;

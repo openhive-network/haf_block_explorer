@@ -14,11 +14,10 @@ BEGIN
     continue_processing BOOLEAN,
     last_processed_block INT,
     started_processing_at TIMESTAMP,
-    last_reported_at TIMESTAMP,
-    report_time BOOLEAN
+    last_reported_at TIMESTAMP
   );
-  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, last_reported_at, report_time)
-  VALUES (True, 0, NULL, to_timestamp(0), TRUE);
+  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at)
+  VALUES (True, 0, NULL, to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hardfork_operations (
     operation_id INT NOT NULL,
@@ -47,8 +46,6 @@ BEGIN
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
-  CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id_timestamp ON hafbe_app.witness_votes_history USING btree (witness_id, timestamp);
-
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
@@ -57,8 +54,6 @@ BEGIN
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
   ) INHERITS (hive.hafbe_app);
-  
-  CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id_approve ON hafbe_app.current_witness_votes USING btree (witness_id, approve);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
     witness_id INT NOT NULL,
@@ -79,12 +74,6 @@ BEGIN
     proxy BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
-  
-  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp ON hafbe_app.account_proxies_history USING btree (timestamp);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_account_id ON hafbe_app.account_proxies_history USING btree (timestamp, account_id);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_proxy_id ON hafbe_app.account_proxies_history USING btree (timestamp, proxy_id);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp_proxy_id_proxy ON hafbe_app.account_proxies_history USING btree (timestamp, proxy_id, proxy);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_proxy_id ON hafbe_app.account_proxies_history USING btree (account_id, proxy_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
@@ -93,10 +82,6 @@ BEGIN
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
-  
-  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_proxy ON hafbe_app.current_account_proxies USING btree (proxy_id, proxy);
-  CREATE INDEX IF NOT EXISTS current_account_proxies_account_id_proxy ON hafbe_app.current_account_proxies USING btree (account_id, proxy);
-  CREATE INDEX IF NOT EXISTS current_account_proxies_account_id_proxy_id ON hafbe_app.current_account_proxies USING btree (account_id, proxy_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
@@ -107,7 +92,7 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_operation_cache (
     account_id INT NOT NULL,
-    op_type_id INT NOT NULL,
+    op_type_id SMALLINT NOT NULL,
 
     CONSTRAINT pk_account_operation_cache PRIMARY KEY (account_id, op_type_id)
   ) INHERITS (hive.hafbe_app);
@@ -129,8 +114,6 @@ BEGIN
 
     CONSTRAINT pk_account_vests PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
 
   --ALTER SCHEMA hafbe_app OWNER TO hafbe_owner;
 END
@@ -312,7 +295,7 @@ BEGIN
     -- parse witness url 42,11
     IF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'url' INTO __prop_value;
+        SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'url' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'url' INTO __prop_value;
       END IF;
@@ -324,14 +307,14 @@ BEGIN
     -- parse witness feed_data 42,7
     ELSIF __prop_op.op_type_id = ANY('{42,7}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'hbd_exchange_rate' INTO __prop_value;
+        SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'hbd_exchange_rate' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->'exchange_rate' INTO __prop_value;
       END IF;
 
       IF __prop_value IS NOT NULL THEN
         UPDATE hafbe_app.current_witnesses cw SET
-          price_feed = ((__prop_value::JSON)->'base'->>'amount')::INT / ((__prop_value::JSON)->'quote'->>'amount')::INT,
+          price_feed = ((__prop_value::JSON)->'base'->>'amount')::BIGINT / ((__prop_value::JSON)->'quote'->>'amount')::INT,
           bias = (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT,
           feed_age = (NOW() - __prop_op.timestamp)::INTERVAL
         WHERE witness_id = __prop_op.witness_id;
@@ -340,7 +323,7 @@ BEGIN
     -- parse witness block_size 42,30,14,11
     ELSIF __prop_op.op_type_id = ANY('{42,30,14,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'maximum_block_size' INTO __prop_value;
+        SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'maximum_block_size' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'maximum_block_size' INTO __prop_value;
       END IF;
@@ -352,13 +335,13 @@ BEGIN
     -- parse witness signing_key 42,11
     ELSIF __prop_op.op_type_id = ANY('{42,11}'::INT[]) THEN
       IF __prop_op.op_type_id = 42 THEN
-        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'new_signing_key' INTO __prop_value;
+        SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'new_signing_key' INTO __prop_value;
       ELSE
         SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
       END IF;
 
       IF __prop_op.op_type_id = 42 AND __prop_value IS NULL THEN
-        SELECT hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'key' INTO __prop_value;
+        SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'key' INTO __prop_value;
       END IF;
 
       IF __prop_value IS NOT NULL THEN
@@ -435,8 +418,7 @@ BEGIN
 
     --RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
 
-    IF (SELECT report_time FROM hafbe_app.app_status) IS TRUE AND
-      (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status))::INTERVAL >= '5 second'::INTERVAL THEN
+    IF (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status))::INTERVAL >= '5 second'::INTERVAL THEN
 
       RAISE NOTICE 'Last processed block %', _last_block;
       RAISE NOTICE 'Block processing running for % minutes',

@@ -34,6 +34,9 @@ GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
 GRANT USAGE ON SCHEMA hafbe_views TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_views TO hafbe_user;
 
+GRANT USAGE ON SCHEMA hafbe_types TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_types TO hafbe_user;
+
 GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
