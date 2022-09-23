@@ -19,11 +19,11 @@ process_blocks() {
 }
 
 stop_processing() {
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_app.stopProcessing();"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "SELECT hafbe_app.stopProcessing();"
 }
 
 continue_processing() {
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_app.allowProcessing();"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "SELECT hafbe_app.allowProcessing();"
 }
 
 create_api() {
@@ -34,24 +34,28 @@ create_api() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
+    
+    echo "Creating indexes, this might take a while."
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes()"
 }
 
 create_indexes() {
-    echo "Creating indexes, this might take a while."
-
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_indexes.create_hafbe_indexes()"
 }
 
 start_webserver() {
-    default_port=3000
+    export PGRST_DB_URI="postgres://haf_admin@/haf_block_log"
+    export PGRST_DB_SCHEMA="hafbe_endpoints"
+    export PGRST_DB_ANON_ROLE="hafbe_user"
+
+    export PGRST_SERVER_PORT=3000
     if [[ $1 == ?+([0-9]) ]]; then 
-        port=$1
-    else
-        port=$default_port
+        export PGRST_SERVER_PORT=$1
     fi
 
-    sed -i "/server-port = /s/.*/server-port = \"$port\"/" $CONFIG_PATH
-    postgrest postgrest.conf
+    postgrest
 }
 
 install_postgrest() {

@@ -16,8 +16,8 @@ BEGIN
     started_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP
   );
-  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at)
-  VALUES (True, 0, NULL, to_timestamp(0));
+  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, last_reported_at)
+  VALUES (TRUE, 0, NULL, to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hardfork_operations (
     operation_id INT NOT NULL,
@@ -59,7 +59,7 @@ BEGIN
     witness_id INT NOT NULL,
     url TEXT,
     price_feed FLOAT,
-    bias INT,
+    bias NUMERIC,
     feed_age INTERVAL,
     block_size INT,
     signing_key TEXT,
@@ -314,8 +314,8 @@ BEGIN
 
       IF __prop_value IS NOT NULL THEN
         UPDATE hafbe_app.current_witnesses cw SET
-          price_feed = ((__prop_value::JSON)->'base'->>'amount')::BIGINT / ((__prop_value::JSON)->'quote'->>'amount')::INT,
-          bias = (((__prop_value::JSON)->'quote'->>'amount')::INT - 1000)::INT,
+          price_feed = ((__prop_value::JSON)->'base'->>'amount')::NUMERIC / ((__prop_value::JSON)->'quote'->>'amount')::NUMERIC,
+          bias = (((__prop_value::JSON)->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC,
           feed_age = (NOW() - __prop_op.timestamp)::INTERVAL
         WHERE witness_id = __prop_op.witness_id;
       END IF;
