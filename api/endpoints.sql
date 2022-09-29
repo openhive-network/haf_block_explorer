@@ -257,7 +257,7 @@ BEGIN
     _offset = 0;
   END IF;
 
-  IF _order_by NOT SIMILAR TO '(account|vests|account_vests|proxied_vests|timestamp)' THEN
+  IF _order_by NOT SIMILAR TO '(vests|account_vests|proxied_vests|timestamp)' THEN
     RETURN hafbe_exceptions.raise_no_such_column_exception(_order_by);
   END IF;
   IF _order_by IS NULL THEN

@@ -464,6 +464,21 @@ END
 $$
 ;
 
+CREATE OR REPLACE PROCEDURE hafbe_app.create_context_if_not_exists(_appContext VARCHAR)
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  IF NOT hive.app_context_exists(_appContext) THEN
+    RAISE NOTICE 'Attempting to create a HAF application context...';
+    PERFORM hive.app_create_context(_appContext);
+    PERFORM hafbe_app.define_schema();
+    COMMIT;
+  END IF;
+END
+$$
+;
+
 /** Application entry point, which:
   - defines its data schema,
   - creates HAF application context,
@@ -477,13 +492,6 @@ DECLARE
   __last_block INT;
   __next_block_range hive.blocks_range;
 BEGIN
-  IF NOT hive.app_context_exists(_appContext) THEN
-    RAISE NOTICE 'Attempting to create a HAF application context...';
-    PERFORM hive.app_create_context(_appContext);
-    PERFORM hafbe_app.define_schema();
-    COMMIT;
-  END IF;
-
   PERFORM hafbe_app.allowProcessing();
   COMMIT;
 

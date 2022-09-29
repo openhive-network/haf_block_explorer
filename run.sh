@@ -9,7 +9,6 @@ drop_db() {
 }
 
 create_db() {
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
     process_blocks $@
 }
 
@@ -28,6 +27,11 @@ continue_processing() {
 
 create_api() {
     postgrest_dir=$PWD/api
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "CALL hafbe_app.create_context_if_not_exists('$hive_app_name');"
+
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/views.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/types.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
@@ -35,8 +39,6 @@ create_api() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
-    
     echo "Creating indexes, this might take a while."
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes()"
 }
