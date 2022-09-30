@@ -1,6 +1,6 @@
 DROP SCHEMA IF EXISTS hafbe_views CASCADE;
 
-CREATE SCHEMA hafbe_views;
+CREATE SCHEMA hafbe_views AUTHORIZATION hafbe_owner;
 
 DROP VIEW IF EXISTS hafbe_views.recursively_proxied_accounts_view CASCADE;
 CREATE VIEW hafbe_views.recursively_proxied_accounts_view AS

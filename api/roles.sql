@@ -1,12 +1,3 @@
--- recreate hafbe schemas owner
-DROP ROLE IF EXISTS hafbe_owner;
-CREATE ROLE hafbe_owner LOGIN INHERIT IN ROLE hive_applications_group;
-
-ALTER SCHEMA hafbe_backend OWNER TO hafbe_owner;
-ALTER SCHEMA hafbe_endpoints OWNER TO hafbe_owner;
-ALTER SCHEMA hafbe_exceptions OWNER TO hafbe_owner;
-ALTER SCHEMA hafbe_views OWNER TO hafbe_owner;
-
 -- drop priviliges of schemas user
 DO $$
 BEGIN
@@ -53,3 +44,6 @@ GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hafbe_app TO hafbe_user;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
+
+-- plpython3u must be trusted language
+GRANT USAGE ON LANGUAGE plpython3u TO hafbe_owner;

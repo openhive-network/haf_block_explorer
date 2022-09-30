@@ -1,6 +1,6 @@
 DROP SCHEMA IF EXISTS hafbe_types CASCADE;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_types;
+CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
 
 CREATE TYPE hafbe_types.op_types AS (
   op_type_id SMALLINT,

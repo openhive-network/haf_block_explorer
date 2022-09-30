@@ -1,7 +1,7 @@
 -- TODO: review if all indexes necessary
 DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_indexes;
+CREATE SCHEMA IF NOT EXISTS hafbe_indexes AUTHORIZATION hafbe_owner;
 
 CREATE FUNCTION hafbe_indexes.create_hafbe_indexes()
 RETURNS VOID

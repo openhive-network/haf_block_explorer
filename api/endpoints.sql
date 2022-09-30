@@ -1,6 +1,6 @@
 DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_endpoints;
+CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
 /*
 determines the input type as one of 'account_name', 'block_num', 'transaction_hash', 'block_hash'

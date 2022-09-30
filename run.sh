@@ -25,11 +25,37 @@ continue_processing() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "SELECT hafbe_app.allowProcessing();"
 }
 
+create_role() {
+    role_name=hafbe_owner
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f - <<EOF
+DO \$$
+BEGIN
+    CREATE ROLE $role_name WITH LOGIN INHERIT IN ROLE hive_applications_group;
+    EXCEPTION WHEN DUPLICATE_OBJECT THEN
+    RAISE NOTICE '$role_name role already exists';
+    
+    GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $role_name;
+END
+\$$;
+
+EOF
+
+    if ! id $role_name &>/dev/null; then
+        sudo useradd -m $role_name
+        sudo chsh -s /bin/bash $role_name
+    fi;
+
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;"
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpython3u';"
+}
+
 create_api() {
     postgrest_dir=$PWD/api
+    db_dir=$PWD/db
 
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f db/hafbe_app.sql
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -f db/indexes.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $db_dir/hafbe_app.sql
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $db_dir/indexes.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "CALL hafbe_app.create_context_if_not_exists('$hive_app_name');"
 
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/views.sql
@@ -37,18 +63,23 @@ create_api() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/exceptions.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/backend.sql
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/endpoints.sql
-    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
+}
 
+grant_permissions() {
+    psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -f $postgrest_dir/roles.sql
+}
+
+create_haf_indexes() {
     echo "Creating indexes, this might take a while."
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes()"
 }
 
-create_indexes() {
+create_hafbe_indexes() {
     psql -a -v "ON_ERROR_STOP=1" -d $DB_NAME -c "\timing" -c "SELECT hafbe_indexes.create_hafbe_indexes()"
 }
 
 start_webserver() {
-    export PGRST_DB_URI="postgres://haf_admin@/haf_block_log"
+    export PGRST_DB_URI="postgres://hafbe_owner@/haf_block_log"
     export PGRST_DB_SCHEMA="hafbe_endpoints"
     export PGRST_DB_ANON_ROLE="hafbe_user"
 
@@ -116,24 +147,41 @@ hive_app_name="hafbe_app"
 if [ "$1" = "start" ]; then
     start_webserver $2
 elif [ "$1" = "drop-db" ]; then
+    # run as hafbe_owner
     drop_db
 elif [ "$1" = "create-db" ]; then
     create_db $2
+elif [ "$1" = "create-role" ]; then
+    # run as admin
+    create_role
 elif [ "$1" = "re-start" ]; then
+    # run as hafbe_owner
     create_api
     echo 'SUCCESS: Users and API recreated'
     start_webserver $2
-elif [ "$1" =  "create-indexes" ]; then
-    create_indexes
+elif [ "$1" = "grant-permissions" ]; then
+    # run as admin
+    grant_permissions
+elif [ "$1" =  "create-haf-indexes" ]; then
+    # run as admin
+    create_haf_indexes
+elif [ "$1" =  "create-hafbe-indexes" ]; then
+    # run as hafbe_owner ?
+    create_hafbe_indexes
 elif [ "$1" =  "stop-processing" ]; then
+    # run as hafbe_owner
     stop_processing
 elif [ "$1" =  "continue-processing" ]; then
+    # run as hafbe_owner
     continue_processing
 elif [ "$1" =  "install-postgrest" ]; then
+    # run as admin
     install_postgrest
 elif [ "$1" =  "install-plpython" ]; then
+    # run as admin
     install_plpython
 elif [ "$1" =  "install-jmeter" ]; then
+    # run as admin
     install_jmeter
 elif [ "$1" =  "run-tests" ]; then
     run_tests $@

@@ -1,8 +1,6 @@
 DROP SCHEMA IF EXISTS hafbe_backend CASCADE;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_backend;
-
-CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;
+CREATE SCHEMA IF NOT EXISTS hafbe_backend AUTHORIZATION hafbe_owner;
 
 /*
 general
