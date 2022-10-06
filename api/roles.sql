@@ -10,7 +10,8 @@ $$
 
 -- recreate hafbe schemas user
 DROP ROLE IF EXISTS hafbe_user;
-CREATE ROLE hafbe_user LOGIN INHERIT IN ROLE hive_applications_group;
+CREATE ROLE hafbe_user NOLOGIN;
+GRANT hafbe_user TO hafbe_owner;
 
 -- grant new priviliges
 GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;

@@ -51,7 +51,7 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
-    proxy_id INT NOT NULL,
+    proxy_id INT,
     proxy BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
@@ -79,15 +79,16 @@ BEGIN
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
-    op_type_id INT NOT NULL,
-
-    CONSTRAINT pk_balance_impacting_op_ids PRIMARY KEY(op_type_id)
+    op_type_ids_arr SMALLINT[] NOT NULL
   );
 
-  INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_id)
-  SELECT hot.id
+  INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_ids_arr)
+  SELECT array_agg(hot.id)
   FROM hive.operation_types hot
-  WHERE hot.name IN (SELECT * FROM hive.get_balance_impacting_operations());
+  JOIN (
+    SELECT hive.get_balance_impacting_operations() AS name
+  ) bio
+  ON hot.name = bio.name;
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
     account_id INT NOT NULL,
@@ -176,90 +177,98 @@ DECLARE
   __prop_value TEXT;
   __prop_op RECORD;
   __proxy_op RECORD;
+  __first_timestamp TIMESTAMP;
   __vote_op RECORD;
   __vote_or_proxy_ops RECORD;
   __balance_change RECORD;
-  -- TODO: use proper function to get this data
-  __balance_impacting_ops_ids INT[] = '{56,64,22,9,41,69,83,59,54,50,81,27,29,2,77,78,5,21,57,85,32,39,66,51,52,80,55,74}'::SMALLINT[];
+  __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
-  FOR b IN _from .. _to
+  SELECT INTO __vote_or_proxy_ops
+    (body::JSON)->'value' AS value,
+    timestamp,
+    op_type_id,
+    id
+  FROM hive.hafbe_app_operations_view
+  WHERE op_type_id = ANY('{12,13}') AND block_num BETWEEN _from AND _to;
 
-  LOOP
-    SELECT INTO __vote_or_proxy_ops
-      (body::JSON)->'value' AS value,
-      timestamp,
-      op_type_id
-    FROM hive.hafbe_app_operations_view
-    WHERE op_type_id = ANY('{12,13}') AND block_num = b
-    ORDER BY id ASC;
-
-    FOR __vote_op IN
+  FOR __vote_op IN
     SELECT
       hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'witness') AS witness_id,
       hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS voter_id,
       (__vote_or_proxy_ops.value->>'approve')::BOOLEAN AS approve,
-      __vote_or_proxy_ops.timestamp AS timestamp
+      __vote_or_proxy_ops.timestamp
     WHERE __vote_or_proxy_ops.op_type_id = 12
+    ORDER BY __vote_or_proxy_ops.timestamp ASC
 
-    LOOP
-      INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
-      SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp
-      ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
-        approve = EXCLUDED.approve,
-        timestamp = EXCLUDED.timestamp
-    ;
-    END LOOP;
-
-    IF __vote_op.witness_id IS NOT NULL THEN
-      -- add new witness per vote op
-      INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-      SELECT __vote_op.witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-      ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
-      
-      -- insert historical vote op data
-      INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
-      SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp;
-    END IF;
-
-    FOR __proxy_op IN
-    SELECT
-      prox_op.account_id,
-      prev_prox_op.proxy_id,
-      prev_prox_op.proxy,
-      timestamp
-    FROM (
-      SELECT
-        hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS account_id,
-        hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'proxy') AS proxy_id,
-        __vote_or_proxy_ops.timestamp AS timestamp
-      WHERE __vote_or_proxy_ops.op_type_id = 13
-    ) prox_op
-    JOIN LATERAL (
-      SELECT
-        CASE WHEN prox_op.proxy_id IS NULL THEN aph.proxy_id ELSE prox_op.proxy_id END AS proxy_id,
-        CASE WHEN prox_op.proxy_id IS NULL THEN FALSE ELSE TRUE END AS proxy
-      FROM hafbe_app.account_proxies_history aph
-      WHERE aph.timestamp < prox_op.timestamp AND aph.account_id = prox_op.account_id
-      ORDER BY aph.timestamp DESC
-      LIMIT 1
-    ) prev_prox_op ON TRUE
-
-    LOOP
-      INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
-      VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy, __proxy_op.timestamp);
-
-      IF __proxy_op.account_id IS NOT NULL THEN
-        INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
-        VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy)
-        ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
-          proxy_id = EXCLUDED.proxy_id,
-          proxy = EXCLUDED.proxy
-        ;
-      END IF;
-    END LOOP;
-  
+  LOOP
+    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
+    SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp
+    ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
+      approve = EXCLUDED.approve,
+      timestamp = EXCLUDED.timestamp
+  ;
   END LOOP;
 
+  IF __vote_op.witness_id IS NOT NULL THEN
+    -- add new witness per vote op
+    INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
+    SELECT __vote_op.witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
+    ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+    
+    -- insert historical vote op data
+    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
+    SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp;
+  END IF;
+
+  SELECT INTO __proxy_op
+    prox_op.account_id,
+    prox_op.proxy_id,
+    CASE WHEN prox_op.proxy_id IS NULL THEN FALSE ELSE TRUE END AS proxy,
+    prox_op.timestamp
+  FROM (
+    SELECT
+      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS account_id,
+      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'proxy') AS proxy_id,
+      __vote_or_proxy_ops.timestamp,
+      __vote_or_proxy_ops.id
+    WHERE __vote_or_proxy_ops.op_type_id = 13
+  ) prox_op
+  ORDER BY prox_op.timestamp ASC;
+
+  IF __proxy_op.account_id IS NOT NULL THEN
+    INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
+    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy, __proxy_op.timestamp);
+  END IF;
+
+  UPDATE hafbe_app.account_proxies_history
+  SET proxy_id = (
+    SELECT aph.proxy_id
+    FROM hafbe_app.account_proxies_history aph
+    WHERE aph.account_id = __proxy_op.account_id AND aph.proxy_id IS NOT NULL AND aph.timestamp < __proxy_op.timestamp
+    ORDER BY aph.timestamp DESC
+    LIMIT 1
+  )
+  WHERE proxy_id IS NULL;
+
+  SELECT INTO __first_timestamp
+    __proxy_op.timestamp
+  ORDER BY __proxy_op.timestamp ASC
+  LIMIT 1;
+
+  FOR __proxy_op IN
+    SELECT account_id, proxy_id, proxy, timestamp
+    FROM hafbe_app.account_proxies_history
+    WHERE timestamp >= __first_timestamp AND proxy_id IS NOT NULL
+
+  LOOP
+    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
+    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy)
+    ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
+      proxy_id = EXCLUDED.proxy_id,
+      proxy = EXCLUDED.proxy
+    ;
+  END LOOP;
+  
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
   SELECT DISTINCT ON (account_id)
@@ -436,7 +445,7 @@ BEGIN
     COMMIT;
 
     IF __next_block_range IS NULL THEN
-      RAISE WARNING 'Waiting for next block...';
+      -- RAISE WARNING 'Waiting for next block...';
     ELSE
       IF _maxBlockLimit != 0 and __next_block_range.first_block > _maxBlockLimit THEN
         __next_block_range.first_block  := _maxBlockLimit;
