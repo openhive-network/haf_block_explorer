@@ -40,14 +40,17 @@ install_jmeter() {
 postgrest_v=9.0.0
 jmeter_v=5.4.3
 
-if [ "$1" =  "install-postgrest" ]; then
+if [ "$1" =  "all" ]; then
   install_postgrest
-elif [ "$1" =  "install-plpython" ]; then
   install_plpython
-elif [ "$1" =  "install-jmeter" ]; then
+  install_jmeter
+elif [ "$1" =  "postgrest" ]; then
+  install_postgrest
+elif [ "$1" =  "plpython" ]; then
+  install_plpython
+elif [ "$1" =  "jmeter" ]; then
   install_jmeter
 else
-  install_postgrest
-  install_plpython
-  install_jmeter
+  echo "job not found"
+  exit 1
 fi;

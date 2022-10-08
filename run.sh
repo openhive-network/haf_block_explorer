@@ -44,10 +44,9 @@ admin_role=haf_admin
 
 if [ "$1" = "start" ]; then
     start_webserver $2
-elif [ "$1" = "setup-dependancies" ]; then
-    ./scripts/setup_dependancies.sh
-elif [ "$1" = "setup-db" ]; then
-    ./scripts/setup_db.sh
+elif [ "$1" = "setup" ]; then
+    ./scripts/setup_dependancies.sh all
+    ./scripts/setup_db.sh all
 elif [ "$1" = "process-blocks" ]; then
     process_blocks $2
 elif [ "$1" =  "stop-processing" ]; then

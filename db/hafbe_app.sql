@@ -51,7 +51,7 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
-    proxy_id INT,
+    proxy_id INT NOT NULL,
     proxy BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
@@ -186,10 +186,9 @@ BEGIN
   SELECT INTO __vote_or_proxy_ops
     (body::JSON)->'value' AS value,
     timestamp,
-    op_type_id,
-    id
+    op_type_id
   FROM hive.hafbe_app_operations_view
-  WHERE op_type_id = ANY('{12,13}') AND block_num BETWEEN _from AND _to;
+  WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to;
 
   FOR __vote_op IN
     SELECT
@@ -220,45 +219,18 @@ BEGIN
     SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp;
   END IF;
 
-  SELECT INTO __proxy_op
-    prox_op.account_id,
-    prox_op.proxy_id,
-    CASE WHEN prox_op.proxy_id IS NULL THEN FALSE ELSE TRUE END AS proxy,
-    prox_op.timestamp
-  FROM (
+  FOR __proxy_op IN
     SELECT
       hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS account_id,
       hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'proxy') AS proxy_id,
-      __vote_or_proxy_ops.timestamp,
-      __vote_or_proxy_ops.id
-    WHERE __vote_or_proxy_ops.op_type_id = 13
-  ) prox_op
-  ORDER BY prox_op.timestamp ASC;
-
-  IF __proxy_op.account_id IS NOT NULL THEN
-    INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
-    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy, __proxy_op.timestamp);
-  END IF;
-
-  UPDATE hafbe_app.account_proxies_history
-  SET proxy_id = (
-    SELECT aph.proxy_id
-    FROM hafbe_app.account_proxies_history aph
-    WHERE aph.account_id = __proxy_op.account_id AND aph.proxy_id IS NOT NULL AND aph.timestamp < __proxy_op.timestamp
-    ORDER BY aph.timestamp DESC
-    LIMIT 1
-  )
-  WHERE proxy_id IS NULL;
-
-  SELECT INTO __first_timestamp
-    __proxy_op.timestamp
-  ORDER BY __proxy_op.timestamp ASC
-  LIMIT 1;
-
-  FOR __proxy_op IN
-    SELECT account_id, proxy_id, proxy, timestamp
-    FROM hafbe_app.account_proxies_history
-    WHERE timestamp >= __first_timestamp AND proxy_id IS NOT NULL
+      CASE WHEN (__vote_or_proxy_ops.value->>'clear')::BOOLEAN IS TRUE THEN
+        FALSE
+      ELSE
+        TRUE
+      END AS proxy,
+      __vote_or_proxy_ops.timestamp
+    WHERE __vote_or_proxy_ops.op_type_id = 91
+    ORDER BY __vote_or_proxy_ops.timestamp ASC
 
   LOOP
     INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
@@ -268,6 +240,11 @@ BEGIN
       proxy = EXCLUDED.proxy
     ;
   END LOOP;
+
+  IF __proxy_op.account_id IS NOT NULL THEN
+    INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
+    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy, __proxy_op.timestamp);
+  END IF;
   
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
@@ -276,6 +253,79 @@ BEGIN
   FROM hive.hafbe_app_account_operations_view
   WHERE op_type_id = ANY('{42,11,7}') AND block_num BETWEEN _from AND _to
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+
+  -- processes witness properties per block range
+  FOR __prop_op IN
+    SELECT
+      witness_id,
+      (hov.body::JSON)->'value' AS value,
+      hov.op_type_id,
+      hov.timestamp
+    FROM hafbe_app.current_witnesses cw
+    JOIN (
+      SELECT account_id, operation_id, block_num
+      FROM hive.hafbe_app_account_operations_view
+      WHERE op_type_id = ANY('{42,30,14,11,7}'::INT[]) AND block_num BETWEEN _from AND _to
+      ORDER BY operation_id ASC
+    ) haov ON haov.account_id = cw.witness_id
+    JOIN (
+      SELECT body, op_type_id, timestamp, id, block_num
+      FROM hive.hafbe_app_operations_view 
+    ) hov ON hov.id = haov.operation_id AND hov.block_num = haov.block_num
+        
+  LOOP
+    -- parse witness url 42,11
+    SELECT __prop_op.value->>'url' INTO __prop_value;
+
+    IF __prop_value IS NULL AND __prop_op.op_type_id = 42 THEN
+      SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'url' INTO __prop_value;
+    END IF;
+
+    IF __prop_value IS NOT NULL THEN
+      UPDATE hafbe_app.current_witnesses cw SET url = __prop_value WHERE witness_id = __prop_op.witness_id;
+    END IF;
+
+    -- parse witness feed_data 42,7
+    SELECT __prop_op.value->'exchange_rate' INTO __prop_value;
+
+    IF __prop_value IS NULL AND __prop_op.op_type_id = 42 THEN
+      SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'hbd_exchange_rate' INTO __prop_value;
+    END IF;
+
+    IF __prop_value IS NOT NULL THEN
+      UPDATE hafbe_app.current_witnesses cw SET
+        price_feed = ((__prop_value::JSON)->'base'->>'amount')::NUMERIC / ((__prop_value::JSON)->'quote'->>'amount')::NUMERIC,
+        bias = (((__prop_value::JSON)->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC,
+        feed_age = (NOW() - __prop_op.timestamp)::INTERVAL
+      WHERE witness_id = __prop_op.witness_id;
+    END IF;
+
+    -- parse witness block_size 42,30,14,11
+    SELECT __prop_op.value->'props'->>'maximum_block_size' INTO __prop_value;
+
+    IF __prop_value IS NULL AND __prop_op.op_type_id = 42 THEN
+      SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'maximum_block_size' INTO __prop_value;
+    END IF;
+
+    IF __prop_value IS NOT NULL THEN
+      UPDATE hafbe_app.current_witnesses cw SET block_size = __prop_value::INT WHERE witness_id = __prop_op.witness_id;
+    END IF;
+
+    -- parse witness signing_key 42,11
+    SELECT __prop_op.value->>'block_signing_key' INTO __prop_value;
+
+    IF __prop_value IS NULL AND __prop_op.op_type_id = 42 THEN
+      SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'new_signing_key' INTO __prop_value;
+    END IF;
+
+    IF __prop_value IS NULL AND __prop_op.op_type_id = 42 THEN
+      SELECT prop_value FROM hive.extract_set_witness_properties(__prop_op.value->>'props') WHERE prop_name = 'key' INTO __prop_value;
+    END IF;
+
+    IF __prop_value IS NOT NULL THEN
+      UPDATE hafbe_app.current_witnesses cw SET signing_key = __prop_value WHERE witness_id = __prop_op.witness_id;
+    END IF;
+  END LOOP;
 
   INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
   SELECT account_id, op_type_id

@@ -36,6 +36,65 @@ END
 EOF
 }
 
+find_function() {
+  schema=$1
+  function=$2
+
+  result=$(sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f - <<EOF
+DO \$$
+BEGIN
+  IF (SELECT COUNT(1)
+    FROM pg_catalog.pg_namespace n
+    JOIN pg_catalog.pg_proc p ON p.pronamespace = n.oid
+    WHERE n.nspname = '$schema' AND p.proname = '$function') = 0
+  THEN
+    RAISE NOTICE '$schema.$function() does not exist';
+  END IF;
+END
+\$$;
+EOF
+)
+}
+
+setup_apps() {
+  build_dir=$PWD/build
+  rm -rf $build_dir
+  mkdir $build_dir
+
+  # hafah
+  schema="hafah_python"
+  function="get_transaction_json"
+
+  result=$(find_function $schema $function 2>&1)
+  notice="$schema.$function() does not exist"
+
+  if [[ $result = *"$notice"* ]]; then
+    cd $build_dir
+    git clone git@gitlab.syncad.com:hive/HAfAH.git
+    cd $build_dir/HAfAH
+    git checkout develop
+    
+    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "queries/ah_schema_functions.pgsql"
+  fi
+
+  # btracker
+  schema="btracker_app"
+  function="find_matching_accounts"
+
+  result=$(find_function $schema $function 2>&1)
+  notice="$schema.$function() does not exist"
+
+  if [[ $result = *"$notice"* ]]; then
+    cd $build_dir
+    git clone git@gitlab.syncad.com:hive/balance_tracker.git
+    cd $build_dir/balance_tracker
+    git checkout master
+    
+    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS btracker_app;"
+    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "api/btracker_api.sql"
+  fi
+}
+
 setup_extensions() {
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;"
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpython3u';"
@@ -70,19 +129,23 @@ owner_role=hafbe_owner
 postgrest_dir=$PWD/api
 db_dir=$PWD/db
 
-if [ "$1" = "setup-role" ]; then
+if [ "$1" = "all" ]; then
   setup_owner
-elif [ "$1" = "setup-extensions" ]; then
+  setup_apps
   setup_extensions
-elif [ "$1" = "setup-api" ]; then
   setup_api
-elif [ "$1" = "setup-permissions" ]; then
-  setup_permissions
-elif [ "$1" =  "create-haf-indexes" ]; then
+  create_haf_indexes
+elif [ "$1" = "owner" ]; then
+  setup_owner
+elif [ "$1" = "apps" ]; then
+  setup_apps
+elif [ "$1" = "extensions" ]; then
+  setup_extensions
+elif [ "$1" = "api" ]; then
+  setup_api
+elif [ "$1" =  "haf-indexes" ]; then
   create_haf_indexes
 else
-  setup_owner
-  setup_extensions
-  setup_api
-  create_haf_indexes
+  echo "job not found"
+  exit 1
 fi;
