@@ -232,38 +232,31 @@ SET from_collapse_limit=16
 ;
 
 /*
-witnesses and voters
+witness voters
 */
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_by_name(_witness_id INT, _limit INT, _offset INT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_by_name
 AS
 $function$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT name::TEXT, vsv.vests, vsv.account_vests, vsv.proxied_vests, vsv.timestamp
-    FROM hive.accounts_view
-    JOIN (
-      SELECT voter_id
-      FROM hafbe_app.current_witness_votes
-      WHERE witness_id = %L
-    ) cwv ON cwv.voter_id = id
-    JOIN (
-      SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
-      FROM hafbe_views.voters_stats_view
-      WHERE witness_id = %L
-    ) vsv ON vsv.voter_id = id
+    SELECT
+      voter_id, hav.name::TEXT AS voter
+    FROM hive.accounts_view hav
+    JOIN hafbe_app.current_witness_votes cwv ON hav.id = cwv.voter_id
+    WHERE cwv.witness_id = %L
     ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
     OFFSET %L
-    LIMIT %L;
+    LIMIT %L
 
     $query$,
-    _witness_id, _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  ) res;
+    _witness_id, _order_is, _order_is, _offset, _limit
+  );
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -271,6 +264,99 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_by_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_by_vests
+AS
+$function$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+
+    SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+    FROM (
+      SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
+      FROM hafbe_views.voters_stats_view
+      WHERE witness_id = %L
+    ) vests_sum
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    OFFSET %L
+    LIMIT %L
+
+    $query$,
+    _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit
+  );
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+/*
+witnesses
+*/
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters
+AS
+$function$
+BEGIN
+  IF _order_by = 'voter' THEN
+
+    RETURN QUERY EXECUTE format(
+      $query$
+
+      SELECT voter, vsv.vests, vsv.account_vests, vsv.proxied_vests, vsv.timestamp
+      FROM hafbe_backend.get_set_of_witness_voters_by_name(%L, %L, %L, %L) ls
+      JOIN (
+        SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
+        FROM hafbe_views.voters_stats_view
+        WHERE witness_id = %L
+      ) vsv ON vsv.voter_id = ls.voter_id
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      ;
+
+      $query$,
+      _witness_id, _limit, _offset, _order_is,
+      _witness_id, _order_is, _order_by, _order_is, _order_by
+    ) res;
+
+  ELSIF _order_by = ANY('{vests,account_vests,proxied_vests,timestamp}'::TEXT[]) THEN
+
+    RETURN QUERY EXECUTE format(
+      $query$
+
+      SELECT hav.name::TEXT, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
+      FROM hafbe_backend.get_set_of_witness_voters_by_vests(%L, %L, %L, %L, %L) ls
+      JOIN (
+        SELECT id, name
+        FROM hive.accounts_view
+      ) hav ON hav.id = ls.voter_id
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      ;
+
+      $query$,
+      _witness_id, _limit, _offset, _order_by, _order_is,
+      _order_is, _order_by, _order_is, _order_by
+    ) res;
+
+  END IF;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
 
 CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_name(_limit INT, _offset INT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witnesses_by_name

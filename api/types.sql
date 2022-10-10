@@ -20,6 +20,19 @@ CREATE TYPE hafbe_types.operations AS (
   acc_operation_id BIGINT
 );
 
+CREATE TYPE hafbe_types.witness_voters_by_name AS (
+  voter_id INT,
+  voter TEXT
+);
+
+CREATE TYPE hafbe_types.witness_voters_by_vests AS (
+  voter_id INT,
+  vests NUMERIC,
+  account_vests NUMERIC,
+  proxied_vests NUMERIC,
+  timestamp TIMESTAMP
+);
+
 CREATE TYPE hafbe_types.witness_voters AS (
   account TEXT,
   vests NUMERIC,

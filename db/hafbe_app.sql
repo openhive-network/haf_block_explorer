@@ -186,7 +186,8 @@ BEGIN
   SELECT INTO __vote_or_proxy_ops
     (body::JSON)->'value' AS value,
     timestamp,
-    op_type_id
+    op_type_id,
+    id AS operation_id
   FROM hive.hafbe_app_operations_view
   WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to;
 
@@ -197,7 +198,7 @@ BEGIN
       (__vote_or_proxy_ops.value->>'approve')::BOOLEAN AS approve,
       __vote_or_proxy_ops.timestamp
     WHERE __vote_or_proxy_ops.op_type_id = 12
-    ORDER BY __vote_or_proxy_ops.timestamp ASC
+    ORDER BY __vote_or_proxy_ops.operation_id ASC
 
   LOOP
     INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
@@ -230,7 +231,7 @@ BEGIN
       END AS proxy,
       __vote_or_proxy_ops.timestamp
     WHERE __vote_or_proxy_ops.op_type_id = 91
-    ORDER BY __vote_or_proxy_ops.timestamp ASC
+    ORDER BY __vote_or_proxy_ops.operation_id ASC
 
   LOOP
     INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
