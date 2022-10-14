@@ -192,7 +192,7 @@ CREATE TYPE hafbe_backend.operations AS (
   acc_operation_id BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS SETOF hafbe_backend.operations 
 AS
 $function$
@@ -202,32 +202,38 @@ DECLARE
   __no_end_date BOOLEAN = (_date_end IS NULL);
 BEGIN
   RETURN QUERY SELECT
-    hafbe_backend.get_trx_hash(haov.block_num, hov.trx_in_block)::TEXT,
-    haov.block_num::INT,
-    hov.trx_in_block::INT,
-    hov.op_pos::INT,
+    encode(htv.trx_hash, 'hex')::TEXT,
+    haov_hov.block_num::INT,
+    haov_hov.trx_in_block::INT,
+    haov_hov.op_pos::INT,
     hot.is_virtual::BOOLEAN,
-    hov.timestamp::TEXT,
-    hov.body::JSON,
-    hov.id::BIGINT,
-    haov.account_op_seq_no::BIGINT
+    haov_hov.timestamp::TEXT,
+    haov_hov.body::JSON,
+    haov_hov.operation_id::BIGINT,
+    haov_hov.account_op_seq_no::BIGINT
   FROM (
-    SELECT operation_id, op_type_id, account_id, account_op_seq_no, block_num
-    FROM hive.account_operations_view
-  ) haov
-  JOIN LATERAL (
-    SELECT trx_in_block, op_pos, timestamp, body, id
-    FROM hive.operations_view
-  ) hov ON hov.id = haov.operation_id
-  JOIN LATERAL (
+    SELECT *
+    FROM hive.account_operations_view haov
+    JOIN (
+      SELECT id, trx_in_block, op_pos, timestamp, body
+      FROM hive.operations_view
+    ) hov ON hov.id = haov.operation_id
+    WHERE
+      haov.account_id = _account_id AND
+      haov.account_op_seq_no <= _top_op_id AND (
+      __filter_ops OR haov.op_type_id=ANY(_filter)) AND
+      (__no_start_date OR hov.timestamp >= _date_start) AND
+      (__no_end_date OR hov.timestamp < _date_end)
+  ) haov_hov
+  JOIN (
     SELECT is_virtual, id
     FROM hive.operation_types
-  ) hot ON hot.id = haov.op_type_id
-  WHERE haov.account_id = _account_id AND haov.account_op_seq_no <= _top_op_id AND (
-    __filter_ops OR haov.op_type_id=ANY(_filter)) AND
-    (__no_start_date OR hov.timestamp >= _date_start) AND
-    (__no_end_date OR hov.timestamp < _date_end)
-  ORDER BY haov.account_op_seq_no DESC
+  ) hot ON hot.id = haov_hov.op_type_id
+  JOIN (
+    SELECT trx_hash, block_num, trx_in_block
+    FROM hive.transactions_view
+  ) htv ON htv.block_num = haov_hov.block_num AND htv.trx_in_block = haov_hov.trx_in_block
+  ORDER BY haov_hov.operation_id DESC
   LIMIT _limit;
 END
 $function$
