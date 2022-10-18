@@ -60,6 +60,7 @@ BEGIN
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
     proxy BOOLEAN NOT NULL,
+    operation_id BIGINT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
@@ -157,16 +158,6 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.get_account_id(_account TEXT)
-RETURNS INT
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN id FROM hive.hafbe_app_accounts_view WHERE name = _account;
-END
-$$
-;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
 RETURNS VOID
@@ -174,78 +165,107 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __prop_value TEXT;
   __prop_op RECORD;
-  __proxy_op RECORD;
-  __first_timestamp TIMESTAMP;
-  __vote_op RECORD;
-  __vote_or_proxy_ops RECORD;
+  __prop_value TEXT;
   __balance_change RECORD;
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
-  SELECT INTO __vote_or_proxy_ops
-    (body::JSON)->'value' AS value,
-    timestamp,
-    op_type_id,
-    id AS operation_id
-  FROM hive.hafbe_app_operations_view
-  WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to;
-
-  FOR __vote_op IN
+  WITH vote_or_proxy_op AS (
     SELECT
-      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'witness') AS witness_id,
-      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS voter_id,
-      (__vote_or_proxy_ops.value->>'approve')::BOOLEAN AS approve,
-      __vote_or_proxy_ops.timestamp
-    WHERE __vote_or_proxy_ops.op_type_id = 12
-    ORDER BY __vote_or_proxy_ops.operation_id ASC
+      (body::JSON)->'value' AS value,
+      timestamp, op_type_id, id
+    FROM hive.hafbe_app_operations_view
+    WHERE op_type_id =  ANY('{12,91}') AND block_num BETWEEN _from AND _to
+  ),
+  
+  insert_votes_history AS (
+    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
+    SELECT
+      hav_w.witness_id,
+      hav_v.voter_id,
+      approve, timestamp
+    FROM (
+      SELECT
+        value->>'witness' AS witness,
+        value->>'account' AS voter,
+        (value->>'approve')::BOOLEAN AS approve,
+        timestamp, id
+      FROM vote_or_proxy_op
+      WHERE op_type_id = 12
+    ) vote_op
+    JOIN LATERAL (
+      SELECT id AS witness_id
+      FROM hive.hafbe_app_accounts_view
+      WHERE name = vote_op.witness
+    ) hav_w ON TRUE
+    JOIN LATERAL (
+      SELECT id AS voter_id
+      FROM hive.hafbe_app_accounts_view
+      WHERE name = vote_op.voter
+    ) hav_v ON TRUE
+    ORDER BY id DESC
+    RETURNING witness_id, voter_id, approve, timestamp
+  ),
 
-  LOOP
+  insert_current_votes AS (
     INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
-    SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp
+    SELECT DISTINCT ON (witness_id, voter_id)
+      witness_id, voter_id, approve, timestamp
+    FROM insert_votes_history
     ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
       approve = EXCLUDED.approve,
       timestamp = EXCLUDED.timestamp
-  ;
-  END LOOP;
+  ),
 
-  IF __vote_op.witness_id IS NOT NULL THEN
-    -- add new witness per vote op
+  insert_witnesses_from_votes AS (
     INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-    SELECT __vote_op.witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-    ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
-    
-    -- insert historical vote op data
-    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
-    SELECT __vote_op.witness_id, __vote_op.voter_id, __vote_op.approve, __vote_op.timestamp;
-  END IF;
+    SELECT witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
+    FROM insert_votes_history
+    ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING
+  ),
 
-  FOR __proxy_op IN
+  select_proxy_ops AS (
     SELECT
-      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'account') AS account_id,
-      hafbe_app.get_account_id(__vote_or_proxy_ops.value->>'proxy') AS proxy_id,
-      CASE WHEN (__vote_or_proxy_ops.value->>'clear')::BOOLEAN IS TRUE THEN
-        FALSE
-      ELSE
-        TRUE
-      END AS proxy,
-      __vote_or_proxy_ops.timestamp
-    WHERE __vote_or_proxy_ops.op_type_id = 91
-    ORDER BY __vote_or_proxy_ops.operation_id ASC
+      hav_a.account_id,
+      hav_p.proxy_id,
+      proxy, timestamp,
+      id AS operation_id
+    FROM (
+      SELECT
+        value->>'account' AS account,
+        value->>'proxy' AS proxy_account,
+        CASE WHEN (value->>'clear')::BOOLEAN IS TRUE THEN FALSE ELSE TRUE END AS proxy,
+        timestamp, id
+      FROM vote_or_proxy_op
+      WHERE op_type_id = 91
+    ) proxy_op
+    JOIN LATERAL (
+      SELECT id AS account_id
+      FROM hive.hafbe_app_accounts_view
+      WHERE name = proxy_op.account
+    ) hav_a ON TRUE
+    JOIN LATERAL (
+      SELECT id AS proxy_id
+      FROM hive.hafbe_app_accounts_view
+      WHERE name = proxy_op.proxy_account
+    ) hav_p ON TRUE
+    ORDER BY proxy_op.id DESC
+  ),
 
-  LOOP
-    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy)
-    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy)
-    ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
-      proxy_id = EXCLUDED.proxy_id,
-      proxy = EXCLUDED.proxy
-    ;
-  END LOOP;
-
-  IF __proxy_op.account_id IS NOT NULL THEN
+  insert_proxy_history AS (
     INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
-    VALUES (__proxy_op.account_id, __proxy_op.proxy_id, __proxy_op.proxy, __proxy_op.timestamp);
-  END IF;
+    SELECT account_id, proxy_id, proxy, timestamp
+    FROM select_proxy_ops
+  )
+
+  INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy, operation_id)
+  SELECT DISTINCT ON (account_id)
+    account_id, proxy_id, proxy, operation_id
+  FROM select_proxy_ops
+  ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
+    proxy_id = EXCLUDED.proxy_id,
+    proxy = EXCLUDED.proxy
+  ;
   
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)

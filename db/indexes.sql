@@ -22,6 +22,7 @@ BEGIN
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_proxy ON hafbe_app.current_account_proxies USING btree (proxy_id, proxy);
   CREATE INDEX IF NOT EXISTS current_account_proxies_account_id_proxy ON hafbe_app.current_account_proxies USING btree (account_id, proxy);
   CREATE INDEX IF NOT EXISTS current_account_proxies_account_id_proxy_id ON hafbe_app.current_account_proxies USING btree (account_id, proxy_id);
+  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_operation_id ON hafbe_app.current_account_proxies USING btree (proxy_id, operation_id);
 
   CREATE INDEX IF NOT EXISTS account_vests_vests ON hafbe_app.account_vests USING btree (vests);
 END
