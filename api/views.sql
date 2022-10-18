@@ -13,28 +13,28 @@ SELECT
   prox5.account_id AS proxies_of_proxies3
 FROM hafbe_app.current_account_proxies prox1
 
-LEFT JOIN (
-  SELECT proxy_id, account_id, proxy
+LEFT JOIN LATERAL (
+  SELECT proxy_id, account_id, proxy, operation_id
   FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE
+  WHERE proxy = TRUE AND operation_id < prox1.operation_id
 ) prox2 ON prox2.proxy_id = prox1.account_id
 
-LEFT JOIN (
-  SELECT proxy_id, account_id, proxy
+LEFT JOIN LATERAL (
+  SELECT proxy_id, account_id, proxy, operation_id
   FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE
+  WHERE proxy = TRUE AND operation_id < prox2.operation_id
 ) prox3 ON prox3.proxy_id = prox2.account_id
 
-LEFT JOIN (
-  SELECT proxy_id, account_id, proxy
+LEFT JOIN LATERAL (
+  SELECT proxy_id, account_id, proxy, operation_id
   FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE
+  WHERE proxy = TRUE AND operation_id < prox3.operation_id
 ) prox4 ON prox4.proxy_id = prox3.account_id
 
-LEFT JOIN (
-  SELECT proxy_id, account_id, proxy
+LEFT JOIN LATERAL (
+  SELECT proxy_id, account_id, proxy, operation_id
   FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE
+  WHERE proxy = TRUE AND operation_id < prox4.operation_id
 ) prox5 ON prox5.proxy_id = prox4.account_id
 
 WHERE prox1.proxy = TRUE;
@@ -50,10 +50,10 @@ SELECT
 FROM hafbe_app.current_witness_votes cwv
 
 JOIN LATERAL (
-  SELECT * 
+  SELECT voter_id, voters_proxies, proxies_of_voters_proxies, proxies_of_proxies1, proxies_of_proxies2, proxies_of_proxies3
   FROM hafbe_views.recursively_proxied_accounts_view
   WHERE voter_id = cwv.voter_id
-) proxied_accs ON cwv.voter_id = cwv.voter_id
+) proxied_accs ON proxied_accs.voter_id = cwv.voter_id
 
 CROSS JOIN LATERAL (
   VALUES (voters_proxies), (proxies_of_voters_proxies), (proxies_of_proxies1), (proxies_of_proxies2), (proxies_of_proxies3)
@@ -139,3 +139,48 @@ LEFT JOIN (
 ) account ON account.account_id = acc_as_proxied.account_id
 
 GROUP BY witness_id, voter_id, approve, timestamp, acc_as_proxied.proxy, account.vests;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_account_vests_view CASCADE;
+CREATE VIEW hafbe_views.voters_account_vests_view AS
+SELECT
+  cwv.witness_id,
+  SUM(account.vests) AS account_vests
+FROM hafbe_app.current_witness_votes cwv
+
+JOIN (
+  SELECT account_id
+  FROM hafbe_app.current_account_proxies
+  WHERE proxy = FALSE
+) acc_as_proxied ON acc_as_proxied.account_id = cwv.voter_id
+
+JOIN (
+  SELECT vests, account_id
+  FROM hafbe_app.account_vests
+) account ON account.account_id = cwv.voter_id
+
+WHERE cwv.approve IS TRUE
+GROUP BY cwv.witness_id;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_proxied_vests_view CASCADE;
+CREATE VIEW hafbe_views.voters_proxied_vests_view AS
+SELECT
+  cwv.witness_id,
+  SUM(proxied.vests) AS proxied_vests
+FROM hafbe_app.current_witness_votes cwv
+
+JOIN (
+  SELECT witness_id, voter_id, account_id
+  FROM hafbe_views.recursively_proxied_accounts_unpivoted_view
+) rpauv ON rpauv.witness_id = cwv.witness_id AND rpauv.voter_id = cwv.voter_id
+
+JOIN (
+  SELECT vests, account_id
+  FROM hafbe_app.account_vests
+) proxied ON proxied.account_id = rpauv.account_id 
+
+WHERE cwv.approve IS TRUE
+GROUP BY cwv.witness_id;

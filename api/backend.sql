@@ -395,16 +395,27 @@ $function$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
-
-    SELECT witness_id, votes::NUMERIC, voters_num::INT
+    SELECT witness_id, votes, voters_num
     FROM (
       SELECT
-        witness_id,
-        SUM(account_vests + proxied_vests) AS votes,
-        COUNT(1) AS voters_num
-      FROM hafbe_views.voters_stats_view
-      GROUP BY witness_id
-    ) all_votes
+        vavv.witness_id,
+        vavv.account_vests + vpvv.proxied_vests AS votes,
+        cwv.voters_num
+      FROM hafbe_views.voters_account_vests_view vavv
+      JOIN (
+        SELECT
+          witness_id,
+          proxied_vests
+        FROM hafbe_views.voters_proxied_vests_view
+      ) vpvv ON vpvv.witness_id = vavv.witness_id
+      JOIN (
+        SELECT
+          witness_id,
+          COUNT(voter_id)::INT AS voters_num
+        FROM hafbe_app.current_witness_votes
+        GROUP BY witness_id
+      ) cwv ON cwv.witness_id = vavv.witness_id
+    ) votes_sum
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
