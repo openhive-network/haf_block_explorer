@@ -30,7 +30,6 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
-    approve BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
@@ -59,10 +58,18 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
-    proxy BOOLEAN NOT NULL,
     operation_id BIGINT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
+  ) INHERITS (hive.hafbe_app);
+
+  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_operation_id ON hafbe_app.current_account_proxies USING btree (proxy_id, operation_id);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.recursive_account_proxies (
+    proxy_id INT NOT NULL,
+    account_id INT NOT NULL,
+
+    CONSTRAINT pk_recursive_account_proxies PRIMARY KEY (proxy_id, account_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
@@ -177,13 +184,9 @@ BEGIN
     FROM hive.hafbe_app_operations_view
     WHERE op_type_id =  ANY('{12,91}') AND block_num BETWEEN _from AND _to
   ),
-  
-  insert_votes_history AS (
-    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
-    SELECT
-      hav_w.witness_id,
-      hav_v.voter_id,
-      approve, timestamp
+
+  select_votes_ops AS (
+    SELECT hav_w.witness_id, hav_v.voter_id, approve, timestamp
     FROM (
       SELECT
         value->>'witness' AS witness,
@@ -204,32 +207,38 @@ BEGIN
       WHERE name = vote_op.voter
     ) hav_v ON TRUE
     ORDER BY id DESC
-    RETURNING witness_id, voter_id, approve, timestamp
+  ),
+  
+  insert_votes_history AS (
+    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
+    SELECT witness_id, voter_id, approve, timestamp
+    FROM select_votes_ops
   ),
 
   insert_current_votes AS (
-    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, approve, timestamp)
+    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, timestamp)
     SELECT DISTINCT ON (witness_id, voter_id)
-      witness_id, voter_id, approve, timestamp
-    FROM insert_votes_history
+      witness_id, voter_id, timestamp
+    FROM select_votes_ops
+    WHERE approve IS TRUE
     ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
-      approve = EXCLUDED.approve,
       timestamp = EXCLUDED.timestamp
+  ),
+
+  delete_current_votes AS (
+    DELETE FROM hafbe_app.current_witness_votes cwv USING select_votes_ops svo
+    WHERE svo.approve IS FALSE AND cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id
   ),
 
   insert_witnesses_from_votes AS (
     INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
     SELECT witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-    FROM insert_votes_history
+    FROM select_votes_ops
     ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING
   ),
 
   select_proxy_ops AS (
-    SELECT
-      hav_a.account_id,
-      hav_p.proxy_id,
-      proxy, timestamp,
-      id AS operation_id
+    SELECT hav_a.account_id, hav_p.proxy_id, proxy, timestamp, id AS operation_id
     FROM (
       SELECT
         value->>'account' AS account,
@@ -256,17 +265,147 @@ BEGIN
     INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
     SELECT account_id, proxy_id, proxy, timestamp
     FROM select_proxy_ops
+  ),
+
+  insert_current_proxies AS (
+    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, operation_id)
+    SELECT DISTINCT ON (account_id)
+      account_id, proxy_id, operation_id
+    FROM select_proxy_ops
+    ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
+      proxy_id = EXCLUDED.proxy_id
+    RETURNING cap.account_id, cap.proxy_id, cap.operation_id
+  ),
+
+  delete_current_proxies AS (
+    DELETE FROM hafbe_app.current_account_proxies cap USING select_proxy_ops spo
+    WHERE spo.proxy IS FALSE AND cap.account_id = spo.account_id
+    RETURNING cap.account_id, cap.proxy_id, cap.operation_id
+  ),
+
+  proxies1 AS (
+    SELECT
+      prox1.proxy_id AS top_proxy_id,
+      prox1.account_id, prox1.operation_id
+    FROM insert_current_proxies prox1
+  ),
+
+  proxies2 AS (
+    SELECT prox1.top_proxy_id, prox2.account_id, prox2.operation_id
+    FROM proxies1 prox1
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox1.operation_id AND proxy_id = prox1.account_id
+    ) prox2 ON TRUE
+  ),
+
+  proxies3 AS (
+    SELECT prox2.top_proxy_id, prox3.account_id, prox3.operation_id
+    FROM proxies2 prox2
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox2.operation_id AND proxy_id = prox2.account_id
+    ) prox3 ON TRUE
+  ),
+
+  proxies4 AS (
+    SELECT prox3.top_proxy_id, prox4.account_id, prox4.operation_id
+    FROM proxies3 prox3
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox3.operation_id AND proxy_id = prox3.account_id
+    ) prox4 ON TRUE
+  ),
+
+  proxies5 AS (
+    SELECT prox4.top_proxy_id, prox5.account_id
+    FROM proxies4 prox4
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox4.operation_id AND proxy_id = prox4.account_id
+    ) prox5 ON TRUE
+  ),
+
+  insert_recursive_account_proxies AS (
+    INSERT INTO hafbe_app.recursive_account_proxies (proxy_id, account_id)
+    SELECT top_proxy_id, account_id FROM proxies1
+    UNION
+    SELECT top_proxy_id, account_id FROM proxies2
+    UNION
+    SELECT top_proxy_id, account_id FROM proxies3
+    UNION
+    SELECT top_proxy_id, account_id FROM proxies4
+    UNION
+    SELECT top_proxy_id, account_id FROM proxies5
+    ON CONFLICT ON CONSTRAINT pk_recursive_account_proxies DO NOTHING
+  ),
+
+  unproxies1 AS (
+    SELECT
+      prox1.proxy_id AS top_proxy_id,
+      prox1.account_id, prox1.operation_id
+    FROM delete_current_proxies prox1
+  ),
+
+  unproxies2 AS (
+    SELECT prox1.top_proxy_id, prox2.account_id, prox2.operation_id
+    FROM unproxies1 prox1
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox1.operation_id AND proxy_id = prox1.account_id
+    ) prox2 ON TRUE
+  ),
+
+  unproxies3 AS (
+    SELECT prox2.top_proxy_id, prox3.account_id, prox3.operation_id
+    FROM unproxies2 prox2
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox2.operation_id AND proxy_id = prox2.account_id
+    ) prox3 ON TRUE
+  ),
+
+  unproxies4 AS (
+    SELECT prox3.top_proxy_id, prox4.account_id, prox4.operation_id
+    FROM unproxies3 prox3
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox3.operation_id AND proxy_id = prox3.account_id
+    ) prox4 ON TRUE
+  ),
+
+  unproxies5 AS (
+    SELECT prox4.top_proxy_id, prox5.account_id
+    FROM unproxies4 prox4
+    JOIN LATERAL (
+      SELECT proxy_id, account_id, operation_id
+      FROM hafbe_app.current_account_proxies
+      WHERE operation_id < prox4.operation_id AND proxy_id = prox4.account_id
+    ) prox5 ON TRUE
+  ),
+
+  select_recursive_account_unproxies AS (
+    SELECT top_proxy_id, account_id FROM unproxies1
+    UNION
+    SELECT top_proxy_id, account_id FROM unproxies2
+    UNION
+    SELECT top_proxy_id, account_id FROM unproxies3
+    UNION
+    SELECT top_proxy_id, account_id FROM unproxies4
+    UNION
+    SELECT top_proxy_id, account_id FROM unproxies5
   )
 
-  INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, proxy, operation_id)
-  SELECT DISTINCT ON (account_id)
-    account_id, proxy_id, proxy, operation_id
-  FROM select_proxy_ops
-  ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
-    proxy_id = EXCLUDED.proxy_id,
-    proxy = EXCLUDED.proxy
-  ;
-  
+  DELETE FROM hafbe_app.recursive_account_proxies rap USING select_recursive_account_unproxies raup
+  WHERE rap.proxy_id = raup.top_proxy_id AND rap.account_id = raup.account_id;
+
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
   SELECT DISTINCT ON (account_id)
