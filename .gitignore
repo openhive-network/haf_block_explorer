@@ -1,2 +1,3 @@
 tests/performance/result
 build/
+block_processing.log

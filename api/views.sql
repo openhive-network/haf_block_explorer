@@ -56,24 +56,12 @@ LEFT JOIN LATERAL (
 
 ------
 
-DROP VIEW IF EXISTS hafbe_views.voters_history_account_vests_view CASCADE;
-CREATE VIEW hafbe_views.voters_history_account_vests_view AS
-SELECT wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, av.vests  
-FROM hafbe_app.witness_votes_history wvh
-
-JOIN (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-) av ON av.account_id = wvh.voter_id;
-
-------
-
 DROP VIEW IF EXISTS hafbe_views.voters_approve_vests_change_view CASCADE;
 CREATE VIEW hafbe_views.voters_approve_vests_change_view AS
 SELECT
   wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-  CASE WHEN wvh.approve THEN av.vests ELSE -1 * av.vests END AS approve_votes_change,
-  CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxy_votes_change
+  CASE WHEN wvh.approve THEN av.vests ELSE -1 * av.vests END AS account_vests,
+  CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxied_vests
 FROM hafbe_app.witness_votes_history wvh
 
 JOIN (
@@ -114,19 +102,15 @@ GROUP BY aph.account_id;
 DROP VIEW IF EXISTS hafbe_views.voters_stats_change_view CASCADE;
 CREATE VIEW hafbe_views.voters_stats_change_view AS
 SELECT
-  vavcv.witness_id,
-  SUM(
-    vavcv.approve_votes_change + vavcv.proxy_votes_change
-      +
-    COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0)
-  ) AS votes_daily_change,
-  SUM(CASE WHEN vavcv.approve THEN 1 ELSE -1 END) AS voters_num_daily_change,
-  MAX(vavcv.timestamp) AS timestamp
+  vavcv.witness_id, vavcv.voter_id,
+  vavcv.account_vests + vavcv.proxied_vests + COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0) AS vests,
+  vavcv.account_vests + vavcv.proxied_vests AS account_vests,
+  COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0) AS proxied_vests,
+  vavcv.approve, vavcv.timestamp
 FROM hafbe_views.voters_approve_vests_change_view vavcv
 
 LEFT JOIN LATERAL (
   SELECT voter_id, account_vests, proxied_vests
   FROM hafbe_views.voters_proxy_vests_change_view
   WHERE voter_id = vavcv.voter_id
-) vpvcv ON TRUE
-GROUP BY vavcv.witness_id;
+) vpvcv ON TRUE;

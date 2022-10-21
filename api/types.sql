@@ -41,6 +41,31 @@ CREATE TYPE hafbe_types.witness_voters AS (
   timestamp TIMESTAMP
 );
 
+CREATE TYPE hafbe_types.witness_voters_daily_change_by_name AS (
+  witness_id INT,
+  voter_id INT,  
+  voter TEXT,
+  approve BOOLEAN
+);
+
+CREATE TYPE hafbe_types.witness_voters_daily_change_by_vests AS (
+  voter_id INT,
+  vests BIGINT,
+  account_vests BIGINT,
+  proxied_vests BIGINT,
+  timestamp TIMESTAMP,
+  approve BOOLEAN
+);
+
+CREATE TYPE hafbe_types.witness_voters_daily_change AS (
+  account TEXT,
+  approve BOOLEAN,
+  vests BIGINT,
+  account_vests BIGINT,
+  proxied_vests BIGINT,
+  timestamp TIMESTAMP
+);
+
 CREATE TYPE hafbe_types.witnesses_by_name AS (
   witness_id INT,
   witness TEXT,

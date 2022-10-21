@@ -243,10 +243,13 @@ BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT
-      voter_id, hav.name::TEXT AS voter
-    FROM hive.accounts_view hav
-    JOIN hafbe_app.current_witness_votes cwv ON hav.id = cwv.voter_id
+    SELECT cwv.voter_id, hav.name::TEXT AS voter
+    FROM hafbe_app.current_witness_votes cwv
+    JOIN LATERAL (
+      SELECT name
+      FROM hive.accounts_view
+      WHERE id = cwv.voter_id
+    ) hav ON TRUE
     WHERE cwv.witness_id = %L
     ORDER BY
       (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
@@ -292,10 +295,6 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
-
-/*
-witnesses
-*/
 
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters
@@ -354,6 +353,158 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
+/*
+witness voters change
+*/
+
+CREATE FUNCTION hafbe_backend.get_todays_date()
+RETURNS DATE
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __today DATE;
+BEGIN
+  IF (
+    SELECT timestamp::DATE FROM hafbe_app.witness_votes_history ORDER BY timestamp DESC LIMIT 1
+  ) != 'today'::DATE THEN
+    __today = NULL;
+  ELSE
+    __today = 'today'::DATE;
+  END IF;
+  RETURN __today;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_by_name(_witness_id INT, _limit INT, _offset INT, _order_is TEXT, _today DATE)
+RETURNS SETOF hafbe_types.witness_voters_daily_change_by_name
+AS
+$function$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+
+    SELECT wvh.witness_id, wvh.voter_id, hav.name::TEXT, wvh.approve
+    FROM hafbe_app.witness_votes_history wvh
+    JOIN LATERAL (
+      SELECT name
+      FROM hive.accounts_view
+      WHERE id = wvh.voter_id
+    ) hav ON TRUE
+    WHERE wvh.witness_id = %L AND wvh.timestamp >= %L
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
+    OFFSET %L
+    LIMIT %L
+
+    $query$,
+    _witness_id, _today,
+    _order_is, _order_is, _offset, _limit
+  );
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_by_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT, _today DATE)
+RETURNS SETOF hafbe_types.witness_voters_daily_change_by_vests
+AS
+$function$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+
+    SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp, approve
+    FROM hafbe_views.voters_stats_change_view
+    WHERE witness_id = %L AND timestamp >= %L
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    OFFSET %L
+    LIMIT %L
+
+    $query$,
+    _witness_id, _today,
+    _order_is, _order_by, _order_is, _order_by, _offset, _limit
+  );
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_daily_change
+AS
+$function$
+DECLARE
+  __today DATE;
+BEGIN
+  SELECT hafbe_backend.get_todays_date() INTO __today;
+
+  IF _order_by = 'voter' THEN
+
+    RETURN QUERY EXECUTE format(
+      $query$
+
+      SELECT ls.voter, ls.approve, vscv.vests::BIGINT, vscv.account_vests::BIGINT, vscv.proxied_vests::BIGINT, vscv.timestamp
+      FROM hafbe_backend.get_set_of_witness_voters_daily_change_by_name(%L, %L, %L, %L, %L) ls
+      JOIN (
+        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+        FROM hafbe_views.voters_stats_change_view vscv
+        WHERE witness_id = %L AND timestamp >= %L
+      ) vscv ON vscv.voter_id = ls.voter_id
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      ;
+
+      $query$,
+      _witness_id, _limit, _offset, _order_is, __today,
+      _witness_id, __today,
+      _order_is, _order_by, _order_is, _order_by
+    ) res;
+
+  ELSIF _order_by = ANY('{vests,account_vests,proxied_vests,timestamp}'::TEXT[]) THEN
+
+    RETURN QUERY EXECUTE format(
+      $query$
+
+      SELECT hav.name::TEXT, ls.approve, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
+      FROM hafbe_backend.get_set_of_witness_voters_daily_change_by_vests(%L, %L, %L, %L, %L, %L) ls
+      JOIN (
+        SELECT id, name
+        FROM hive.accounts_view
+      ) hav ON hav.id = ls.voter_id
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      ;
+
+      $query$,
+      _witness_id, _limit, _offset, _order_by, _order_is, __today,
+      _order_is, _order_by, _order_is, _order_by
+    ) res;
+
+  END IF;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+/*
+witnesses
+*/
 
 CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_name(_limit INT, _offset INT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witnesses_by_name
@@ -426,9 +577,13 @@ BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT witness_id, votes_daily_change::BIGINT, voters_num_daily_change::INT
-    FROM hafbe_views.voters_stats_change_view
+    SELECT 
+      witness_id,
+      SUM(vests)::BIGINT AS votes_daily_change,
+      COUNT(1)::INT AS voters_num_daily_change
+    FROM hafbe_views.voters_stats_change_view vscv
     WHERE timestamp >= %L
+    GROUP BY witness_id
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -482,13 +637,7 @@ $function$
 DECLARE
   __today DATE;
 BEGIN
-  IF (
-    SELECT timestamp::DATE FROM hafbe_app.witness_votes_history ORDER BY timestamp DESC LIMIT 1
-  ) != 'today'::DATE THEN
-    __today = NULL;
-  ELSE
-    __today = 'today'::DATE;
-  END IF;
+  SELECT hafbe_backend.get_todays_date() INTO __today;
 
   IF _order_by = 'witness' THEN
 
@@ -513,9 +662,13 @@ BEGIN
         GROUP BY vsv.witness_id
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
+        SELECT 
+          vscv.witness_id,
+          SUM(vscv.vests) AS votes_daily_change,
+          COUNT(1) AS voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
-        WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
+        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
+        GROUP BY vscv.witness_id
       ) todays_votes ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -541,9 +694,13 @@ BEGIN
       FROM hafbe_backend.get_set_of_witnesses_by_votes(%L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
+        SELECT 
+          vscv.witness_id,
+          SUM(vscv.vests) AS votes_daily_change,
+          COUNT(1) AS voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
-        WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
+        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
+        GROUP BY vscv.witness_id
       ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
@@ -617,9 +774,13 @@ BEGIN
         GROUP BY vsv.witness_id
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
+        SELECT 
+          vscv.witness_id,
+          SUM(vscv.vests) AS votes_daily_change,
+          COUNT(1) AS voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
-        WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
+        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
+        GROUP BY vscv.witness_id
       ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
