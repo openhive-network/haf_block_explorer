@@ -299,7 +299,7 @@ BEGIN
     RETURN hafbe_exceptions.raise_no_such_column_exception(_order_by);
   END IF;
   IF _order_by IS NULL THEN
-    _order_by = 'vests';
+    _order_by = 'votes';
   END IF;
 
   IF _order_is NOT SIMILAR TO '(asc|desc)' THEN

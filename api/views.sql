@@ -2,185 +2,131 @@ DROP SCHEMA IF EXISTS hafbe_views CASCADE;
 
 CREATE SCHEMA hafbe_views AUTHORIZATION hafbe_owner;
 
-DROP VIEW IF EXISTS hafbe_views.recursively_proxied_accounts_view CASCADE;
-CREATE VIEW hafbe_views.recursively_proxied_accounts_view AS
-SELECT
-  prox1.proxy_id AS voter_id,
-  prox1.account_id AS voters_proxies,
-  prox2.account_id AS proxies_of_voters_proxies,
-  prox3.account_id AS proxies_of_proxies1,
-  prox4.account_id AS proxies_of_proxies2,
-  prox5.account_id AS proxies_of_proxies3
-FROM hafbe_app.current_account_proxies prox1
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, account_id, proxy, operation_id
-  FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE AND operation_id < prox1.operation_id
-) prox2 ON prox2.proxy_id = prox1.account_id
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, account_id, proxy, operation_id
-  FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE AND operation_id < prox2.operation_id
-) prox3 ON prox3.proxy_id = prox2.account_id
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, account_id, proxy, operation_id
-  FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE AND operation_id < prox3.operation_id
-) prox4 ON prox4.proxy_id = prox3.account_id
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, account_id, proxy, operation_id
-  FROM hafbe_app.current_account_proxies
-  WHERE proxy = TRUE AND operation_id < prox4.operation_id
-) prox5 ON prox5.proxy_id = prox4.account_id
-
-WHERE prox1.proxy = TRUE;
-
-------
-
-DROP VIEW IF EXISTS hafbe_views.recursively_proxied_accounts_unpivoted_view CASCADE;
-CREATE VIEW hafbe_views.recursively_proxied_accounts_unpivoted_view AS
-SELECT
-  cwv.witness_id,
-  cwv.voter_id,
-  unpivot.account_id
-FROM hafbe_app.current_witness_votes cwv
-
-JOIN LATERAL (
-  SELECT voter_id, voters_proxies, proxies_of_voters_proxies, proxies_of_proxies1, proxies_of_proxies2, proxies_of_proxies3
-  FROM hafbe_views.recursively_proxied_accounts_view
-  WHERE voter_id = cwv.voter_id
-) proxied_accs ON proxied_accs.voter_id = cwv.voter_id
-
-CROSS JOIN LATERAL (
-  VALUES (voters_proxies), (proxies_of_voters_proxies), (proxies_of_proxies1), (proxies_of_proxies2), (proxies_of_proxies3)
-) AS unpivot(account_id)
-
-WHERE unpivot.account_id IS NOT NULL;
-
-------
-
-DROP VIEW IF EXISTS hafbe_views.recursively_proxied_vests_view CASCADE;
-CREATE VIEW hafbe_views.recursively_proxied_vests_view AS
-SELECT
-  rpauv.witness_id,
-  rpauv.voter_id,
-  SUM(proxied.vests) AS proxied_vests
-FROM hafbe_views.recursively_proxied_accounts_unpivoted_view rpauv
-JOIN LATERAL (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-  WHERE account_id = rpauv.account_id
-) proxied ON proxied.account_id = rpauv.account_id
-GROUP BY rpauv.witness_id, rpauv.voter_id;
-
-------
-
-DROP VIEW IF EXISTS hafbe_views.voters_stats_view CASCADE;
-CREATE VIEW hafbe_views.voters_stats_view AS
-SELECT
-  cwv.witness_id, cwv.voter_id, cwv.timestamp,
-  COALESCE(account.vests, 0)::NUMERIC AS account_vests,
-  COALESCE(rpv.proxied_vests, 0) AS proxied_vests
-FROM hafbe_app.current_witness_votes cwv
-
-LEFT JOIN LATERAL (
-  SELECT witness_id, voter_id, proxied_vests
-  FROM hafbe_views.recursively_proxied_vests_view
-  WHERE witness_id = cwv.witness_id AND voter_id = cwv.voter_id
-) rpv ON rpv.witness_id = cwv.witness_id AND rpv.voter_id = cwv.voter_id
-
-LEFT JOIN (
-  SELECT account_id, proxy
-  FROM hafbe_app.current_account_proxies
-) acc_as_proxied ON acc_as_proxied.account_id = cwv.voter_id
-
-LEFT JOIN (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-) account ON account.account_id = cwv.voter_id AND COALESCE(acc_as_proxied.proxy, FALSE) IS FALSE
-
-WHERE cwv.approve IS TRUE;
-
-------
-
-DROP VIEW IF EXISTS hafbe_views.voters_stats_change_view CASCADE;
-CREATE VIEW hafbe_views.voters_stats_change_view AS
-SELECT
-  witness_id, voter_id, approve, timestamp,
-  (
-    SUM(CASE WHEN acc_as_proxy.proxy IS TRUE THEN proxied.vests ELSE -1 * proxied.vests END)
-      +
-    CASE WHEN acc_as_proxied.proxy IS FALSE THEN account.vests ELSE -1 * account.vests END
-  ) AS votes
-FROM hafbe_app.witness_votes_history
-
-LEFT JOIN (
-  SELECT account_id, proxy_id, proxy
-  FROM hafbe_app.account_proxies_history
-) acc_as_proxy ON acc_as_proxy.proxy_id = voter_id
-
-LEFT JOIN (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-) proxied ON proxied.account_id = acc_as_proxy.account_id
-
-LEFT JOIN (
-  SELECT account_id, proxy
-  FROM hafbe_app.account_proxies_history
-) acc_as_proxied ON acc_as_proxied.account_id = voter_id
-
-LEFT JOIN (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-) account ON account.account_id = acc_as_proxied.account_id
-
-GROUP BY witness_id, voter_id, approve, timestamp, acc_as_proxied.proxy, account.vests;
-
-------
-
 DROP VIEW IF EXISTS hafbe_views.voters_account_vests_view CASCADE;
 CREATE VIEW hafbe_views.voters_account_vests_view AS
 SELECT
-  cwv.witness_id,
-  SUM(account.vests) AS account_vests
-FROM hafbe_app.current_witness_votes cwv
+  av.account_id AS voter_id,
+  CASE WHEN cap.account_id IS NULL THEN av.vests ELSE 0 END AS account_vests
+FROM hafbe_app.account_vests av
 
-JOIN (
+LEFT JOIN LATERAL (
   SELECT account_id
   FROM hafbe_app.current_account_proxies
-  WHERE proxy = FALSE
-) acc_as_proxied ON acc_as_proxied.account_id = cwv.voter_id
-
-JOIN (
-  SELECT vests, account_id
-  FROM hafbe_app.account_vests
-) account ON account.account_id = cwv.voter_id
-
-WHERE cwv.approve IS TRUE
-GROUP BY cwv.witness_id;
+  WHERE account_id = av.account_id
+) cap ON TRUE;
 
 ------
 
 DROP VIEW IF EXISTS hafbe_views.voters_proxied_vests_view CASCADE;
 CREATE VIEW hafbe_views.voters_proxied_vests_view AS
 SELECT
-  cwv.witness_id,
-  SUM(proxied.vests) AS proxied_vests
-FROM hafbe_app.current_witness_votes cwv
+  rap.proxy_id,
+  SUM(av.vests) AS proxied_vests
+FROM hafbe_app.recursive_account_proxies rap
 
 JOIN (
-  SELECT witness_id, voter_id, account_id
-  FROM hafbe_views.recursively_proxied_accounts_unpivoted_view
-) rpauv ON rpauv.witness_id = cwv.witness_id AND rpauv.voter_id = cwv.voter_id
+  SELECT account_id, vests
+  FROM hafbe_app.account_vests
+) av ON av.account_id = rap.account_id
+GROUP BY rap.proxy_id;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_stats_view CASCADE;
+CREATE VIEW hafbe_views.voters_stats_view AS
+SELECT
+  cwv.witness_id, cwv.voter_id,
+  COALESCE(vavv.account_vests, 0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
+  COALESCE(vavv.account_vests, 0) AS account_vests,
+  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests,
+  cwv.timestamp
+FROM hafbe_app.current_witness_votes cwv
+
+LEFT JOIN LATERAL (
+  SELECT voter_id, account_vests
+  FROM hafbe_views.voters_account_vests_view
+  WHERE voter_id = cwv.voter_id
+) vavv ON TRUE
+
+LEFT JOIN LATERAL (
+  SELECT proxy_id, proxied_vests
+  FROM hafbe_views.voters_proxied_vests_view
+  WHERE proxy_id = cwv.voter_id
+) vpvv ON TRUE;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_history_account_vests_view CASCADE;
+CREATE VIEW hafbe_views.voters_history_account_vests_view AS
+SELECT wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, av.vests  
+FROM hafbe_app.witness_votes_history wvh
 
 JOIN (
   SELECT vests, account_id
   FROM hafbe_app.account_vests
-) proxied ON proxied.account_id = rpauv.account_id 
+) av ON av.account_id = wvh.voter_id;
 
-WHERE cwv.approve IS TRUE
-GROUP BY cwv.witness_id;
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_approve_vests_change_view CASCADE;
+CREATE VIEW hafbe_views.voters_approve_vests_change_view AS
+SELECT
+  wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
+  CASE WHEN wvh.approve THEN av.vests ELSE -1 * av.vests END AS approve_votes_change,
+  CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxy_votes_change
+FROM hafbe_app.witness_votes_history wvh
+
+JOIN (
+  SELECT vests, account_id
+  FROM hafbe_app.account_vests
+) av ON av.account_id = wvh.voter_id
+
+LEFT JOIN LATERAL (
+  SELECT proxy_id, proxied_vests
+  FROM hafbe_views.voters_proxied_vests_view
+  WHERE proxy_id = wvh.voter_id
+) rpav ON TRUE;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_proxy_vests_change_view CASCADE;
+CREATE VIEW hafbe_views.voters_proxy_vests_change_view AS
+SELECT
+  aph.account_id AS voter_id,
+  SUM(CASE WHEN aph.proxy THEN -1 * av.vests ELSE av.vests END) AS account_vests,
+  SUM(CASE WHEN aph.proxy THEN -1 * COALESCE(rpav.proxied_vests, 0) ELSE COALESCE(rpav.proxied_vests, 0) END) AS proxied_vests
+FROM hafbe_app.account_proxies_history aph
+
+JOIN (
+  SELECT vests, account_id
+  FROM hafbe_app.account_vests
+) av ON av.account_id = aph.account_id
+
+LEFT JOIN LATERAL (
+  SELECT proxy_id, proxied_vests
+  FROM hafbe_views.voters_proxied_vests_view
+  WHERE proxy_id = aph.account_id
+) rpav ON TRUE
+GROUP BY aph.account_id;
+
+------
+
+DROP VIEW IF EXISTS hafbe_views.voters_stats_change_view CASCADE;
+CREATE VIEW hafbe_views.voters_stats_change_view AS
+SELECT
+  vavcv.witness_id,
+  SUM(
+    vavcv.approve_votes_change + vavcv.proxy_votes_change
+      +
+    COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0)
+  ) AS votes_daily_change,
+  SUM(CASE WHEN vavcv.approve THEN 1 ELSE -1 END) AS voters_num_daily_change,
+  MAX(vavcv.timestamp) AS timestamp
+FROM hafbe_views.voters_approve_vests_change_view vavcv
+
+LEFT JOIN LATERAL (
+  SELECT voter_id, account_vests, proxied_vests
+  FROM hafbe_views.voters_proxy_vests_change_view
+  WHERE voter_id = vavcv.voter_id
+) vpvcv ON TRUE
+GROUP BY vavcv.witness_id;

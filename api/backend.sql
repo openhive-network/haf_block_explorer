@@ -273,12 +273,9 @@ BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT voter_id, vests, account_vests, proxied_vests, timestamp
-    FROM (
-      SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
-      FROM hafbe_views.voters_stats_view
-      WHERE witness_id = %L
-    ) vests_sum
+    SELECT voter_id, vests, account_vests::NUMERIC, proxied_vests, timestamp
+    FROM hafbe_views.voters_stats_view
+    WHERE witness_id = %L
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -310,10 +307,10 @@ BEGIN
     RETURN QUERY EXECUTE format(
       $query$
 
-      SELECT voter, vsv.vests, vsv.account_vests, vsv.proxied_vests, vsv.timestamp
+      SELECT voter, vsv.vests, vsv.account_vests::NUMERIC, vsv.proxied_vests, vsv.timestamp
       FROM hafbe_backend.get_set_of_witness_voters_by_name(%L, %L, %L, %L) ls
       JOIN (
-        SELECT voter_id, proxied_vests + account_vests AS vests, account_vests, proxied_vests, timestamp
+        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
         FROM hafbe_views.voters_stats_view
         WHERE witness_id = %L
       ) vsv ON vsv.voter_id = ls.voter_id
@@ -398,23 +395,11 @@ BEGIN
     SELECT witness_id, votes, voters_num
     FROM (
       SELECT
-        vavv.witness_id,
-        vavv.account_vests + vpvv.proxied_vests AS votes,
-        cwv.voters_num
-      FROM hafbe_views.voters_account_vests_view vavv
-      JOIN (
-        SELECT
-          witness_id,
-          proxied_vests
-        FROM hafbe_views.voters_proxied_vests_view
-      ) vpvv ON vpvv.witness_id = vavv.witness_id
-      JOIN (
-        SELECT
-          witness_id,
-          COUNT(voter_id)::INT AS voters_num
-        FROM hafbe_app.current_witness_votes
-        GROUP BY witness_id
-      ) cwv ON cwv.witness_id = vavv.witness_id
+        vsv.witness_id,
+        SUM(vsv.vests) AS votes,
+        COUNT(1)::INT AS voters_num
+      FROM hafbe_views.voters_stats_view vsv
+      GROUP BY vsv.witness_id
     ) votes_sum
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -442,15 +427,8 @@ BEGIN
     $query$
 
     SELECT witness_id, votes_daily_change::BIGINT, voters_num_daily_change::INT
-    FROM (
-      SELECT
-        witness_id,
-        SUM(CASE WHEN approve IS TRUE THEN votes ELSE -1 * votes END) AS votes_daily_change,
-        SUM(CASE WHEN approve IS TRUE THEN 1 ELSE -1 END) AS voters_num_daily_change
-      FROM hafbe_views.voters_stats_change_view
-      WHERE timestamp >= %L
-      GROUP BY witness_id
-    ) todays_votes
+    FROM hafbe_views.voters_stats_change_view
+    WHERE timestamp >= %L
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -528,21 +506,17 @@ BEGIN
       LEFT JOIN LATERAL (
         SELECT
           vsv.witness_id,
-          SUM(vsv.account_vests + vsv.proxied_vests) AS votes,
+          SUM(vsv.vests) AS votes,
           COUNT(1) AS voters_num
         FROM hafbe_views.voters_stats_view vsv
         WHERE vsv.witness_id = ls.witness_id
         GROUP BY vsv.witness_id
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT
-          vscv.witness_id,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN vscv.votes ELSE -1 * vscv.votes END) AS votes_daily_change,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN 1 ELSE -1 END) AS voters_num_daily_change
+        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
         WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
-      ) todays_votes ON todays_votes.witness_id = ls.witness_id
+      ) todays_votes ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -567,14 +541,10 @@ BEGIN
       FROM hafbe_backend.get_set_of_witnesses_by_votes(%L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT
-          vscv.witness_id,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN vscv.votes ELSE -1 * vscv.votes END) AS votes_daily_change,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN 1 ELSE -1 END) AS voters_num_daily_change
+        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
         WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
-      ) todays_votes ON todays_votes.witness_id = ls.witness_id
+      ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
         FROM hive.accounts_view
@@ -605,7 +575,7 @@ BEGIN
       JOIN LATERAL (
         SELECT
           vsv.witness_id,
-          SUM(vsv.account_vests + vsv.proxied_vests) AS votes,
+          SUM(vsv.vests) AS votes,
           COUNT(1) AS voters_num
         FROM hafbe_views.voters_stats_view vsv
         WHERE vsv.witness_id = ls.witness_id
@@ -640,21 +610,17 @@ BEGIN
       LEFT JOIN LATERAL (
         SELECT
           vsv.witness_id,
-          SUM(vsv.account_vests + vsv.proxied_vests) AS votes,
+          SUM(vsv.vests) AS votes,
           COUNT(1) AS voters_num
         FROM hafbe_views.voters_stats_view vsv
         WHERE vsv.witness_id = ls.witness_id
         GROUP BY vsv.witness_id
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT
-          vscv.witness_id,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN vscv.votes ELSE -1 * vscv.votes END) AS votes_daily_change,
-          SUM(CASE WHEN vscv.approve IS TRUE THEN 1 ELSE -1 END) AS voters_num_daily_change
+        SELECT vscv.witness_id, votes_daily_change, voters_num_daily_change
         FROM hafbe_views.voters_stats_change_view vscv
         WHERE timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
-      ) todays_votes ON todays_votes.witness_id = ls.witness_id
+      ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
         FROM hive.accounts_view
