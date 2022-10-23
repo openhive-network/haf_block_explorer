@@ -58,12 +58,9 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
-    operation_id BIGINT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
-
-  CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id_operation_id ON hafbe_app.current_account_proxies USING btree (proxy_id, operation_id);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.recursive_account_proxies (
     proxy_id INT NOT NULL,
@@ -180,33 +177,33 @@ BEGIN
   WITH vote_or_proxy_op AS (
     SELECT
       (body::JSON)->'value' AS value,
-      timestamp, op_type_id, id
-    FROM hive.hafbe_app_operations_view
+      timestamp, op_type_id, id AS operation_id
+    FROM hive.operations_view
     WHERE op_type_id =  ANY('{12,91}') AND block_num BETWEEN _from AND _to
   ),
 
   select_votes_ops AS (
-    SELECT hav_w.witness_id, hav_v.voter_id, approve, timestamp
+    SELECT hav_w.witness_id, hav_v.voter_id, approve, timestamp, operation_id
     FROM (
       SELECT
         value->>'witness' AS witness,
         value->>'account' AS voter,
         (value->>'approve')::BOOLEAN AS approve,
-        timestamp, id
+        timestamp, operation_id
       FROM vote_or_proxy_op
       WHERE op_type_id = 12
     ) vote_op
     JOIN LATERAL (
       SELECT id AS witness_id
-      FROM hive.hafbe_app_accounts_view
+      FROM hive.accounts_view
       WHERE name = vote_op.witness
     ) hav_w ON TRUE
     JOIN LATERAL (
       SELECT id AS voter_id
-      FROM hive.hafbe_app_accounts_view
+      FROM hive.accounts_view
       WHERE name = vote_op.voter
     ) hav_v ON TRUE
-    ORDER BY id DESC
+    ORDER BY operation_id DESC
   ),
   
   insert_votes_history AS (
@@ -215,19 +212,33 @@ BEGIN
     FROM select_votes_ops
   ),
 
+  select_latest_vote_ops AS (
+    SELECT witness_id, voter_id, approve, timestamp
+    FROM (
+      SELECT
+        ROW_NUMBER() OVER (PARTITION BY witness_id, voter_id ORDER BY operation_id DESC) AS row_n,
+        witness_id, voter_id, approve, timestamp
+      FROM select_votes_ops
+    ) row_count
+    WHERE row_n = 1
+  ),
+
   insert_current_votes AS (
     INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, timestamp)
-    SELECT DISTINCT ON (witness_id, voter_id)
-      witness_id, voter_id, timestamp
-    FROM select_votes_ops
+    SELECT witness_id, voter_id, timestamp
+    FROM select_latest_vote_ops
     WHERE approve IS TRUE
     ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
       timestamp = EXCLUDED.timestamp
   ),
 
   delete_current_votes AS (
-    DELETE FROM hafbe_app.current_witness_votes cwv USING select_votes_ops svo
-    WHERE svo.approve IS FALSE AND cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id
+    DELETE FROM hafbe_app.current_witness_votes cwv USING (
+      SELECT witness_id, voter_id
+      FROM select_latest_vote_ops
+      WHERE approve IS FALSE
+    ) svo
+    WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id
   ),
 
   insert_witnesses_from_votes AS (
@@ -238,27 +249,27 @@ BEGIN
   ),
 
   select_proxy_ops AS (
-    SELECT hav_a.account_id, hav_p.proxy_id, proxy, timestamp, id AS operation_id
+    SELECT hav_a.account_id, hav_p.proxy_id, proxy, timestamp, operation_id
     FROM (
       SELECT
         value->>'account' AS account,
         value->>'proxy' AS proxy_account,
         CASE WHEN (value->>'clear')::BOOLEAN IS TRUE THEN FALSE ELSE TRUE END AS proxy,
-        timestamp, id
+        timestamp, operation_id
       FROM vote_or_proxy_op
       WHERE op_type_id = 91
     ) proxy_op
     JOIN LATERAL (
       SELECT id AS account_id
-      FROM hive.hafbe_app_accounts_view
+      FROM hive.accounts_view
       WHERE name = proxy_op.account
     ) hav_a ON TRUE
     JOIN LATERAL (
       SELECT id AS proxy_id
-      FROM hive.hafbe_app_accounts_view
+      FROM hive.accounts_view
       WHERE name = proxy_op.proxy_account
     ) hav_p ON TRUE
-    ORDER BY proxy_op.id DESC
+    ORDER BY operation_id DESC
   ),
 
   insert_proxy_history AS (
@@ -267,71 +278,118 @@ BEGIN
     FROM select_proxy_ops
   ),
 
+  select_latest_proxy_ops AS (
+    SELECT account_id, proxy_id, proxy, timestamp
+    FROM (
+      SELECT
+        ROW_NUMBER() OVER (PARTITION BY account_id, proxy_id ORDER BY operation_id DESC) AS row_n,
+        account_id, proxy_id, proxy, timestamp
+      FROM select_proxy_ops
+    ) row_count
+    WHERE row_n = 1
+  ),
+
   insert_current_proxies AS (
-    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id, operation_id)
-    SELECT DISTINCT ON (account_id)
-      account_id, proxy_id, operation_id
-    FROM select_proxy_ops
+    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id)
+    SELECT account_id, proxy_id
+    FROM select_latest_proxy_ops
+    WHERE proxy IS TRUE
+
     ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
       proxy_id = EXCLUDED.proxy_id
-    RETURNING cap.account_id, cap.proxy_id, cap.operation_id
+    RETURNING cap.account_id, cap.proxy_id
   ),
 
   delete_current_proxies AS (
-    DELETE FROM hafbe_app.current_account_proxies cap USING select_proxy_ops spo
-    WHERE spo.proxy IS FALSE AND cap.account_id = spo.account_id
-    RETURNING cap.account_id, cap.proxy_id, cap.operation_id
+    DELETE FROM hafbe_app.current_account_proxies cap USING (
+      SELECT account_id
+      FROM select_latest_proxy_ops
+      WHERE proxy IS FALSE
+    ) spo
+    WHERE cap.account_id = spo.account_id
+    RETURNING cap.account_id, cap.proxy_id
+  ),
+
+  unproxies1 AS (
+    SELECT
+      prox1.proxy_id AS top_proxy_id,
+      prox1.account_id
+    FROM delete_current_proxies prox1
+  ),
+
+  unproxies2 AS (
+    SELECT prox1.top_proxy_id, prox2.account_id
+    FROM unproxies1 prox1
+    JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
+  ),
+
+  unproxies3 AS (
+    SELECT prox2.top_proxy_id, prox3.account_id
+    FROM unproxies2 prox2
+    JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
+  ),
+
+  unproxies4 AS (
+    SELECT prox3.top_proxy_id, prox4.account_id
+    FROM unproxies3 prox3
+    JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
+  ),
+
+  unproxies5 AS (
+    SELECT prox4.top_proxy_id, prox5.account_id
+    FROM unproxies4 prox4
+    JOIN hafbe_app.current_account_proxies prox5 ON prox5.proxy_id = prox4.account_id
+  ),
+
+  delete_recursive_account_unproxies AS (
+    DELETE FROM hafbe_app.recursive_account_proxies rap USING (
+      SELECT top_proxy_id, account_id FROM unproxies1
+      UNION
+      SELECT top_proxy_id, account_id FROM unproxies2
+      UNION
+      SELECT top_proxy_id, account_id FROM unproxies3
+      UNION
+      SELECT top_proxy_id, account_id FROM unproxies4
+      UNION
+      SELECT top_proxy_id, account_id FROM unproxies5
+    ) raup
+    WHERE rap.proxy_id = raup.top_proxy_id AND rap.account_id = raup.account_id
   ),
 
   proxies1 AS (
     SELECT
       prox1.proxy_id AS top_proxy_id,
-      prox1.account_id, prox1.operation_id
+      prox1.account_id
     FROM insert_current_proxies prox1
   ),
 
   proxies2 AS (
-    SELECT prox1.top_proxy_id, prox2.account_id, prox2.operation_id
+    SELECT prox1.top_proxy_id, prox2.account_id
     FROM proxies1 prox1
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox1.operation_id AND proxy_id = prox1.account_id
-    ) prox2 ON TRUE
+    JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
   ),
 
   proxies3 AS (
-    SELECT prox2.top_proxy_id, prox3.account_id, prox3.operation_id
+    SELECT prox2.top_proxy_id, prox3.account_id
     FROM proxies2 prox2
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox2.operation_id AND proxy_id = prox2.account_id
-    ) prox3 ON TRUE
+    JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
   ),
 
   proxies4 AS (
-    SELECT prox3.top_proxy_id, prox4.account_id, prox4.operation_id
+    SELECT prox3.top_proxy_id, prox4.account_id
     FROM proxies3 prox3
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox3.operation_id AND proxy_id = prox3.account_id
-    ) prox4 ON TRUE
+    JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
   ),
 
   proxies5 AS (
     SELECT prox4.top_proxy_id, prox5.account_id
     FROM proxies4 prox4
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox4.operation_id AND proxy_id = prox4.account_id
-    ) prox5 ON TRUE
-  ),
+    JOIN hafbe_app.current_account_proxies prox5 ON prox5.proxy_id = prox4.account_id
+  )
 
-  insert_recursive_account_proxies AS (
-    INSERT INTO hafbe_app.recursive_account_proxies (proxy_id, account_id)
+  INSERT INTO hafbe_app.recursive_account_proxies (proxy_id, account_id)
+  SELECT top_proxy_id, account_id
+  FROM (
     SELECT top_proxy_id, account_id FROM proxies1
     UNION
     SELECT top_proxy_id, account_id FROM proxies2
@@ -341,76 +399,15 @@ BEGIN
     SELECT top_proxy_id, account_id FROM proxies4
     UNION
     SELECT top_proxy_id, account_id FROM proxies5
-    ON CONFLICT ON CONSTRAINT pk_recursive_account_proxies DO NOTHING
-  ),
-
-  unproxies1 AS (
-    SELECT
-      prox1.proxy_id AS top_proxy_id,
-      prox1.account_id, prox1.operation_id
-    FROM delete_current_proxies prox1
-  ),
-
-  unproxies2 AS (
-    SELECT prox1.top_proxy_id, prox2.account_id, prox2.operation_id
-    FROM unproxies1 prox1
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox1.operation_id AND proxy_id = prox1.account_id
-    ) prox2 ON TRUE
-  ),
-
-  unproxies3 AS (
-    SELECT prox2.top_proxy_id, prox3.account_id, prox3.operation_id
-    FROM unproxies2 prox2
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox2.operation_id AND proxy_id = prox2.account_id
-    ) prox3 ON TRUE
-  ),
-
-  unproxies4 AS (
-    SELECT prox3.top_proxy_id, prox4.account_id, prox4.operation_id
-    FROM unproxies3 prox3
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox3.operation_id AND proxy_id = prox3.account_id
-    ) prox4 ON TRUE
-  ),
-
-  unproxies5 AS (
-    SELECT prox4.top_proxy_id, prox5.account_id
-    FROM unproxies4 prox4
-    JOIN LATERAL (
-      SELECT proxy_id, account_id, operation_id
-      FROM hafbe_app.current_account_proxies
-      WHERE operation_id < prox4.operation_id AND proxy_id = prox4.account_id
-    ) prox5 ON TRUE
-  ),
-
-  select_recursive_account_unproxies AS (
-    SELECT top_proxy_id, account_id FROM unproxies1
-    UNION
-    SELECT top_proxy_id, account_id FROM unproxies2
-    UNION
-    SELECT top_proxy_id, account_id FROM unproxies3
-    UNION
-    SELECT top_proxy_id, account_id FROM unproxies4
-    UNION
-    SELECT top_proxy_id, account_id FROM unproxies5
-  )
-
-  DELETE FROM hafbe_app.recursive_account_proxies rap USING select_recursive_account_unproxies raup
-  WHERE rap.proxy_id = raup.top_proxy_id AND rap.account_id = raup.account_id;
+  ) rap
+  WHERE top_proxy_id != account_id
+  ON CONFLICT ON CONSTRAINT pk_recursive_account_proxies DO NOTHING;
 
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
   SELECT DISTINCT ON (account_id)
     account_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-  FROM hive.hafbe_app_account_operations_view
+  FROM hive.account_operations_view
   WHERE op_type_id = ANY('{42,11,7}') AND block_num BETWEEN _from AND _to
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
