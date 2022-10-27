@@ -1,4 +1,3 @@
--- TODO: review if all indexes necessary
 DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_indexes AUTHORIZATION hafbe_owner;
@@ -27,26 +26,8 @@ BEGIN
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id);
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash);
 
-  CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp_id ON hive.operations_reversible USING btree (timestamp, id, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_operations_timestamp_id ON hive.operations USING btree (timestamp, id);
-
-  CREATE INDEX IF NOT EXISTS hive_operations_reversible_block_num_op_type_id ON hive.operations_reversible USING btree (block_num, op_type_id, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_operations_block_num_op_type_id ON hive.operations USING btree (block_num, op_type_id);
-
-  CREATE INDEX IF NOT EXISTS hive_operations_reversible_timestamp ON hive.operations_reversible USING btree (timestamp, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_operations_timestamp ON hive.operations USING btree (timestamp);
-
-  CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_reversible_account_id_op_type_id_operation_id ON hive.account_operations_reversible USING btree (account_id, op_type_id, operation_id, fork_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS hive_account_operations_account_id_op_type_id_operation_id ON hive.account_operations USING btree (account_id, op_type_id, operation_id);
-
-  CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_block_num ON hive.account_operations_reversible USING btree (block_num, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_account_operations_block_num ON hive.account_operations USING btree (block_num);
-
-  CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_block_num_op_type_id ON hive.account_operations_reversible USING btree (block_num, op_type_id, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_account_operations_block_num_op_type_id ON hive.account_operations USING btree (block_num, op_type_id);
-
-  CREATE INDEX IF NOT EXISTS hive_account_operations_reversible_operation_id_block_num ON hive.account_operations_reversible USING btree (operation_id, block_num, fork_id);
-  CREATE INDEX IF NOT EXISTS hive_account_operations_operation_id_block_num ON hive.account_operations USING btree (operation_id, block_num);
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_created_at ON hive.blocks USING btree (created_at);
 END
 $$
 ;

@@ -91,9 +91,9 @@ BEGIN
   SELECT array_agg(hot.id)
   FROM hive.operation_types hot
   JOIN (
-    SELECT hive.get_balance_impacting_operations() AS name
-  ) bio
-  ON hot.name = bio.name;
+    SELECT get_balance_impacting_operations AS name
+    FROM hive.get_balance_impacting_operations()
+  ) bio ON bio.name = hot.name::TEXT;
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
     account_id INT NOT NULL,
@@ -179,7 +179,7 @@ BEGIN
       (body::JSON)->'value' AS value,
       timestamp, op_type_id, id AS operation_id
     FROM hive.hafbe_app_operations_view
-    WHERE op_type_id =  ANY('{12,91}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to
   ),
 
   select_votes_ops AS (
@@ -405,26 +405,30 @@ BEGIN
 
   -- add new witnesses per block range
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-  SELECT DISTINCT ON (account_id)
-    account_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-  FROM hive.hafbe_app_account_operations_view
-  WHERE op_type_id = ANY('{42,11,7}') AND block_num BETWEEN _from AND _to
+  SELECT DISTINCT ON (haov.account_id)
+    haov.account_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
+  FROM hive.hafbe_app_account_operations_view haov
+  JOIN (
+    SELECT id
+    FROM hive.hafbe_app_operations_view
+    WHERE op_type_id = ANY('{42,11,7}') AND block_num BETWEEN _from AND _to
+  ) hov ON hov.id = haov.operation_id
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   SELECT INTO __prop_op
     cw.witness_id,
     (hov.body::JSON)->'value' AS value,
     hov.op_type_id, hov.timestamp, haov.operation_id
-  FROM hafbe_app.current_witnesses cw
-  JOIN (
-    SELECT account_id, operation_id, block_num
-    FROM hive.hafbe_app_account_operations_view
-    WHERE op_type_id = ANY('{42,30,14,11,7}') AND block_num BETWEEN _from AND _to
-  ) haov ON haov.account_id = cw.witness_id
+  FROM hive.hafbe_app_account_operations_view haov
   JOIN (
     SELECT body, op_type_id, timestamp, id, block_num
     FROM hive.hafbe_app_operations_view 
-  ) hov ON hov.id = haov.operation_id AND hov.block_num = haov.block_num;
+    WHERE op_type_id = ANY('{42,30,14,11,7}') AND block_num BETWEEN _from AND _to
+  ) hov ON hov.id = haov.operation_id AND hov.block_num = haov.block_num
+  JOIN (
+    SELECT witness_id
+    FROM hafbe_app.current_witnesses
+  ) cw ON cw.witness_id = haov.account_id;
   
   UPDATE hafbe_app.current_witnesses cw SET url = res.prop_value FROM (
     SELECT prop_value, witness_id
@@ -536,7 +540,7 @@ BEGIN
           FROM hive.extract_set_witness_properties(value->>'props')
           WHERE prop_name = 'new_signing_key'
         ) ex_res1 ON TRUE
-        JOIN LATERAL (
+        LEFT JOIN LATERAL (
           SELECT prop_value
           FROM hive.extract_set_witness_properties(value->>'props')
           WHERE prop_name = 'key'
@@ -550,9 +554,14 @@ BEGIN
   WHERE cw.witness_id = res.witness_id;
 
   INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
-  SELECT account_id, op_type_id
-  FROM hive.hafbe_app_account_operations_view
-  WHERE block_num BETWEEN _from AND _to
+  SELECT DISTINCT ON (haov.account_id, haov.op_type_id)
+    haov.account_id, haov.op_type_id
+  FROM hive.hafbe_app_account_operations_view haov
+  JOIN (
+    SELECT id
+    FROM hive.hafbe_app_operations_view
+    WHERE block_num BETWEEN _from AND _to
+  ) hov ON hov.id = haov.operation_id
   ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
 
   -- get impacted vests balance for block range and update account_vests
@@ -578,12 +587,6 @@ BEGIN
       ON CONFLICT ON CONSTRAINT pk_account_vests DO 
       UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests;
     END LOOP;
-
-  INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
-  SELECT account_id, op_type_id
-  FROM hive.hafbe_app_account_operations_view
-  WHERE block_num BETWEEN _from AND _to
-  ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
 END
 $$
 SET from_collapse_limit = 16

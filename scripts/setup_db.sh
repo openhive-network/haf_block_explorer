@@ -129,6 +129,8 @@ owner_role=hafbe_owner
 postgrest_dir=$PWD/api
 db_dir=$PWD/db
 
+sudo echo
+
 if [ "$1" = "all" ]; then
   setup_owner
   setup_apps
