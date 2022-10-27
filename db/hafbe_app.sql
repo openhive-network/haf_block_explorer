@@ -170,10 +170,10 @@ AS
 $$
 DECLARE
   __prop_op RECORD;
-  __prop_value TEXT;
   __balance_change RECORD;
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
+  -- process vote and proxy ops, fill tables
   WITH vote_or_proxy_op AS (
     SELECT
       (body::JSON)->'value' AS value,
@@ -183,7 +183,7 @@ BEGIN
   ),
 
   select_votes_ops AS (
-    SELECT hav_w.witness_id, hav_v.voter_id, approve, timestamp, operation_id
+    SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
     FROM (
       SELECT
         value->>'witness' AS witness,
@@ -193,16 +193,8 @@ BEGIN
       FROM vote_or_proxy_op
       WHERE op_type_id = 12
     ) vote_op
-    JOIN LATERAL (
-      SELECT id AS witness_id
-      FROM hive.hafbe_app_accounts_view
-      WHERE name = vote_op.witness
-    ) hav_w ON TRUE
-    JOIN LATERAL (
-      SELECT id AS voter_id
-      FROM hive.hafbe_app_accounts_view
-      WHERE name = vote_op.voter
-    ) hav_v ON TRUE
+    JOIN hive.hafbe_app_accounts_view hav_w ON hav_w.name = vote_op.witness
+    JOIN hive.hafbe_app_accounts_view hav_v ON hav_v.name = vote_op.voter
     ORDER BY operation_id DESC
   ),
   
@@ -249,7 +241,7 @@ BEGIN
   ),
 
   select_proxy_ops AS (
-    SELECT hav_a.account_id, hav_p.proxy_id, proxy, timestamp, operation_id
+    SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
     FROM (
       SELECT
         value->>'account' AS account,
@@ -259,16 +251,8 @@ BEGIN
       FROM vote_or_proxy_op
       WHERE op_type_id = 91
     ) proxy_op
-    JOIN LATERAL (
-      SELECT id AS account_id
-      FROM hive.hafbe_app_accounts_view
-      WHERE name = proxy_op.account
-    ) hav_a ON TRUE
-    JOIN LATERAL (
-      SELECT id AS proxy_id
-      FROM hive.hafbe_app_accounts_view
-      WHERE name = proxy_op.proxy_account
-    ) hav_p ON TRUE
+    JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.account
+    JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
     ORDER BY operation_id DESC
   ),
 
@@ -404,31 +388,35 @@ BEGIN
   ON CONFLICT ON CONSTRAINT pk_recursive_account_proxies DO NOTHING;
 
   -- add new witnesses per block range
+  WITH limited_set AS (
+    SELECT DISTINCT bia.name
+    FROM hive.hafbe_app_operations_view hov
+    JOIN LATERAL (
+      SELECT get_impacted_accounts AS name
+      FROM hive.get_impacted_accounts(hov.body)
+    ) bia ON TRUE
+    WHERE hov.op_type_id = ANY('{42,11,7}') AND hov.block_num BETWEEN _from AND _to
+  )
+  
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-  SELECT DISTINCT ON (haov.account_id)
-    haov.account_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-  FROM hive.hafbe_app_account_operations_view haov
-  JOIN (
-    SELECT id
-    FROM hive.hafbe_app_operations_view
-    WHERE op_type_id = ANY('{42,11,7}') AND block_num BETWEEN _from AND _to
-  ) hov ON hov.id = haov.operation_id
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
+  FROM limited_set ls
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = ls.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
+  -- parse props for witnesses table
   SELECT INTO __prop_op
     cw.witness_id,
     (hov.body::JSON)->'value' AS value,
-    hov.op_type_id, hov.timestamp, haov.operation_id
-  FROM hive.hafbe_app_account_operations_view haov
-  JOIN (
-    SELECT body, op_type_id, timestamp, id, block_num
-    FROM hive.hafbe_app_operations_view 
-    WHERE op_type_id = ANY('{42,30,14,11,7}') AND block_num BETWEEN _from AND _to
-  ) hov ON hov.id = haov.operation_id AND hov.block_num = haov.block_num
-  JOIN (
-    SELECT witness_id
-    FROM hafbe_app.current_witnesses
-  ) cw ON cw.witness_id = haov.account_id;
+    hov.op_type_id, hov.timestamp, hov.id AS operation_id
+  FROM hive.hafbe_app_operations_view hov
+  JOIN LATERAL (
+    SELECT get_impacted_accounts AS name
+    FROM hive.get_impacted_accounts(hov.body)
+  ) bia ON TRUE
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = bia.name
+  JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hav.id
+  WHERE hov.op_type_id = ANY('{42,30,14,11,7}') AND hov.block_num BETWEEN _from AND _to;
   
   UPDATE hafbe_app.current_witnesses cw SET url = res.prop_value FROM (
     SELECT prop_value, witness_id
@@ -552,16 +540,23 @@ BEGIN
     WHERE row_n = 1
   ) res
   WHERE cw.witness_id = res.witness_id;
+  
+  -- fill account op types cache
+  WITH limited_set AS (
+    SELECT DISTINCT ON (hov.op_type_id, bia.name)
+      hov.op_type_id, bia.name
+    FROM hive.hafbe_app_operations_view hov
+    JOIN LATERAL (
+      SELECT get_impacted_accounts AS name
+      FROM hive.get_impacted_accounts(hov.body)
+    ) bia ON TRUE
+    WHERE hov.block_num BETWEEN _from AND _to
+  )
 
   INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
-  SELECT DISTINCT ON (haov.account_id, haov.op_type_id)
-    haov.account_id, haov.op_type_id
-  FROM hive.hafbe_app_account_operations_view haov
-  JOIN (
-    SELECT id
-    FROM hive.hafbe_app_operations_view
-    WHERE block_num BETWEEN _from AND _to
-  ) hov ON hov.id = haov.operation_id
+  SELECT hav.id, ls.op_type_id
+  FROM limited_set ls
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = ls.name
   ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
 
   -- get impacted vests balance for block range and update account_vests
