@@ -169,29 +169,28 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
+  __vote_or_proxy_op RECORD;
   __prop_op RECORD;
   __balance_change RECORD;
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
-  -- process vote and proxy ops, fill tables
-  WITH vote_or_proxy_op AS (
-    SELECT
-      (body::JSON)->'value' AS value,
-      timestamp, op_type_id, id AS operation_id
-    FROM hive.hafbe_app_operations_view
-    WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to
-  ),
 
-  select_votes_ops AS (
+  SELECT INTO __vote_or_proxy_op
+    (body::JSON)->'value' AS value,
+    timestamp, op_type_id, id AS operation_id
+  FROM hive.hafbe_app_operations_view
+  WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to;
+
+  -- process vote ops
+  WITH select_votes_ops AS (
     SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
     FROM (
       SELECT
-        value->>'witness' AS witness,
-        value->>'account' AS voter,
-        (value->>'approve')::BOOLEAN AS approve,
-        timestamp, operation_id
-      FROM vote_or_proxy_op
-      WHERE op_type_id = 12
+        __vote_or_proxy_op.value->>'witness' AS witness,
+        __vote_or_proxy_op.value->>'account' AS voter,
+        (__vote_or_proxy_op.value->>'approve')::BOOLEAN AS approve,
+        __vote_or_proxy_op.timestamp, __vote_or_proxy_op.operation_id
+      WHERE __vote_or_proxy_op.op_type_id = 12
     ) vote_op
     JOIN hive.hafbe_app_accounts_view hav_w ON hav_w.name = vote_op.witness
     JOIN hive.hafbe_app_accounts_view hav_v ON hav_v.name = vote_op.voter
@@ -222,34 +221,25 @@ BEGIN
     WHERE approve IS TRUE
     ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
       timestamp = EXCLUDED.timestamp
-  ),
+  )
 
-  delete_current_votes AS (
-    DELETE FROM hafbe_app.current_witness_votes cwv USING (
-      SELECT witness_id, voter_id
-      FROM select_latest_vote_ops
-      WHERE approve IS FALSE
-    ) svo
-    WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id
-  ),
+  DELETE FROM hafbe_app.current_witness_votes cwv USING (
+    SELECT witness_id, voter_id
+    FROM select_latest_vote_ops
+    WHERE approve IS FALSE
+  ) svo
+  WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
 
-  insert_witnesses_from_votes AS (
-    INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-    SELECT witness_id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-    FROM select_votes_ops
-    ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING
-  ),
-
-  select_proxy_ops AS (
+  -- process proxy ops
+  WITH select_proxy_ops AS (
     SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
     FROM (
       SELECT
-        value->>'account' AS account,
-        value->>'proxy' AS proxy_account,
-        CASE WHEN (value->>'clear')::BOOLEAN IS TRUE THEN FALSE ELSE TRUE END AS proxy,
-        timestamp, operation_id
-      FROM vote_or_proxy_op
-      WHERE op_type_id = 91
+        __vote_or_proxy_op.value->>'account' AS account,
+        __vote_or_proxy_op.value->>'proxy' AS proxy_account,
+        CASE WHEN (__vote_or_proxy_op.value->>'clear')::BOOLEAN IS TRUE THEN FALSE ELSE TRUE END AS proxy,
+        __vote_or_proxy_op.timestamp, __vote_or_proxy_op.operation_id
+      WHERE __vote_or_proxy_op.op_type_id = 91
     ) proxy_op
     JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.account
     JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
@@ -389,13 +379,19 @@ BEGIN
 
   -- add new witnesses per block range
   WITH limited_set AS (
-    SELECT DISTINCT bia.name
+    SELECT DISTINCT bia.name AS name
     FROM hive.hafbe_app_operations_view hov
     JOIN LATERAL (
       SELECT get_impacted_accounts AS name
       FROM hive.get_impacted_accounts(hov.body)
     ) bia ON TRUE
     WHERE hov.op_type_id = ANY('{42,11,7}') AND hov.block_num BETWEEN _from AND _to
+    
+    UNION
+  
+    SELECT DISTINCT name
+    FROM (SELECT __vote_or_proxy_op.value->>'witness' AS name) witnesses
+    WHERE witnesses.name IS NOT NULL
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
@@ -540,7 +536,7 @@ BEGIN
     WHERE row_n = 1
   ) res
   WHERE cw.witness_id = res.witness_id;
-  
+
   -- fill account op types cache
   WITH limited_set AS (
     SELECT DISTINCT ON (hov.op_type_id, bia.name)

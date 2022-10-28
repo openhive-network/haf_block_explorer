@@ -43,7 +43,9 @@ DB_NAME=haf_block_log
 owner_role=hafbe_owner
 admin_role=haf_admin
 
-sudo echo
+if [ "$1" != "start" ]; then
+    sudo echo
+fi;
 
 if [ "$1" = "start" ]; then
     start_webserver $2
