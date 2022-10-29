@@ -54,10 +54,7 @@ BEGIN
   RETURN QUERY SELECT
     aoc.op_type_id, hot.name, hot.is_virtual
   FROM hafbe_app.account_operation_cache aoc
-  JOIN (
-    SELECT id, name, is_virtual
-    FROM hive.operation_types
-  ) hot ON hot.id = aoc.op_type_id
+  JOIN hive.operation_types hot ON hot.id = aoc.op_type_id
   WHERE aoc.account_id = _account_id
   ORDER BY aoc.op_type_id ASC;
 END
@@ -73,13 +70,10 @@ RETURNS SETOF hafbe_types.op_types
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT
+  RETURN QUERY SELECT DISTINCT ON (hov.op_type_id)
     hov.op_type_id, hot.name, hot.is_virtual
   FROM hive.operations_view hov
-  JOIN  (
-    SELECT id, name, is_virtual
-    FROM hive.operation_types
-  ) hot ON hot.id = hov.op_type_id
+  JOIN hive.operation_types hot ON hot.id = hov.op_type_id
   WHERE hov.block_num = _block_num
   ORDER BY hov.op_type_id ASC;
 END
@@ -126,15 +120,15 @@ BEGIN
   END IF;
 
   RETURN QUERY SELECT
-    encode(htv.trx_hash, 'hex')::TEXT,
-    ls.block_num::INT,
-    hov.trx_in_block::INT,
-    hov.op_pos::INT,
-    hot.is_virtual::BOOLEAN,
+    encode(htv.trx_hash, 'hex'),
+    ls.block_num,
+    hov.trx_in_block,
+    hov.op_pos,
+    hot.is_virtual,
     hov.timestamp::TEXT,
     hov.body::JSON,
-    ls.operation_id::BIGINT,
-    ls.account_op_seq_no::BIGINT
+    ls.operation_id,
+    ls.account_op_seq_no
   FROM (
     SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
     FROM hive.account_operations_view haov
@@ -167,31 +161,28 @@ DECLARE
   __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
   RETURN QUERY SELECT
-    encode(htv.trx_hash, 'hex')::TEXT,
-    _block_num::INT,
-    hov.trx_in_block::INT,
-    hov.op_pos::INT,
-    hot.is_virtual::BOOLEAN,
-    hov.timestamp::TEXT,
-    hov.body::JSON,
-    hov.id::BIGINT,
-    NULL::BIGINT
-  FROM hive.operations_view hov
-  JOIN (
-    SELECT id, is_virtual
-    FROM hive.operation_types
-  ) hot ON hot.id = hov.op_type_id
-  JOIN (
-    SELECT trx_hash, block_num, trx_in_block
-    FROM hive.transactions_view
-  ) htv ON htv.block_num = hov.block_num AND htv.trx_in_block = hov.trx_in_block
-  WHERE
-    hov.block_num = _block_num AND
-    hov.id <= _top_op_id AND (
-    __filter_ops OR hov.op_type_id=ANY(_filter)
-  )
-  ORDER BY hov.id DESC
-  LIMIT _limit;
+    encode(htv.trx_hash, 'hex'),
+    ls.block_num,
+    ls.trx_in_block,
+    ls.op_pos,
+    hot.is_virtual,
+    ls.timestamp::TEXT,
+    ls.body::JSON,
+    ls.id,
+    NULL::INT
+  FROM (
+    SELECT hov.id, hov.trx_in_block, hov.op_pos, hov.timestamp, hov.body, hov.op_type_id, hov.block_num
+    FROM hive.operations_view hov
+    WHERE
+      hov.block_num = _block_num AND
+      hov.id <= _top_op_id AND 
+      (__filter_ops OR hov.op_type_id = ANY(_filter))
+    ORDER BY hov.id DESC
+    LIMIT _limit
+  ) ls
+  JOIN hive.operation_types hot ON hot.id = ls.op_type_id
+  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
+  ORDER BY ls.id DESC;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
@@ -204,26 +195,24 @@ SET from_collapse_limit=16
 Block stats
 */
 
-CREATE FUNCTION hafbe_backend.get_block(_block_num INT)
-RETURNS JSON
+CREATE FUNCTION hafbe_backend.get_set_of_block_data(_block_num INT)
+RETURNS SETOF hafbe_types.block
 AS
 $function$
 BEGIN
-  RETURN to_json(res) FROM (
-    SELECT
-      hbv.num AS block_num,
-      encode(hbv.hash, 'hex')::TEXT AS block_hash,
-      hbv.created_at AS timestamp,
-      hav.name AS witness,
-      hbv.signing_key
-    FROM hive.accounts_view hav
-    JOIN (
-      SELECT num, hash, created_at, producer_account_id, signing_key
-      FROM hive.blocks_view
-      WHERE num = _block_num
-      LIMIT 1
-    ) hbv ON hbv.producer_account_id = hav.id
-  ) res;
+  RETURN QUERY SELECT
+    hbv.num,
+    encode(hbv.hash, 'hex'),
+    hbv.created_at::TEXT,
+    hav.name::TEXT,
+    hbv.signing_key
+  FROM hive.accounts_view hav
+  JOIN (
+    SELECT num, hash, created_at, producer_account_id, signing_key
+    FROM hive.blocks_view
+    WHERE num = _block_num
+    LIMIT 1
+  ) hbv ON hbv.producer_account_id = hav.id;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE

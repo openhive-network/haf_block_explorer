@@ -11,13 +11,21 @@ CREATE TYPE hafbe_types.op_types AS (
 CREATE TYPE hafbe_types.operations AS (
   trx_id TEXT,
   block INT,
-  trx_in_block INT,
+  trx_in_block SMALLINT,
   op_in_trx INT,
   virtual_op BOOLEAN,
   timestamp TEXT,
   operations JSON,
   operation_id BIGINT,
-  acc_operation_id BIGINT
+  acc_operation_id INT
+);
+
+CREATE TYPE hafbe_types.block AS (
+  block_num INT,
+  block_hash TEXT,
+  timestamp TEXT,
+  witness TEXT,
+  signing_key TEXT
 );
 
 CREATE TYPE hafbe_types.witness_voters_by_name AS (

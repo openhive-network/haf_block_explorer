@@ -193,7 +193,15 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN hafbe_backend.get_block(_block_num);
+  IF _block_num IS NULL THEN
+    SELECT hafbe_backend.get_head_block_num() INTO _block_num;
+  END IF;
+
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT to_json(hafbe_backend.get_set_of_block_data(_block_num))
+    ) arr
+  ) result;
 END
 $$
 ;
@@ -214,6 +222,10 @@ BEGIN
 
   IF _top_op_id < (_limit - 1) THEN
     RETURN hafbe_exceptions.raise_ops_limit_exception(_top_op_id, _limit);
+  END IF;
+
+  IF _block_num IS NULL THEN
+    SELECT hafbe_backend.get_head_block_num() INTO _block_num;
   END IF;
 
   IF _filter IS NULL THEN
