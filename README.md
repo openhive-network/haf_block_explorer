@@ -13,23 +13,48 @@ npm: `latest`
 
 To start using haf block explorer, first
 ```
-./run.sh install-postgrest
-./run.sh install-plpython
+./scripts/setup_dependancies.sh all
+./scripts/setup_db.sh all
 ```
-then install gui dependancies
+This will create required postgres schemas and roles, also [indexes](https://gitlab.syncad.com/hive/haf_block_explorer/-/blob/22-create-witness-table/db/indexes.sql#L20) on haf db.
+
+
+Then install gui dependancies
 ```
 cd gui ; npm install ; cd ..
 ```
-finally start server with:
-```
-./run.sh re-start
-```
-This will create required postgres schemas and roles.
 
-## Starting 
+## Block processing
+
+hafbe will process blocks from haf db to own tables
+```
+./run.sh process-blocks
+```
+Until hafbe catches up to head block on haf db, it will do massive processing
+
+
+If you need to stop and restart processing
+```
+./run.sh stop-processing
+./run.sh continue-processing
+```
+
+If you want to destroy hafbe db:
+```
+./run.sh drop-db
+```
+
+## Starting
+
+When hafbe is in live sync mode (processing block-by-block), create indexes for it's tables:
+```
+./run.sh create-hafbe-indexes
+```
 
 After setup start postgREST server with:
 ```
+sudo su - hafbe_owner
+cd <hafbe_dir>
 ./run.sh start <PORT>
 ```
 `PORT` is optional, default is 3000.
@@ -41,9 +66,9 @@ cd gui ; npm start
 
 ## Testing performance
 
-haf block explorer has 10 performance/load test suites ready in `tests/performance/endpoints.jmx`.<br>To run tests you must have JMeter installed:
+Install JMeter if not yet installed
 ```
-./run.sh install-jmeter
+./scripts/setup_dependancies.sh jmeter
 ```
 then run tests with:
 ```
