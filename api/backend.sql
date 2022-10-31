@@ -51,12 +51,19 @@ RETURNS SETOF hafbe_types.op_types
 AS
 $function$
 BEGIN
-  RETURN QUERY SELECT
-    aoc.op_type_id, hot.name, hot.is_virtual
-  FROM hafbe_app.account_operation_cache aoc
-  JOIN hive.operation_types hot ON hot.id = aoc.op_type_id
-  WHERE aoc.account_id = _account_id
-  ORDER BY aoc.op_type_id ASC;
+  RETURN QUERY WITH op_types_cte AS (
+    SELECT id
+    FROM hive.operation_types hot
+    WHERE (
+      SELECT EXISTS (
+        SELECT 1 FROM hive.account_operations_view haov WHERE haov.account_id = _account_id AND haov.op_type_id = hot.id
+      )
+    )
+  )
+
+  SELECT cte.id, hot.name, hot.is_virtual
+  FROM op_types_cte cte
+  JOIN hive.operation_types hot ON hot.id = cte.id;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE

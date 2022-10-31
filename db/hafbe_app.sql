@@ -76,13 +76,6 @@ BEGIN
     CONSTRAINT pk_hived_account_cache PRIMARY KEY (account)
   );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.account_operation_cache (
-    account_id INT NOT NULL,
-    op_type_id SMALLINT NOT NULL,
-
-    CONSTRAINT pk_account_operation_cache PRIMARY KEY (account_id, op_type_id)
-  ) INHERITS (hive.hafbe_app);
-
   CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
     op_type_ids_arr SMALLINT[] NOT NULL
   );
@@ -536,24 +529,6 @@ BEGIN
     WHERE row_n = 1
   ) res
   WHERE cw.witness_id = res.witness_id;
-
-  -- fill account op types cache
-  WITH limited_set AS (
-    SELECT DISTINCT ON (hov.op_type_id, bia.name)
-      hov.op_type_id, bia.name
-    FROM hive.hafbe_app_operations_view hov
-    JOIN LATERAL (
-      SELECT get_impacted_accounts AS name
-      FROM hive.get_impacted_accounts(hov.body)
-    ) bia ON TRUE
-    WHERE hov.block_num BETWEEN _from AND _to
-  )
-
-  INSERT INTO hafbe_app.account_operation_cache (account_id, op_type_id)
-  SELECT hav.id, ls.op_type_id
-  FROM limited_set ls
-  JOIN hive.hafbe_app_accounts_view hav ON hav.name = ls.name
-  ON CONFLICT ON CONSTRAINT pk_account_operation_cache DO NOTHING;
 
   -- get impacted vests balance for block range and update account_vests
   FOR __balance_change IN
