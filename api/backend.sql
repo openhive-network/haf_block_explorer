@@ -273,8 +273,8 @@ BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT voter_id, vests, account_vests::NUMERIC, proxied_vests, timestamp
-    FROM hafbe_views.voters_stats_view
+    SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+    FROM hafbe_app.witness_voters_stats_cache
     WHERE witness_id = %L
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -307,7 +307,7 @@ BEGIN
       FROM hafbe_backend.get_set_of_witness_voters_by_name(%L, %L, %L, %L) ls
       JOIN (
         SELECT voter_id, vests, account_vests, proxied_vests, timestamp
-        FROM hafbe_views.voters_stats_view
+        FROM hafbe_app.witness_voters_stats_cache
         WHERE witness_id = %L
       ) vsv ON vsv.voter_id = ls.voter_id
       ORDER BY
@@ -542,12 +542,8 @@ BEGIN
     $query$
     SELECT witness_id, votes, voters_num
     FROM (
-      SELECT
-        vsv.witness_id,
-        SUM(vsv.vests) AS votes,
-        COUNT(1)::INT AS voters_num
-      FROM hafbe_views.voters_stats_view vsv
-      GROUP BY vsv.witness_id
+      SELECT witness_id, votes, voters_num
+      FROM hafbe_app.witness_votes_cache
     ) votes_sum
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -649,14 +645,9 @@ BEGIN
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
         price_feed, bias, feed_age, block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_name(%L, %L, %L) ls
-      LEFT JOIN LATERAL (
-        SELECT
-          vsv.witness_id,
-          SUM(vsv.vests) AS votes,
-          COUNT(1) AS voters_num
-        FROM hafbe_views.voters_stats_view vsv
-        WHERE vsv.witness_id = ls.witness_id
-        GROUP BY vsv.witness_id
+      LEFT JOIN (
+        SELECT witness_id, votes, voters_num
+        FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
         SELECT 
@@ -726,14 +717,9 @@ BEGIN
         price_feed, bias, feed_age, block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_votes_change(%L, %L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
-      JOIN LATERAL (
-        SELECT
-          vsv.witness_id,
-          SUM(vsv.vests) AS votes,
-          COUNT(1) AS voters_num
-        FROM hafbe_views.voters_stats_view vsv
-        WHERE vsv.witness_id = ls.witness_id
-        GROUP BY vsv.witness_id
+      JOIN (
+        SELECT witness_id, votes, voters_num
+        FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       JOIN (
         SELECT name, id
@@ -761,14 +747,9 @@ BEGIN
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
         price_feed, bias, feed_age, block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_prop(%L, %L, %L, %L) ls
-      LEFT JOIN LATERAL (
-        SELECT
-          vsv.witness_id,
-          SUM(vsv.vests) AS votes,
-          COUNT(1) AS voters_num
-        FROM hafbe_views.voters_stats_view vsv
-        WHERE vsv.witness_id = ls.witness_id
-        GROUP BY vsv.witness_id
+      LEFT JOIN (
+        SELECT witness_id, votes, voters_num
+        FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
         SELECT 

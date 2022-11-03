@@ -14,11 +14,12 @@ BEGIN
     continue_processing BOOLEAN,
     last_processed_block INT,
     started_processing_at TIMESTAMP,
+    finished_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP,
     last_reported_block INT
   );
-  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, last_reported_at, last_reported_block)
-  VALUES (TRUE, 0, NULL, to_timestamp(0), 0);
+  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
+  VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
@@ -62,13 +63,6 @@ BEGIN
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.recursive_account_proxies (
-    proxy_id INT NOT NULL,
-    account_id INT NOT NULL,
-
-    CONSTRAINT pk_recursive_account_proxies PRIMARY KEY (proxy_id, account_id)
-  ) INHERITS (hive.hafbe_app);
-
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
     data JSON NOT NULL,
@@ -94,6 +88,33 @@ BEGIN
 
     CONSTRAINT pk_account_vests PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witnesses_cache_config (
+    update_interval INTERVAL,
+    last_updated_at TIMESTAMP
+  );
+
+  INSERT INTO hafbe_app.witnesses_cache_config (update_interval, last_updated_at)
+  VALUES ('1 hour', to_timestamp(0));
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
+    witness_id INT,
+    voter_id INT,
+    vests NUMERIC,
+    account_vests NUMERIC,
+    proxied_vests NUMERIC,
+    timestamp TIMESTAMP,
+
+    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness_id, voter_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
+    witness_id INT,
+    votes NUMERIC,
+    voters_num INT,
+
+    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
+  );
 END
 $$
 ;
@@ -162,32 +183,31 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __vote_or_proxy_op RECORD;
+  __ops_in_range RECORD;
   __prop_op RECORD;
   __balance_change RECORD;
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
-
-  SELECT INTO __vote_or_proxy_op
+  SELECT INTO __ops_in_range
+    body,
     (body::JSON)->'value' AS value,
     timestamp, op_type_id, id AS operation_id
   FROM hive.hafbe_app_operations_view
-  WHERE op_type_id = ANY('{12,91}') AND block_num BETWEEN _from AND _to;
+  WHERE op_type_id = ANY('{12,13,91,42,30,14,11,7}') AND block_num BETWEEN _from AND _to;
 
   -- process vote ops
   WITH select_votes_ops AS (
     SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
     FROM (
       SELECT
-        __vote_or_proxy_op.value->>'witness' AS witness,
-        __vote_or_proxy_op.value->>'account' AS voter,
-        (__vote_or_proxy_op.value->>'approve')::BOOLEAN AS approve,
-        __vote_or_proxy_op.timestamp, __vote_or_proxy_op.operation_id
-      WHERE __vote_or_proxy_op.op_type_id = 12
+        __ops_in_range.value->>'witness' AS witness,
+        __ops_in_range.value->>'account' AS voter,
+        (__ops_in_range.value->>'approve')::BOOLEAN AS approve,
+        __ops_in_range.timestamp, __ops_in_range.operation_id
+      WHERE __ops_in_range.op_type_id = 12
     ) vote_op
     JOIN hive.hafbe_app_accounts_view hav_w ON hav_w.name = vote_op.witness
     JOIN hive.hafbe_app_accounts_view hav_v ON hav_v.name = vote_op.voter
-    ORDER BY operation_id DESC
   ),
   
   insert_votes_history AS (
@@ -228,15 +248,23 @@ BEGIN
     SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
     FROM (
       SELECT
-        __vote_or_proxy_op.value->>'account' AS account,
-        __vote_or_proxy_op.value->>'proxy' AS proxy_account,
-        CASE WHEN (__vote_or_proxy_op.value->>'clear')::BOOLEAN IS TRUE THEN FALSE ELSE TRUE END AS proxy,
-        __vote_or_proxy_op.timestamp, __vote_or_proxy_op.operation_id
-      WHERE __vote_or_proxy_op.op_type_id = 91
+        __ops_in_range.value->>'account' AS account,
+        __ops_in_range.value->>'proxy' AS proxy_account,
+        TRUE AS proxy,
+        __ops_in_range.timestamp, __ops_in_range.operation_id
+      WHERE __ops_in_range.op_type_id = 13
+
+      UNION
+
+      SELECT
+        __ops_in_range.value->>'account' AS account,
+        __ops_in_range.value->>'proxy' AS proxy_account,
+        FALSE AS proxy,
+        __ops_in_range.timestamp, __ops_in_range.operation_id
+      WHERE __ops_in_range.op_type_id = 91
     ) proxy_op
     JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.account
     JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
-    ORDER BY operation_id DESC
   ),
 
   insert_proxy_history AS (
@@ -261,130 +289,28 @@ BEGIN
     SELECT account_id, proxy_id
     FROM select_latest_proxy_ops
     WHERE proxy IS TRUE
-
     ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
       proxy_id = EXCLUDED.proxy_id
     RETURNING cap.account_id, cap.proxy_id
-  ),
-
-  delete_current_proxies AS (
-    DELETE FROM hafbe_app.current_account_proxies cap USING (
-      SELECT account_id
-      FROM select_latest_proxy_ops
-      WHERE proxy IS FALSE
-    ) spo
-    WHERE cap.account_id = spo.account_id
-    RETURNING cap.account_id, cap.proxy_id
-  ),
-
-  unproxies1 AS (
-    SELECT
-      prox1.proxy_id AS top_proxy_id,
-      prox1.account_id
-    FROM delete_current_proxies prox1
-  ),
-
-  unproxies2 AS (
-    SELECT prox1.top_proxy_id, prox2.account_id
-    FROM unproxies1 prox1
-    JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
-  ),
-
-  unproxies3 AS (
-    SELECT prox2.top_proxy_id, prox3.account_id
-    FROM unproxies2 prox2
-    JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
-  ),
-
-  unproxies4 AS (
-    SELECT prox3.top_proxy_id, prox4.account_id
-    FROM unproxies3 prox3
-    JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
-  ),
-
-  unproxies5 AS (
-    SELECT prox4.top_proxy_id, prox5.account_id
-    FROM unproxies4 prox4
-    JOIN hafbe_app.current_account_proxies prox5 ON prox5.proxy_id = prox4.account_id
-  ),
-
-  delete_recursive_account_unproxies AS (
-    DELETE FROM hafbe_app.recursive_account_proxies rap USING (
-      SELECT top_proxy_id, account_id FROM unproxies1
-      UNION
-      SELECT top_proxy_id, account_id FROM unproxies2
-      UNION
-      SELECT top_proxy_id, account_id FROM unproxies3
-      UNION
-      SELECT top_proxy_id, account_id FROM unproxies4
-      UNION
-      SELECT top_proxy_id, account_id FROM unproxies5
-    ) raup
-    WHERE rap.proxy_id = raup.top_proxy_id AND rap.account_id = raup.account_id
-  ),
-
-  proxies1 AS (
-    SELECT
-      prox1.proxy_id AS top_proxy_id,
-      prox1.account_id
-    FROM insert_current_proxies prox1
-  ),
-
-  proxies2 AS (
-    SELECT prox1.top_proxy_id, prox2.account_id
-    FROM proxies1 prox1
-    JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
-  ),
-
-  proxies3 AS (
-    SELECT prox2.top_proxy_id, prox3.account_id
-    FROM proxies2 prox2
-    JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
-  ),
-
-  proxies4 AS (
-    SELECT prox3.top_proxy_id, prox4.account_id
-    FROM proxies3 prox3
-    JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
-  ),
-
-  proxies5 AS (
-    SELECT prox4.top_proxy_id, prox5.account_id
-    FROM proxies4 prox4
-    JOIN hafbe_app.current_account_proxies prox5 ON prox5.proxy_id = prox4.account_id
   )
 
-  INSERT INTO hafbe_app.recursive_account_proxies (proxy_id, account_id)
-  SELECT top_proxy_id, account_id
-  FROM (
-    SELECT top_proxy_id, account_id FROM proxies1
-    UNION
-    SELECT top_proxy_id, account_id FROM proxies2
-    UNION
-    SELECT top_proxy_id, account_id FROM proxies3
-    UNION
-    SELECT top_proxy_id, account_id FROM proxies4
-    UNION
-    SELECT top_proxy_id, account_id FROM proxies5
-  ) rap
-  WHERE top_proxy_id != account_id
-  ON CONFLICT ON CONSTRAINT pk_recursive_account_proxies DO NOTHING;
+  DELETE FROM hafbe_app.current_account_proxies cap USING (
+    SELECT account_id
+    FROM select_latest_proxy_ops
+    WHERE proxy IS FALSE
+  ) spo
+  WHERE cap.account_id = spo.account_id;
 
   -- add new witnesses per block range
   WITH limited_set AS (
-    SELECT DISTINCT bia.name AS name
-    FROM hive.hafbe_app_operations_view hov
-    JOIN LATERAL (
-      SELECT get_impacted_accounts AS name
-      FROM hive.get_impacted_accounts(hov.body)
-    ) bia ON TRUE
-    WHERE hov.op_type_id = ANY('{42,11,7}') AND hov.block_num BETWEEN _from AND _to
+    SELECT DISTINCT get_impacted_accounts AS name
+    FROM hive.get_impacted_accounts(__ops_in_range.body)
+    WHERE __ops_in_range.op_type_id = ANY('{42,11,7}')
     
     UNION
   
-    SELECT DISTINCT name
-    FROM (SELECT __vote_or_proxy_op.value->>'witness' AS name) witnesses
-    WHERE witnesses.name IS NOT NULL
+    SELECT DISTINCT __ops_in_range.value->>'witness' AS name
+    WHERE __ops_in_range.op_type_id = 12
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
@@ -396,16 +322,18 @@ BEGIN
   -- parse props for witnesses table
   SELECT INTO __prop_op
     cw.witness_id,
-    (hov.body::JSON)->'value' AS value,
-    hov.op_type_id, hov.timestamp, hov.id AS operation_id
-  FROM hive.hafbe_app_operations_view hov
-  JOIN LATERAL (
-    SELECT get_impacted_accounts AS name
-    FROM hive.get_impacted_accounts(hov.body)
-  ) bia ON TRUE
+    bia.value,
+    bia.op_type_id, bia.timestamp, bia.operation_id
+  FROM (
+    SELECT
+      get_impacted_accounts AS name,
+      __ops_in_range.value,
+      __ops_in_range.op_type_id, __ops_in_range.timestamp, __ops_in_range.operation_id
+    FROM hive.get_impacted_accounts(__ops_in_range.body)
+    WHERE __ops_in_range.op_type_id = ANY('{42,30,14,11,7}')
+  ) bia
   JOIN hive.hafbe_app_accounts_view hav ON hav.name = bia.name
-  JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hav.id
-  WHERE hov.op_type_id = ANY('{42,30,14,11,7}') AND hov.block_num BETWEEN _from AND _to;
+  JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hav.id;
   
   UPDATE hafbe_app.current_witnesses cw SET url = res.prop_value FROM (
     SELECT prop_value, witness_id
@@ -531,28 +459,27 @@ BEGIN
   WHERE cw.witness_id = res.witness_id;
 
   -- get impacted vests balance for block range and update account_vests
-  FOR __balance_change IN
-    SELECT bio.account_name AS account, bio.amount AS vests
-    FROM hive.hafbe_app_operations_view hov
+  WITH balance_change AS (
+    SELECT hav.id AS account_id, bio.amount AS vests
+    FROM hive.operations_view hov
 
     JOIN LATERAL (
       SELECT account_name, amount
       FROM hive.get_impacted_balances(hov.body, hov.block_num > 905693)
       WHERE asset_symbol_nai = 37
     ) bio ON TRUE
-    
+
+    JOIN hive.accounts_view hav ON hav.name = bio.account_name
     WHERE hov.op_type_id = ANY(__balance_impacting_ops_ids) AND hov.block_num BETWEEN _from AND _to
-    ORDER BY hov.block_num, hov.id
+  )
 
-    LOOP
-      INSERT INTO hafbe_app.account_vests (account_id, vests)
-      SELECT hav.id, __balance_change.vests
-      FROM hive.hafbe_app_accounts_view hav
-      WHERE hav.name = __balance_change.account
-
-      ON CONFLICT ON CONSTRAINT pk_account_vests DO 
-      UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests;
-    END LOOP;
+  INSERT INTO hafbe_app.account_vests (account_id, vests)
+  SELECT account_id, SUM(vests) AS vests
+  FROM balance_change
+  GROUP BY account_id
+  ON CONFLICT ON CONSTRAINT pk_account_vests DO 
+    UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests
+  ;
 END
 $$
 SET from_collapse_limit = 16
@@ -586,13 +513,13 @@ BEGIN
 
     --RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
 
-    IF (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status))::INTERVAL >= '5 second'::INTERVAL THEN
+    IF (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status LIMIT 1)) >= '5 second'::INTERVAL THEN
 
       RAISE NOTICE 'Last processed block %', _last_block;
-      RAISE NOTICE 'Processed % blocks in 5 seconds', (SELECT _last_block - last_reported_block FROM hafbe_app.app_status);
+      RAISE NOTICE 'Processed % blocks in 5 seconds', (SELECT _last_block - last_reported_block FROM hafbe_app.app_status LIMIT 1);
       RAISE NOTICE 'Block processing running for % minutes
       ', ROUND((EXTRACT(epoch FROM (
-          SELECT NOW() - started_processing_at FROM hafbe_app.app_status
+          SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1
         )) / 60)::NUMERIC, 2);
       
       UPDATE hafbe_app.app_status SET last_reported_at = NOW();
@@ -700,9 +627,45 @@ BEGIN
 
       IF __next_block_range.first_block != __next_block_range.last_block THEN
         CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
+        UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         __last_block := __next_block_range.last_block;
+      END IF;
+    
+      IF __next_block_range.first_block = __next_block_range.last_block AND
+        (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
+        (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
+
+        RAISE NOTICE 'Updating witnesses caches';
+        
+        WITH select_voters_stats AS (
+          SELECT witness_id, voter_id, vests, account_vests, proxied_vests
+          FROM hafbe_views.voters_stats_view
+        ),
+
+        insert_witness_voters_stats_cache AS (
+          INSERT INTO hafbe_app.witness_voters_stats_cache (witness_id, voter_id, vests, account_vests, proxied_vests)
+          SELECT witness_id, voter_id, vests, account_vests, proxied_vests
+          FROM select_voters_stats
+          ON CONFLICT ON CONSTRAINT pk_witness_voters_stats_cache DO UPDATE SET
+            vests = EXCLUDED.vests,
+            account_vests = EXCLUDED.account_vests,
+            proxied_vests = EXCLUDED.proxied_vests,
+            timestamp = EXCLUDED.timestamp
+        )
+
+        INSERT INTO hafbe_app.witness_votes_cache (witness_id, votes, voters_num)
+        SELECT witness_id, SUM(vests), COUNT(1)
+        FROM select_voters_stats
+        GROUP BY witness_id
+        ON CONFLICT ON CONSTRAINT pk_witness_votes_cache DO UPDATE SET
+          votes = EXCLUDED.votes,
+          voters_num = EXCLUDED.voters_num
+        ;
+
+        UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
+
       END IF;
 
     END IF;

@@ -20,6 +20,7 @@ continue_processing() {
 drop_db() {
     sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "SELECT hive.app_remove_context('hafbe_app');"
     sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
+    sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
 }
 
 create_hafbe_indexes() {
