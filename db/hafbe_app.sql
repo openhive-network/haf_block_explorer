@@ -183,28 +183,24 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __ops_in_range RECORD;
-  __prop_op RECORD;
-  __balance_change RECORD;
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
 BEGIN
-  SELECT INTO __ops_in_range
-    body,
-    (body::JSON)->'value' AS value,
-    timestamp, op_type_id, id AS operation_id
-  FROM hive.hafbe_app_operations_view
-  WHERE op_type_id = ANY('{12,13,91,42,30,14,11,7}') AND block_num BETWEEN _from AND _to;
-
   -- process vote ops
   WITH select_votes_ops AS (
     SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
     FROM (
       SELECT
-        __ops_in_range.value->>'witness' AS witness,
-        __ops_in_range.value->>'account' AS voter,
-        (__ops_in_range.value->>'approve')::BOOLEAN AS approve,
-        __ops_in_range.timestamp, __ops_in_range.operation_id
-      WHERE __ops_in_range.op_type_id = 12
+        value->>'witness' AS witness,
+        value->>'account' AS voter,
+        (value->>'approve')::BOOLEAN AS approve,
+        timestamp, operation_id
+      FROM (
+        SELECT
+          (body::JSON)->'value' AS value,
+          timestamp, id AS operation_id
+        FROM hive.hafbe_app_operations_view
+        WHERE op_type_id = 12 AND block_num BETWEEN _from AND _to
+      ) ops_in_range
     ) vote_op
     JOIN hive.hafbe_app_accounts_view hav_w ON hav_w.name = vote_op.witness
     JOIN hive.hafbe_app_accounts_view hav_v ON hav_v.name = vote_op.voter
@@ -248,20 +244,17 @@ BEGIN
     SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
     FROM (
       SELECT
-        __ops_in_range.value->>'account' AS account,
-        __ops_in_range.value->>'proxy' AS proxy_account,
-        TRUE AS proxy,
-        __ops_in_range.timestamp, __ops_in_range.operation_id
-      WHERE __ops_in_range.op_type_id = 13
-
-      UNION
-
-      SELECT
-        __ops_in_range.value->>'account' AS account,
-        __ops_in_range.value->>'proxy' AS proxy_account,
-        FALSE AS proxy,
-        __ops_in_range.timestamp, __ops_in_range.operation_id
-      WHERE __ops_in_range.op_type_id = 91
+        value->>'account' AS account,
+        value->>'proxy' AS proxy_account,
+        CASE WHEN op_type_id = 13 THEN TRUE ELSE FALSE END AS proxy,
+        timestamp, operation_id
+      FROM (
+        SELECT
+          (body::JSON)->'value' AS value,
+          timestamp, id AS operation_id, op_type_id
+        FROM hive.hafbe_app_operations_view
+        WHERE op_type_id = ANY('{13,91}') AND block_num BETWEEN _from AND _to
+      ) ops_in_range
     ) proxy_op
     JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.account
     JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
@@ -291,7 +284,6 @@ BEGIN
     WHERE proxy IS TRUE
     ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
       proxy_id = EXCLUDED.proxy_id
-    RETURNING cap.account_id, cap.proxy_id
   )
 
   DELETE FROM hafbe_app.current_account_proxies cap USING (
@@ -302,161 +294,173 @@ BEGIN
   WHERE cap.account_id = spo.account_id;
 
   -- add new witnesses per block range
-  WITH limited_set AS (
-    SELECT DISTINCT get_impacted_accounts AS name
-    FROM hive.get_impacted_accounts(__ops_in_range.body)
-    WHERE __ops_in_range.op_type_id = ANY('{42,11,7}')
-    
-    UNION
-  
-    SELECT DISTINCT __ops_in_range.value->>'witness' AS name
-    WHERE __ops_in_range.op_type_id = 12
+  WITH select_witness_names AS (
+    SELECT DISTINCT
+      CASE WHEN op_type_id = 12 THEN
+        value->>'witness'
+      ELSE
+        (SELECT hive.get_impacted_accounts(body))
+      END AS name
+    FROM (
+      SELECT body, (body::JSON)->'value' AS value, op_type_id
+      FROM hive.hafbe_app_operations_view
+      WHERE op_type_id = ANY('{12,42,11,7}') AND block_num BETWEEN _from AND _to
+    ) ops_in_range
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version)
-  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, '1.25.0'
-  FROM limited_set ls
-  JOIN hive.hafbe_app_accounts_view hav ON hav.name = ls.name
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, '1.27.0'
+  FROM select_witness_names swn
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   -- parse props for witnesses table
-  SELECT INTO __prop_op
-    cw.witness_id,
-    bia.value,
-    bia.op_type_id, bia.timestamp, bia.operation_id
-  FROM (
+  WITH select_witness_prop_ops AS (
     SELECT
-      get_impacted_accounts AS name,
-      __ops_in_range.value,
-      __ops_in_range.op_type_id, __ops_in_range.timestamp, __ops_in_range.operation_id
-    FROM hive.get_impacted_accounts(__ops_in_range.body)
-    WHERE __ops_in_range.op_type_id = ANY('{42,30,14,11,7}')
-  ) bia
-  JOIN hive.hafbe_app_accounts_view hav ON hav.name = bia.name
-  JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hav.id;
-  
-  UPDATE hafbe_app.current_witnesses cw SET url = res.prop_value FROM (
-    SELECT prop_value, witness_id
+      cw.witness_id,
+      oir.value,
+      oir.op_type_id, oir.timestamp, oir.operation_id
     FROM (
       SELECT
-        prop_value, witness_id, operation_id,
-        ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY operation_id DESC) AS row_n
+        bia.name,
+        (body::JSON)->'value' AS value,
+        op_type_id, timestamp, id AS operation_id
+      FROM hive.hafbe_app_operations_view hov
+
+      JOIN LATERAL (
+        SELECT get_impacted_accounts AS name
+        FROM hive.get_impacted_accounts(hov.body)
+      ) bia ON TRUE
+      WHERE op_type_id = ANY('{42,30,14,11,7}') AND block_num BETWEEN _from AND _to
+    ) oir
+    JOIN hive.hafbe_app_accounts_view hav ON hav.name = oir.name
+    JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hav.id
+  ),
+
+  parse_witness_set_properties_ops AS (
+    SELECT
+      ex_prop.prop_value, ex_prop.prop_name,
+      timestamp, operation_id, witness_id
+    FROM select_witness_prop_ops swpo
+
+    JOIN LATERAL (
+      SELECT
+        trim(both '"' FROM prop_value::TEXT) AS prop_value,
+        CASE WHEN prop_name = 'hbd_exchange_rate' THEN 'exchange_rate' ELSE prop_name END AS prop_name
+      FROM hive.extract_set_witness_properties(swpo.value->>'props')
+    ) ex_prop ON TRUE
+    WHERE op_type_id = 42
+  ),
+
+  /*
+  TODO: 
+  -- witness_set_properties_operation may contain old and new signing keys
+  -- new_signing_key -- key
+  trim(both '"' FROM 
+    (CASE WHEN ex_res1.prop_value IS NULL THEN ex_res2.prop_value ELSE ex_res1.prop_value END)::TEXT
+  ),
+  */  
+  
+  parse_witness_update_and_pow_ops AS (
+    SELECT
+      value->>'url' AS prop_value, 'url' AS prop_name,
+      timestamp, operation_id, witness_id
+    FROM select_witness_prop_ops
+    WHERE op_type_id = 11
+
+    UNION
+
+    SELECT
+      value->>'block_signing_key' AS prop_value, 'signing_key' AS prop_name,
+      timestamp, operation_id, witness_id
+    FROM select_witness_prop_ops
+    WHERE op_type_id = 11
+
+    UNION
+
+    SELECT
+      value->'props'->>'maximum_block_size' AS prop_value, 'block_size' AS prop_name,
+      timestamp, operation_id, witness_id
+    FROM select_witness_prop_ops
+    WHERE op_type_id = ANY('{30,14,11}')
+  ),
+
+  parse_feed_publish_ops AS (
+    SELECT
+      value->>'exchange_rate' AS prop_value, 'exchange_rate' AS prop_name,
+      timestamp, operation_id, witness_id
+    FROM select_witness_prop_ops
+    WHERE op_type_id = 7
+  ),
+
+  stack_parsed_props AS (
+    SELECT prop_value, prop_name, timestamp, operation_id, witness_id
+    FROM (
+      SELECT
+        ROW_NUMBER() OVER (PARTITION BY witness_id, prop_name ORDER BY operation_id DESC) AS row_n,
+        prop_value, prop_name, timestamp, operation_id, witness_id
       FROM (
-        SELECT
-          __prop_op.value->>'url' AS prop_value,
-          __prop_op.operation_id, __prop_op.witness_id
-        WHERE __prop_op.op_type_id = 11
+        SELECT prop_value, prop_name, timestamp, operation_id, witness_id
+        FROM parse_witness_set_properties_ops
 
         UNION
 
-        SELECT
-          trim(both '"' FROM prop_value::TEXT),
-          __prop_op.operation_id, __prop_op.witness_id
-        FROM hive.extract_set_witness_properties(__prop_op.value->>'props')
-        WHERE prop_name = 'url' AND __prop_op.op_type_id = 42
-      ) parsed
-      WHERE prop_value IS NOT NULL
-    ) row_count
-    WHERE row_n = 1
-  ) res
-  WHERE cw.witness_id = res.witness_id;
-  
-  UPDATE hafbe_app.current_witnesses cw SET
-    price_feed = (res.prop_value->'base'->>'amount')::NUMERIC / (res.prop_value->'quote'->>'amount')::NUMERIC,
-    bias = ((res.prop_value->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC,
-    feed_age = (NOW() - res.timestamp)::INTERVAL
-  FROM (
-    SELECT prop_value::JSON, witness_id, timestamp
-    FROM (
-      SELECT
-        prop_value, witness_id, operation_id, timestamp,
-        ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT
-          __prop_op.value->>'exchange_rate' AS prop_value,
-          __prop_op.operation_id, __prop_op.witness_id, __prop_op.timestamp
-        WHERE __prop_op.op_type_id = 7
+        SELECT prop_value, prop_name, timestamp, operation_id, witness_id
+        FROM parse_witness_update_and_pow_ops
 
         UNION
 
-        SELECT
-          prop_value::TEXT,
-          __prop_op.operation_id, __prop_op.witness_id, __prop_op.timestamp
-        FROM hive.extract_set_witness_properties(__prop_op.value->>'props')
-        WHERE prop_name = 'hbd_exchange_rate' AND __prop_op.op_type_id = 42
-      ) parsed
-      WHERE prop_value IS NOT NULL
+        SELECT prop_value, prop_name, timestamp, operation_id, witness_id
+        FROM parse_feed_publish_ops
+      ) pp
     ) row_count
     WHERE row_n = 1
-  ) res
-  WHERE cw.witness_id = res.witness_id;
-  
-  UPDATE hafbe_app.current_witnesses cw SET block_size = res.prop_value FROM (
-    SELECT prop_value::INT, witness_id
+  ),
+
+  update_witness_url AS (
+    UPDATE hafbe_app.current_witnesses cw SET url = spp.url FROM (
+      SELECT prop_value AS url, witness_id
+      FROM stack_parsed_props
+      WHERE prop_name = 'url'
+    ) spp
+    WHERE cw.witness_id = spp.witness_id
+  ),
+
+  update_witness_exchange_rate_data AS (
+    UPDATE hafbe_app.current_witnesses cw SET
+      price_feed = spp.price_feed,
+      bias = spp.bias,
+      feed_age = spp.feed_age
     FROM (
       SELECT
-        prop_value, witness_id, operation_id,
-        ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY operation_id DESC) AS row_n
+        (prop_value->'base'->>'amount')::NUMERIC / (prop_value->'quote'->>'amount')::NUMERIC AS price_feed,
+        ((prop_value->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
+        (NOW() - timestamp)::INTERVAL AS feed_age,
+        witness_id
       FROM (
-        SELECT
-          __prop_op.value->'props'->>'maximum_block_size' AS prop_value,
-          __prop_op.operation_id, __prop_op.witness_id
-        WHERE __prop_op.op_type_id = ANY('{30,14,11}')
+        SELECT (prop_value::JSON) AS prop_value, timestamp, witness_id
+        FROM stack_parsed_props
+        WHERE prop_name = 'exchange_rate'
+      ) vals
+    ) spp
+    WHERE cw.witness_id = spp.witness_id
+  ),
 
-        UNION
+  update_witness_block_size AS (
+    UPDATE hafbe_app.current_witnesses cw SET block_size = spp.block_size FROM (
+      SELECT prop_value::INT AS block_size, witness_id
+      FROM stack_parsed_props
+      WHERE prop_name = 'block_size'
+    ) spp
+    WHERE cw.witness_id = spp.witness_id
+  )
 
-        SELECT
-          prop_value::TEXT,
-          __prop_op.operation_id, __prop_op.witness_id
-        FROM hive.extract_set_witness_properties(__prop_op.value->>'props')
-        WHERE prop_name = 'maximum_block_size' AND __prop_op.op_type_id = 42
-      ) parsed
-      WHERE prop_value IS NOT NULL
-    ) row_count
-    WHERE row_n = 1
-  ) res
-  WHERE cw.witness_id = res.witness_id;
-  
-  UPDATE hafbe_app.current_witnesses cw SET signing_key = res.prop_value FROM (
-    SELECT prop_value, witness_id
-    FROM (
-      SELECT
-        prop_value, witness_id, operation_id,
-        ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT
-          __prop_op.value->>'block_signing_key' AS prop_value,
-          __prop_op.operation_id, __prop_op.witness_id
-        WHERE __prop_op.op_type_id = 11
-
-        UNION
-
-        SELECT
-          -- witness_set_properties_operation may contain old and new signing keys
-          trim(both '"' FROM 
-            (CASE WHEN ex_res1.prop_value IS NULL THEN ex_res2.prop_value ELSE ex_res1.prop_value END)::TEXT
-          ),
-          operation_id, witness_id
-        FROM (
-          SELECT __prop_op.value, __prop_op.operation_id, __prop_op.witness_id
-        ) encoded_op
-        LEFT JOIN LATERAL (
-          SELECT prop_value
-          FROM hive.extract_set_witness_properties(value->>'props')
-          WHERE prop_name = 'new_signing_key'
-        ) ex_res1 ON TRUE
-        LEFT JOIN LATERAL (
-          SELECT prop_value
-          FROM hive.extract_set_witness_properties(value->>'props')
-          WHERE prop_name = 'key'
-        ) ex_res2 ON ex_res1.prop_value IS NULL
-        WHERE __prop_op.op_type_id = 42
-      ) parsed
-      WHERE prop_value IS NOT NULL
-    ) row_count
-    WHERE row_n = 1
-  ) res
-  WHERE cw.witness_id = res.witness_id;
+  UPDATE hafbe_app.current_witnesses cw SET signing_key = spp.signing_key FROM (
+    SELECT prop_value AS signing_key, witness_id
+    FROM stack_parsed_props
+    WHERE prop_name = 'signing_key'
+  ) spp
+  WHERE cw.witness_id = spp.witness_id;
 
   -- get impacted vests balance for block range and update account_vests
   WITH balance_change AS (
