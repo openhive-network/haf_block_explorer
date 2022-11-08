@@ -346,7 +346,7 @@ BEGIN
   END IF;
 
   IF _order_by NOT SIMILAR TO
-    '(witness|url|votes|votes_daily_change|voters_num|voters_num_daily_change|price_feed|bias|feed_age|block_size|signing_key|version)' THEN
+    '(witness|rank|url|votes|votes_daily_change|voters_num|voters_num_daily_change|price_feed|bias|feed_age|block_size|signing_key|version)' THEN
     RETURN hafbe_exceptions.raise_no_such_column_exception(_order_by);
   END IF;
   IF _order_by IS NULL THEN

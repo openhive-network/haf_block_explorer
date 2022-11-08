@@ -542,9 +542,9 @@ $function$
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
-    SELECT witness_id, votes, voters_num
+    SELECT witness_id, rank, votes, voters_num
     FROM (
-      SELECT witness_id, votes, voters_num
+      SELECT witness_id, rank, votes, voters_num
       FROM hafbe_app.witness_votes_cache
     ) votes_sum
     ORDER BY
@@ -572,13 +572,16 @@ BEGIN
   RETURN QUERY EXECUTE format(
     $query$
 
-    SELECT 
-      witness_id,
-      SUM(vests)::BIGINT AS votes_daily_change,
-      COUNT(1)::INT AS voters_num_daily_change
-    FROM hafbe_views.voters_stats_change_view vscv
-    WHERE timestamp >= %L
-    GROUP BY witness_id
+    SELECT witness_id, votes_daily_change, voters_num_daily_change
+    FROM (
+      SELECT 
+        witness_id,
+        SUM(vests)::BIGINT AS votes_daily_change,
+        COUNT(1)::INT AS voters_num_daily_change
+      FROM hafbe_views.voters_stats_change_view
+      WHERE timestamp >= %L
+      GROUP BY witness_id
+    ) vscv
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -642,17 +645,15 @@ BEGIN
       $query$
       
       SELECT
-        witness, url,
+        witness, rank::INT, url,
         COALESCE(all_votes.votes, 0)::NUMERIC,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        price_feed, bias,
-        (NOW() - feed_updated_at)::INTERVAL,
-        block_size, signing_key, version
+        price_feed, bias, feed_age, block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_name(%L, %L, %L) ls
       LEFT JOIN (
-        SELECT witness_id, votes, voters_num
+        SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
@@ -673,13 +674,41 @@ BEGIN
       _order_is, _order_by, _order_is, _order_by
     );
 
+  ELSIF _order_by = 'rank' THEN
+
+    RETURN QUERY SELECT
+      hav.name::TEXT, rank::INT, url,
+      ls.votes,
+      COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
+      ls.voters_num,
+      COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
+      price_feed, bias,
+      (NOW() - feed_updated_at)::INTERVAL,
+      block_size, signing_key, version
+    FROM hafbe_app.witness_votes_cache ls
+    JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
+    LEFT JOIN LATERAL (
+      SELECT 
+        vscv.witness_id,
+        SUM(vscv.vests) AS votes_daily_change,
+        COUNT(1) AS voters_num_daily_change
+      FROM hafbe_views.voters_stats_change_view vscv
+      WHERE vscv.timestamp >= __today AND vscv.witness_id = ls.witness_id
+      GROUP BY vscv.witness_id
+    ) todays_votes ON TRUE
+    JOIN hive.accounts_view ON hav.id = ls.witness_id
+    ORDER BY
+      (CASE WHEN _order_is = 'desc' THEN _order_by ELSE NULL END) DESC,
+      (CASE WHEN _order_is = 'asc' THEN _order_by ELSE NULL END) ASC
+    LIMIT _limit;
+
   ELSIF _order_by = ANY('{votes,voters_num}'::TEXT[]) THEN
 
     RETURN QUERY EXECUTE format(
       $query$
 
       SELECT
-        hav.name::TEXT, url,
+        hav.name::TEXT, rank::INT, url,
         ls.votes,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT AS votes_daily_change,
         ls.voters_num,
@@ -717,7 +746,7 @@ BEGIN
       $query$
 
       SELECT
-        hav.name::TEXT, url,
+        hav.name::TEXT, rank::INT, url,
         all_votes.votes::NUMERIC,
         ls.votes_daily_change,
         all_votes.voters_num::INT,
@@ -728,7 +757,7 @@ BEGIN
       FROM hafbe_backend.get_set_of_witnesses_by_votes_change(%L, %L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       JOIN (
-        SELECT witness_id, votes, voters_num
+        SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       JOIN (
@@ -750,17 +779,15 @@ BEGIN
       $query$
       
       SELECT
-        hav.name::TEXT, url,
+        hav.name::TEXT, rank::INT, url,
         COALESCE(all_votes.votes, 0)::NUMERIC,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        price_feed, bias,
-        (NOW() - feed_updated_at)::INTERVAL,
-        block_size, signing_key, version
+        price_feed, bias, feed_age, block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_prop(%L, %L, %L, %L) ls
       LEFT JOIN (
-        SELECT witness_id, votes, voters_num
+        SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (

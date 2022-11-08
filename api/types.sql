@@ -88,6 +88,7 @@ CREATE TYPE hafbe_types.witnesses_by_name AS (
 
 CREATE TYPE hafbe_types.witnesses_by_votes AS (
   witness_id INT,
+  rank INT,
   votes NUMERIC,
   voters_num INT
 );
@@ -111,6 +112,7 @@ CREATE TYPE hafbe_types.witnesses_by_prop AS (
 
 CREATE TYPE hafbe_types.witnesses AS (
   witness TEXT,
+  rank INT,
   url TEXT,
   votes NUMERIC,
   votes_daily_change BIGINT,
