@@ -1,5 +1,19 @@
 CREATE SCHEMA IF NOT EXISTS hafbe_views AUTHORIZATION hafbe_owner;
 
+CREATE OR REPLACE VIEW hafbe_views.witness_prop_op_view AS
+SELECT
+  bia.name AS witness,
+  (body::JSON)->'value' AS value,
+  block_num, op_type_id, timestamp, id AS operation_id
+FROM hive.hafbe_app_operations_view hov
+
+JOIN LATERAL (
+  SELECT get_impacted_accounts AS name
+  FROM hive.get_impacted_accounts(hov.body)
+) bia ON TRUE;
+
+------
+
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_view AS
 WITH proxies1 AS (
   SELECT

@@ -513,7 +513,9 @@ BEGIN
 
     SELECT
       witness_id, name::TEXT AS witness,
-      url, price_feed, bias, feed_age, block_size, signing_key, version
+      url, price_feed, bias,
+      (NOW() - feed_updated_at)::INTERVAL AS feed_age,
+      block_size, signing_key, version
     FROM hive.accounts_view hav
     JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
     ORDER BY
@@ -603,7 +605,9 @@ BEGIN
     $query$
 
     SELECT
-      witness_id, url, price_feed, bias, feed_age, block_size, signing_key, version
+      witness_id, url, price_feed, bias,
+      (NOW() - feed_updated_at)::INTERVAL AS feed_age,
+      block_size, signing_key, version
     FROM hafbe_app.current_witnesses
     WHERE %I IS NOT NULL
     ORDER BY
@@ -643,7 +647,9 @@ BEGIN
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        price_feed, bias, feed_age, block_size, signing_key, version
+        price_feed, bias,
+        (NOW() - feed_updated_at)::INTERVAL,
+        block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_name(%L, %L, %L) ls
       LEFT JOIN (
         SELECT witness_id, votes, voters_num
@@ -678,7 +684,9 @@ BEGIN
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT AS votes_daily_change,
         ls.voters_num,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT AS voters_num_daily_change,
-        price_feed, bias, feed_age, block_size, signing_key, version
+        price_feed, bias,
+        (NOW() - feed_updated_at)::INTERVAL,
+        block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_votes(%L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
@@ -714,7 +722,9 @@ BEGIN
         ls.votes_daily_change,
         all_votes.voters_num::INT,
         ls.voters_num_daily_change,
-        price_feed, bias, feed_age, block_size, signing_key, version
+        price_feed, bias,
+        (NOW() - feed_updated_at)::INTERVAL,
+        block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_votes_change(%L, %L, %L, %L, %L) ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       JOIN (
@@ -745,7 +755,9 @@ BEGIN
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        price_feed, bias, feed_age, block_size, signing_key, version
+        price_feed, bias,
+        (NOW() - feed_updated_at)::INTERVAL,
+        block_size, signing_key, version
       FROM hafbe_backend.get_set_of_witnesses_by_prop(%L, %L, %L, %L) ls
       LEFT JOIN (
         SELECT witness_id, votes, voters_num
