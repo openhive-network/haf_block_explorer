@@ -232,67 +232,6 @@ SET from_collapse_limit=16
 witness voters
 */
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_by_name(_witness_id INT, _limit INT, _offset INT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_by_name
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT cwv.voter_id, hav.name::TEXT AS voter
-    FROM hafbe_app.current_witness_votes cwv
-    JOIN LATERAL (
-      SELECT name
-      FROM hive.accounts_view
-      WHERE id = cwv.voter_id
-    ) hav ON TRUE
-    WHERE cwv.witness_id = %L
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _witness_id, _order_is, _order_is, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_by_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_by_vests
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT voter_id, vests, account_vests, proxied_vests, timestamp
-    FROM hafbe_app.witness_voters_stats_cache
-    WHERE witness_id = %L
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters
 AS
@@ -303,41 +242,67 @@ BEGIN
     RETURN QUERY EXECUTE format(
       $query$
 
-      SELECT voter, vsv.vests, vsv.account_vests::NUMERIC, vsv.proxied_vests, vsv.timestamp
-      FROM hafbe_backend.get_set_of_witness_voters_by_name(%L, %L, %L, %L) ls
+      WITH limited_set AS (
+        SELECT cwv.voter_id, hav.name::TEXT AS voter
+        FROM hafbe_app.current_witness_votes cwv
+
+        JOIN LATERAL (
+          SELECT name
+          FROM hive.accounts_view
+          WHERE id = cwv.voter_id
+        ) hav ON TRUE
+        WHERE cwv.witness_id = %L
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L
+      )
+
+      SELECT ls.voter, vsv.vests, vsv.account_vests::NUMERIC, vsv.proxied_vests, vsv.timestamp
+      FROM limited_set ls
+
       JOIN (
         SELECT voter_id, vests, account_vests, proxied_vests, timestamp
         FROM hafbe_app.witness_voters_stats_cache
         WHERE witness_id = %L
       ) vsv ON vsv.voter_id = ls.voter_id
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        (CASE WHEN %L = 'desc' THEN ls.voter ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN ls.voter ELSE NULL END) ASC
       ;
 
       $query$,
-      _witness_id, _limit, _offset, _order_is,
-      _witness_id, _order_is, _order_by, _order_is, _order_by
+      _witness_id, _order_is, _order_is, _offset, _limit,
+      _witness_id, _order_is, _order_is
     ) res;
 
-  ELSIF _order_by = ANY('{vests,account_vests,proxied_vests,timestamp}'::TEXT[]) THEN
+  ELSE
 
     RETURN QUERY EXECUTE format(
       $query$
 
+      WITH limited_set AS (
+        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+        FROM hafbe_app.witness_voters_stats_cache
+        WHERE witness_id = %L
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L        
+      )
+
       SELECT hav.name::TEXT, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
-      FROM hafbe_backend.get_set_of_witness_voters_by_vests(%L, %L, %L, %L, %L) ls
-      JOIN (
-        SELECT id, name
-        FROM hive.accounts_view
-      ) hav ON hav.id = ls.voter_id
+      FROM limited_set ls
+      JOIN hive.accounts_view hav ON hav.id = ls.voter_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
       ;
 
       $query$,
-      _witness_id, _limit, _offset, _order_by, _order_is,
+      _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     ) res;
 
@@ -374,69 +339,6 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_by_name(_witness_id INT, _limit INT, _offset INT, _order_is TEXT, _today DATE)
-RETURNS SETOF hafbe_types.witness_voters_daily_change_by_name
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT wvh.witness_id, wvh.voter_id, hav.name::TEXT, wvh.approve
-    FROM hafbe_app.witness_votes_history wvh
-    JOIN LATERAL (
-      SELECT name
-      FROM hive.accounts_view
-      WHERE id = wvh.voter_id
-    ) hav ON TRUE
-    WHERE wvh.witness_id = %L AND wvh.timestamp >= %L
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _witness_id, _today,
-    _order_is, _order_is, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_by_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT, _today DATE)
-RETURNS SETOF hafbe_types.witness_voters_daily_change_by_vests
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp, approve
-    FROM hafbe_views.voters_stats_change_view
-    WHERE witness_id = %L AND timestamp >= %L
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _witness_id, _today,
-    _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_daily_change
 AS
@@ -451,42 +353,73 @@ BEGIN
     RETURN QUERY EXECUTE format(
       $query$
 
-      SELECT ls.voter, ls.approve, vscv.vests::BIGINT, vscv.account_vests::BIGINT, vscv.proxied_vests::BIGINT, vscv.timestamp
-      FROM hafbe_backend.get_set_of_witness_voters_daily_change_by_name(%L, %L, %L, %L, %L) ls
-      JOIN (
+      WITH limited_set AS (
+        SELECT wvh.voter_id, hav.name::TEXT AS voter, wvh.approve
+        FROM hafbe_app.witness_votes_history wvh
+        JOIN LATERAL (
+          SELECT name
+          FROM hive.accounts_view
+          WHERE id = wvh.voter_id
+        ) hav ON TRUE
+        WHERE wvh.witness_id = %L AND wvh.timestamp >= %L
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L
+      )
+
+      SELECT
+        ls.voter, ls.approve,
+        COALESCE(vscv.vests, 0)::BIGINT,
+        COALESCE(vscv.account_vests, 0)::BIGINT,
+        COALESCE(vscv.proxied_vests, 0)::BIGINT,
+        vscv.timestamp
+      FROM limited_set ls
+      LEFT JOIN (
         SELECT voter_id, vests, account_vests, proxied_vests, timestamp
-        FROM hafbe_views.voters_stats_change_view vscv
+        FROM hafbe_views.voters_stats_change_view
         WHERE witness_id = %L AND timestamp >= %L
       ) vscv ON vscv.voter_id = ls.voter_id
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        (CASE WHEN %L = 'desc' THEN ls.voter ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN ls.voter ELSE NULL END) ASC
       ;
 
       $query$,
-      _witness_id, _limit, _offset, _order_is, __today,
       _witness_id, __today,
-      _order_is, _order_by, _order_is, _order_by
+      _order_is, _order_is, _offset, _limit,
+      _witness_id, __today,
+      _order_is, _order_is
     ) res;
 
-  ELSIF _order_by = ANY('{vests,account_vests,proxied_vests,timestamp}'::TEXT[]) THEN
+  ELSE
 
     RETURN QUERY EXECUTE format(
       $query$
 
+      WITH limited_set AS (
+        SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp, approve
+        FROM hafbe_views.voters_stats_change_view
+        WHERE witness_id = %L AND timestamp >= %L
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L
+      )
+
       SELECT hav.name::TEXT, ls.approve, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
-      FROM hafbe_backend.get_set_of_witness_voters_daily_change_by_vests(%L, %L, %L, %L, %L, %L) ls
-      JOIN (
-        SELECT id, name
-        FROM hive.accounts_view
-      ) hav ON hav.id = ls.voter_id
+      FROM limited_set ls
+      JOIN hive.accounts_view hav ON hav.id = ls.voter_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
       ;
 
       $query$,
-      _witness_id, _limit, _offset, _order_by, _order_is, __today,
+      _witness_id, _today,
+      _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     ) res;
 
@@ -503,133 +436,6 @@ SET from_collapse_limit=16
 witnesses
 */
 
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_name(_limit INT, _offset INT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses_by_name
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT
-      witness_id, name::TEXT AS witness,
-      url, price_feed, bias,
-      (NOW() - feed_updated_at)::INTERVAL AS feed_age,
-      block_size, signing_key, version
-    FROM hive.accounts_view hav
-    JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN name ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN name ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _order_is, _order_is, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_votes(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses_by_votes
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-    SELECT witness_id, rank, votes, voters_num
-    FROM (
-      SELECT witness_id, rank, votes, voters_num
-      FROM hafbe_app.witness_votes_cache
-    ) votes_sum
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_votes_change(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT, _today DATE)
-RETURNS SETOF hafbe_types.witnesses_by_votes_change
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT witness_id, votes_daily_change, voters_num_daily_change
-    FROM (
-      SELECT 
-        witness_id,
-        SUM(vests)::BIGINT AS votes_daily_change,
-        COUNT(1)::INT AS voters_num_daily_change
-      FROM hafbe_views.voters_stats_change_view
-      WHERE timestamp >= %L
-      GROUP BY witness_id
-    ) vscv
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _today, _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_by_prop(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses_by_prop
-AS
-$function$
-BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT
-      witness_id, url, price_feed, bias,
-      (NOW() - feed_updated_at)::INTERVAL AS feed_age,
-      block_size, signing_key, version
-    FROM hafbe_app.current_witnesses
-    WHERE %I IS NOT NULL
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-
-    $query$,
-    _order_by, _order_is, _order_by, _order_is, _order_by, _offset, _limit
-  );
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
 CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witnesses
 AS
@@ -643,19 +449,31 @@ BEGIN
 
     RETURN QUERY EXECUTE format(
       $query$
-      
+
+      WITH limited_set AS (
+        SELECT
+          cw.witness_id, hav.name::TEXT AS witness,
+          cw.url, cw.price_feed, cw.bias,
+          (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
+          cw.block_size, cw.signing_key, cw.version
+        FROM hive.accounts_view hav
+        JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L
+      )
+
       SELECT
-        witness, rank::INT, url,
+        ls.witness, all_votes.rank, ls.url,
         COALESCE(all_votes.votes, 0)::NUMERIC,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        price_feed, bias, feed_age, block_size, signing_key, version
-      FROM hafbe_backend.get_set_of_witnesses_by_name(%L, %L, %L) ls
-      LEFT JOIN (
-        SELECT witness_id, rank, votes, voters_num
-        FROM hafbe_app.witness_votes_cache
-      ) all_votes ON all_votes.witness_id = ls.witness_id
+        ls.price_feed, ls.bias, ls.feed_age, ls.block_size, ls.signing_key, ls.version
+      FROM limited_set ls
+      LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
       LEFT JOIN LATERAL (
         SELECT 
           vscv.witness_id,
@@ -666,57 +484,40 @@ BEGIN
         GROUP BY vscv.witness_id
       ) todays_votes ON TRUE
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        (CASE WHEN %L = 'desc' THEN witness ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN witness ELSE NULL END) ASC
 
       $query$,
-      _limit, _offset, _order_is, __today,
-      _order_is, _order_by, _order_is, _order_by
+      _order_is, _order_is, _offset, _limit,
+      __today,
+      _order_is, _order_is
     );
 
-  ELSIF _order_by = 'rank' THEN
-
-    RETURN QUERY SELECT
-      hav.name::TEXT, rank::INT, url,
-      ls.votes,
-      COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
-      ls.voters_num,
-      COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-      price_feed, bias,
-      (NOW() - feed_updated_at)::INTERVAL,
-      block_size, signing_key, version
-    FROM hafbe_app.witness_votes_cache ls
-    JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
-    LEFT JOIN LATERAL (
-      SELECT 
-        vscv.witness_id,
-        SUM(vscv.vests) AS votes_daily_change,
-        COUNT(1) AS voters_num_daily_change
-      FROM hafbe_views.voters_stats_change_view vscv
-      WHERE vscv.timestamp >= __today AND vscv.witness_id = ls.witness_id
-      GROUP BY vscv.witness_id
-    ) todays_votes ON TRUE
-    JOIN hive.accounts_view ON hav.id = ls.witness_id
-    ORDER BY
-      (CASE WHEN _order_is = 'desc' THEN _order_by ELSE NULL END) DESC,
-      (CASE WHEN _order_is = 'asc' THEN _order_by ELSE NULL END) ASC
-    LIMIT _limit;
-
-  ELSIF _order_by = ANY('{votes,voters_num}'::TEXT[]) THEN
+  ELSIF _order_by = ANY('{rank,votes,voters_num}'::TEXT[]) THEN
 
     RETURN QUERY EXECUTE format(
       $query$
 
+      WITH limited_set AS (
+        SELECT witness_id, rank, votes, voters_num
+        FROM hafbe_app.witness_votes_cache
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L
+      )
+
       SELECT
-        hav.name::TEXT, rank::INT, url,
+        hav.name::TEXT, ls.rank, cw.url,
         ls.votes,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT AS votes_daily_change,
         ls.voters_num,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT AS voters_num_daily_change,
-        price_feed, bias,
-        (NOW() - feed_updated_at)::INTERVAL,
-        block_size, signing_key, version
-      FROM hafbe_backend.get_set_of_witnesses_by_votes(%L, %L, %L, %L) ls
+        cw.price_feed, cw.bias,
+        (NOW() - cw.feed_updated_at)::INTERVAL,
+        cw.block_size, cw.signing_key, cw.version
+      FROM limited_set ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
         SELECT 
@@ -736,7 +537,8 @@ BEGIN
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
       $query$,
-      _limit, _offset, _order_by, _order_is, __today,
+      _order_is, _order_by, _order_is, _order_by, _offset, _limit,
+      __today,
       _order_is, _order_by, _order_is, _order_by
     );
 
@@ -745,31 +547,46 @@ BEGIN
     RETURN QUERY EXECUTE format(
       $query$
 
+      WITH limited_set AS (
+        SELECT witness_id, votes_daily_change, voters_num_daily_change
+        FROM (
+          SELECT 
+            witness_id,
+            SUM(vests)::BIGINT AS votes_daily_change,
+            COUNT(1)::INT AS voters_num_daily_change
+          FROM hafbe_views.voters_stats_change_view
+          WHERE timestamp >= %L
+          GROUP BY witness_id
+        ) vscv
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L        
+      )
+
       SELECT
-        hav.name::TEXT, rank::INT, url,
+        hav.name::TEXT, all_votes.rank, cw.url,
         all_votes.votes::NUMERIC,
         ls.votes_daily_change,
         all_votes.voters_num::INT,
         ls.voters_num_daily_change,
-        price_feed, bias,
-        (NOW() - feed_updated_at)::INTERVAL,
-        block_size, signing_key, version
-      FROM hafbe_backend.get_set_of_witnesses_by_votes_change(%L, %L, %L, %L, %L) ls
+        cw.price_feed, cw.bias,
+        (NOW() - cw.feed_updated_at)::INTERVAL,
+        cw.block_size, cw.signing_key, cw.version
+      FROM limited_set ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
-      JOIN (
+      LEFT JOIN (
         SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
-      JOIN (
-        SELECT name, id
-        FROM hive.accounts_view
-      ) hav ON hav.id = ls.witness_id
+      JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
       $query$,
-      _limit, _offset, _order_by, _order_is, __today,
+      __today, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     );
 
@@ -778,6 +595,20 @@ BEGIN
     RETURN QUERY EXECUTE format(
       $query$
       
+      WITH limited_set AS (
+        SELECT
+          witness_id, url, price_feed, bias,
+          (NOW() - feed_updated_at)::INTERVAL AS feed_age,
+          block_size, signing_key, version
+        FROM hafbe_app.current_witnesses
+        WHERE %I IS NOT NULL
+        ORDER BY
+          (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        OFFSET %L
+        LIMIT %L        
+      )
+
       SELECT
         hav.name::TEXT, rank::INT, url,
         COALESCE(all_votes.votes, 0)::NUMERIC,
@@ -785,7 +616,7 @@ BEGIN
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
         price_feed, bias, feed_age, block_size, signing_key, version
-      FROM hafbe_backend.get_set_of_witnesses_by_prop(%L, %L, %L, %L) ls
+      FROM limited_set ls
       LEFT JOIN (
         SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
@@ -799,16 +630,14 @@ BEGIN
         WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
         GROUP BY vscv.witness_id
       ) todays_votes ON TRUE
-      JOIN (
-        SELECT name, id
-        FROM hive.accounts_view
-      ) hav ON hav.id = ls.witness_id
+      JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
       $query$,
-      _limit, _offset, _order_by, _order_is, __today,
+      _order_by, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
+      __today,
       _order_is, _order_by, _order_is, _order_by
     );
 
