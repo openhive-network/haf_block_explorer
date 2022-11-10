@@ -371,16 +371,16 @@ BEGIN
 
       SELECT
         ls.voter, ls.approve,
-        COALESCE(vscv.vests, 0)::BIGINT,
-        COALESCE(vscv.account_vests, 0)::BIGINT,
-        COALESCE(vscv.proxied_vests, 0)::BIGINT,
-        vscv.timestamp
+        COALESCE(wvcc.vests, 0)::BIGINT,
+        COALESCE(wvcc.account_vests, 0)::BIGINT,
+        COALESCE(wvcc.proxied_vests, 0)::BIGINT,
+        wvcc.timestamp
       FROM limited_set ls
       LEFT JOIN (
         SELECT voter_id, vests, account_vests, proxied_vests, timestamp
-        FROM hafbe_views.voters_stats_change_view
-        WHERE witness_id = %L AND timestamp >= %L
-      ) vscv ON vscv.voter_id = ls.voter_id
+        FROM hafbe_app.witness_voters_stats_change_cache
+        WHERE witness_id = %L
+      ) wvcc ON wvcc.voter_id = ls.voter_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN ls.voter ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN ls.voter ELSE NULL END) ASC
@@ -389,7 +389,7 @@ BEGIN
       $query$,
       _witness_id, __today,
       _order_is, _order_is, _offset, _limit,
-      _witness_id, __today,
+      _witness_id,
       _order_is, _order_is
     ) res;
 
@@ -400,8 +400,8 @@ BEGIN
 
       WITH limited_set AS (
         SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp, approve
-        FROM hafbe_views.voters_stats_change_view
-        WHERE witness_id = %L AND timestamp >= %L
+        FROM hafbe_app.witness_voters_stats_change_cache
+        WHERE witness_id = %L
         ORDER BY
           (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
           (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -418,7 +418,7 @@ BEGIN
       ;
 
       $query$,
-      _witness_id, _today,
+      _witness_id,
       _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     ) res;
@@ -475,13 +475,10 @@ BEGIN
       FROM limited_set ls
       LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
       LEFT JOIN LATERAL (
-        SELECT 
-          vscv.witness_id,
-          SUM(vscv.vests) AS votes_daily_change,
-          COUNT(1) AS voters_num_daily_change
-        FROM hafbe_views.voters_stats_change_view vscv
-        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
+        SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+        FROM hafbe_app.witness_votes_change_cache wvcc
+        WHERE wvcc.witness_id = ls.witness_id
+        GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN witness ELSE NULL END) DESC,
@@ -489,7 +486,6 @@ BEGIN
 
       $query$,
       _order_is, _order_is, _offset, _limit,
-      __today,
       _order_is, _order_is
     );
 
@@ -520,13 +516,10 @@ BEGIN
       FROM limited_set ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT 
-          vscv.witness_id,
-          SUM(vscv.vests) AS votes_daily_change,
-          COUNT(1) AS voters_num_daily_change
-        FROM hafbe_views.voters_stats_change_view vscv
-        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
+        SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+        FROM hafbe_app.witness_votes_change_cache wvcc
+        WHERE wvcc.witness_id = ls.witness_id
+        GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
@@ -538,7 +531,6 @@ BEGIN
 
       $query$,
       _order_is, _order_by, _order_is, _order_by, _offset, _limit,
-      __today,
       _order_is, _order_by, _order_is, _order_by
     );
 
@@ -550,14 +542,10 @@ BEGIN
       WITH limited_set AS (
         SELECT witness_id, votes_daily_change, voters_num_daily_change
         FROM (
-          SELECT 
-            witness_id,
-            SUM(vests)::BIGINT AS votes_daily_change,
-            COUNT(1)::INT AS voters_num_daily_change
-          FROM hafbe_views.voters_stats_change_view
-          WHERE timestamp >= %L
+          SELECT witness_id, votes_daily_change, voters_num_daily_change
+          FROM hafbe_app.witness_votes_change_cache wvcc
           GROUP BY witness_id
-        ) vscv
+        ) wvcc
         ORDER BY
           (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
           (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -586,7 +574,7 @@ BEGIN
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
       $query$,
-      __today, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
+      _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     );
 
@@ -622,13 +610,10 @@ BEGIN
         FROM hafbe_app.witness_votes_cache
       ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT 
-          vscv.witness_id,
-          SUM(vscv.vests) AS votes_daily_change,
-          COUNT(1) AS voters_num_daily_change
-        FROM hafbe_views.voters_stats_change_view vscv
-        WHERE vscv.timestamp >= %L AND vscv.witness_id = ls.witness_id
-        GROUP BY vscv.witness_id
+        SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+        FROM hafbe_app.witness_votes_change_cache wvcc
+        WHERE wvcc.witness_id = ls.witness_id
+        GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
@@ -637,7 +622,6 @@ BEGIN
 
       $query$,
       _order_by, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
-      __today,
       _order_is, _order_by, _order_is, _order_by
     );
 

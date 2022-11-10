@@ -116,6 +116,24 @@ BEGIN
 
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
+
+  CREATE TABLE hafbe_app.witness_voters_stats_change_cache (
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
+    vests NUMERIC NOT NULL,
+    account_vests NUMERIC NOT NULL,
+    proxied_vests NUMERIC NOT NULL,
+    approve BOOLEAN NOT NULL,
+    timestamp TIMESTAMP NOT NULL
+  );
+
+  CREATE TABLE hafbe_app.witness_votes_change_cache (
+    witness_id INT NOT NULL,
+    votes_daily_change BIGINT NOT NULL,
+    voters_num_daily_change INT NOT NULL,
+
+    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
+  );
 END
 $$
 ;
@@ -184,7 +202,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids);
+  __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
   -- process vote ops
   WITH select_votes_ops AS (
@@ -645,31 +663,52 @@ $function$
 BEGIN
   RAISE NOTICE 'Updating witnesses caches';
 
+  TRUNCATE TABLE hafbe_app.witness_voters_stats_cache;
+
   INSERT INTO hafbe_app.witness_voters_stats_cache (witness_id, voter_id, vests, account_vests, proxied_vests, timestamp)
   SELECT witness_id, voter_id, vests, account_vests, proxied_vests, timestamp
-  FROM hafbe_views.voters_stats_view
-  ON CONFLICT ON CONSTRAINT pk_witness_voters_stats_cache DO UPDATE SET
-    vests = EXCLUDED.vests,
-    account_vests = EXCLUDED.account_vests,
-    proxied_vests = EXCLUDED.proxied_vests,
-    timestamp = EXCLUDED.timestamp
-  ;
+  FROM hafbe_views.voters_stats_view;
+
+  RAISE NOTICE 'Updated witness voters cache';
+
+  TRUNCATE TABLE hafbe_app.witness_votes_cache;
 
   INSERT INTO hafbe_app.witness_votes_cache (witness_id, rank, votes, voters_num)
-  SELECT witness_id, RANK() OVER (ORDER BY votes DESC), votes, voters_num
+  SELECT witness_id, RANK() OVER (ORDER BY votes DESC, voters_num DESC, feed_updated_at DESC), votes, voters_num
   FROM (
     SELECT
       witness_id,
       SUM(vests) AS votes,
-      COUNT(1) AS voters_num
+      COUNT(1) AS voters_num,
+      MAX(timestamp) AS feed_updated_at
     FROM hafbe_views.voters_stats_view
     GROUP BY witness_id
-  ) vsv
-  ON CONFLICT ON CONSTRAINT pk_witness_votes_cache DO UPDATE SET
-    votes = EXCLUDED.votes,
-    voters_num = EXCLUDED.voters_num
-  ;
+  ) vsv;
 
+  RAISE NOTICE 'Updated witnesses cache';
+
+  TRUNCATE TABLE hafbe_app.witness_voters_stats_change_cache;
+
+  INSERT INTO hafbe_app.witness_voters_stats_change_cache (witness_id, voter_id, vests, account_vests, proxied_vests, approve, timestamp)
+  SELECT witness_id, voter_id, vests, account_vests, proxied_vests, approve, timestamp
+  FROM hafbe_views.voters_stats_change_view  
+  WHERE timestamp >= 'today'::DATE;
+
+  RAISE NOTICE 'Updated witness voters change cache';
+
+  TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
+
+  INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
+  SELECT
+    witness_id,
+    SUM(CASE WHEN approve THEN vests ELSE -1 * vests END)::BIGINT,
+    SUM(CASE WHEN approve THEN 1 ELSE -1 END)::INT
+  FROM hafbe_views.voters_stats_change_view
+  WHERE timestamp >= 'today'::DATE
+  GROUP BY witness_id;
+
+  RAISE NOTICE 'Updated witness change cache';
+  
   UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
 END
 $function$
@@ -728,13 +767,14 @@ BEGIN
 
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
       
-      IF __next_block_range.first_block >= 1000000 THEN
-        __next_block_range.first_block := __next_block_range.last_block;
-      END IF;
-
       IF __next_block_range.first_block != __next_block_range.last_block THEN
         CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
-        UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
+        UPDATE hafbe_app.app_status SET finished_processing_at = NOW() FROM (
+          SELECT CASE WHEN finished_processing_at IS NULL THEN TRUE ELSE FALSE END AS not_updated
+          FROM hafbe_app.app_status
+          LIMIT 1
+        ) app_stat
+        WHERE app_stat.not_updated;
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         __last_block := __next_block_range.last_block;

@@ -97,8 +97,7 @@ LEFT JOIN hafbe_views.voters_proxied_vests_view vpvv ON vpvv.proxy_id = wvvv.vot
 
 ------
 
-DROP VIEW IF EXISTS hafbe_views.voters_approve_vests_change_view CASCADE;
-CREATE VIEW hafbe_views.voters_approve_vests_change_view AS
+CREATE OR REPLACE VIEW hafbe_views.voters_approve_vests_change_view AS
 SELECT
   wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
   CASE WHEN wvh.approve THEN av.vests ELSE -1 * av.vests END AS account_vests,
@@ -118,8 +117,7 @@ LEFT JOIN LATERAL (
 
 ------
 
-DROP VIEW IF EXISTS hafbe_views.voters_proxy_vests_change_view CASCADE;
-CREATE VIEW hafbe_views.voters_proxy_vests_change_view AS
+CREATE OR REPLACE VIEW hafbe_views.voters_proxy_vests_change_view AS
 SELECT
   aph.account_id AS voter_id,
   SUM(CASE WHEN aph.proxy THEN -1 * av.vests ELSE av.vests END) AS account_vests,
@@ -140,8 +138,7 @@ GROUP BY aph.account_id;
 
 ------
 
-DROP VIEW IF EXISTS hafbe_views.voters_stats_change_view CASCADE;
-CREATE VIEW hafbe_views.voters_stats_change_view AS
+CREATE OR REPLACE VIEW hafbe_views.voters_stats_change_view AS
 SELECT
   vavcv.witness_id, vavcv.voter_id,
   vavcv.account_vests + vavcv.proxied_vests + COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0) AS vests,
