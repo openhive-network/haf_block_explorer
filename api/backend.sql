@@ -232,8 +232,8 @@ SET from_collapse_limit=16
 witness voters
 */
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_in_vests
 AS
 $function$
 BEGIN
@@ -315,6 +315,28 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_in_hp
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT account, hive_power, account_hive_power, proxied_hive_power, timestamp
+  FROM hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id, _limit, _offset, _order_by, _order_is)
+  JOIN LATERAL (
+    SELECT arr_hp[1] AS hive_power, arr_hp[2] AS account_hive_power, arr_hp[3] AS proxied_hive_power
+    FROM (
+      SELECT array_agg(hp) AS arr_hp
+      FROM hafbe_backend.vests_to_hive_power(vests, account_vests, proxied_vests) hp
+    ) to_arr
+  ) conv ON TRUE;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
 /*
 witness voters change
 */
@@ -339,8 +361,8 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_daily_change
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_daily_change_in_vests
 AS
 $function$
 DECLARE
@@ -432,12 +454,34 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
+CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_in_hp
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT account, hive_power, account_hive_power, proxied_hive_power, timestamp
+  FROM hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id, _limit, _offset, _order_by, _order_is)
+  JOIN LATERAL (
+    SELECT arr_hp[1] AS hive_power, arr_hp[2] AS account_hive_power, arr_hp[3] AS proxied_hive_power
+    FROM (
+      SELECT array_agg(hp) AS arr_hp
+      FROM hafbe_backend.vests_to_hive_power(vests, account_vests, proxied_vests) hp
+    ) to_arr
+  ) conv ON TRUE;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
 /*
 witnesses
 */
 
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses
+CREATE FUNCTION hafbe_backend.get_set_of_witnesses_in_vests(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witnesses_in_vests
 AS
 $function$
 DECLARE
@@ -632,6 +676,51 @@ LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.get_set_of_witnesses_in_hp(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witnesses_in_hp
+AS
+$function$
+BEGIN
+  RETURN QUERY SELECT
+    witness, rank, url, conv.votes, conv.votes_daily_change, voters_num, voters_num_daily_change,
+    price_feed, bias, feed_age, block_size, signing_key, version
+  FROM hafbe_backend.get_set_of_witnesses_in_vests(_limit, _offset, _order_by, _order_is)
+  JOIN LATERAL (
+    SELECT arr_hp[1] AS votes, arr_hp[2] AS votes_daily_change
+    FROM (
+      SELECT array_agg(hp) AS arr_hp
+      FROM hafbe_backend.vests_to_hive_power(votes, votes_daily_change) hp
+    ) to_arr
+  ) conv ON TRUE;
+END
+$function$
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+;
+
+CREATE FUNCTION hafbe_backend.vests_to_hive_power(VARIADIC vests_value NUMERIC[])
+RETURNS SETOF FLOAT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT (
+    unnest(vests_value)
+      *
+    (SELECT value FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_fund')
+      *
+    10 ^ (SELECT precision FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_fund')
+  ) / (
+    (SELECT value FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_shares')
+      *
+    10 ^ (SELECT precision FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_shares')
+  )::FLOAT;
+END
+$$
 ;
 
 /*

@@ -18,6 +18,7 @@ BEGIN
     last_reported_at TIMESTAMP,
     last_reported_block INT
   );
+  
   INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
   VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
 
@@ -142,6 +143,14 @@ BEGIN
     voters_num_daily_change INT NOT NULL,
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
+  );
+
+  CREATE TABLE hafbe_app.dynamic_global_properties_cache (
+    property TEXT NOT NULL,
+    value NUMERIC NOT NULL,
+    precision SMALLINT NOT NULL,
+
+    CONSTRAINT pk_dynamic_global_properties_cache PRIMARY KEY (property)
   );
 END
 $$
@@ -666,6 +675,28 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_app.get_dynamic_global_properties()
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "database_api.get_dynamic_global_properties", "id": null}'
+        """
+      ], shell=True).decode('utf-8')
+    )['result']
+  )
+$$
+;
+
 CREATE OR REPLACE PROCEDURE hafbe_app.update_witnesses_cache()
 AS
 $function$
@@ -717,7 +748,20 @@ BEGIN
   GROUP BY witness_id;
 
   RAISE NOTICE 'Updated witness change cache';
+
+  INSERT INTO hafbe_app.dynamic_global_properties_cache(property, value, precision)
+  SELECT
+    unnest(array['vesting_fund', 'vesting_shares']),
+    unnest(array[(props->'total_vesting_fund_hive'->>'amount'), (props->'total_vesting_shares'->>'amount')])::NUMERIC,
+    unnest(array[(props->'total_vesting_fund_hive'->>'precision'), (props->'total_vesting_shares'->>'precision')])::SMALLINT
+  FROM hafbe_app.get_dynamic_global_properties() props
+  ON CONFLICT ON CONSTRAINT pk_dynamic_global_properties_cache DO UPDATE SET
+    value = EXCLUDED.value,
+    precision = EXCLUDED.precision
+  ;
   
+  RAISE NOTICE 'Updated global properties cache';
+
   UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
 END
 $function$

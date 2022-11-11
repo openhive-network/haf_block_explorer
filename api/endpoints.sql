@@ -253,7 +253,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -283,16 +283,32 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_set_of_witness_voters(__witness_id, _limit, _offset, _order_by, _order_is)
-    ) arr
-  ) result;
+  IF _to_hp IS NULL THEN
+    _to_hp = TRUE;
+  END IF;
+
+  IF _to_hp THEN
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witness_voters_in_hp(__witness_id, _limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  ELSE
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witness_voters_in_vests(__witness_id, _limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  END IF;
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters_daily_change(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witness_voters_daily_change(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -322,16 +338,32 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_set_of_witness_voters_daily_change(__witness_id, _limit, _offset, _order_by, _order_is)
-    ) arr
-  ) result;
+  IF _to_hp IS NULL THEN
+    _to_hp = TRUE;
+  END IF;
+
+  IF _to_hp THEN
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witness_voters_daily_change_in_hp(__witness_id, _limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  ELSE
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(__witness_id, _limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  END IF;
 END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc')
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -360,11 +392,27 @@ BEGIN
     _order_is = 'desc';
   END IF;
 
-  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_set_of_witnesses(_limit, _offset, _order_by, _order_is)
-    ) arr
-  ) result;
+  IF _to_hp IS NULL THEN
+    _to_hp = TRUE;
+  END IF;
+
+  IF _to_hp THEN
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witnesses_in_hp(_limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  ELSE
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_set_of_witnesses_in_vests(_limit, _offset, _order_by, _order_is)
+      ) arr
+    ) result;
+
+  END IF;
 END
 $$
 ;

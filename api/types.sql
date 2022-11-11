@@ -28,7 +28,7 @@ CREATE TYPE hafbe_types.block AS (
   signing_key TEXT
 );
 
-CREATE TYPE hafbe_types.witness_voters AS (
+CREATE TYPE hafbe_types.witness_voters_in_vests AS (
   account TEXT,
   vests NUMERIC,
   account_vests NUMERIC,
@@ -36,7 +36,15 @@ CREATE TYPE hafbe_types.witness_voters AS (
   timestamp TIMESTAMP
 );
 
-CREATE TYPE hafbe_types.witness_voters_daily_change AS (
+CREATE TYPE hafbe_types.witness_voters_in_hp AS (
+  account TEXT,
+  hive_power FLOAT,
+  account_hive_power FLOAT,
+  proxied_hive_power FLOAT,
+  timestamp TIMESTAMP
+);
+
+CREATE TYPE hafbe_types.witness_voters_daily_change_in_vests AS (
   account TEXT,
   approve BOOLEAN,
   vests BIGINT,
@@ -45,12 +53,37 @@ CREATE TYPE hafbe_types.witness_voters_daily_change AS (
   timestamp TIMESTAMP
 );
 
-CREATE TYPE hafbe_types.witnesses AS (
+CREATE TYPE hafbe_types.witness_voters_daily_change_in_hp AS (
+  account TEXT,
+  approve BOOLEAN,
+  hive_power FLOAT,
+  account_hive_power FLOAT,
+  proxied_hive_power FLOAT,
+  timestamp TIMESTAMP
+);
+
+CREATE TYPE hafbe_types.witnesses_in_vests AS (
   witness TEXT,
   rank INT,
   url TEXT,
   votes NUMERIC,
   votes_daily_change BIGINT,
+  voters_num INT,
+  voters_num_daily_change INT,
+  price_feed FLOAT,
+  bias NUMERIC,
+  feed_age INTERVAL,
+  block_size INT,
+  signing_key TEXT,
+  version TEXT
+);
+
+CREATE TYPE hafbe_types.witnesses_in_hp AS (
+  witness TEXT,
+  rank INT,
+  url TEXT,
+  votes FLOAT,
+  votes_daily_change FLOAT,
   voters_num INT,
   voters_num_daily_change INT,
   price_feed FLOAT,
