@@ -66,8 +66,17 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
     account TEXT NOT NULL,
     data JSON NOT NULL,
+    last_updated_at TIMESTAMP,
 
     CONSTRAINT pk_hived_account_cache PRIMARY KEY (account)
+  );
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_resource_credits_cache (
+    account TEXT NOT NULL,
+    data JSON NOT NULL,
+    last_updated_at TIMESTAMP,
+
+    CONSTRAINT pk_hived_account_resource_credits_cache PRIMARY KEY (account)
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (

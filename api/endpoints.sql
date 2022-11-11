@@ -375,66 +375,100 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __account_data JSON;
-  __profile_image TEXT;
   __response_data JSON;
+  __profile_image TEXT;
 BEGIN
-  SELECT data FROM hafbe_app.hived_account_cache WHERE account = _account INTO __response_data;
+  SELECT INTO __response_data
+    data
+  FROM hafbe_app.hived_account_cache
+  WHERE account = _account AND (NOW() - last_updated_at)::INTERVAL >= '1 hour'::INTERVAL;
 
-  IF __response_data IS NOT NULL THEN
-    RETURN __response_data;
-  ELSE
-    SELECT hafbe_backend.get_account(_account) INTO __account_data;
+  IF __response_data IS NULL THEN
+    SELECT hafbe_backend.get_account(_account) INTO __response_data;
 
-    SELECT hafbe_backend.parse_profile_picture(__account_data, 'json_metadata') INTO __profile_image;
+    SELECT hafbe_backend.parse_profile_picture(__response_data, 'json_metadata') INTO __profile_image;
     IF __profile_image IS NULL THEN
-      SELECT hafbe_backend.parse_profile_picture(__account_data, 'posting_json_metadata') INTO __profile_image;
+      SELECT hafbe_backend.parse_profile_picture(__response_data, 'posting_json_metadata') INTO __profile_image;
     END IF;
     
     SELECT json_build_object(
-      'id', __account_data->>'id',
+      'id', __response_data->>'id',
       'name', _account,
       'profile_image', __profile_image,
-      'last_owner_update', __account_data->>'last_owner_update',
-      'last_account_update', __account_data->>'last_account_update',
-      'created', __account_data->>'created',
-      'mined', __account_data->>'mined',
-      'recovery_account', __account_data->>'recovery_account',
-      'comment_count', __account_data->>'comment_count',
-      'post_count', __account_data->>'post_count',
-      'can_vote', __account_data->>'can_vote',
-      'voting_manabar', __account_data->'voting_manabar',
-      'downvote_manabar', __account_data->'downvote_manabar',
-      'voting_power', __account_data->>'voting_power',
-      'balance', __account_data->>'balance',
-      'savings_balance', __account_data->>'savings_balance',
-      'hbd_balance', __account_data->>'hbd_balance',
-      'savings_withdraw_requests', __account_data->>'savings_withdraw_requests',
-      'reward_hbd_balance', __account_data->>'reward_hbd_balance',
-      'reward_hive_balance', __account_data->>'reward_hive_balance',
-      'reward_vesting_balance', __account_data->>'reward_vesting_balance',
-      'reward_vesting_hive', __account_data->>'reward_vesting_hive',
-      'vesting_shares', __account_data->>'vesting_shares',
-      'delegated_vesting_shares', __account_data->>'delegated_vesting_shares',
-      'received_vesting_shares', __account_data->>'received_vesting_shares',
-      'vesting_withdraw_rate', __account_data->>'vesting_withdraw_rate',
-      'post_voting_power', __account_data->>'post_voting_power',
-      'posting_rewards', __account_data->>'posting_rewards',
-      'proxied_vsf_votes', __account_data->'proxied_vsf_votes',
-      'witnesses_voted_for', __account_data->>'witnesses_voted_for',
-      'last_post', __account_data->>'last_post',
-      'last_root_post', __account_data->>'last_root_post',
-      'last_vote_time', __account_data->>'last_vote_time',
-      'vesting_balance', __account_data->>'vesting_balance',
-      'reputation', __account_data->>'reputation'
+      'last_owner_update', __response_data->>'last_owner_update',
+      'last_account_update', __response_data->>'last_account_update',
+      'created', __response_data->>'created',
+      'mined', __response_data->>'mined',
+      'recovery_account', __response_data->>'recovery_account',
+      'comment_count', __response_data->>'comment_count',
+      'post_count', __response_data->>'post_count',
+      'can_vote', __response_data->>'can_vote',
+      'voting_manabar', __response_data->'voting_manabar',
+      'downvote_manabar', __response_data->'downvote_manabar',
+      'voting_power', __response_data->>'voting_power',
+      'balance', __response_data->>'balance',
+      'savings_balance', __response_data->>'savings_balance',
+      'hbd_balance', __response_data->>'hbd_balance',
+      'savings_withdraw_requests', __response_data->>'savings_withdraw_requests',
+      'reward_hbd_balance', __response_data->>'reward_hbd_balance',
+      'reward_hive_balance', __response_data->>'reward_hive_balance',
+      'reward_vesting_balance', __response_data->>'reward_vesting_balance',
+      'reward_vesting_hive', __response_data->>'reward_vesting_hive',
+      'vesting_shares', __response_data->>'vesting_shares',
+      'delegated_vesting_shares', __response_data->>'delegated_vesting_shares',
+      'received_vesting_shares', __response_data->>'received_vesting_shares',
+      'vesting_withdraw_rate', __response_data->>'vesting_withdraw_rate',
+      'post_voting_power', __response_data->>'post_voting_power',
+      'posting_rewards', __response_data->>'posting_rewards',
+      'proxied_vsf_votes', __response_data->'proxied_vsf_votes',
+      'witnesses_voted_for', __response_data->>'witnesses_voted_for',
+      'last_post', __response_data->>'last_post',
+      'last_root_post', __response_data->>'last_root_post',
+      'last_vote_time', __response_data->>'last_vote_time',
+      'vesting_balance', __response_data->>'vesting_balance',
+      'reputation', __response_data->>'reputation'
     ) INTO __response_data;
 
-    INSERT INTO hafbe_app.hived_account_cache (account, data)
-    SELECT _account, __response_data
-    ON CONFLICT DO NOTHING;
-
-    RETURN __response_data;
+    INSERT INTO hafbe_app.hived_account_cache (account, data, last_updated_at)
+    SELECT _account, __response_data, NOW()
+    ON CONFLICT ON CONSTRAINT pk_hived_account_cache DO
+    UPDATE SET
+      data = EXCLUDED.data,
+      last_updated_at = EXCLUDED.last_updated_at
+    ;
   END IF;
+
+  RETURN __response_data;
+END
+$$
+;
+
+CREATE FUNCTION hafbe_endpoints.get_account_resource_credits(_account TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __response_data JSON;
+BEGIN
+  SELECT INTO __response_data
+    data
+  FROM hafbe_app.hived_account_resource_credits_cache
+  WHERE account = _account AND (NOW() - last_updated_at)::INTERVAL >= '1 hour'::INTERVAL;
+
+  IF __response_data IS NULL THEN
+    SELECT hafbe_backend.get_account_resource_credits(_account) INTO __response_data;
+
+    INSERT INTO hafbe_app.hived_account_resource_credits_cache (account, data, last_updated_at)
+    SELECT _account, __response_data, NOW()
+    ON CONFLICT ON CONSTRAINT pk_hived_account_resource_credits_cache DO
+    UPDATE SET
+      data = EXCLUDED.data,
+      last_updated_at = EXCLUDED.last_updated_at
+    ;
+  END IF;
+
+  RETURN __response_data;
 END
 $$
 ;

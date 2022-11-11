@@ -43,8 +43,10 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hafbe_user;
 
 GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hafbe_app TO hafbe_user;
-GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
 
--- plpython3u must be trusted language
+GRANT INSERT, UPDATE ON hafbe_app.hived_account_cache, hafbe_app.hived_account_resource_credits_cache TO hafbe_user;
+
+-- plpython3u must be GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;trusted language
 GRANT USAGE ON LANGUAGE plpython3u TO hafbe_owner;

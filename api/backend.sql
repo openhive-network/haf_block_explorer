@@ -679,3 +679,25 @@ BEGIN
 END
 $$
 ;
+
+CREATE FUNCTION hafbe_backend.get_account_resource_credits(_account TEXT)
+RETURNS JSON
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+  import json
+
+  return json.dumps(
+    json.loads(
+      subprocess.check_output([
+        """
+        curl -X POST https://api.hive.blog \
+          -H 'Content-Type: application/json' \
+          -d '{"jsonrpc": "2.0", "method": "rc_api.find_rc_accounts", "params": {"accounts":["%s"]}, "id": null}'
+        """ % _account
+      ], shell=True).decode('utf-8')
+    )['result']['rc_accounts'][0]
+  )
+$$
+;
