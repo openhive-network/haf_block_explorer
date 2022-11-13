@@ -180,7 +180,7 @@ BEGIN
 
   RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_account(__account_id, _top_op_id, _limit, _filter, _date_start, _date_end))
+      SELECT hafbe_backend.get_set_of_ops_by_account(__account_id, _top_op_id, _limit, _filter, _date_start, _date_end)
     ) arr
   ) result;
 END
@@ -199,7 +199,7 @@ BEGIN
 
   RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_block_data(_block_num))
+      SELECT hafbe_backend.get_set_of_block_data(_block_num)
     ) arr
   ) result;
 END
@@ -234,7 +234,7 @@ BEGIN
 
   RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
     SELECT ARRAY(
-      SELECT to_json(hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter))
+      SELECT hafbe_backend.get_set_of_ops_by_block(_block_num, _top_op_id, _limit, _filter)
     ) arr
   ) result;
 END

@@ -822,23 +822,21 @@ BEGIN
       
       IF __next_block_range.first_block != __next_block_range.last_block THEN
         CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
-        UPDATE hafbe_app.app_status SET finished_processing_at = NOW() FROM (
-          SELECT CASE WHEN finished_processing_at IS NULL THEN TRUE ELSE FALSE END AS not_updated
-          FROM hafbe_app.app_status
-          LIMIT 1
-        ) app_stat
-        WHERE app_stat.not_updated;
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         __last_block := __next_block_range.last_block;
       END IF;
 
+      IF __next_block_range.first_block = __next_block_range.last_block AND 
+      (SELECT finished_processing_at FROM hafbe_app.app_status LIMIT 1) IS NULL THEN
+      UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
+        PERFORM hafbe_indexes.create_hafbe_indexes();
+      END IF;
+
       IF __next_block_range.first_block = __next_block_range.last_block AND
-        (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
-        (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
-
+      (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
+      (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
         CALL hafbe_app.update_witnesses_cache();
-
       END IF;
 
     END IF;
