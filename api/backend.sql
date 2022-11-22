@@ -108,17 +108,32 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
-RETURNS SETOF hafbe_types.operations 
+CREATE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id INT, _limit INT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+RETURNS SETOF hafbe_types.operations
 AS
 $function$
 DECLARE
-  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
+  __no_ops_filter BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
   __no_start_date BOOLEAN = (_date_start IS NULL);
   __no_end_date BOOLEAN = (_date_end IS NULL);
+  __no_filters BOOLEAN;
+  __subq_limit INT;
+  __lastest_account_op_seq_no INT;
   __block_start INT;
   __block_end INT;
 BEGIN
+  IF __no_ops_filter AND __no_start_date AND __no_end_date THEN
+    SELECT TRUE INTO __no_filters;
+    SELECT NULL INTO __subq_limit;
+    SELECT INTO __lastest_account_op_seq_no
+      account_op_seq_no FROM hive.account_operations_view WHERE account_id = _account_id ORDER BY account_op_seq_no DESC LIMIT 1;
+    SELECT INTO _top_op_id
+      CASE WHEN __lastest_account_op_seq_no < _top_op_id THEN __lastest_account_op_seq_no ELSE _top_op_id END; 
+  ELSE
+    SELECT FALSE INTO __no_filters;
+    SELECT _limit INTO __subq_limit;
+  END IF;
+
   IF __no_start_date IS FALSE THEN
     SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1 INTO __block_start;
   END IF;
@@ -140,13 +155,14 @@ BEGIN
     SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
     FROM hive.account_operations_view haov
     WHERE
-      haov.account_id = _account_id AND
-      haov.account_op_seq_no <= _top_op_id AND (
-      __filter_ops OR haov.op_type_id = ANY(_filter)) AND
+      haov.account_id = _account_id AND 
+      haov.account_op_seq_no <= _top_op_id AND
+      (NOT __no_filters OR haov.account_op_seq_no > _top_op_id - _limit) AND
+      (__no_ops_filter OR haov.op_type_id = ANY(_filter)) AND
       (__no_start_date OR haov.block_num >= __block_start) AND
       (__no_end_date OR haov.block_num < __block_end)
     ORDER BY haov.operation_id DESC
-    LIMIT _limit
+    LIMIT __subq_limit
   ) ls
   JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
@@ -160,12 +176,12 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit BIGINT, _filter SMALLINT[])
+CREATE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit INT, _filter SMALLINT[])
 RETURNS SETOF hafbe_types.operations 
 AS
 $function$
 DECLARE
-  __filter_ops BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
+  __no_ops_filter BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
   RETURN QUERY SELECT
     encode(htv.trx_hash, 'hex'),
@@ -183,7 +199,7 @@ BEGIN
     WHERE
       hov.block_num = _block_num AND
       hov.id <= _top_op_id AND 
-      (__filter_ops OR hov.op_type_id = ANY(_filter))
+      (__no_ops_filter OR hov.op_type_id = ANY(_filter))
     ORDER BY hov.id DESC
     LIMIT _limit
   ) ls

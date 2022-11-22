@@ -152,7 +152,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _top_op_id BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL)
+CREATE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _top_op_id INT = 2147483647, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -161,7 +161,7 @@ DECLARE
   __account_id INT;
 BEGIN
   IF _top_op_id IS NULL OR _top_op_id < 0 THEN
-    _top_op_id = 9223372036854775807;
+    _top_op_id = 2147483647;
   END IF;
 
   IF _limit IS NULL OR _limit <= 0 THEN
@@ -206,7 +206,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit BIGINT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
+CREATE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
