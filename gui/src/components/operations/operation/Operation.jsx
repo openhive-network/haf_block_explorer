@@ -1372,5 +1372,6 @@ export default function Operation({ value, type, full_trx }) {
         </div>
       );
     default:
+      return null;
   }
 }
