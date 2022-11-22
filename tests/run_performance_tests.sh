@@ -12,6 +12,7 @@ cleanup() {
   mkdir $RESULT_DIR
   mkdir $RESULT_REPORT_DIR
 }
+
 generate_db() {
   DB_SIZE=$1
   python3 $PWD/tests/performance/generate_db.py --db_size=$DB_SIZE
@@ -51,7 +52,7 @@ JTL_PATH=$RESULT_DIR/"report.jtl"
 
 JMETER=jmeter-5.4.3
 
-args=("${@:2}") 
+args=("${@:2}")
 
 cleanup
 generate_db ${args[3]}

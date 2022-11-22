@@ -44,7 +44,7 @@ DB_NAME=haf_block_log
 owner_role=hafbe_owner
 admin_role=haf_admin
 
-if [ "$1" != "start" ]; then
+if [[ ! "run-tests start" =~ "$1" ]]; then
     sudo echo
 fi;
 

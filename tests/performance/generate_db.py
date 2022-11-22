@@ -15,21 +15,21 @@ def gen_rand_block_range(limit):
   return [str(random.randint(0, max_block)) for i in range(limit)]
 
 def get_acc_names(limit):
-  return call_sql("SELECT name FROM hive.accounts", limit)
+  return call_sql("SELECT hav.name FROM hafbe_app.current_witnesses cw JOIN hive.accounts_view hav ON hav.id = cw.witness_id", limit)
 
 def generate_input_db():
   limit = db_size // 4
   data = gen_rand_block_range(limit)
   rand_block_arr_str = "'{%s}'" % ','.join(gen_rand_block_range(limit))
-  data += call_sql("SELECT encode(hash, 'hex') FROM hive.blocks WHERE num = ANY(%s)" % rand_block_arr_str, limit)
-  data += call_sql("SELECT encode(trx_hash, 'hex') FROM hive.transactions WHERE block_num = ANY(%s)" % rand_block_arr_str, limit)
+  data += call_sql("SELECT encode(hash, 'hex') FROM hive.blocks_view WHERE num = ANY(%s)" % rand_block_arr_str, limit)
+  data += call_sql("SELECT encode(trx_hash, 'hex') FROM hive.transactions_view WHERE block_num = ANY(%s)" % rand_block_arr_str, limit)
   data += get_acc_names(limit)
   return data
 
 def generate_db():
   rand_blocks = gen_rand_block_range(db_size)
   rand_block_arr_str = "'{%s}'" % ','.join(gen_rand_block_range(db_size))
-  trx_hashes = call_sql("SELECT '\\x' || encode(trx_hash, 'hex') FROM hive.transactions WHERE block_num = ANY(%s)" % rand_block_arr_str, db_size)
+  trx_hashes = call_sql("SELECT encode(trx_hash, 'hex') FROM hive.transactions_view WHERE block_num = ANY(%s)" % rand_block_arr_str, db_size)
   acc_names = get_acc_names(db_size)
   partial_acc_names = [el[:-1] for el in acc_names]
   input_data = generate_input_db()
@@ -40,7 +40,7 @@ def generate_db():
   random.shuffle(partial_acc_names)
   random.shuffle(input_data)
 
-  data = [f'{block},\{trx_hash},{name},{part_name},{input}' for block, trx_hash, name, part_name, input in zip(
+  data = [f'{block},{trx_hash},{name},{part_name},{input}' for block, trx_hash, name, part_name, input in zip(
     rand_blocks, trx_hashes, acc_names, partial_acc_names, input_data
   )]
 
@@ -53,6 +53,6 @@ if __name__ == '__main__':
   db_dir = os.path.join(os.getcwd(), 'tests', 'performance', 'result')
 
   psql_cmd = 'psql -d haf_block_log -c "%s LIMIT %d"'
-  max_block = int(call_sql("SELECT num FROM hive.blocks ORDER BY num DESC", 1)[0])
+  max_block = int(call_sql("SELECT num FROM hive.blocks_view ORDER BY num DESC", 1)[0])
 
   generate_db()

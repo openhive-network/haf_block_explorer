@@ -363,14 +363,14 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 50, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
+CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 1000, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
   IF _limit IS NULL OR _limit <= 0 THEN
-    _limit = 50;
+    _limit = 1000;
   END IF;
 
   IF _offset IS NULL OR _offset < 0 THEN
