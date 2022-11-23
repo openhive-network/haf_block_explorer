@@ -1,3 +1,8 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
 install_postgrest() {
   sudo apt-get update -y
   sudo apt-get install wget -y
@@ -33,12 +38,11 @@ install_jmeter() {
   sudo chmod +x $jmeter
   sudo mv $jmeter "/usr/local/bin/${jmeter}"
 
-  sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/
-  sudo chmod 777 /usr/local/src/apache-jmeter-5.4.3/bin/jmeter.log
+  sudo chmod 777 /usr/local/src/apache-jmeter-$jmeter_v/bin
 }
 
 postgrest_v=9.0.0
-jmeter_v=5.4.3
+jmeter_v=5.5
 
 if [ "$1" =  "all" ]; then
   install_postgrest

@@ -50,7 +50,7 @@ JMX_OUT=$RESULT_DIR/$JMX_FILE
 
 JTL_PATH=$RESULT_DIR/"report.jtl"
 
-JMETER=jmeter-5.4.3
+JMETER=jmeter-5.5
 
 args=("${@:2}")
 
