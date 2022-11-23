@@ -261,6 +261,17 @@ SET from_collapse_limit=16
 witness voters
 */
 
+CREATE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT)
+RETURNS INT
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN COUNT(1) FROM hafbe_app.current_witness_votes WHERE witness_id = _witness_id;
+END
+$$
+;
+
 CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_in_vests
 AS
