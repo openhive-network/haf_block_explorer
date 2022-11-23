@@ -141,33 +141,46 @@ BEGIN
     SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _date_end ORDER BY created_at DESC LIMIT 1 INTO __block_end;
   END IF;
 
-  RETURN QUERY SELECT
-    encode(htv.trx_hash, 'hex'),
-    ls.block_num,
-    hov.trx_in_block,
-    hov.op_pos,
-    hot.is_virtual,
-    hov.timestamp::TEXT,
-    hov.body::JSON,
-    ls.operation_id,
-    ls.account_op_seq_no
-  FROM (
-    SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
-    FROM hive.account_operations_view haov
-    WHERE
-      haov.account_id = _account_id AND 
-      haov.account_op_seq_no <= _top_op_id AND
-      (NOT __no_filters OR haov.account_op_seq_no > _top_op_id - _limit) AND
-      (__no_ops_filter OR haov.op_type_id = ANY(_filter)) AND
-      (__no_start_date OR haov.block_num >= __block_start) AND
-      (__no_end_date OR haov.block_num < __block_end)
-    ORDER BY haov.operation_id DESC
-    LIMIT __subq_limit
-  ) ls
-  JOIN hive.operations_view hov ON hov.id = ls.operation_id
-  JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
-  ORDER BY ls.operation_id DESC;
+  RETURN QUERY EXECUTE format(
+    $query$
+    
+    SELECT
+      encode(htv.trx_hash, 'hex'),
+      ls.block_num,
+      hov.trx_in_block,
+      hov.op_pos,
+      hot.is_virtual,
+      hov.timestamp::TEXT,
+      hov.body::JSON,
+      ls.operation_id,
+      ls.account_op_seq_no
+    FROM (
+      SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
+      FROM hive.account_operations_view haov
+      WHERE
+        haov.account_id = %L::INT AND 
+        haov.account_op_seq_no <= %L::INT AND
+        (NOT %L OR haov.account_op_seq_no > %L::INT - %L::INT) AND
+        (%L OR haov.op_type_id = ANY(%L)) AND
+        (%L OR haov.block_num >= %L::INT) AND
+        (%L OR haov.block_num < %L::INT)
+      ORDER BY haov.operation_id DESC
+      LIMIT %L
+    ) ls
+    JOIN hive.operations_view hov ON hov.id = ls.operation_id
+    JOIN hive.operation_types hot ON hot.id = ls.op_type_id
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
+    ORDER BY ls.operation_id DESC;
+
+    $query$,
+    _account_id,
+    _top_op_id,
+    __no_filters, _top_op_id, _limit,
+    __no_ops_filter, _filter,
+    __no_start_date, __block_start,
+    __no_end_date, __block_end,
+    __subq_limit
+  ) res;
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
