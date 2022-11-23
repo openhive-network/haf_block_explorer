@@ -22,6 +22,9 @@ DECLARE
   __head_block_num INT;
   __accounts_array JSON;
 BEGIN
+  -- names in db are lowercase, no uppercase is used in hashes
+  SELECT lower(_input) INTO _input;
+
   -- first, name existance is checked
   IF (SELECT 1 FROM hive.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
     RETURN json_build_object(
