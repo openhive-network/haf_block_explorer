@@ -440,6 +440,8 @@ AS
 $$
 DECLARE
   __response_data JSON;
+  __json_metadata JSON;
+  __posting_json_metadata JSON;
   __profile_image TEXT;
 BEGIN
   SELECT INTO __response_data
@@ -454,11 +456,29 @@ BEGIN
     IF __profile_image IS NULL THEN
       SELECT hafbe_backend.parse_profile_picture(__response_data, 'posting_json_metadata') INTO __profile_image;
     END IF;
+
+    BEGIN
+      SELECT TRIM(BOTH '"' FROM __response_data->>'json_metadata')::JSON INTO __json_metadata;
+    EXCEPTION WHEN others THEN
+      SELECT NULL INTO __json_metadata;
+    END;
+
+    BEGIN
+      SELECT TRIM(BOTH '"' FROM __response_data->>'posting_json_metadata')::JSON INTO __posting_json_metadata;
+    EXCEPTION WHEN others THEN
+      SELECT NULL INTO __posting_json_metadata;
+    END;
     
     SELECT json_build_object(
       'id', __response_data->>'id',
       'name', _account,
+      'owner', __response_data->'owner',
+      'active', __response_data->'active',
+      'posting', __response_data->'posting',
+      'memo_key', __response_data->>'memo_key',
       'profile_image', __profile_image,
+      'json_metadata', __json_metadata,
+      'posting_json_metadata', __posting_json_metadata,
       'last_owner_update', __response_data->>'last_owner_update',
       'last_account_update', __response_data->>'last_account_update',
       'created', __response_data->>'created',
@@ -490,7 +510,8 @@ BEGIN
       'last_root_post', __response_data->>'last_root_post',
       'last_vote_time', __response_data->>'last_vote_time',
       'vesting_balance', __response_data->>'vesting_balance',
-      'reputation', __response_data->>'reputation'
+      'reputation', __response_data->>'reputation',
+      'witness_votes', __response_data->'witness_votes'
     ) INTO __response_data;
 
     INSERT INTO hafbe_app.hived_account_cache (account, data, last_updated_at)

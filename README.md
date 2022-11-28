@@ -75,10 +75,10 @@ then run tests with:
 ./run.sh run-tests <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
 ```
 
-E.g. this will run 28 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
+E.g. this will run 30 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
 ```
-./run.sh run-tests <PORT> 2 200 5600
+./run.sh run-tests <PORT> 2 200 6000
 ```
 Server port must be specified as first arg.
 
-Read test result in Apache JMeter Dashboard, generated at `tests/performance/result/result_report/index,html`
+Read test result in Apache JMeter Dashboard, generated at `tests/performance/result/result_report/index.html`
