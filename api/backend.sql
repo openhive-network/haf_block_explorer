@@ -184,6 +184,7 @@ BEGIN
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
+COST 10000
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
@@ -713,6 +714,7 @@ BEGIN
 END
 $function$
 LANGUAGE 'plpgsql' STABLE
+COST 10000
 SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
