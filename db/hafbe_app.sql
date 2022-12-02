@@ -5,8 +5,6 @@ RETURNS VOID
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __hardfork_one_op_id INT = 1176568;
 BEGIN
   RAISE NOTICE 'Attempting to create an application schema tables...';
 
@@ -216,12 +214,13 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
 AS
-$$
+$function$
 DECLARE
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
+  SET enable_bitmapscan = OFF;
+
   -- process vote ops
   WITH select_votes_ops AS (
     SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
@@ -346,10 +345,30 @@ BEGIN
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, '1.27.0'
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
   JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+
+  -- insert witness node version
+  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
+    SELECT witness_id, version
+    FROM (
+      SELECT
+        cw.witness_id,
+        CASE WHEN extensions->0->>'type' = 'version' THEN
+          extensions->0->>'value'
+        ELSE
+          extensions->1->>'value'
+        END AS version,
+        ROW_NUMBER() OVER (PARTITION BY cw.witness_id ORDER BY num DESC) AS row_n
+      FROM hive.hafbe_app_blocks_view hbv
+      JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
+      WHERE num BETWEEN _from AND _to AND extensions IS NOT NULL
+    ) row_count
+    WHERE row_n = 1 AND version IS NOT NULL
+  ) w_node
+  WHERE cw.witness_id = w_node.witness_id;
 
   -- parse witness url
   WITH select_ops_with_url AS (
@@ -579,8 +598,11 @@ BEGIN
   ON CONFLICT ON CONSTRAINT pk_account_vests DO 
     UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests
   ;
+
+  SET enable_bitmapscan = ON;
 END
-$$
+$function$
+LANGUAGE 'plpgsql' VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
