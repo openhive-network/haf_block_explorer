@@ -18,7 +18,9 @@ thead {
     top: 0;
 }
 
-
+.inactive {
+    background-color: red;
+}
 
 td,
 th {
@@ -95,3 +97,8 @@ td {
     text-decoration: none;
     cursor: pointer;
 }
+
+/* //////////////////
+.witness_row {
+    text-decoration: line-through;
+} */

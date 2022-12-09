@@ -12,16 +12,15 @@ export default function Main_Page() {
   document.title = "HAF | Block explorer";
   const { witnessData } = useContext(WitnessContext);
   const { head_block_data } = useContext(HeadBlockContext);
-  const operations_count_per_block = head_block_data?.length;
 
   const profile_picture = (user) => {
     return `https://images.hive.blog/u/${user}/avatar`;
   };
-  const trim_witness_array = witnessData?.slice(0, 20);
 
+  const trim_witness_array = witnessData?.slice(0, 20);
   return (
     <>
-      {operations_count_per_block === 0 ? (
+      {!head_block_data || !witnessData ? (
         <Loader />
       ) : (
         <Container fluid>
@@ -41,14 +40,14 @@ export default function Main_Page() {
                 <h3>Top Witnesses</h3>
                 <ol className={styles.topWitnessOl}>
                   {trim_witness_array?.map((w) => (
-                    <div key={w.id}>
+                    <div key={w.witness}>
                       <li className={styles.topWitnessLi}>
                         <img
-                          src={profile_picture(w.owner)}
+                          src={profile_picture(w.witness)}
                           alt="witness profile avatar"
                         />
-                        <Link className={styles.link} to={`/user/${w.owner}`}>
-                          {w.owner}
+                        <Link className={styles.link} to={`/user/${w.witness}`}>
+                          {w.witness}
                         </Link>
                       </li>
                     </div>

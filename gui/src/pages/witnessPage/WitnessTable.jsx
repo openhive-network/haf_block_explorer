@@ -1,41 +1,33 @@
 import styles from "./witnessTable.module.css";
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import { tidyNumber } from "../../functions/calculations";
 import { WitnessContext } from "../../contexts/witnessContext";
-import moment from "moment";
-import { sort } from "../../functions/witness_page_func";
 import { AiOutlineUnorderedList } from "react-icons/ai";
 import { MdOutlineHistory } from "react-icons/md";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import { AiOutlineLink } from "react-icons/ai";
 
 const TABLE_HEAD = [
-  "Rank",
-  "Name",
-  "Votes",
-  "Voters",
-  "Missed",
-  "Last Block",
-  "APR",
-  "Price Feed",
-  "Bias",
-  "Feed Age",
-  "Account Fee",
-  "Block Size",
-  "Version",
+  "rank",
+  "witness",
+  "votes",
+  "voters",
+  "block_size",
+  "price Feed",
+  "bias",
+  "feed Age",
+  "signing_key",
+  "version",
 ];
 
 export default function WitnessTable({
-  handleOpenVotersListTable,
+  handeOpenVotersListTable,
   handleOpenVotesHistoryTable,
+  arrowPosition,
+  linkToUserProfile,
 }) {
-  const { witnessData } = useContext(WitnessContext);
-  const [count, setCount] = useState(1);
-  const click = (name) => {
-    setCount(count + 1);
-    sort(name, count, witnessData);
-  };
-
+  const { witnessData, handleOrderBy } = useContext(WitnessContext);
   const renderVotersTooltip = (props) => (
     <Tooltip id="list-tooltip" {...props}>
       Show Voters
@@ -47,6 +39,13 @@ export default function WitnessTable({
     </Tooltip>
   );
 
+  const trimTime = (time) => {
+    if (time?.includes("days") || time?.includes("day")) {
+      return time?.split(" ").slice(0, 2).join(" ");
+    }
+    return time?.split(".")[0];
+  };
+
   return (
     <div className={styles.main}>
       <table className={styles.table}>
@@ -55,14 +54,14 @@ export default function WitnessTable({
             {TABLE_HEAD.map((name, i) => (
               <th key={i} className={styles.table_head_col}>
                 <button
-                  onClick={() => click(name)}
+                  onClick={() => handleOrderBy(name)}
                   style={{
                     border: "none",
                     background: "inherit",
                     color: "#fff",
                   }}
                 >
-                  {name} &#8645;
+                  {name.toUpperCase()} {arrowPosition(name)}
                 </button>
               </th>
             ))}
@@ -70,23 +69,33 @@ export default function WitnessTable({
         </thead>
         <tbody className={styles.table_body}>
           {witnessData?.map((witness, i) => {
+            const inactiveWitness =
+              witness.signing_key ===
+              "STM1111111111111111111111111111111114T1Anm";
             return (
-              <tr key={witness.id}>
-                <td className={styles.rank_col}>{i + 1}</td>
-                <td className={styles.name_col}>{witness.owner}</td>
-                <td className={styles.votes_col}>
-                  {tidyNumber(Math.round(witness.votes / 1000000 / 1000000))}{" "}
-                  <span style={{ color: "#0fbb2c" }}>+- 99</span>
+              <tr
+                key={witness.witness}
+                style={{
+                  textDecoration: inactiveWitness ? "line-through" : "none",
+                }}
+              >
+                <td className={styles.rank_col}>{witness.rank}</td>
+                <td className={styles.name_col}>
+                  {linkToUserProfile(witness.witness)}
+                  {witness.url && (
+                    <a href={witness.url} target="_blank" rel="noreferrer">
+                      <AiOutlineLink />
+                    </a>
+                  )}
                 </td>
-                <td className={styles.voters_col}>
-                  {" "}
-                  9999{" "}
+                <td className={styles.votes_col}>
+                  {witness.votes.toFixed(2)}{" "}
                   <span
                     style={{
-                      color: "red",
+                      color: witness.votes_daily_change > 0 ? "#0fbb2c" : "red",
                     }}
                   >
-                    -+ 99
+                    {witness.votes_daily_change.toFixed(2)}
                   </span>
                   <span style={styles.list_icon}>
                     <OverlayTrigger
@@ -99,11 +108,22 @@ export default function WitnessTable({
                           border: "none",
                           background: "inherit",
                         }}
-                        onClick={handleOpenVotersListTable}
+                        onClick={() => handeOpenVotersListTable(witness)}
                       >
                         <AiOutlineUnorderedList />
                       </button>
                     </OverlayTrigger>
+                  </span>
+                </td>
+                <td className={styles.voters_col}>
+                  {witness.voters_num}{" "}
+                  <span
+                    style={{
+                      color:
+                        witness.voters_num_daily_change > 0 ? "#0fbb2c" : "red",
+                    }}
+                  >
+                    {witness.voters_num_daily_change}
                   </span>
                   <span style={styles.list_icon}>
                     <OverlayTrigger
@@ -116,38 +136,46 @@ export default function WitnessTable({
                           border: "none",
                           background: "inherit",
                         }}
-                        onClick={handleOpenVotesHistoryTable}
+                        onClick={() => handleOpenVotesHistoryTable(witness)}
                       >
                         <MdOutlineHistory />
                       </button>
                     </OverlayTrigger>
                   </span>
                 </td>
-                <td className={styles.missed_col}>
-                  {tidyNumber(witness.total_missed)}
-                </td>
+
                 <td className={styles.last_block_col}>
-                  {tidyNumber(witness.last_confirmed_block_num)}
+                  {tidyNumber(witness.block_size)}
                 </td>
-                <td className={styles.apr_col}>
-                  {Number(witness.props.hbd_interest_rate) / 100}%
-                </td>
-                <td className={styles.price_feed_col}>
-                  {witness.hbd_exchange_rate.base.split("HBD")[0]}
-                </td>
-                <td className={styles.bias_col}> ??? %</td>
+                <td className={styles.price_feed_col}>{witness.price_feed}</td>
+                <td className={styles.bias_col}> {witness.bias}</td>
                 <td className={styles.feed_age_col}>
-                  {moment(witness.last_hbd_exchange_update).fromNow()}
+                  <OverlayTrigger
+                    placement="bottom"
+                    delay={{ show: 250, hide: 400 }}
+                    overlay={
+                      <Tooltip id="feed_age-tooltip">
+                        {witness.feed_age}
+                      </Tooltip>
+                    }
+                  >
+                    <p>{trimTime(witness.feed_age)}</p>
+                  </OverlayTrigger>
                 </td>
-                <td className={styles.ac_free_col}>
-                  {witness.props.account_creation_fee}
+                <td>
+                  <OverlayTrigger
+                    placement="bottom"
+                    delay={{ show: 250, hide: 400 }}
+                    overlay={
+                      <Tooltip id="signing_key-tooltip">
+                        {witness.signing_key}
+                      </Tooltip>
+                    }
+                  >
+                    <p>{witness?.signing_key?.slice(0, 20)}</p>
+                  </OverlayTrigger>
                 </td>
-                <td className={styles.block_size}>
-                  {tidyNumber(witness.props.maximum_block_size)}
-                </td>
-                <td className={styles.version}>
-                  {witness.hardfork_version_vote}
-                </td>
+                <td className={styles.version}>{witness.version}</td>
               </tr>
             );
           })}

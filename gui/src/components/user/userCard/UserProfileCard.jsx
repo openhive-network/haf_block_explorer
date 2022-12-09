@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext } from "react";
 import { ProgressBar } from "react-bootstrap";
 import { UserProfileContext } from "../../../contexts/userProfileContext";
 import {
@@ -18,20 +18,14 @@ import {
 } from "../../../functions/calculations";
 import { HeadBlockContext } from "../../../contexts/headBlockContext";
 import moment from "moment";
-import axios from "axios";
 import styles from "./userCard.module.css";
 
 export default function UserProfileCard({ user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
-  const [costs, setCosts] = useState(null);
   const profile_picture = `https://images.hive.blog/u/${user}/avatar`;
   const user_vesting_shares =
     Number(user_info?.vesting_shares?.split("VESTS")[0]) * 1000000;
-
-  useEffect(() => {
-    axios.get("https://api.ausbit.dev/rc").then((res) => setCosts(res.data));
-  }, []);
 
   return (
     <div className={styles.userCardContainer}>
@@ -123,7 +117,7 @@ export default function UserProfileCard({ user }) {
             />
           </div>
         )}
-        {calcResourseCredits(resource_credits) !== "NaN" && (
+        {calcResourseCredits(resource_credits) > 0 && (
           <div className={styles.votingPowerContainer}>
             <p className={styles.RCText}>Resource Credits</p>
             <p>{calcResourseCredits(resource_credits)} %</p>
@@ -148,21 +142,11 @@ export default function UserProfileCard({ user }) {
       <div>
         <p>Enough credits for aproximately</p>
         <ul>
+          <li> {resourceBudgetComments(resource_credits)} comments</li>
+          <li>{resourceBudgetVotes(resource_credits)} votes</li>
+          <li>{resourceBudgetTransfers(resource_credits)} transfers</li>
           <li>
-            {" "}
-            {resourceBudgetComments(resource_credits, costs, tidyNumber)}{" "}
-            comments
-          </li>
-          <li>
-            {resourceBudgetVotes(resource_credits, costs, tidyNumber)} votes
-          </li>
-          <li>
-            {resourceBudgetTransfers(resource_credits, costs, tidyNumber)}{" "}
-            transfers
-          </li>
-          <li>
-            {resourceBudgetClaimAccounts(resource_credits, costs, tidyNumber)}{" "}
-            account claims
+            {resourceBudgetClaimAccounts(resource_credits)} account claims
           </li>
         </ul>
       </div>

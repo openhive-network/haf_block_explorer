@@ -132,76 +132,56 @@ export const timeDelta = (timestamp, moment) => {
   return moment.duration(diff, "minutes").humanize(true);
 };
 
-export const resourceBudgetComments = (resource_credits, costs, tidyNumber) => {
+export const resourceBudgetComments = (resource_credits) => {
   if (resource_credits?.rc_manabar !== undefined) {
     var cost = 1175937456;
-    if (costs !== null) {
-      cost = costs.comment;
-    }
     var available = resource_credits?.rc_manabar?.current_mana / cost;
     if (available >= 1000000) {
       return "1M+";
     } else {
-      return tidyNumber(available.toFixed(0));
+      return available.toFixed(0);
     }
   } else {
     return null;
   }
 };
 
-export const resourceBudgetVotes = (resource_credits, costs, tidyNumber) => {
+export const resourceBudgetVotes = (resource_credits) => {
   if (resource_credits?.rc_manabar !== undefined) {
     var cost = 109514642;
-    if (costs !== null) {
-      cost = costs.vote;
-    }
     var available = resource_credits?.rc_manabar?.current_mana / cost;
     if (available >= 1000000) {
       return "1M+";
     } else {
-      return tidyNumber(available.toFixed(0));
+      return available.toFixed(0);
     }
   } else {
     return null;
   }
 };
 
-export const resourceBudgetTransfers = (
-  resource_credits,
-  costs,
-  tidyNumber
-) => {
+export const resourceBudgetTransfers = (resource_credits) => {
   if (resource_credits?.rc_manabar !== undefined) {
     var cost = 487237759;
-    if (costs !== null) {
-      cost = costs.transfer;
-    }
     var available = resource_credits?.rc_manabar?.current_mana / cost;
     if (available >= 1000000) {
       return "1M+";
     } else {
-      return tidyNumber(available.toFixed(0));
+      return available.toFixed(0);
     }
   } else {
     return null;
   }
 };
 
-export const resourceBudgetClaimAccounts = (
-  resource_credits,
-  costs,
-  tidyNumber
-) => {
+export const resourceBudgetClaimAccounts = (resource_credits) => {
   if (resource_credits?.rc_manabar !== undefined) {
     var cost = 8541343515163;
-    if (costs !== null) {
-      cost = costs.claim_account;
-    }
     var available = resource_credits?.rc_manabar?.current_mana / cost;
     if (available >= 1000000) {
       return "1M+";
     } else {
-      return tidyNumber(available.toFixed(0));
+      return available.toFixed(0);
     }
   } else {
     return null;
@@ -209,7 +189,7 @@ export const resourceBudgetClaimAccounts = (
 };
 
 export const calculateReputation = (reputation) => {
-  if (reputation == null) return reputation;
+  if (reputation === null || reputation === 0) return reputation;
   let neg = reputation < 0;
   let rep = String(reputation);
   rep = neg ? rep.substring(1) : rep;

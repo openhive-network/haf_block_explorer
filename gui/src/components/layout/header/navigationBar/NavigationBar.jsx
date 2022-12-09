@@ -21,8 +21,8 @@ export default function NavigationBar() {
   const { setBlockNumber } = useContext(BlockContext);
   const { setUserProfile } = useContext(UserProfileContext);
   const { setTransactionId } = useContext(TranasctionContext);
-
   const [check_input, set_check_input] = useState("");
+
   function handleSubmit(e) {
     e.preventDefault();
     let val = form_value.current.value;
@@ -35,7 +35,7 @@ export default function NavigationBar() {
     if (value !== "") {
       axios({
         method: "post",
-        url: "http://192.168.5.126:3002/rpc/get_input_type",
+        url: `http://192.168.4.250:3000/rpc/get_input_type`,
         headers: { "Content-Type": "application/json" },
         data: { _input: value },
       })
@@ -48,32 +48,25 @@ export default function NavigationBar() {
   useEffect(() => {
     if (check_input.input_type === "block_num") {
       setBlockNumber(value);
-      navigate(`block/${value}`);
+      navigate(`/block/${value}`);
     }
     if (check_input.input_type === "account_name") {
       setUserProfile(value);
-      navigate(`user/${value}`);
+      navigate(`/user/${value}`);
     }
 
     if (check_input.input_type === "transaction_hash") {
       setTransactionId(value);
-      navigate(`transaction/${value}`);
+      navigate(`/transaction/${value}`);
     }
     if (check_input.input_type === "block_hash") {
       setBlockNumber(check_input.input_value);
-      navigate(`block/${check_input.input_value}`);
+      navigate(`/block/${check_input.input_value}`);
     }
     if (check_input === "No data") {
       navigate("/error");
     }
-  }, [
-    check_input,
-    value,
-    setBlockNumber,
-    setTransactionId,
-    setUserProfile,
-    // navigate,
-  ]);
+  }, [check_input, value, setBlockNumber, setTransactionId, setUserProfile]);
 
   return (
     <>

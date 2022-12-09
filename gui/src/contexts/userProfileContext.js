@@ -1,5 +1,4 @@
 import { useState, createContext, useEffect } from "react";
-// import moment from "moment";
 
 import axios from "axios";
 
@@ -10,40 +9,35 @@ export const UserProfileContextProvider = ({ children }) => {
   const [acc_history_limit, set_acc_history_limit] = useState(100);
   const [op_filters, set_op_filters] = useState([]);
   const [user_info, set_user_info] = useState("");
-  const [op_types, set_op_types] = useState([]);
+  const [op_types, set_op_types] = useState(null);
   const [pagination, set_pagination] = useState(-1);
   const [resource_credits, set_resource_credits] = useState({});
   const [startDateState, setStartDateState] = useState(null);
   const [endDateState, setEndDateState] = useState(null);
 
-  // console.log(userProfile);
-  // 192.168.5.118 -steem7
-  // 192.168.4.250 -steem10
-  //Get available operation types for current user
-  // console.log(endDateState);
   useEffect(() => {
-    if (userProfile !== "") {
+    if (userProfile) {
       axios({
         method: "post",
-        url: "http://192.168.5.126:3002/rpc/get_acc_op_types",
+        url: `http://192.168.4.250:3000/rpc/get_acc_op_types`,
         headers: { "Content-Type": "application/json" },
         data: {
           _account: userProfile,
         },
       }).then((res) => set_op_types(res.data));
     }
-  }, [userProfile, set_op_types]);
+    return () => set_op_types([]);
+  }, [userProfile]);
 
-  //  Get user profile data, user info, resource accounts
-  const calc_limit =
-    pagination !== -1 && acc_history_limit > pagination
-      ? pagination
-      : acc_history_limit;
   useEffect(() => {
-    if (userProfile !== "") {
+    if (userProfile) {
+      const calc_limit =
+        pagination !== -1 && acc_history_limit > pagination
+          ? pagination
+          : acc_history_limit;
       axios({
         method: "post",
-        url: "http://192.168.5.126:3002/rpc/get_ops_by_account",
+        url: `http://192.168.4.250:3000/rpc/get_ops_by_account`,
         headers: { "Content-Type": "application/json" },
         data: {
           _account: userProfile,
@@ -54,39 +48,41 @@ export const UserProfileContextProvider = ({ children }) => {
           _date_end: endDateState,
         },
       }).then((res) => setUser_profile_data(res.data));
-      axios({
-        method: "post",
-        url: "https://api.hive.blog",
-        data: {
-          jsonrpc: "2.0",
-          method: "condenser_api.get_accounts",
-          params: [[userProfile]],
-          id: 1,
-        },
-      }).then((res) => set_user_info(res?.data?.result[0]));
-      axios({
-        method: "post",
-        url: "https://api.hive.blog",
-        data: {
-          jsonrpc: "2.0",
-          method: "rc_api.find_rc_accounts",
-          params: { accounts: [userProfile] },
-          id: 1,
-        },
-      }).then((res) => set_resource_credits(res?.data?.result?.rc_accounts[0]));
     }
+    return () => setUser_profile_data(null);
   }, [
     userProfile,
     pagination,
-    op_filters,
     acc_history_limit,
-    setUser_profile_data,
-    set_user_info,
-    set_resource_credits,
+    op_filters,
     startDateState,
     endDateState,
-    calc_limit,
+    setUser_profile_data,
   ]);
+
+  useEffect(() => {
+    if (userProfile) {
+      axios({
+        method: "post",
+        url: "http://192.168.4.250:3000/rpc/get_account",
+        headers: { "Content-Type": "application/json" },
+        data: { _account: userProfile },
+      }).then((res) => set_user_info(res?.data));
+    }
+    return () => set_user_info("");
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (userProfile) {
+      axios({
+        method: "post",
+        url: `http://192.168.4.250:3000/rpc/get_account_resource_credits`,
+        headers: { "Content-Type": "application/json" },
+        data: { _account: userProfile },
+      }).then((res) => set_resource_credits(res?.data));
+    }
+    return () => set_resource_credits({});
+  }, [userProfile]);
 
   return (
     <UserProfileContext.Provider

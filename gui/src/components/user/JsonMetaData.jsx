@@ -5,11 +5,11 @@ import HighlightedJSON from "../customJson/HighlightedJSON";
 export default function JsonMetaData({ user_info }) {
   return (
     <>
-      {user_info?.json_metadata ? (
+      {user_info && user_info.json_metadata ? (
         <div className={styles.grayContainer}>
           <h3>JSON metadata</h3>
           <pre className={styles.jsonMetaData}>
-            <HighlightedJSON json={JSON.parse(user_info?.json_metadata)} />
+            <HighlightedJSON json={user_info.json_metadata} />
           </pre>
         </div>
       ) : (

@@ -11,3 +11,7 @@ a {
     font-weight: bold;
     font-size: 18px;
 }
+
+.user_page {
+    overflow: scroll;
+}

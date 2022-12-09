@@ -21,6 +21,8 @@ import PostingJsonMetaData from "../../components/user/PostingJsonMetaData";
 import Authorities from "../../components/user/Authorities";
 import WitnessProps from "../../components/user/WitnessProps";
 import WitnessVotes from "../../components/user/WitnessVotes";
+import usePagination from "../../components/Pagination";
+import { useEffect } from "react";
 
 export default function User_Page({ user }) {
   document.title = `HAF | User ${user}`;
@@ -38,11 +40,10 @@ export default function User_Page({ user }) {
     setEndDateState,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
-  const user_witness = witnessData?.filter((w) => w.owner === user);
+  const user_witness = witnessData?.filter((w) => w.witness === user);
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
-
   localStorage.setItem("last_trx_on_page", last_trx_on_page);
   localStorage.setItem("first_trx_on_page", max_trx_nr);
   pagination === -1 && localStorage.setItem("trx_count_max", max_trx_nr);
@@ -55,16 +56,26 @@ export default function User_Page({ user }) {
   );
   const count_same = {};
   check_op_type?.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
-  const page_count = Math.ceil(get_max_trx_num / acc_history_limit);
-  const [page, setPage] = useState([]);
+  const [page, setPage] = useState(1);
+  const count = Math.ceil(get_max_trx_num / acc_history_limit);
+  const _DATA = usePagination(user_profile_data, acc_history_limit);
+
+  const operationsMax = get_max_trx_num - (page - 1) * acc_history_limit; //// TODO: rename
+  const handleChange = (e, p) => {
+    setPage(p);
+    _DATA.jump(p);
+  };
+
+  useEffect(() => {
+    set_pagination(page === 1 ? -1 : operationsMax);
+  }, [set_pagination, operationsMax, page]); // TODO : check if set_pagination here is needed
+
   return (
     <>
-      {user_info === "" ||
-      witnessData === null ||
-      user_profile_data === null ? (
+      {!user_profile_data || !user_info ? (
         <Loader />
       ) : (
-        <Container fluid>
+        <Container className={styles.user_page} fluid>
           <Row className="d-flex">
             <Col sm={12} md={5} lg={5} xl={3}>
               <UserProfileCard user={user} />
@@ -88,16 +99,12 @@ export default function User_Page({ user }) {
                   startDateState === null &&
                   endDateState === null ? (
                     <Pagination
-                      onClick={(e) =>
-                        set_pagination(
-                          get_max_trx_num -
-                            (Number(e.target.innerText) - 1) * acc_history_limit
-                        )
-                      }
-                      count={page_count}
-                      color="secondary"
-                      hidePrevButton
-                      hideNextButton
+                      count={count}
+                      size="large"
+                      page={page}
+                      variant="outlined"
+                      shape="rounded"
+                      onChange={handleChange}
                     />
                   ) : (
                     <>

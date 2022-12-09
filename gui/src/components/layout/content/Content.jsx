@@ -47,17 +47,17 @@ export default function Content() {
       <Routes>
         <Route exact path="/" element={<MainPage />} />
         <Route
-          path={`block/${blockNumber}`}
+          path={blockNumber && `block/${blockNumber}`}
           element={
             <BlockPage setBlockNumber={setBlockNumber} block_nr={blockNumber} />
           }
         />
         <Route
-          path={`user/${userProfile}`}
+          path={userProfile && `user/${userProfile}`}
           element={<UserPage user={userProfile} />}
         />
         <Route
-          path={`transaction/${transactionId}`}
+          path={transactionId && `transaction/${transactionId}`}
           element={<TransactionPage transaction={transactionId} />}
         />
         <Route path="witnesses" element={<WitnessesPage />} />

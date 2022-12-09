@@ -45,8 +45,8 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   const trimStartValue = moment(startDateState).format().split("T")[0];
   const [endDateBtn, setEndDateBtn] = useState("select end date");
   const [startDateBtn, setStartDateBtn] = useState("select start date");
-
   const [errorMessage, setErrorMessage] = useState("");
+
   useEffect(() => {
     if (endDateState) {
       setEndDateBtn("loading ...");
@@ -78,7 +78,7 @@ export default function MultiSelectFilters({ show_filters, set_show_filters }) {
   ]);
 
   return (
-    <div>
+    <div style={{ owerflow: "auto" }}>
       <Modal show={show_filters} onHide={() => set_show_filters(false)}>
         <Modal.Header closeButton>
           <h5 className="modal-title">Operations filters</h5>
