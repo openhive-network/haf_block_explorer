@@ -150,7 +150,8 @@ BEGIN
       hov.trx_in_block,
       hov.op_pos,
       hot.is_virtual,
-      hov.timestamp::TEXT,
+      hov.timestamp,
+      NOW() - hov.timestamp,
       hov.body::JSON,
       ls.operation_id,
       ls.account_op_seq_no
@@ -203,7 +204,8 @@ BEGIN
     ls.trx_in_block,
     ls.op_pos,
     hot.is_virtual,
-    ls.timestamp::TEXT,
+    ls.timestamp,
+    NOW() - ls.timestamp,
     ls.body::JSON,
     ls.id,
     NULL::INT

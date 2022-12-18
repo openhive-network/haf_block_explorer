@@ -14,7 +14,8 @@ CREATE TYPE hafbe_types.operations AS (
   trx_in_block SMALLINT,
   op_in_trx INT,
   virtual_op BOOLEAN,
-  timestamp TEXT,
+  timestamp TIMESTAMP,
+  age INTERVAL,
   operations JSON,
   operation_id BIGINT,
   acc_operation_id INT
