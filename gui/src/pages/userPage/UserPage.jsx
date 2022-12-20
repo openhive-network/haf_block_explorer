@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useMemo } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
 import { WitnessContext } from "../../contexts/witnessContext";
 import { Container, Col, Row } from "react-bootstrap";
@@ -21,7 +21,6 @@ import PostingJsonMetaData from "../../components/user/PostingJsonMetaData";
 import Authorities from "../../components/user/Authorities";
 import WitnessProps from "../../components/user/WitnessProps";
 import WitnessVotes from "../../components/user/WitnessVotes";
-import usePagination from "../../components/Pagination";
 import { useEffect } from "react";
 
 export default function User_Page({ user }) {
@@ -40,36 +39,32 @@ export default function User_Page({ user }) {
     setEndDateState,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
+  const [page, setPage] = useState(1);
+  const [show_filters, set_show_filters] = useState(false);
+  const [prevNextPage, setPrevNextPage] = useState([]);
+
   const user_witness = witnessData?.filter((w) => w.witness === user);
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
+
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
   localStorage.setItem("last_trx_on_page", last_trx_on_page);
   localStorage.setItem("first_trx_on_page", max_trx_nr);
   pagination === -1 && localStorage.setItem("trx_count_max", max_trx_nr);
+
   const get_max_trx_num = localStorage.getItem("trx_count_max");
   const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
   const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
-  const [show_filters, set_show_filters] = useState(false);
-  const check_op_type = user_profile_data?.map(
-    (history) => history.operations.type
-  );
-  const count_same = {};
-  check_op_type?.forEach((e) => (count_same[e] = (count_same[e] || 0) + 1));
-  const [page, setPage] = useState(1);
   const count = Math.ceil(get_max_trx_num / acc_history_limit);
-  const _DATA = usePagination(user_profile_data, acc_history_limit);
+  const operationsMax = get_max_trx_num - (page - 1) * acc_history_limit;
 
-  const operationsMax = get_max_trx_num - (page - 1) * acc_history_limit; //// TODO: rename
-  const handleChange = (e, p) => {
+  const handleChange = async (e, p) => {
     setPage(p);
-    _DATA.jump(p);
   };
 
   useEffect(() => {
     set_pagination(page === 1 ? -1 : operationsMax);
-  }, [set_pagination, operationsMax, page]); // TODO : check if set_pagination here is needed
-
+  }, [page, operationsMax]);
   return (
     <>
       {!user_profile_data || !user_info ? (
@@ -110,7 +105,11 @@ export default function User_Page({ user }) {
                     <>
                       <Button
                         onClick={() =>
-                          handlePrevPage(setPage, page, set_pagination)
+                          handlePrevPage(
+                            set_pagination,
+                            prevNextPage,
+                            setPrevNextPage
+                          )
                         }
                       >
                         <ArrowBackIosNewIcon />
@@ -124,8 +123,8 @@ export default function User_Page({ user }) {
                             handleNextPage(
                               set_pagination,
                               get_last_trx_on_page,
-                              setPage,
-                              get_first_trx_on_page
+                              get_first_trx_on_page,
+                              setPrevNextPage
                             )
                           }
                         >
@@ -165,7 +164,8 @@ export default function User_Page({ user }) {
                           clearFilters(
                             setEndDateState,
                             setStartDateState,
-                            set_op_filters
+                            set_op_filters,
+                            setPage
                           )
                         }
                         variant="contained"

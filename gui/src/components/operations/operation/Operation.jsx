@@ -55,13 +55,13 @@ export default function Operation({ value, type, full_trx }) {
               onClick={() => setShowJson(!showJson)}
               className={styles.jsonButton}
             >
-              Show JSON
+              json
             </button>
             <button
               onClick={() => setShowDetails(!showDetails)}
               className={styles.detailsButton}
             >
-              Show details
+              details
             </button>
           </span>
         )}

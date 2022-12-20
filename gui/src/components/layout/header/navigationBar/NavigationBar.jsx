@@ -85,10 +85,10 @@ export default function NavigationBar() {
           <Navbar.Collapse id="navbarScroll">
             <Nav className={`me-auto my-2 my-lg-0 `} navbarScroll>
               <Nav.Link href="/">
-                <p className={styles.navLink}>HAF Blocks</p>
+                <p className={styles.navLink}>Blocks</p>
               </Nav.Link>
               <Nav.Link href="/witnesses" target="_blank">
-                <p className={styles.linkWitnesses}>HAF Witnesses</p>
+                <p className={styles.linkWitnesses}>Witnesses</p>
               </Nav.Link>
             </Nav>
             <Form className="d-flex" onSubmit={handleSubmit}>
