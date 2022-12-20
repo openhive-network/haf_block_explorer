@@ -67,11 +67,9 @@ export const modify_obj_hbd = (key, head_block) => {
   return Number(head_block[key]?.amount).toFixed(3);
 };
 export const modify_obj_number = (key, head_block) => {
-  const result =
-    head_block[key] !== 0
-      ? tidyNumber(Number(head_block[key]))
-      : Number(head_block[key]);
-  return result;
+  return head_block[key] !== 0
+    ? tidyNumber(Number(head_block[key]))
+    : Number(head_block[key]);
 };
 export const modify_obj_date = (key, head_block) => {
   return head_block[key]?.split("T").join(" ");
