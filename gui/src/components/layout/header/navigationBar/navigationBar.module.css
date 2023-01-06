@@ -26,10 +26,19 @@
     color: rgb(238, 66, 66);
 }
 
+.searchBox {
+    width: 400px;
+    margin: 0 20px;
+}
+
 
 @media only screen and (max-width: 1200px) {
     .navbar {
         padding: 10px 50px;
+    }
 
+    .searchBox {
+        width: 100%;
+        margin: 0 20px 0 0;
     }
 }
