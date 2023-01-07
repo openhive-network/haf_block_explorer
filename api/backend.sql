@@ -752,17 +752,11 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  RETURN QUERY SELECT (
-    unnest(vests_value)
-      *
-    (SELECT value FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_fund')
-      *
-    10 ^ (SELECT precision FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_fund')
-  ) / (
-    (SELECT value FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_shares')
-      *
-    10 ^ (SELECT precision FROM hafbe_app.dynamic_global_properties_cache WHERE property = 'vesting_shares')
-  )::FLOAT;
+  RETURN QUERY SELECT
+    (unnest(vests_value) * total_vesting_fund_hive / total_vesting_shares)::FLOAT
+  FROM hive.blocks
+  ORDER BY num DESC
+  LIMIT 1;
 END
 $$
 ;

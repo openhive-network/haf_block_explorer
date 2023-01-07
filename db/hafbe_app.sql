@@ -103,7 +103,7 @@ BEGIN
   );
 
   INSERT INTO hafbe_app.witnesses_cache_config (update_interval, last_updated_at)
-  VALUES ('1 hour', to_timestamp(0));
+  VALUES ('30 minutes', to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
     witness_id INT NOT NULL,
@@ -141,14 +141,6 @@ BEGIN
     voters_num_daily_change INT NOT NULL,
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
-  );
-
-  CREATE TABLE hafbe_app.dynamic_global_properties_cache (
-    property TEXT NOT NULL,
-    value NUMERIC NOT NULL,
-    precision SMALLINT NOT NULL,
-
-    CONSTRAINT pk_dynamic_global_properties_cache PRIMARY KEY (property)
   );
 END
 $$
@@ -770,19 +762,6 @@ BEGIN
   GROUP BY witness_id;
 
   RAISE NOTICE 'Updated witness change cache';
-
-  INSERT INTO hafbe_app.dynamic_global_properties_cache(property, value, precision)
-  SELECT
-    unnest(array['vesting_fund', 'vesting_shares']),
-    unnest(array[(props->'total_vesting_fund_hive'->>'amount'), (props->'total_vesting_shares'->>'amount')])::NUMERIC,
-    unnest(array[(props->'total_vesting_fund_hive'->>'precision'), (props->'total_vesting_shares'->>'precision')])::SMALLINT
-  FROM hafbe_app.get_dynamic_global_properties() props
-  ON CONFLICT ON CONSTRAINT pk_dynamic_global_properties_cache DO UPDATE SET
-    value = EXCLUDED.value,
-    precision = EXCLUDED.precision
-  ;
-  
-  RAISE NOTICE 'Updated global properties cache';
 
   UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
 END
