@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 //TODO : rewrite this hook
 function usePagination(data, itemsPerPage) {
   const [currentPage, setCurrentPage] = useState(1);

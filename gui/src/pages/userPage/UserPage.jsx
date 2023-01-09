@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo } from "react";
+import React, { useContext, useState } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
 import { WitnessContext } from "../../contexts/witnessContext";
 import { Container, Col, Row } from "react-bootstrap";
@@ -22,6 +22,7 @@ import Authorities from "../../components/user/Authorities";
 import WitnessProps from "../../components/user/WitnessProps";
 import WitnessVotes from "../../components/user/WitnessVotes";
 import { useEffect } from "react";
+import usePrevious from "../../components/customHooks/usePrevious";
 
 export default function User_Page({ user }) {
   document.title = `HAF | User ${user}`;
@@ -57,14 +58,24 @@ export default function User_Page({ user }) {
   const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
   const count = Math.ceil(get_max_trx_num / acc_history_limit);
   const operationsMax = get_max_trx_num - (page - 1) * acc_history_limit;
+  const prevUser = usePrevious(user);
 
   const handleChange = async (e, p) => {
     setPage(p);
   };
 
   useEffect(() => {
+    if (prevUser !== user) {
+      setPage(1);
+      set_pagination(-1);
+      set_op_filters([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
     set_pagination(page === 1 ? -1 : operationsMax);
   }, [page, operationsMax]);
+
   return (
     <>
       {!user_profile_data || !user_info ? (
