@@ -69,6 +69,7 @@ export default function User_Page({ user }) {
       setPage(1);
       set_pagination(-1);
       set_op_filters([]);
+      localStorage.clear();
     }
   }, [user]);
 
