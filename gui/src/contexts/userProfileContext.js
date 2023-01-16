@@ -67,9 +67,7 @@ export const UserProfileContextProvider = ({ children }) => {
         url: "http://192.168.4.250:3000/rpc/get_account",
         headers: { "Content-Type": "application/json" },
         data: { _account: userProfile },
-      })
-        .then((res) => set_user_info(res?.data))
-        .catch((err) => console.log(err.status));
+      }).then((res) => set_user_info(res?.data));
     }
     return () => set_user_info("");
   }, [userProfile]);
