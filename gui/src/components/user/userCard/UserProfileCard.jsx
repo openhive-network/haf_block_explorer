@@ -19,21 +19,20 @@ import {
 import { HeadBlockContext } from "../../../contexts/headBlockContext";
 import moment from "moment";
 import styles from "./userCard.module.css";
+import noProfilePicture from "../../../assets/no_profile_picture.png";
 
 export default function UserProfileCard({ user }) {
   const { user_info, resource_credits } = useContext(UserProfileContext);
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
-  const profile_picture = `https://images.hive.blog/u/${user}/avatar`;
   const user_vesting_shares =
     Number(user_info?.vesting_shares?.split("VESTS")[0]) * 1000000;
-
   return (
     <div className={styles.userCardContainer}>
       <div className={styles.nameContainer}>
         <div className={styles.userPictureContainer}>
           <img
             className={styles.userPicture}
-            src={profile_picture}
+            src={user_info.profile_image ?? noProfilePicture}
             alt="user avarar"
           />
         </div>
@@ -135,7 +134,7 @@ export default function UserProfileCard({ user }) {
       ) : (
         <div className={styles.reputationContainer}>
           <p>Reputation</p>
-          <p>{calculateReputation(user_info?.reputation)}</p>
+          <p>{calculateReputation(Number(user_info?.reputation))}</p>
         </div>
       )}
 
