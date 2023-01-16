@@ -820,7 +820,7 @@ BEGIN
       END IF;
 
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
-      
+
       IF __next_block_range.first_block != __next_block_range.last_block THEN
         CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
       ELSE

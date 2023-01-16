@@ -768,7 +768,7 @@ account data
 CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
-AS 
+AS
 $$
   import subprocess
   import json
@@ -793,17 +793,46 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __profile_image TEXT;
+  __profile_image_url TEXT;
+  __response_code INT;
 BEGIN
   BEGIN
-    SELECT INTO __profile_image ( (
+    SELECT INTO __profile_image_url ( (
       ((_account_data->>_key)::JSON)->>'profile'
       )::JSON )->>'profile_image';
   EXCEPTION WHEN invalid_text_representation THEN
-    SELECT NULL INTO __profile_image;
+    SELECT NULL INTO __profile_image_url;
   END;
-  RETURN __profile_image;
+
+  IF __profile_image_url IS NOT NULL AND LENGTH(__profile_image_url) != 0 THEN
+    SELECT hafbe_backend.validate_profile_picture_link(__profile_image_url) INTO __response_code;
+  END IF;
+
+  IF __profile_image_url IS NOT NULL AND LENGTH(__profile_image_url) != 0 AND __response_code > 299 THEN
+    SELECT NULL INTO __profile_image_url;
+  END IF;
+
+  RETURN __profile_image_url;
 END
+$$
+;
+
+CREATE FUNCTION hafbe_backend.validate_profile_picture_link(__profile_image_url TEXT)
+RETURNS INT
+LANGUAGE 'plpython3u'
+AS 
+$$
+  import subprocess
+
+  try:
+    res = int(
+      subprocess.check_output([
+        f'curl -s -o /dev/null -I -w "%{{http_code}}" "{__profile_image_url}"'
+      ], shell=True).decode('utf-8')
+    )
+  except:
+    res = 500
+  return res
 $$
 ;
 
