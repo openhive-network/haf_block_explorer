@@ -42,6 +42,7 @@ export default function NavigationBar() {
           navigate("/error");
       }
     }
+    setValue("");
   }
   //Get input type
   useEffect(() => {

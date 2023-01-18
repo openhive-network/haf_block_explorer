@@ -9,5 +9,8 @@
 }
 
 .toast {
-    background-color: #2C3136
+    background-color: #2C3136;
+    max-height: 300px;
+    overflow: auto;
+    /* max-height: 300px */
 }

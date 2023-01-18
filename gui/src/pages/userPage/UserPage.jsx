@@ -38,6 +38,8 @@ export default function User_Page({ user }) {
     set_op_filters,
     setStartDateState,
     setEndDateState,
+    opTypesLoading,
+    userDataLoading,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
   const [page, setPage] = useState(1);
@@ -45,41 +47,102 @@ export default function User_Page({ user }) {
   const [prevNextPage, setPrevNextPage] = useState([]);
 
   const user_witness = witnessData?.filter((w) => w.witness === user);
-  const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
+  // const max_trx_nr = (() => {
+  //   if (userDataLoading) return 0;
+  //   return user_profile_data?.[0]?.acc_operation_id;
+  // })();
 
-  const last_trx_on_page =
-    user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
-  localStorage.setItem("last_trx_on_page", last_trx_on_page);
-  localStorage.setItem("first_trx_on_page", max_trx_nr);
-  pagination === -1 && localStorage.setItem("trx_count_max", max_trx_nr);
+  // const last_trx_on_page =
+  //   user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
+  // localStorage.setItem("last_trx_on_page", last_trx_on_page);
+  // localStorage.setItem("first_trx_on_page", max_trx_nr);
+  // pagination === -1 && localStorage.setItem("trx_count_max", max_trx_nr);
 
-  const get_max_trx_num = localStorage.getItem("trx_count_max");
-  const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
-  const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
-  const count = Math.ceil(get_max_trx_num / acc_history_limit);
-  const operationsMax = get_max_trx_num - (page - 1) * acc_history_limit;
+  // const get_max_trx_num = localStorage.getItem("trx_count_max");
+  // const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
+  // const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
+  const [maxTrxNum, setMaxTrxNum] = useState(0);
+  const [firstTrxNum, setFirstTrxNum] = useState(0);
+  const [lastTrxNum, setLastTrxNum] = useState(0);
+  // const [count, setCount] = useState(0);
+  const count = Math.ceil(maxTrxNum / acc_history_limit);
+  const operationsMax = maxTrxNum - (page - 1) * acc_history_limit;
+
   const prevUser = usePrevious(user);
+  const prevCount = usePrevious(count);
 
   const handleChange = async (e, p) => {
     setPage(p);
   };
 
   useEffect(() => {
+    // if (user_profile_data) {
+    // if (page === 1) {
+    //   set_pagination(-1);
+    // }
+    set_pagination(page === 1 ? -1 : operationsMax);
+    // }
+  }, [page, operationsMax]);
+  // console.log(prevUser);
+  useEffect(() => {
     if (prevUser !== user) {
       setPage(1);
       set_pagination(-1);
       set_op_filters([]);
-      localStorage.clear();
+      // setFirstTrxNum(0);
     }
-  }, [user]);
+    // if (!userDataLoading) {
+    const max_trx_nr = (() => {
+      return user_profile_data?.[0]?.acc_operation_id;
+    })();
 
-  useEffect(() => {
-    set_pagination(page === 1 ? -1 : operationsMax);
-  }, [page, operationsMax]);
+    const last_trx_on_page =
+      user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
+    if (pagination === -1) {
+      setMaxTrxNum(max_trx_nr);
+      // setFirstTrxNum(max_trx_nr);
+    } else {
+      setFirstTrxNum(pagination === -1 ? 0 : pagination);
+    }
+    setLastTrxNum(last_trx_on_page);
+    // }
+  }, [
+    setFirstTrxNum,
+    prevUser,
+    acc_history_limit,
+    user_profile_data,
+    user,
+    pagination,
+  ]);
+
+  // useEffect(() => {
+  //   const max_trx_nr = (() => {
+  //     if (userDataLoading) return 0;
+  //     return user_profile_data?.[0]?.acc_operation_id;
+  //   })();
+  //   if (pagination !== -1) {
+  //     setFirstTrxNum(max_trx_nr);
+  //   }
+  // }, [userDataLoading, user_profile_data, pagination]);
+  // useEffect(() => {
+  //   // if (prevUser !== user) {
+  //   setCount(Math.ceil(maxTrxNum / acc_history_limit));
+  //   // }
+  //   // return () => setCount(0);
+  // }, [maxTrxNum, acc_history_limit]);
+
+  console.log(pagination, firstTrxNum, lastTrxNum, maxTrxNum, prevUser, user);
+
+  // useEffect(() => {
+  //   if (!user_profile_data) {
+  //     if (prevUser !== user) {
+  //     }
+  //   }
+  // }, [prevUser, user]);
 
   return (
     <>
-      {!user_profile_data || !user_info ? (
+      {!user_profile_data || !user_info || opTypesLoading || userDataLoading ? (
         <Loader />
       ) : (
         <Container className={styles.user_page} fluid>
@@ -134,8 +197,8 @@ export default function User_Page({ user }) {
                           onClick={() =>
                             handleNextPage(
                               set_pagination,
-                              get_last_trx_on_page,
-                              get_first_trx_on_page,
+                              lastTrxNum,
+                              firstTrxNum,
                               setPrevNextPage
                             )
                           }
@@ -193,9 +256,9 @@ export default function User_Page({ user }) {
                   )}
                 </Col>
               </Row>
-              {user_profile_data.length === 0
+              {user_profile_data?.length === 0
                 ? "No operations found"
-                : user_profile_data.map((profile) => (
+                : user_profile_data?.map((profile) => (
                     <Row key={profile.operation_id}>
                       <Col>
                         <OpCard block={profile} full_trx={profile} />

@@ -15,41 +15,62 @@ export const UserProfileContextProvider = ({ children }) => {
   const [startDateState, setStartDateState] = useState(null);
   const [endDateState, setEndDateState] = useState(null);
 
+  const [opTypesLoading, setOpTypesLoading] = useState(false);
+  const [userDataLoading, setUserDataLoading] = useState(false);
+
   useEffect(() => {
-    if (userProfile) {
-      axios({
-        method: "post",
-        url: `http://192.168.4.250:3000/rpc/get_acc_op_types`,
-        headers: { "Content-Type": "application/json" },
-        data: {
-          _account: userProfile,
-        },
-      }).then((res) => set_op_types(res.data));
-    }
+    (async function () {
+      setOpTypesLoading(true);
+      try {
+        if (userProfile) {
+          axios({
+            method: "post",
+            url: `http://192.168.4.250:3000/rpc/get_acc_op_types`,
+            headers: { "Content-Type": "application/json" },
+            data: {
+              _account: userProfile,
+            },
+          }).then((res) => set_op_types(res.data));
+        }
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setOpTypesLoading(false);
+      }
+    })();
+
     return () => set_op_types([]);
   }, [userProfile]);
-
   useEffect(() => {
     if (userProfile) {
       const calc_limit =
         pagination !== -1 && acc_history_limit > pagination
           ? pagination
           : acc_history_limit;
-      axios({
-        method: "post",
-        url: `http://192.168.4.250:3000/rpc/get_ops_by_account`,
-        headers: { "Content-Type": "application/json" },
-        data: {
-          _account: userProfile,
-          _top_op_id: pagination,
-          _limit: calc_limit,
-          _filter: op_filters,
-          _date_start: startDateState,
-          _date_end: endDateState,
-        },
-      }).then((res) => setUser_profile_data(res.data));
+      (async function () {
+        setUserDataLoading(true);
+        try {
+          await axios({
+            method: "post",
+            url: `http://192.168.4.250:3000/rpc/get_ops_by_account`,
+            headers: { "Content-Type": "application/json" },
+            data: {
+              _account: userProfile,
+              _top_op_id: pagination,
+              _limit: calc_limit,
+              _filter: op_filters,
+              _date_start: startDateState,
+              _date_end: endDateState,
+            },
+          }).then((res) => setUser_profile_data(res?.data));
+        } catch (err) {
+          console.log(err);
+        } finally {
+          setUserDataLoading(false);
+        }
+      })();
     }
-    return () => setUser_profile_data(null);
+    // return () => setUser_profile_data(null);
   }, [
     userProfile,
     pagination,
@@ -59,6 +80,7 @@ export const UserProfileContextProvider = ({ children }) => {
     endDateState,
     setUser_profile_data,
   ]);
+  console.log(userDataLoading);
 
   useEffect(() => {
     if (userProfile) {
@@ -104,6 +126,8 @@ export const UserProfileContextProvider = ({ children }) => {
         setStartDateState: setStartDateState,
         endDateState: endDateState,
         setEndDateState: setEndDateState,
+        opTypesLoading: opTypesLoading,
+        userDataLoading: userDataLoading,
       }}
     >
       {children}
