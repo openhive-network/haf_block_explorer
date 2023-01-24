@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
 import { WitnessContext } from "../../contexts/witnessContext";
 import { Container, Col, Row } from "react-bootstrap";
-import { Button, Pagination } from "@mui/material";
+import { Button, ButtonGroup } from "@mui/material";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import styles from "./userPage.module.css";
@@ -31,118 +31,40 @@ export default function User_Page({ user }) {
     acc_history_limit,
     op_filters,
     set_pagination,
-    pagination,
     user_info,
     startDateState,
     endDateState,
     set_op_filters,
     setStartDateState,
     setEndDateState,
-    opTypesLoading,
     userDataLoading,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
-  const [page, setPage] = useState(1);
   const [show_filters, set_show_filters] = useState(false);
   const [prevNextPage, setPrevNextPage] = useState([]);
 
   const user_witness = witnessData?.filter((w) => w.witness === user);
-  // const max_trx_nr = (() => {
-  //   if (userDataLoading) return 0;
-  //   return user_profile_data?.[0]?.acc_operation_id;
-  // })();
+  const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
 
-  // const last_trx_on_page =
-  //   user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
-  // localStorage.setItem("last_trx_on_page", last_trx_on_page);
-  // localStorage.setItem("first_trx_on_page", max_trx_nr);
-  // pagination === -1 && localStorage.setItem("trx_count_max", max_trx_nr);
-
-  // const get_max_trx_num = localStorage.getItem("trx_count_max");
-  // const get_last_trx_on_page = localStorage.getItem("last_trx_on_page");
-  // const get_first_trx_on_page = localStorage.getItem("first_trx_on_page");
-  const [maxTrxNum, setMaxTrxNum] = useState(0);
-  const [firstTrxNum, setFirstTrxNum] = useState(0);
-  const [lastTrxNum, setLastTrxNum] = useState(0);
-  // const [count, setCount] = useState(0);
-  const count = Math.ceil(maxTrxNum / acc_history_limit);
-  const operationsMax = maxTrxNum - (page - 1) * acc_history_limit;
-
+  const last_trx_on_page =
+    user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
+  const [get_last_trx_on_page, set_get_last_trx_on_page] = useState(0);
+  const [get_first_trx_on_page, set_get_first_trx_on_page] = useState(0);
   const prevUser = usePrevious(user);
-  const prevCount = usePrevious(count);
-
-  const handleChange = async (e, p) => {
-    setPage(p);
-  };
 
   useEffect(() => {
-    // if (user_profile_data) {
-    // if (page === 1) {
-    //   set_pagination(-1);
-    // }
-    set_pagination(page === 1 ? -1 : operationsMax);
-    // }
-  }, [page, operationsMax]);
-  // console.log(prevUser);
-  useEffect(() => {
-    if (prevUser !== user) {
-      setPage(1);
+    if (prevUser === user) {
+      set_get_last_trx_on_page(last_trx_on_page);
+      set_get_first_trx_on_page(max_trx_nr);
+    } else {
       set_pagination(-1);
       set_op_filters([]);
-      // setFirstTrxNum(0);
     }
-    // if (!userDataLoading) {
-    const max_trx_nr = (() => {
-      return user_profile_data?.[0]?.acc_operation_id;
-    })();
-
-    const last_trx_on_page =
-      user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
-    if (pagination === -1) {
-      setMaxTrxNum(max_trx_nr);
-      // setFirstTrxNum(max_trx_nr);
-    } else {
-      setFirstTrxNum(pagination === -1 ? 0 : pagination);
-    }
-    setLastTrxNum(last_trx_on_page);
-    // }
-  }, [
-    setFirstTrxNum,
-    prevUser,
-    acc_history_limit,
-    user_profile_data,
-    user,
-    pagination,
-  ]);
-
-  // useEffect(() => {
-  //   const max_trx_nr = (() => {
-  //     if (userDataLoading) return 0;
-  //     return user_profile_data?.[0]?.acc_operation_id;
-  //   })();
-  //   if (pagination !== -1) {
-  //     setFirstTrxNum(max_trx_nr);
-  //   }
-  // }, [userDataLoading, user_profile_data, pagination]);
-  // useEffect(() => {
-  //   // if (prevUser !== user) {
-  //   setCount(Math.ceil(maxTrxNum / acc_history_limit));
-  //   // }
-  //   // return () => setCount(0);
-  // }, [maxTrxNum, acc_history_limit]);
-
-  console.log(pagination, firstTrxNum, lastTrxNum, maxTrxNum, prevUser, user);
-
-  // useEffect(() => {
-  //   if (!user_profile_data) {
-  //     if (prevUser !== user) {
-  //     }
-  //   }
-  // }, [prevUser, user]);
+  }, [prevUser, user, last_trx_on_page, max_trx_nr]);
 
   return (
     <>
-      {!user_profile_data || !user_info || opTypesLoading || userDataLoading ? (
+      {!user_profile_data || !user_info ? (
         <Loader />
       ) : (
         <Container className={styles.user_page} fluid>
@@ -158,60 +80,56 @@ export default function User_Page({ user }) {
             </Col>
 
             <Col sm={12} md={7} lg={7} xl={9}>
-              <Row className="mt-3">
+              <MultiSelectFilters
+                show_filters={show_filters}
+                set_show_filters={set_show_filters}
+              />
+              <Row className="my-3">
                 <Col className="d-flex justify-content-between">
                   <div>
                     <p className={styles.operationsCount}>
                       Operations : {user_profile_data?.length}
                     </p>
                   </div>
-                  {op_filters.length === 0 &&
-                  startDateState === null &&
-                  endDateState === null ? (
-                    <Pagination
-                      count={count}
-                      size="large"
-                      page={page}
-                      variant="outlined"
-                      shape="rounded"
-                      onChange={handleChange}
-                    />
-                  ) : (
-                    <>
-                      <Button
-                        onClick={() =>
-                          handlePrevPage(
-                            set_pagination,
-                            prevNextPage,
-                            setPrevNextPage
-                          )
-                        }
-                      >
-                        <ArrowBackIosNewIcon />
-                      </Button>
 
-                      {user_profile_data?.length !== acc_history_limit ? (
-                        " "
-                      ) : (
-                        <Button
-                          onClick={() =>
-                            handleNextPage(
-                              set_pagination,
-                              lastTrxNum,
-                              firstTrxNum,
-                              setPrevNextPage
-                            )
-                          }
-                        >
-                          <ArrowForwardIosIcon />
-                        </Button>
-                      )}
-                    </>
-                  )}
+                  <ButtonGroup
+                    sx={{
+                      maxHeight: "40px",
+                    }}
+                    size="small"
+                    disableElevation
+                    variant="contained"
+                    color="secondary"
+                  >
+                    <Button
+                      onClick={() =>
+                        handlePrevPage(
+                          set_pagination,
+                          prevNextPage,
+                          setPrevNextPage
+                        )
+                      }
+                    >
+                      <ArrowBackIosNewIcon />
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        handleNextPage(
+                          set_pagination,
+                          get_last_trx_on_page,
+                          get_first_trx_on_page,
+                          setPrevNextPage
+                        )
+                      }
+                    >
+                      <ArrowForwardIosIcon />
+                    </Button>
+                  </ButtonGroup>
+
                   {op_filters.length === 0 &&
                   startDateState === null &&
                   endDateState === null ? (
-                    <div>
+                    <>
                       <Button
                         variant="contained"
                         color="secondary"
@@ -219,15 +137,10 @@ export default function User_Page({ user }) {
                       >
                         Filters
                       </Button>
-                      <MultiSelectFilters
-                        show_filters={show_filters}
-                        set_show_filters={set_show_filters}
-                      />
-                    </div>
+                    </>
                   ) : (
-                    <div>
+                    <ButtonGroup>
                       <Button
-                        className="m-3"
                         variant="contained"
                         color="warning"
                         onClick={() => set_show_filters(!show_filters)}
@@ -240,7 +153,7 @@ export default function User_Page({ user }) {
                             setEndDateState,
                             setStartDateState,
                             set_op_filters,
-                            setPage
+                            set_pagination
                           )
                         }
                         variant="contained"
@@ -252,13 +165,13 @@ export default function User_Page({ user }) {
                         show_filters={show_filters}
                         set_show_filters={set_show_filters}
                       />
-                    </div>
+                    </ButtonGroup>
                   )}
                 </Col>
               </Row>
-              {user_profile_data?.length === 0
+              {user_profile_data.length === 0
                 ? "No operations found"
-                : user_profile_data?.map((profile) => (
+                : user_profile_data.map((profile) => (
                     <Row key={profile.operation_id}>
                       <Col>
                         <OpCard block={profile} full_trx={profile} />

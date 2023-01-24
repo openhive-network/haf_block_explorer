@@ -38,8 +38,6 @@ export const UserProfileContextProvider = ({ children }) => {
         setOpTypesLoading(false);
       }
     })();
-
-    return () => set_op_types([]);
   }, [userProfile]);
   useEffect(() => {
     if (userProfile) {
@@ -70,7 +68,6 @@ export const UserProfileContextProvider = ({ children }) => {
         }
       })();
     }
-    // return () => setUser_profile_data(null);
   }, [
     userProfile,
     pagination,
@@ -80,7 +77,6 @@ export const UserProfileContextProvider = ({ children }) => {
     endDateState,
     setUser_profile_data,
   ]);
-  console.log(userDataLoading);
 
   useEffect(() => {
     if (userProfile) {

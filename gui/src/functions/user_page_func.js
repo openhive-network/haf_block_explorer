@@ -22,10 +22,10 @@ export const clearFilters = (
   setEndDateState,
   setStartDateState,
   set_op_filters,
-  setPage
+  setPagination
 ) => {
   setEndDateState(null);
   setStartDateState(null);
   set_op_filters([]);
-  setPage(1);
+  setPagination(-1);
 };
