@@ -2,20 +2,25 @@ export const handleNextPage = (
   set_pagination,
   get_last_trx_on_page,
   get_first_trx_on_page,
-  setPrevNextPage
+  setPrevNextPage,
+  setPageCount,
+  pageCount
 ) => {
-  // setPage((page += 1));
   set_pagination(get_last_trx_on_page);
   setPrevNextPage((prev) => [...prev, get_first_trx_on_page]);
+  setPageCount((pageCount += 1));
 };
 
 export const handlePrevPage = (
   set_pagination,
   prevNextPage,
-  setPrevNextPage
+  setPrevNextPage,
+  setPageCount,
+  pageCount
 ) => {
   setPrevNextPage(prevNextPage.slice(0, -1));
   set_pagination(prevNextPage.pop());
+  setPageCount((pageCount -= 1));
 };
 
 export const clearFilters = (

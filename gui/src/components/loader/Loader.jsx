@@ -9,10 +9,10 @@ const DEFAULT_LOADER_STYLE = {
   height: "100%",
 };
 
-export default function Loader({ style }) {
+export default function Loader({ containerStyle, loaderSize }) {
   return (
-    <Box sx={style ?? DEFAULT_LOADER_STYLE}>
-      <CircularProgress />
+    <Box sx={containerStyle ?? DEFAULT_LOADER_STYLE}>
+      <CircularProgress size={loaderSize} />
     </Box>
   );
 }

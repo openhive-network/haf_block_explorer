@@ -37,19 +37,19 @@ export default function User_Page({ user }) {
     set_op_filters,
     setStartDateState,
     setEndDateState,
-    userDataLoading,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
   const [show_filters, set_show_filters] = useState(false);
   const [prevNextPage, setPrevNextPage] = useState([]);
+  const [get_last_trx_on_page, set_get_last_trx_on_page] = useState(0);
+  const [get_first_trx_on_page, set_get_first_trx_on_page] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
 
   const user_witness = witnessData?.filter((w) => w.witness === user);
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
-
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
-  const [get_last_trx_on_page, set_get_last_trx_on_page] = useState(0);
-  const [get_first_trx_on_page, set_get_first_trx_on_page] = useState(0);
+
   const prevUser = usePrevious(user);
 
   useEffect(() => {
@@ -59,9 +59,9 @@ export default function User_Page({ user }) {
     } else {
       set_pagination(-1);
       set_op_filters([]);
+      setPageCount(1);
     }
   }, [prevUser, user, last_trx_on_page, max_trx_nr]);
-
   return (
     <>
       {!user_profile_data || !user_info ? (
@@ -90,6 +90,9 @@ export default function User_Page({ user }) {
                     <p className={styles.operationsCount}>
                       Operations : {user_profile_data?.length}
                     </p>
+                    <p className={styles.operationsCount}>
+                      Page Count : {pageCount}
+                    </p>
                   </div>
 
                   <ButtonGroup
@@ -106,21 +109,28 @@ export default function User_Page({ user }) {
                         handlePrevPage(
                           set_pagination,
                           prevNextPage,
-                          setPrevNextPage
+                          setPrevNextPage,
+                          setPageCount,
+                          pageCount
                         )
                       }
+                      disabled={pageCount === 1}
                     >
                       <ArrowBackIosNewIcon />
                     </Button>
+
                     <Button
                       onClick={() =>
                         handleNextPage(
                           set_pagination,
                           get_last_trx_on_page,
                           get_first_trx_on_page,
-                          setPrevNextPage
+                          setPrevNextPage,
+                          setPageCount,
+                          pageCount
                         )
                       }
+                      disabled={acc_history_limit > user_profile_data.length}
                     >
                       <ArrowForwardIosIcon />
                     </Button>
