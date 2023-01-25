@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Toast, Row, Col } from "react-bootstrap";
 import Operation from "../operation/Operation";
 import styles from "./opCard.module.css";
+
 export default function OpCard({ block, full_trx, trx_id }) {
   const is_trx_page = document.location.href.includes("transaction");
 
@@ -32,7 +33,23 @@ export default function OpCard({ block, full_trx, trx_id }) {
       return <p>Virtual operation</p>;
     }
   };
+  const opTimestampMessage = (op) => {
+    return (
+      <div className={styles.timestamp}>
+        <p>Created at: {op?.timestamp.split("T").join(" ")}</p>
+        <p>Age: {op?.age}</p>
+      </div>
+    );
+  };
 
+  const trxTimestampMessage = (trx) => {
+    return (
+      <div className={styles.timestamp}>
+        <p>Expiration: {trx.expiration.split("T").join(" ")}</p>
+        <p>Age: {trx.age}</p>
+      </div>
+    );
+  };
   return (
     <>
       <Toast className={`d-inline-block m-1 w-100 ${styles.toast}`}>
@@ -43,8 +60,8 @@ export default function OpCard({ block, full_trx, trx_id }) {
               <span className={styles.operationType}>{type}</span>
               <small>
                 {block?.timestamp
-                  ? block?.timestamp
-                  : "Expiration : " + full_trx?.expiration.split("T").join(" ")}
+                  ? opTimestampMessage(block)
+                  : trxTimestampMessage(full_trx)}
               </small>
             </Col>
           </Row>
