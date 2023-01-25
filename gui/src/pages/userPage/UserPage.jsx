@@ -62,6 +62,13 @@ export default function User_Page({ user }) {
       setPageCount(1);
     }
   }, [prevUser, user, last_trx_on_page, max_trx_nr]);
+
+  useEffect(() => {
+    if (show_filters && op_filters.length) {
+      setPageCount(1);
+    }
+  }, [show_filters, op_filters]);
+
   return (
     <>
       {!user_profile_data || !user_info ? (
@@ -163,7 +170,8 @@ export default function User_Page({ user }) {
                             setEndDateState,
                             setStartDateState,
                             set_op_filters,
-                            set_pagination
+                            set_pagination,
+                            setPageCount
                           )
                         }
                         variant="contained"

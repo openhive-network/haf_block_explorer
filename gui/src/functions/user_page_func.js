@@ -27,10 +27,12 @@ export const clearFilters = (
   setEndDateState,
   setStartDateState,
   set_op_filters,
-  setPagination
+  setPagination,
+  setPageCount
 ) => {
   setEndDateState(null);
   setStartDateState(null);
   set_op_filters([]);
   setPagination(-1);
+  setPageCount(1);
 };
