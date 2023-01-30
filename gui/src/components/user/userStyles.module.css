@@ -34,21 +34,17 @@
 .authDataContainer {
     background: #18003fef;
     border-radius: 10px;
+    padding: 20px;
     margin-top: 20px;
 }
 
 
 .authData {
     overflow: auto;
-    padding: 10px;
+    padding: 15px 0;
     color: #d8fd50;
 }
 
-.authDataContainerMemo {
-    background: #18003fef;
-    border-radius: 10px;
-    margin-top: 20px;
-}
 
 .tresholdContainer {
     text-align: left;

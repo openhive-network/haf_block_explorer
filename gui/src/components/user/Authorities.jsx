@@ -82,7 +82,7 @@ export default function Authorities({ user_info, user_witness }) {
           )}
 
           {user_info?.memo_key !== undefined ? (
-            <div className={styles.authDataContainerMemo}>
+            <div className={styles.authDataContainer}>
               <h5>Memo</h5>
               <p className={styles.authData}>{user_info?.memo_key}</p>
             </div>
