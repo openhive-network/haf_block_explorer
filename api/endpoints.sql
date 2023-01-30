@@ -249,12 +249,8 @@ RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-  __result JSONB;
 BEGIN
-  -- _trx_hash TEXT -> BYTEA, __include_reversible = TRUE, __is_legacy_style = FALSE
-  SELECT hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA, TRUE, FALSE) INTO __result;
-  RETURN __result || jsonb_build_object('age', NOW() - (__result->>'expiration')::TIMESTAMP);
+  RETURN hafbe_backend.get_transaction(_trx_hash);
 END
 $$
 ;
