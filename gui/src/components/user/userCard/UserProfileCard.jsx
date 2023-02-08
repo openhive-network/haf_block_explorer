@@ -26,7 +26,8 @@ export default function UserProfileCard({ user }) {
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
   const user_vesting_shares =
     Number(user_info?.vesting_shares?.split("VESTS")[0]) * 1000000;
-  return (
+  
+    return (
     <div className={styles.userCardContainer}>
       <div className={styles.nameContainer}>
         <div className={styles.userPictureContainer}>

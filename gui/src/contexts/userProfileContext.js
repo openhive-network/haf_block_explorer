@@ -1,6 +1,6 @@
 import { useState, createContext, useEffect } from "react";
-
 import axios from "axios";
+import useDebounce from "../components/customHooks/useDebounce";
 
 export const UserProfileContext = createContext();
 export const UserProfileContextProvider = ({ children }) => {
@@ -17,6 +17,8 @@ export const UserProfileContextProvider = ({ children }) => {
 
   const [opTypesLoading, setOpTypesLoading] = useState(false);
   const [userDataLoading, setUserDataLoading] = useState(false);
+
+  const debouncePagination = useDebounce(pagination, 200);
 
   useEffect(() => {
     (async function () {
@@ -39,12 +41,9 @@ export const UserProfileContextProvider = ({ children }) => {
       }
     })();
   }, [userProfile]);
+
   useEffect(() => {
     if (userProfile) {
-      const calc_limit =
-        pagination !== -1 && acc_history_limit > pagination
-          ? pagination
-          : acc_history_limit;
       (async function () {
         setUserDataLoading(true);
         try {
@@ -54,8 +53,8 @@ export const UserProfileContextProvider = ({ children }) => {
             headers: { "Content-Type": "application/json" },
             data: {
               _account: userProfile,
-              _top_op_id: pagination,
-              _limit: calc_limit,
+              _top_op_id: debouncePagination,
+              _limit: acc_history_limit,
               _filter: op_filters,
               _date_start: startDateState,
               _date_end: endDateState,
@@ -70,12 +69,11 @@ export const UserProfileContextProvider = ({ children }) => {
     }
   }, [
     userProfile,
-    pagination,
+    debouncePagination,
     acc_history_limit,
     op_filters,
     startDateState,
     endDateState,
-    setUser_profile_data,
   ]);
 
   useEffect(() => {
@@ -124,6 +122,7 @@ export const UserProfileContextProvider = ({ children }) => {
         setEndDateState: setEndDateState,
         opTypesLoading: opTypesLoading,
         userDataLoading: userDataLoading,
+        debouncePagination: debouncePagination,
       }}
     >
       {children}

@@ -107,7 +107,8 @@ export const votePower = (user_info) => {
   var secondsago =
     (new Date() - new Date(user_info?.last_vote_time + "Z")) / 1000;
   var vpow = user_info?.voting_power + (10000 * secondsago) / 432000;
-  return Math.min(vpow / 100, 100).toFixed(2);
+  return Math.min(vpow / 10000000).toFixed(2);
+  // return Math.min(vpow / 100, 100).toFixed(2);
 };
 
 export const calcResourseCredits = (resource_credits) => {

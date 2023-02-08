@@ -3,7 +3,7 @@ import styles from "./witnessTable.module.css";
 import { Pagination } from "@mui/material";
 import axios from "axios";
 import Loader from "../../components/loader/Loader";
-import usePagination from "../../components/customHooks/Pagination";
+import usePagination from "../../components/customHooks/usePagination";
 
 const CELLS = ["name", "hp", "account hp", "proxied hp"];
 const stylesButtonInherit = {

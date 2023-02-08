@@ -23,6 +23,7 @@ import WitnessProps from "../../components/user/WitnessProps";
 import WitnessVotes from "../../components/user/WitnessVotes";
 import { useEffect } from "react";
 import usePrevious from "../../components/customHooks/usePrevious";
+import LinearLoader from "../../components/loader/LinearLoader";
 
 export default function User_Page({ user }) {
   document.title = `HAF | User ${user}`;
@@ -37,6 +38,9 @@ export default function User_Page({ user }) {
     set_op_filters,
     setStartDateState,
     setEndDateState,
+    pagination,
+    debouncePagination,
+    userDataLoading,
   } = useContext(UserProfileContext);
   const { witnessData } = useContext(WitnessContext);
   const [show_filters, set_show_filters] = useState(false);
@@ -50,6 +54,9 @@ export default function User_Page({ user }) {
   const last_trx_on_page =
     user_profile_data?.[acc_history_limit - 1]?.acc_operation_id;
 
+  const isOperationsLoading =
+    pagination !== debouncePagination || userDataLoading;
+
   const prevUser = usePrevious(user);
 
   useEffect(() => {
@@ -61,7 +68,7 @@ export default function User_Page({ user }) {
       set_op_filters([]);
       setPageCount(1);
     }
-  }, [prevUser, user, last_trx_on_page, max_trx_nr]);
+  }, [user, last_trx_on_page]);
 
   useEffect(() => {
     if (show_filters && op_filters.length) {
@@ -187,15 +194,20 @@ export default function User_Page({ user }) {
                   )}
                 </Col>
               </Row>
-              {user_profile_data.length === 0
-                ? "No operations found"
-                : user_profile_data.map((profile) => (
+              {user_profile_data.length === 0 ? (
+                "No operations found"
+              ) : (
+                <>
+                  <LinearLoader isLoading={isOperationsLoading} />
+                  {user_profile_data.map((profile) => (
                     <Row key={profile.operation_id}>
                       <Col>
                         <OpCard block={profile} full_trx={profile} />
                       </Col>
                     </Row>
                   ))}
+                </>
+              )}
             </Col>
           </Row>
         </Container>
