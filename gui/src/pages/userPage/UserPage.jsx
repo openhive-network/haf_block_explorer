@@ -68,7 +68,7 @@ export default function User_Page({ user }) {
       set_op_filters([]);
       setPageCount(1);
     }
-  }, [user, last_trx_on_page]);
+  }, [prevUser, max_trx_nr, user, last_trx_on_page]);
 
   useEffect(() => {
     if (show_filters && op_filters.length) {
@@ -128,7 +128,7 @@ export default function User_Page({ user }) {
                           pageCount
                         )
                       }
-                      disabled={pageCount === 1}
+                      disabled={pageCount === 1 || isOperationsLoading}
                     >
                       <ArrowBackIosNewIcon />
                     </Button>
@@ -144,7 +144,10 @@ export default function User_Page({ user }) {
                           pageCount
                         )
                       }
-                      disabled={acc_history_limit > user_profile_data.length}
+                      disabled={
+                        acc_history_limit > user_profile_data.length ||
+                        isOperationsLoading
+                      }
                     >
                       <ArrowForwardIosIcon />
                     </Button>

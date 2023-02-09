@@ -44,6 +44,11 @@ export const UserProfileContextProvider = ({ children }) => {
 
   useEffect(() => {
     if (userProfile) {
+      const calc_limit =
+        debouncePagination !== -1 && acc_history_limit > debouncePagination
+          ? debouncePagination
+          : acc_history_limit;
+
       (async function () {
         setUserDataLoading(true);
         try {
@@ -54,7 +59,7 @@ export const UserProfileContextProvider = ({ children }) => {
             data: {
               _account: userProfile,
               _top_op_id: debouncePagination,
-              _limit: acc_history_limit,
+              _limit: calc_limit,
               _filter: op_filters,
               _date_start: startDateState,
               _date_end: endDateState,
