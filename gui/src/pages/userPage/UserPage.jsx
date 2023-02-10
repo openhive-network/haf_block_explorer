@@ -64,6 +64,8 @@ export default function User_Page({ user }) {
       set_get_last_trx_on_page(last_trx_on_page);
       set_get_first_trx_on_page(max_trx_nr);
     } else {
+      setEndDateState(null);
+      setStartDateState(null);
       set_pagination(-1);
       set_op_filters([]);
       setPageCount(1);
