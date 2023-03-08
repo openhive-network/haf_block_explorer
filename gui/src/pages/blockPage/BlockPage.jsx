@@ -21,6 +21,14 @@ export default function Block_Page({ block_nr }) {
 
   const navigate = useNavigate();
 
+  const virtualOperationsCount = block_data?.filter(
+    (block) => block.virtual_op === true
+  ).length;
+
+  const transactionsCount = block_data?.length - virtualOperationsCount;
+
+  const blockTimestamp = block_data?.[0]?.timestamp.split("T").join(" ");
+
   return (
     <>
       {block_data === null || block_data.length === 0 ? (
@@ -54,11 +62,11 @@ export default function Block_Page({ block_nr }) {
               </div>
 
               <p className={styles.text}>
-                <span className={styles.number}>{block_data?.length}</span>{" "}
-                transactions produced in this block at{" "}
-                <span className={styles.number}>
-                  {block_data?.[0]?.timestamp} UTC
-                </span>
+                <span className={styles.number}>{transactionsCount}</span>{" "}
+                transactions and{" "}
+                <span className={styles.number}>{virtualOperationsCount}</span>{" "}
+                virtual operations produced in this block at{" "}
+                <span className={styles.number}>{blockTimestamp} UTC</span>
               </p>
               <Button
                 size="sm"
