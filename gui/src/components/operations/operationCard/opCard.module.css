@@ -21,3 +21,8 @@
     justify-content: flex-end;
     align-items: flex-end;
 }
+
+.links {
+    display: flex;
+    flex-direction: column
+}

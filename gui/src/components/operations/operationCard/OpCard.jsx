@@ -5,38 +5,55 @@ import Operation from "../operation/Operation";
 import styles from "./opCard.module.css";
 
 export default function OpCard({ block, full_trx, trx_id }) {
-  const is_trx_page = document.location.href.includes("transaction");
-
   const type =
     block?.operations?.type === undefined
       ? block.type.replaceAll("_", " ")
       : block.operations.type.replaceAll("_", " ");
 
-  const link_to_trx = () => {
+  const linkToTrx = (() => {
+    return (
+      <Link
+        className={styles.link}
+        to={`/transaction/${block.trx_id || trx_id}`}
+      >
+        {block.trx_id ? block.trx_id?.slice(0, 10) : trx_id?.slice(0, 10)}
+      </Link>
+    );
+  })();
+
+  const linkToBlock = (() => {
+    return (
+      <Link
+        className={styles.link}
+        to={`/block/${block.block || full_trx.block_num}`}
+      >
+        {block.block || full_trx.block_num}
+      </Link>
+    );
+  })();
+
+  const links = (() => {
     if (block.trx_id !== null) {
-      if (is_trx_page === false) {
-        return (
-          <>
-            <Link className={styles.link} to={`/transaction/${block.trx_id}`}>
-              {block.trx_id ? block.trx_id?.slice(0, 10) : trx_id.slice(0, 10)}
-            </Link>
-          </>
-        );
-      } else {
-        return (
-          <p>
-            {block.trx_id ? block.trx_id?.slice(0, 10) : trx_id.slice(0, 10)}
-          </p>
-        );
-      }
+      return (
+        <div className={styles.links}>
+          <p>Trx {linkToTrx}</p>
+          <p>Block {linkToBlock}</p>
+        </div>
+      );
     } else {
-      return <p>Virtual operation</p>;
+      return (
+        <div className={styles.links}>
+          <p>Virtual operation</p>
+          <p>Block {linkToBlock}</p>
+        </div>
+      );
     }
-  };
+  })();
+
   const opTimestampMessage = (op) => {
     return (
       <div className={styles.timestamp}>
-        <p>Created at: {op?.timestamp.split("T").join(" ")}</p>
+        <p> {op?.timestamp.split("T").join(" ")}</p>
         <p>Age: {op?.age}</p>
       </div>
     );
@@ -56,7 +73,7 @@ export default function OpCard({ block, full_trx, trx_id }) {
         <Toast.Body className="text-white">
           <Row>
             <Col className="d-flex justify-content-between">
-              {link_to_trx()}
+              {links}
               <span className={styles.operationType}>{type}</span>
               <small>
                 {block?.timestamp
