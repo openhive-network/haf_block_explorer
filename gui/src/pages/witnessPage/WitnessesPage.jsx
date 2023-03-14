@@ -1,10 +1,4 @@
-import React, {
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { WitnessContext } from "../../contexts/witnessContext";
 import Loader from "../../components/loader/Loader";
 import WitnessTable from "./WitnessTable";
