@@ -15,7 +15,7 @@ export default function UserInfoTable({ user_info }) {
           }
           if (["url"].includes(key)) {
             return (
-              <a href={user_info[key]} target="_blank">
+              <a href={user_info[key]} target="_blank" rel="noreferrer">
                 {user_info[key]}
               </a>
             );
