@@ -15,3 +15,8 @@ a {
 .user_page {
     overflow: scroll;
 }
+
+.stickyRow {
+    padding: 10px;
+    background: #fff;
+}

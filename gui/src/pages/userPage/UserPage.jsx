@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { UserProfileContext } from "../../contexts/userProfileContext";
 import { WitnessContext } from "../../contexts/witnessContext";
 import { Container, Col, Row } from "react-bootstrap";
-import { Button, ButtonGroup } from "@mui/material";
+import { Button, ButtonGroup, Box } from "@mui/material";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import styles from "./userPage.module.css";
@@ -24,6 +24,8 @@ import WitnessVotes from "../../components/user/WitnessVotes";
 import { useEffect } from "react";
 import usePrevious from "../../components/customHooks/usePrevious";
 import LinearLoader from "../../components/loader/LinearLoader";
+import Sticky from "react-stickynode";
+import TopScrollButton from "../../components/common/TopScrollButton";
 
 export default function User_Page({ user }) {
   document.title = `HAF | User ${user}`;
@@ -48,6 +50,7 @@ export default function User_Page({ user }) {
   const [get_last_trx_on_page, set_get_last_trx_on_page] = useState(0);
   const [get_first_trx_on_page, set_get_first_trx_on_page] = useState(0);
   const [pageCount, setPageCount] = useState(1);
+  const [isTopButtonShowing, setIsTopButtonShowing] = useState(false);
 
   const user_witness = witnessData?.filter((w) => w.witness === user);
   const max_trx_nr = user_profile_data?.[0]?.acc_operation_id;
@@ -78,6 +81,15 @@ export default function User_Page({ user }) {
     }
   }, [show_filters, op_filters]);
 
+  onscroll = () => {
+    const lastWindowPosition = window.scrollY;
+    if (lastWindowPosition === 0) {
+      setIsTopButtonShowing(false);
+    } else {
+      setIsTopButtonShowing(true);
+    }
+  };
+
   return (
     <>
       {!user_profile_data || !user_info ? (
@@ -100,110 +112,112 @@ export default function User_Page({ user }) {
                 show_filters={show_filters}
                 set_show_filters={set_show_filters}
               />
-              <Row className="my-3">
-                <Col className="d-flex justify-content-between">
-                  <div>
-                    <p className={styles.operationsCount}>
-                      Operations : {user_profile_data?.length}
-                    </p>
-                    <p className={styles.operationsCount}>
-                      Page Count : {pageCount}
-                    </p>
-                  </div>
 
-                  <ButtonGroup
-                    sx={{
-                      maxHeight: "40px",
-                    }}
-                    size="small"
-                    disableElevation
-                    variant="contained"
-                    color="secondary"
-                  >
-                    <Button
-                      onClick={() =>
-                        handlePrevPage(
-                          set_pagination,
-                          prevNextPage,
-                          setPrevNextPage,
-                          setPageCount,
-                          pageCount
-                        )
-                      }
-                      disabled={pageCount === 1 || isOperationsLoading}
+              <Sticky enabled={true}>
+                <Row className={styles.stickyRow}>
+                  <Col className="d-flex justify-content-between align-items-center">
+                    <Box>
+                      <p className={styles.operationsCount}>
+                        Operations : {user_profile_data?.length}
+                      </p>
+                      <p className={styles.operationsCount}>
+                        Page Count : {pageCount}
+                      </p>
+                    </Box>
+                    <ButtonGroup
+                      sx={{
+                        height: "40px",
+                      }}
+                      size="small"
+                      disableElevation
+                      variant="contained"
+                      color="secondary"
                     >
-                      <ArrowBackIosNewIcon />
-                    </Button>
-
-                    <Button
-                      onClick={() =>
-                        handleNextPage(
-                          set_pagination,
-                          get_last_trx_on_page,
-                          get_first_trx_on_page,
-                          setPrevNextPage,
-                          setPageCount,
-                          pageCount
-                        )
-                      }
-                      disabled={
-                        acc_history_limit > user_profile_data.length ||
-                        isOperationsLoading
-                      }
-                    >
-                      <ArrowForwardIosIcon />
-                    </Button>
-                  </ButtonGroup>
-
-                  {op_filters.length === 0 &&
-                  startDateState === null &&
-                  endDateState === null ? (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        onClick={() => set_show_filters(!show_filters)}
-                      >
-                        Filters
-                      </Button>
-                    </>
-                  ) : (
-                    <ButtonGroup>
-                      <Button
-                        variant="contained"
-                        color="warning"
-                        onClick={() => set_show_filters(!show_filters)}
-                      >
-                        Filters (active)
-                      </Button>
                       <Button
                         onClick={() =>
-                          clearFilters(
-                            setEndDateState,
-                            setStartDateState,
-                            set_op_filters,
+                          handlePrevPage(
                             set_pagination,
-                            setPageCount
+                            prevNextPage,
+                            setPrevNextPage,
+                            setPageCount,
+                            pageCount
                           )
                         }
-                        variant="contained"
-                        color="secondary"
+                        disabled={pageCount === 1 || isOperationsLoading}
                       >
-                        Clear filters
+                        <ArrowBackIosNewIcon />
                       </Button>
-                      <MultiSelectFilters
-                        show_filters={show_filters}
-                        set_show_filters={set_show_filters}
-                      />
+
+                      <Button
+                        onClick={() =>
+                          handleNextPage(
+                            set_pagination,
+                            get_last_trx_on_page,
+                            get_first_trx_on_page,
+                            setPrevNextPage,
+                            setPageCount,
+                            pageCount
+                          )
+                        }
+                        disabled={
+                          acc_history_limit > user_profile_data.length ||
+                          isOperationsLoading
+                        }
+                      >
+                        <ArrowForwardIosIcon />
+                      </Button>
                     </ButtonGroup>
-                  )}
-                </Col>
-              </Row>
+
+                    {op_filters.length === 0 &&
+                    startDateState === null &&
+                    endDateState === null ? (
+                      <>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          onClick={() => set_show_filters(!show_filters)}
+                        >
+                          Filters
+                        </Button>
+                      </>
+                    ) : (
+                      <ButtonGroup>
+                        <Button
+                          variant="contained"
+                          color="warning"
+                          onClick={() => set_show_filters(!show_filters)}
+                        >
+                          Filters (active)
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            clearFilters(
+                              setEndDateState,
+                              setStartDateState,
+                              set_op_filters,
+                              set_pagination,
+                              setPageCount
+                            )
+                          }
+                          variant="contained"
+                          color="secondary"
+                        >
+                          Clear filters
+                        </Button>
+                        <MultiSelectFilters
+                          show_filters={show_filters}
+                          set_show_filters={set_show_filters}
+                        />
+                      </ButtonGroup>
+                    )}
+                  </Col>
+                </Row>
+                <LinearLoader isLoading={isOperationsLoading} />
+              </Sticky>
               {user_profile_data.length === 0 ? (
                 "No operations found"
               ) : (
                 <>
-                  <LinearLoader isLoading={isOperationsLoading} />
                   {user_profile_data.map((profile) => (
                     <Row key={profile.operation_id}>
                       <Col>
@@ -215,6 +229,7 @@ export default function User_Page({ user }) {
               )}
             </Col>
           </Row>
+          {isTopButtonShowing && <TopScrollButton />}
         </Container>
       )}
     </>
