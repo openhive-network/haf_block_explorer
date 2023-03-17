@@ -4,6 +4,7 @@ import BlockPage from "../../../pages/blockPage/BlockPage";
 import UserPage from "../../../pages/userPage/UserPage";
 import TransactionPage from "../../../pages/transactionPage/TransactionPage";
 import WitnessesPage from "../../../pages/witnessPage/WitnessesPage";
+import CommentsPage from "../../../pages/commentsPage/CommentsPage";
 import { Routes, Route } from "react-router-dom";
 import ErrorPage from "../../../pages/ErrorPage";
 import { UserProfileContext } from "../../../contexts/userProfileContext";
@@ -60,6 +61,7 @@ export default function Content() {
           path={transactionId && `transaction/${transactionId}`}
           element={<TransactionPage transaction={transactionId} />}
         />
+        <Route path="/comments" element={<CommentsPage />} />
         <Route path="witnesses" element={<WitnessesPage />} />
         <Route path="error" element={<ErrorPage />} />
       </Routes>
