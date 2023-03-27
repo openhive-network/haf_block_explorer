@@ -224,7 +224,7 @@ BEGIN
         timestamp, operation_id
       FROM (
         SELECT
-          (body::JSON)->'value' AS value,
+          (body::jsonb)->'value' AS value,
           timestamp, id AS operation_id
         FROM hive.hafbe_app_operations_view
         WHERE op_type_id = 12 AND block_num BETWEEN _from AND _to
@@ -278,7 +278,7 @@ BEGIN
         timestamp, operation_id
       FROM (
         SELECT
-          (body::JSON)->'value' AS value,
+          (body::jsonb)->'value' AS value,
           timestamp, id AS operation_id, op_type_id
         FROM hive.hafbe_app_operations_view
         WHERE op_type_id = ANY('{13,91}') AND block_num BETWEEN _from AND _to
@@ -330,7 +330,7 @@ BEGIN
         (SELECT hive.get_impacted_accounts(body))
       END AS name
     FROM (
-      SELECT body, (body::JSON)->'value' AS value, op_type_id
+      SELECT body, (body::jsonb)->'value' AS value, op_type_id
       FROM hive.hafbe_app_operations_view
       WHERE op_type_id = ANY('{12,42,11,7}') AND block_num BETWEEN _from AND _to
     ) ops_in_range

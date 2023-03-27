@@ -3,7 +3,7 @@ CREATE SCHEMA IF NOT EXISTS hafbe_views AUTHORIZATION hafbe_owner;
 CREATE OR REPLACE VIEW hafbe_views.witness_prop_op_view AS
 SELECT
   bia.name AS witness,
-  (body::JSON)->'value' AS value,
+  (body::jsonb)->'value' AS value,
   block_num, op_type_id, timestamp, id AS operation_id
 FROM hive.hafbe_app_operations_view hov
 
