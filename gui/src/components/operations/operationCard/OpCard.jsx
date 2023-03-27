@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Toast, Row, Col } from "react-bootstrap";
 import Operation from "../operation/Operation";
 import styles from "./opCard.module.css";
+import { operationCardColors } from "./operationCardColors";
 
 export default function OpCard({ block, full_trx, trx_id }) {
   const type =
@@ -67,9 +68,33 @@ export default function OpCard({ block, full_trx, trx_id }) {
       </div>
     );
   };
+
+  const operationValue = (() => {
+    if (block?.operations?.type === undefined) {
+      return block.type;
+    } else {
+      return block.operations.type;
+    }
+  })();
+
+  const operationType = (() => {
+    if (block?.operations === undefined) {
+      return block;
+    } else {
+      return block.operations;
+    }
+  })();
+
+  const cardBodyColor = operationCardColors[operationValue]?.bodyColor;
+  const cardFontColor = operationCardColors[operationValue]?.fontColor;
+
+  
   return (
     <>
-      <Toast className={`d-inline-block m-1 w-100 ${styles.toast}`}>
+      <Toast
+        style={{ background: cardBodyColor, color: cardFontColor }}
+        className={`d-inline-block m-1 w-100 ${styles.toast}`}
+      >
         <Toast.Body className="text-white">
           <Row>
             <Col className="d-flex justify-content-between">
@@ -85,14 +110,8 @@ export default function OpCard({ block, full_trx, trx_id }) {
           <Row>
             <Col className="text-center">
               <Operation
-                value={
-                  block?.operations?.type === undefined
-                    ? block.type
-                    : block.operations.type
-                }
-                type={
-                  block?.operations === undefined ? block : block?.operations
-                }
+                value={operationValue}
+                type={operationType}
                 full_trx={full_trx}
               />
             </Col>
