@@ -432,6 +432,44 @@ END
 $$
 ;
 
+DROP TYPE IF EXISTS hafbe_endpoints.btracker_account_balance CASCADE;
+CREATE TYPE hafbe_endpoints.btracker_account_balance AS
+(
+  hbd_balance INT,
+  hive_balance INT,
+  vesting_shares BIGINT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_account_balance(_account TEXT)
+RETURNS hafbe_endpoints.btracker_account_balance
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  hive_amount TEXT;
+  hbd_amount TEXT;
+  vest_amount TEXT;
+  __result hafbe_endpoints.btracker_account_balance;
+BEGIN
+
+SELECT  
+  MAX(CASE WHEN nai = 13 THEN balance END) AS hbd,
+  MAX(CASE WHEN nai = 21 THEN balance END) AS hive, 
+  MAX(CASE WHEN nai = 37 THEN balance END) AS vest 
+INTO hbd_amount, hive_amount, vest_amount
+FROM btracker_app.current_account_balances WHERE account= _account;
+
+  __result.hbd_balance = hbd_amount;
+  __result.hive_balance = hive_amount;
+  __result.vesting_shares = vest_amount;
+
+RETURN __result;
+
+END
+$$
+;
+
+
 CREATE FUNCTION hafbe_endpoints.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
