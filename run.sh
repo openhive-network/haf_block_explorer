@@ -6,7 +6,7 @@ set -o pipefail
 process_blocks() {
     n_blocks="${1:-null}"
     log_file="block_processing.log"
-    sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', $n_blocks);" 2>&1 | tee $log_file
+    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app','btracker_app' , $n_blocks);" 2>&1 | tee $log_file
 }
 
 stop_processing() {
