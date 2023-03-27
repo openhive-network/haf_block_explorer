@@ -600,7 +600,7 @@ SET join_collapse_limit = 16
 SET jit = OFF
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCHAR, IN _from INT, IN _to INT, IN _step INT, INOUT _last_block INT)
+CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCHAR, IN _btrackerappContext VARCHAR, IN _from INT, IN _to INT, IN _step INT, INOUT _last_block INT)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -608,7 +608,7 @@ BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
   PERFORM hive.app_context_detach(_appContext);
-
+  PERFORM hive.app_context_detach(_btrackerappContext);
   --- You can do here also other things to speedup your app, i.e. disable constrains, remove indexes etc.
 
   FOR b IN _from .. _to BY _step LOOP
@@ -618,7 +618,9 @@ BEGIN
       _last_block := _to;
     END IF;
 
-    --RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
+    RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
+
+    PERFORM btracker_app.process_block_range_data_c(b, _last_block);
 
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
 
@@ -646,6 +648,7 @@ BEGIN
   IF hafbe_app.continueProcessing() AND _last_block < _to THEN
     RAISE NOTICE 'Attempting to process a block range (rest): <%, %>', b, _last_block;
     --- Supplement last part of range if anything left.
+    PERFORM btracker_app.process_block_range_data_c(_last_block, _to);
     PERFORM hafbe_app.process_block_range_data_c(_last_block, _to);
     _last_block := _to;
 
@@ -655,7 +658,7 @@ BEGIN
 
   RAISE NOTICE 'Attaching HAF application context at block: %.', _last_block;
   PERFORM hive.app_context_attach(_appContext, _last_block);
-
+  PERFORM hive.app_context_attach(_btrackerappContext, _last_block);
  --- You should enable here all things previously disabled at begin of this function...
 
  RAISE NOTICE 'Leaving massive processing of block range: <%, %>...', _from, _to;
@@ -668,6 +671,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
+  PERFORM btracker_app.process_block_range_data_c(_block, _block);
   PERFORM hafbe_app.process_block_range_data_c(_block, _block);
   COMMIT; -- For single block processing we want to commit all changes for each one.
 END
@@ -682,7 +686,6 @@ BEGIN
   IF NOT hive.app_context_exists(_appContext) THEN
     RAISE NOTICE 'Attempting to create a HAF application context...';
     PERFORM hive.app_create_context(_appContext);
-    PERFORM hafbe_app.define_schema();
     COMMIT;
   END IF;
 END
@@ -777,7 +780,7 @@ SET from_collapse_limit=16
   - creates HAF application context,
   - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULL)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _btrackerContext VARCHAR, _maxBlockLimit INT = NULL)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -796,6 +799,10 @@ BEGIN
     PERFORM hive.app_context_attach(_appContext, __last_block);
   END IF;
 
+  IF NOT hive.app_context_is_attached(_btrackerContext) THEN
+    PERFORM hive.app_context_attach(_btrackerContext, __last_block);
+  END IF;
+
   RAISE NOTICE 'Entering application main loop...';
 
   IF _maxBlockLimit IS NULL THEN
@@ -809,7 +816,7 @@ BEGIN
     COMMIT;
 
     IF __next_block_range IS NULL THEN
-      -- RAISE WARNING 'Waiting for next block...';
+       RAISE WARNING 'Waiting for next block...';
     ELSE
       IF _maxBlockLimit != 0 and __next_block_range.first_block > _maxBlockLimit THEN
         __next_block_range.first_block  := _maxBlockLimit;
@@ -822,7 +829,7 @@ BEGIN
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
 
       IF __next_block_range.first_block != __next_block_range.last_block THEN
-        CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
+        CALL hafbe_app.do_massive_processing(_appContext, _btrackerContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         __last_block := __next_block_range.last_block;
