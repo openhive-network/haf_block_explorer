@@ -50,7 +50,9 @@ fi;
 
 if [ "$1" = "start" ]; then
     start_webserver $2
-elif [ "$1" = "setup" ]; then
+elif [ "$1" = "setup-db" ]; then
+    ./scripts/setup_db.sh all
+elif [ "$1" = "setup-all" ]; then
     ./scripts/setup_dependancies.sh all
     ./scripts/setup_db.sh all
 elif [ "$1" = "process-blocks" ]; then

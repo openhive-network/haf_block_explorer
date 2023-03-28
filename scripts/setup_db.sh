@@ -57,43 +57,12 @@ EOF
 }
 
 setup_apps() {
-  build_dir=$PWD/build
-  rm -rf $build_dir
-  mkdir $build_dir
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$hafah_dir/queries/ah_schema_functions.pgsql"
 
-  # hafah
-  schema="hafah_python"
-  function="get_transaction_json"
-
-  result=$(find_function $schema $function 2>&1)
-  notice="$schema.$function() does not exist"
-
-  if [[ $result = *"$notice"* ]]; then
-    cd $build_dir
-    git clone git@gitlab.syncad.com:hive/HAfAH.git
-    cd $build_dir/HAfAH
-    git checkout develop
-    
-    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "queries/ah_schema_functions.pgsql"
-  fi
-
-  # btracker
-  schema="btracker_app"
-  function="find_matching_accounts"
-
-  result=$(find_function $schema $function 2>&1)
-  notice="$schema.$function() does not exist"
-
-  if [[ $result = *"$notice"* ]]; then
-    cd $build_dir
-    git clone git@gitlab.syncad.com:hive/balance_tracker.git
-    cd $build_dir/balance_tracker
-    git checkout develop
-    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
-    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS btracker_app;"
-    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "api/btracker_api.sql"
-    sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "db/btracker_app.sql"
-  fi
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS btracker_app;"
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$btracker_dir/api/btracker_api.sql"
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$btracker_dir/db/btracker_app.sql"
 }
 
 setup_extensions() {
@@ -102,9 +71,9 @@ setup_extensions() {
 }
 
 setup_api() {
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app.sql
-  
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app.sql 
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/indexes.sql
+  
   # must be done by admin because of hive.contexts permissions
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
@@ -123,10 +92,6 @@ setup_api() {
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/roles.sql
 }
 
-create_indexes() {
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "call btracker_app.create_indexes();"
-}
-
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
@@ -138,7 +103,8 @@ owner_role=hafbe_owner
 
 postgrest_dir=$PWD/api
 db_dir=$PWD/db
-
+hafah_dir=$PWD/HAfAH
+btracker_dir=$PWD/balance_tracker/
 sudo echo
 
 if [ "$1" = "all" ]; then
