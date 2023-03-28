@@ -8,3 +8,4 @@
 [submodule "HAfAH"]
 	path = HAfAH
 	url = https://gitlab.syncad.com/hive/HAfAH.git
+	branch = develop
