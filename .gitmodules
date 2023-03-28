@@ -4,3 +4,4 @@
 [submodule "balance_tracker"]
 	path = balance_tracker
 	url = https://gitlab.syncad.com/hive/balance_tracker.git
+	branch = develop
