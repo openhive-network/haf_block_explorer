@@ -1,3 +1,6 @@
 [submodule "haf"]
 	path = haf
 	url = git@gitlab.syncad.com:hive/haf.git
+[submodule "balance_tracker"]
+	path = balance_tracker
+	url = https://gitlab.syncad.com/hive/balance_tracker.git
