@@ -11,10 +11,13 @@ npm: `latest`
 
 ## Setup
 
-To start using haf block explorer, first
+To start using haf block explorer, on first setup use:
 ```
-./scripts/setup_dependancies.sh all
-./scripts/setup_db.sh all
+./run.sh setup-all
+```
+If u want setup db only, use:
+```
+./run.sh setup-db
 ```
 This will create required postgres schemas and roles, also [indexes](https://gitlab.syncad.com/hive/haf_block_explorer/-/blob/22-create-witness-table/db/indexes.sql#L20) on haf db.
 
