@@ -4,3 +4,6 @@
 [submodule "submodules/hafah"]
 	path = submodules/hafah
 	url = https://gitlab.syncad.com/hive/HAfAH.git
+[submodule "submodules/haf"]
+	path = submodules/haf
+	url = https://gitlab.syncad.com/hive/haf.git
