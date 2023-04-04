@@ -57,8 +57,9 @@ EOF
 }
 
 setup_apps() {
+  #setup hafah 
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$hafah_dir/queries/ah_schema_functions.pgsql"
-
+  #setup balance tracker 
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS btracker_app;"
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$btracker_dir/api/btracker_api.sql"
@@ -71,8 +72,18 @@ setup_extensions() {
 }
 
 setup_api() {
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/indexes.sql
+
+    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+    GRANT CREATE ON DATABASE "$DB_NAME" TO $u;
+EOF
+  # setup db schema
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_indexes.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/main_loop.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
+
   
   # must be done by admin because of hive.contexts permissions
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
@@ -83,13 +94,28 @@ setup_api() {
 
   sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/views.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/types.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/exceptions.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/backend.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/endpoints.sql
+  # setup backend schema
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_account_data.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_block_stats.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operation_types.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
+  # setup endpoints schema
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_account.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_block.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_input_type.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_operation_type.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_transaction.sql 
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_witness.sql 
+
   # must be done by admin
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $postgrest_dir/roles.sql
+  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_roles.sql
 }
 
 create_haf_indexes() {
@@ -101,7 +127,9 @@ DB_NAME=haf_block_log
 admin_role=haf_admin
 owner_role=hafbe_owner
 
-postgrest_dir=$PWD/api
+
+endpoints=$PWD/endpoints
+backend=$PWD/backend
 db_dir=$PWD/db
 hafah_dir=$PWD/HAfAH
 btracker_dir=$PWD/balance_tracker/
