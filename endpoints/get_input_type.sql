@@ -7,7 +7,7 @@ raises exceptions:
   > 'raise_unknown_input_exception()'
 */
 
-CREATE FUNCTION hafbe_endpoints.get_input_type(_input TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(_input TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_endpoints.get_head_block_num()
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -9,7 +9,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_block(_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block(_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

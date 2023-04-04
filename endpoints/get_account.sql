@@ -36,7 +36,7 @@ $$
 ;
 
 
-CREATE FUNCTION hafbe_endpoints.get_account(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -133,7 +133,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_account_resource_credits(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_resource_credits(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

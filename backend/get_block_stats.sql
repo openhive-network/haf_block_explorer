@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_backend.get_head_block_num()
+CREATE OR REPLACE FUNCTION hafbe_backend.get_head_block_num()
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -9,7 +9,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_block_data(_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_block_data(_block_num INT)
 RETURNS SETOF hafbe_types.block
 AS
 $function$
@@ -36,7 +36,7 @@ SET from_collapse_limit=16
 ;
 
 
-CREATE FUNCTION hafbe_backend.get_todays_date()
+CREATE OR REPLACE FUNCTION hafbe_backend.get_todays_date()
 RETURNS DATE
 LANGUAGE 'plpgsql'
 AS
@@ -56,7 +56,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.vests_to_hive_power(VARIADIC vests_value NUMERIC[])
+CREATE OR REPLACE FUNCTION hafbe_backend.vests_to_hive_power(VARIADIC vests_value NUMERIC[])
 RETURNS SETOF FLOAT
 LANGUAGE 'plpgsql'
 AS

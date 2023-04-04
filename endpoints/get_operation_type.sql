@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_endpoints.format_op_types(op_type_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.format_op_types(op_type_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -9,7 +9,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_op_types()
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -23,7 +23,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -39,7 +39,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

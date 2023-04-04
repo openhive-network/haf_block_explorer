@@ -2,7 +2,7 @@ DROP SCHEMA IF EXISTS hafbe_exceptions CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_exceptions AUTHORIZATION hafbe_owner;
 
-CREATE FUNCTION hafbe_exceptions.raise_exception(_status INT, _error_id INT, _error TEXT, _message TEXT, _data TEXT = NULL)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_exception(_status INT, _error_id INT, _error TEXT, _message TEXT, _data TEXT = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -20,7 +20,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -33,7 +33,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -46,7 +46,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_unknown_input_exception(_input TEXT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_input_exception(_input TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -60,7 +60,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_ops_limit_exception(_start BIGINT, _limit BIGINT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_ops_limit_exception(_start BIGINT, _limit BIGINT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -74,7 +74,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_no_such_column_exception(_order_by TEXT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_no_such_column_exception(_order_by TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -88,7 +88,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_exceptions.raise_no_such_order_exception(_order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_no_such_order_exception(_order_is TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

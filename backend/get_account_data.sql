@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_backend.get_account_id(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_id(_account TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -9,7 +9,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS
@@ -31,7 +31,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS
@@ -61,7 +61,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.validate_profile_picture_link(__profile_image_url TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_profile_picture_link(__profile_image_url TEXT)
 RETURNS INT
 LANGUAGE 'plpython3u'
 AS 
@@ -80,7 +80,7 @@ $$
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_account_resource_credits(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_resource_credits(_account TEXT)
 RETURNS JSON
 LANGUAGE 'plpython3u'
 AS 

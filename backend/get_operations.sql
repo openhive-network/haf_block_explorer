@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_trx_hash(_block_num INT, _trx_in_block INT)
 RETURNS TEXT
 LANGUAGE 'plpgsql'
 AS 
@@ -11,7 +11,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id INT, _limit INT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id INT, _limit INT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS SETOF hafbe_types.operations
 AS
 $function$
@@ -94,7 +94,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit INT, _filter SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_block(_block_num INT, _top_op_id BIGINT, _limit INT, _filter SMALLINT[])
 RETURNS SETOF hafbe_types.operations 
 AS
 $function$

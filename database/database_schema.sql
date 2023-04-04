@@ -125,7 +125,7 @@ BEGIN
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
-  CREATE TABLE hafbe_app.witness_voters_stats_change_cache (
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_change_cache (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     vests NUMERIC NOT NULL,
@@ -135,7 +135,7 @@ BEGIN
     timestamp TIMESTAMP NOT NULL
   );
 
-  CREATE TABLE hafbe_app.witness_votes_change_cache (
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
     witness_id INT NOT NULL,
     votes_daily_change BIGINT NOT NULL,
     voters_num_daily_change INT NOT NULL,

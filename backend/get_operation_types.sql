@@ -1,5 +1,5 @@
 
-CREATE FUNCTION hafbe_backend.get_set_of_op_types()
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_op_types()
 RETURNS SETOF hafbe_types.op_types
 LANGUAGE 'plpgsql'
 AS
@@ -13,7 +13,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_acc_op_types(_account_id INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_acc_op_types(_account_id INT)
 RETURNS SETOF hafbe_types.op_types
 AS
 $function$
@@ -39,7 +39,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_block_op_types(_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_block_op_types(_block_num INT)
 RETURNS SETOF hafbe_types.op_types
 AS
 $function$

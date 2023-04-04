@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_endpoints.get_witness_voters_num(_witness TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters_num(_witness TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -11,7 +11,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -66,7 +66,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witness_voters_daily_change(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters_daily_change(_witness TEXT, _limit INT = 1000, _offset INT = 0, _order_by TEXT = 'vests', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS
@@ -121,7 +121,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 1000, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 1000, _offset INT = 0, _order_by TEXT = 'votes', _order_is TEXT = 'desc', _to_hp BOOLEAN = TRUE)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

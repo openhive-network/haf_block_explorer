@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 AS

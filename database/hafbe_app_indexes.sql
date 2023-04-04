@@ -2,7 +2,7 @@ DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_indexes AUTHORIZATION hafbe_owner;
 
-CREATE FUNCTION hafbe_indexes.create_hafbe_indexes()
+CREATE OR REPLACE FUNCTION hafbe_indexes.create_hafbe_indexes()
 RETURNS VOID
 LANGUAGE 'plpgsql'
 AS
@@ -17,7 +17,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_indexes.create_haf_indexes()
+CREATE OR REPLACE FUNCTION hafbe_indexes.create_haf_indexes()
 RETURNS VOID
 LANGUAGE 'plpgsql'
 AS

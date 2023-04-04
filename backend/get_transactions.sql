@@ -1,4 +1,4 @@
-CREATE FUNCTION hafbe_backend.get_transaction(_trx_hash TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction(_trx_hash TEXT)
 RETURNS JSONB
 LANGUAGE 'plpgsql'
 AS

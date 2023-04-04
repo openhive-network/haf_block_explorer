@@ -2,7 +2,7 @@
 witness voters
 */
 
-CREATE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT)
 RETURNS INT
 LANGUAGE 'plpgsql'
 AS
@@ -13,7 +13,7 @@ END
 $$
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_in_vests
 AS
 $function$
@@ -96,7 +96,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_in_hp
 AS
 $function$
@@ -118,7 +118,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_daily_change_in_vests
 AS
 $function$
@@ -211,7 +211,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters_in_hp
 AS
 $function$
@@ -238,7 +238,7 @@ witnesses
 */
 
 
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_in_vests(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses_in_vests(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witnesses_in_vests
 AS
 $function$
@@ -437,7 +437,7 @@ SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
 
-CREATE FUNCTION hafbe_backend.get_set_of_witnesses_in_hp(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses_in_hp(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witnesses_in_hp
 AS
 $function$
