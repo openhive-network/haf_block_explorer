@@ -1,3 +1,6 @@
 [submodule "submodules/btracker"]
 	path = submodules/btracker
 	url = https://gitlab.syncad.com/hive/balance_tracker.git
+[submodule "submodules/hafah"]
+	path = submodules/hafah
+	url = https://gitlab.syncad.com/hive/HAfAH.git
