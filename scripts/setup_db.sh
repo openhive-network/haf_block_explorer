@@ -130,9 +130,9 @@ owner_role=hafbe_owner
 
 endpoints=$PWD/endpoints
 backend=$PWD/backend
-db_dir=$PWD/db
-hafah_dir=$PWD/HAfAH
-btracker_dir=$PWD/balance_tracker/
+db_dir=$PWD/database
+hafah_dir=$PWD/submodules/hafah
+btracker_dir=$PWD/submodules/btracker
 sudo echo
 
 if [ "$1" = "all" ]; then
