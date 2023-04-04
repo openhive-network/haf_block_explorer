@@ -72,10 +72,6 @@ setup_extensions() {
 }
 
 setup_api() {
-
-    sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
-    GRANT CREATE ON DATABASE "$DB_NAME" TO $u;
-EOF
   # setup db schema
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql 
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
@@ -96,15 +92,16 @@ EOF
 
   # setup backend schema
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
+  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_account_data.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_block_stats.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operation_types.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
+
   # setup endpoints schema
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
   sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_account.sql 
