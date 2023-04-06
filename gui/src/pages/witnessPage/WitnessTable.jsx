@@ -72,6 +72,7 @@ export default function WitnessTable({
             const inactiveWitness =
               witness.signing_key ===
               "STM1111111111111111111111111111111114T1Anm";
+
             return (
               <tr
                 key={witness.witness}
@@ -92,10 +93,11 @@ export default function WitnessTable({
                   {witness.votes.toFixed(2)}{" "}
                   <span
                     style={{
-                      color: witness.votes_daily_change > 0 ? "#0fbb2c" : "red",
+                      color:
+                        witness?.votes_daily_change > 0 ? "#0fbb2c" : "red",
                     }}
                   >
-                    {witness.votes_daily_change.toFixed(2)}
+                    {witness?.votes_daily_change?.toFixed(2)}
                   </span>
                   <span style={styles.list_icon}>
                     <OverlayTrigger
