@@ -25,8 +25,6 @@ export default function Operation({ value, type, full_trx }) {
     }
   }, [trx_page]);
 
-  console.log(full_trx?.trx_id);
-
   function prettyViewCard() {
     return (
       <Row className="d-flex">
