@@ -13,7 +13,7 @@ export default function Operation({ value, type, full_trx }) {
   const { vesting_fund, vesting_shares } = useContext(HeadBlockContext);
   const keys = Object.keys(type.value);
   const [showJson, setShowJson] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
   const [is_page_trx, set_is_page_trx] = useState(null);
   const trx_page = document.location.href.includes("transaction");
 
