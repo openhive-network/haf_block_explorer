@@ -16,6 +16,7 @@ export default function OpCard({ block, full_trx, trx_id }) {
       <Link
         className={styles.link}
         to={`/transaction/${block.trx_id || trx_id}`}
+        target="_blank"
       >
         {block.trx_id ? block.trx_id?.slice(0, 10) : trx_id?.slice(0, 10)}
       </Link>
@@ -27,6 +28,7 @@ export default function OpCard({ block, full_trx, trx_id }) {
       <Link
         className={styles.link}
         to={`/block/${block.block || full_trx.block_num}`}
+        target="_blank"
       >
         {block.block || full_trx.block_num}
       </Link>
@@ -88,7 +90,6 @@ export default function OpCard({ block, full_trx, trx_id }) {
   const cardBodyColor = operationCardColors[operationValue]?.bodyColor;
   const cardFontColor = operationCardColors[operationValue]?.fontColor;
 
-  
   return (
     <>
       <Toast
