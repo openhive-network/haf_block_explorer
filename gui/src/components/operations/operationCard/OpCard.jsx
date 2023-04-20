@@ -90,11 +90,15 @@ export default function OpCard({ block, full_trx, trx_id }) {
   const cardBodyColor = operationCardColors[operationValue]?.bodyColor;
   const cardFontColor = operationCardColors[operationValue]?.fontColor;
 
+  const isTransactionPage = document.location.href.includes("transaction");
+
   return (
     <>
       <Toast
         style={{ background: cardBodyColor, color: cardFontColor }}
-        className={`d-inline-block m-1 w-100 ${styles.toast}`}
+        className={`d-inline-block m-1 w-100 ${
+          isTransactionPage ? styles.trx_toast : styles.toast
+        }`}
       >
         <Toast.Body className="text-white">
           <Row>

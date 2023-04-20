@@ -15,6 +15,17 @@
     /* max-height: 300px */
 }
 
+.trx_toast {
+    background-color: #2C3136;
+    max-height: 500px;
+    overflow: auto;
+    border-radius: 0;
+    border: none;
+    background-clip: unset;
+    overflow: unset;
+    margin: 0 !important;
+}
+
 .timestamp {
     display: flex;
     flex-direction: column;

@@ -50,35 +50,37 @@ export default function Operation({ value, type, full_trx }) {
     return (
       <>
         {trx_page === false && (
-          <span>
-            {!full_trx.trx_id && (
+          <>
+            <span>
+              {!full_trx.trx_id && (
+                <button
+                  onClick={() => setShowJson(!showJson)}
+                  className={styles.jsonButton}
+                >
+                  json
+                </button>
+              )}
               <button
-                onClick={() => setShowJson(!showJson)}
-                className={styles.jsonButton}
+                onClick={() => setShowDetails(!showDetails)}
+                className={styles.detailsButton}
               >
-                json
+                details
               </button>
-            )}
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className={styles.detailsButton}
-            >
-              details
-            </button>
-          </span>
-        )}
+            </span>
 
-        <div
-          style={{ marginTop: "20px", textAlign: "left" }}
-          hidden={is_page_trx === false ? false : !showJson}
-        >
-          <pre style={{ color: "#3aff33" }}>
-            {JSON.stringify(full_trx, null, 2)}{" "}
-          </pre>
-        </div>
-        <div hidden={is_page_trx === false ? false : !showDetails}>
-          {prettyViewCard()}
-        </div>
+            <div
+              style={{ marginTop: "20px", textAlign: "left" }}
+              hidden={is_page_trx === false ? false : !showJson}
+            >
+              <pre style={{ color: "#3aff33" }}>
+                {JSON.stringify(full_trx, null, 2)}{" "}
+              </pre>
+            </div>
+            <div hidden={is_page_trx === false ? false : !showDetails}>
+              {prettyViewCard()}
+            </div>
+          </>
+        )}
       </>
     );
   }
