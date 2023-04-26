@@ -8,7 +8,8 @@ export default function Authorities({ user_info, user_witness }) {
       {user_info?.owner?.key_auths ? (
         <div className={styles.authContainer}>
           <h3>Authorities</h3>
-          {user_witness?.[0]?.signing_key !== undefined ? (
+
+          {user_witness.length ? (
             <div className={styles.authDataContainer}>
               <h5>Signinig</h5>
               <p className={styles.authData}>
@@ -19,7 +20,7 @@ export default function Authorities({ user_info, user_witness }) {
             ""
           )}
 
-          {user_info?.owner.key_auths !== undefined ? (
+          {user_info?.owner?.key_auths.length ? (
             <div className={styles.authDataContainer}>
               <h5>Owner</h5>
               <p className={styles.authData}>
@@ -33,7 +34,7 @@ export default function Authorities({ user_info, user_witness }) {
             ""
           )}
 
-          {user_info?.active.key_auths !== undefined ? (
+          {user_info?.active?.key_auths.length ? (
             <div className={styles.authDataContainer}>
               <h5>Active</h5>
               <p className={styles.authData}>
@@ -47,7 +48,7 @@ export default function Authorities({ user_info, user_witness }) {
             ""
           )}
 
-          {user_info?.posting.key_auths !== undefined ? (
+          {user_info?.posting?.key_auths.length ? (
             <div className={styles.authDataContainer}>
               <h5>Posting</h5>
               <p className={styles.authData}>
@@ -56,7 +57,8 @@ export default function Authorities({ user_info, user_witness }) {
               <p>
                 Threshold : <span>{user_info?.posting.key_auths[0][1]}</span>
               </p>
-              {user_info?.posting.account_auths !== undefined ? (
+
+              {user_info?.posting?.account_auths.length ? (
                 <div className={styles.tresholdContainer}>
                   <ul>
                     {user_info?.posting.account_auths.map((acc, i) => (
