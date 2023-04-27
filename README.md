@@ -10,14 +10,20 @@ Node: `latest`<br>
 npm: `latest`
 
 ## Setup
-
+To see available list of commands with parameters use:
+```
+./run.sh --help
+```
 To start using haf block explorer, on first setup use:
 ```
-./run.sh setup-all
+./scripts/setup_dependancies.sh
+./scripts/setup_db.sh
+
 ```
 If u want setup db only, use:
 ```
-./run.sh setup-db
+./scripts/setup_dependancies.sh
+./scripts/setup_db.sh
 ```
 This will create required postgres schemas and roles, also [indexes](https://gitlab.syncad.com/hive/haf_block_explorer/-/blob/22-create-witness-table/db/indexes.sql#L20) on haf db.
 
@@ -31,34 +37,25 @@ cd gui ; npm install ; cd ..
 
 hafbe will process blocks from haf db to own tables
 ```
-./run.sh process-blocks
+
+./scripts/process-blocks.sh
 ```
 Until hafbe catches up to head block on haf db, it will do massive processing
 
 
-If you need to stop and restart processing
-```
-./run.sh stop-processing
-./run.sh continue-processing
-```
-
 If you want to destroy hafbe db:
 ```
-./run.sh drop-db
+./scripts/drop-db.sh
 ```
 
 ## Starting
 
-When hafbe is in live sync mode (processing block-by-block), create indexes for it's tables:
-```
-./run.sh create-hafbe-indexes
-```
 
 After setup start postgREST server with:
 ```
 sudo su - hafbe_owner
 cd <hafbe_dir>
-./run.sh start <PORT>
+./run.sh --c=start <PORT>
 ```
 `PORT` is optional, default is 3000.
 
@@ -75,12 +72,12 @@ Install JMeter if not yet installed
 ```
 then run tests with:
 ```
-./run.sh run-tests <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
+./run.sh --c=run-tests <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
 ```
 
 E.g. this will run 30 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
 ```
-./run.sh run-tests <PORT> 2 200 6000
+./run.sh --c=run-tests <PORT> 2 200 6000
 ```
 Server port must be specified as first arg.
 
