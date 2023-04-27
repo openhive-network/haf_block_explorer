@@ -3,7 +3,7 @@
   - creates HAF application context,
   - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _btrackerContext VARCHAR, _maxBlockLimit INT = NULL)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULL)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -20,10 +20,6 @@ BEGIN
 
   IF NOT hive.app_context_is_attached(_appContext) THEN
     PERFORM hive.app_context_attach(_appContext, __last_block);
-  END IF;
-
-  IF NOT hive.app_context_is_attached(_btrackerContext) THEN
-    PERFORM hive.app_context_attach(_btrackerContext, __last_block);
   END IF;
 
   RAISE NOTICE 'Entering application main loop...';
@@ -62,6 +58,7 @@ BEGIN
       (SELECT finished_processing_at FROM hafbe_app.app_status LIMIT 1) IS NULL THEN
       UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
         PERFORM hafbe_indexes.create_hafbe_indexes();
+        PERFORM btracker_app.create_btracker_indexes();
       END IF;
 
       IF __next_block_range.first_block = __next_block_range.last_block AND
@@ -70,7 +67,7 @@ BEGIN
         CALL hafbe_app.update_witnesses_cache();
       END IF;
 
-    END IF;
+  END IF;
 
   END LOOP;
 

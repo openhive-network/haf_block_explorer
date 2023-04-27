@@ -16,7 +16,7 @@ CREATE TYPE hafbe_types.operations AS (
   virtual_op BOOLEAN,
   timestamp TIMESTAMP,
   age INTERVAL,
-  operations JSON,
+  operations JSONB,
   operation_id BIGINT,
   acc_operation_id INT
 );

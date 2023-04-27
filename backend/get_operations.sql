@@ -55,7 +55,7 @@ BEGIN
       hot.is_virtual,
       hov.timestamp,
       NOW() - hov.timestamp,
-      hov.body::JSON,
+      hov.body::JSONB,
       ls.operation_id,
       ls.account_op_seq_no
     FROM (
@@ -109,7 +109,7 @@ BEGIN
     hot.is_virtual,
     ls.timestamp,
     NOW() - ls.timestamp,
-    ls.body::JSON,
+    ls.body::JSONB,
     ls.id,
     NULL::INT
   FROM (
