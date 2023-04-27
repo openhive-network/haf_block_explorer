@@ -5,35 +5,37 @@ $function$
 DECLARE
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
-  SET enable_bitmapscan = OFF;
-
   -- process vote ops
-  WITH select_votes_ops AS (
-    SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
-    FROM (
-      SELECT
-        value->>'witness' AS witness,
-        value->>'account' AS voter,
-        (value->>'approve')::BOOLEAN AS approve,
-        timestamp, operation_id
-      FROM (
-        SELECT
-          (body::jsonb)->'value' AS value,
-          timestamp, id AS operation_id
-        FROM hive.hafbe_app_operations_view
-        WHERE op_type_id = 12 AND block_num BETWEEN _from AND _to
-      ) ops_in_range
-    ) vote_op
-    JOIN hive.hafbe_app_accounts_view hav_w ON hav_w.name = vote_op.witness
-    JOIN hive.hafbe_app_accounts_view hav_v ON hav_v.name = vote_op.voter
+WITH raw_ops AS MATERIALIZED
+  (
+  SELECT (ov.body::jsonb)->'value' AS value,
+          ov.timestamp,
+          ov.id AS operation_id
+  FROM hive.hafbe_app_operations_view ov
+  WHERE ov.op_type_id = 12 AND ov.block_num BETWEEN _from AND _to
   ),
-  
+  source_ops AS MATERIALIZED
+  (
+   SELECT ro.value->>'witness' AS witness,
+          ro.value->>'account' AS voter,
+          (ro.value->'approve')::BOOLEAN AS approve,
+          timestamp, operation_id
+    from raw_ops ro
+  ),
+  select_votes_ops AS MATERIALIZED
+  (
+  SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
+    FROM source_ops vote_op
+    --- Warning Here we can use `hive.accounts_view` instead of `hive.hafbe_app_accounts_view`,
+    --- since set of operations being visible to hafbe_app is already constrained by `hive.hafbe_app_operations_view`
+    JOIN hive.accounts_view hav_w ON hav_w.name = vote_op.witness
+    JOIN hive.accounts_view hav_v ON hav_v.name = vote_op.voter
+  ),
   insert_votes_history AS (
     INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
     SELECT witness_id, voter_id, approve, timestamp
     FROM select_votes_ops
   ),
-
   select_latest_vote_ops AS (
     SELECT witness_id, voter_id, approve, timestamp
     FROM (
@@ -384,12 +386,11 @@ BEGIN
   ON CONFLICT ON CONSTRAINT pk_account_vests DO 
     UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests
   ;
-
-  SET enable_bitmapscan = ON;
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
+SET enable_bitmapscan = OFF
 ;
