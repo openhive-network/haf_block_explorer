@@ -63,33 +63,38 @@ WITH raw_ops AS MATERIALIZED
   ) svo
   WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
 
-  -- process proxy ops
-  WITH select_proxy_ops AS (
-    SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
-    FROM (
-      SELECT
-        value->>'account' AS account,
-        value->>'proxy' AS proxy_account,
-        CASE WHEN op_type_id = 13 THEN TRUE ELSE FALSE END AS proxy,
-        timestamp, operation_id
-      FROM (
-        SELECT
-          (body::jsonb)->'value' AS value,
-          timestamp, id AS operation_id, op_type_id
-        FROM hive.hafbe_app_operations_view
-        WHERE op_type_id = ANY('{13,91}') AND block_num BETWEEN _from AND _to
-      ) ops_in_range
-    ) proxy_op
-    JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.account
-    JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
+  WITH raw_ops AS MATERIALIZED -- process proxy ops
+  (
+    SELECT (ov.body::jsonb)->'value' AS value,
+           ov.timestamp,
+           ov.id AS operation_id,
+           ov.op_type_id
+  FROM hive.hafbe_app_operations_view ov
+  WHERE ov.op_type_id IN (13,91) AND ov.block_num BETWEEN _from AND _to
   ),
-
+  source_ops AS MATERIALIZED
+  (
+    SELECT ro.value->>'account' AS account,
+           ro.value->>'proxy' AS proxy_account,
+           CASE WHEN ro.op_type_id = 13 THEN TRUE ELSE FALSE END AS proxy,
+           ro.timestamp,
+           ro.operation_id
+    FROM raw_ops ro
+  ),
+  select_proxy_ops AS MATERIALIZED
+  (
+    SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
+    FROM source_ops proxy_op
+    --- Warning Here we can use `hive.accounts_view` instead of `hive.hafbe_app_accounts_view`,
+    --- since set of operations being visible to hafbe_app is already constrained by `hive.hafbe_app_operations_view`
+    JOIN hive.accounts_view hav_a ON hav_a.name = proxy_op.account
+    JOIN hive.accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
+  ),
   insert_proxy_history AS (
     INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
     SELECT account_id, proxy_id, proxy, timestamp
     FROM select_proxy_ops
   ),
-
   select_latest_proxy_ops AS (
     SELECT account_id, proxy_id, proxy, timestamp
     FROM (
@@ -115,21 +120,24 @@ WITH raw_ops AS MATERIALIZED
     FROM select_latest_proxy_ops
     WHERE proxy IS FALSE
   ) spo
-  WHERE cap.account_id = spo.account_id;
+  WHERE cap.account_id = spo.account_id
+  ;
 
-  -- add new witnesses per block range
-  WITH select_witness_names AS (
+  
+  WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
+  (
+  SELECT body, (body::jsonb)->'value' AS value, op_type_id
+  FROM hive.hafbe_app_operations_view
+  WHERE op_type_id IN (12,42,11,7) AND block_num BETWEEN _from AND _to
+  ),
+  select_witness_names AS MATERIALIZED ( 
     SELECT DISTINCT
       CASE WHEN op_type_id = 12 THEN
         value->>'witness'
       ELSE
         (SELECT hive.get_impacted_accounts(body))
       END AS name
-    FROM (
-      SELECT body, (body::jsonb)->'value' AS value, op_type_id
-      FROM hive.hafbe_app_operations_view
-      WHERE op_type_id = ANY('{12,42,11,7}') AND block_num BETWEEN _from AND _to
-    ) ops_in_range
+    FROM ops_in_range
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
