@@ -3,13 +3,63 @@
 set -e
 set -o pipefail
 
+POSTGRES_HOST="localhost"
+POSTGRES_PORT=5432
+POSTGRES_USER="haf_admin"
+COMMAND=""
+
+print_help () {
+    echo "Usage: $0 [OPTION[=VALUE]]..."
+    echo
+    echo "Allows to setup a database already filled by HAF instance, to work with haf_be application."
+    echo "OPTIONS:"
+    echo "  --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)"
+    echo "  --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)"
+    echo "  --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --host=*)
+        POSTGRES_HOST="${1#*=}"
+        ;;
+    --port=*)
+        POSTGRES_PORT="${1#*=}"
+        ;;
+    --user=*)
+        POSTGRES_USER="${1#*=}"
+        ;;
+    --help)
+        print_help
+        exit 0
+        ;;
+    -*)
+        echo "ERROR: '$1' is not a valid option"
+        echo
+        print_help
+        exit 1
+        ;;
+    *)
+        echo "ERROR: '$1' is not a valid argument"
+        echo
+        print_help
+        exit 2
+        ;;
+    esac
+    shift
+done
+
+POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
+
+POSTGRES_ACCESS_OWNER="postgresql://$owner_role@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
+
 setup_owner() {
   if ! id $owner_role &>/dev/null; then
     sudo useradd -m $owner_role
     sudo chsh -s /bin/bash $owner_role
   fi;
 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f - <<EOF
+psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
 DO \$$
 BEGIN
   CREATE ROLE $owner_role WITH LOGIN NOINHERIT IN ROLE hive_applications_group;
@@ -19,7 +69,7 @@ END
 \$$;
 EOF
 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f - <<EOF
+psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
 DO \$$
 BEGIN
   GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $owner_role;
@@ -40,7 +90,7 @@ find_function() {
   schema=$1
   function=$2
 
-  result=$(sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f - <<EOF
+  result=$(psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
 DO \$$
 BEGIN
   IF (SELECT COUNT(1)
@@ -57,98 +107,81 @@ EOF
 }
 
 setup_apps() {
-  #setup hafah 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$hafah_dir/queries/ah_schema_functions.pgsql"
-  #setup balance tracker 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS btracker_app;"
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$btracker_dir/api/btracker_api.sql"
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f "$btracker_dir/db/btracker_app.sql"
+  cd $hafah_dir && bash $hafah_dir/scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
+  cd $hafah_dir && bash $hafah_dir/scripts/generate_version_sql.bash $PWD "sudo --user=$POSTGRES_USER"
+  cd $hafah_dir && bash $hafah_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
+
+  cd $btracker_dir && bash $btracker_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context
 }
 
 setup_extensions() {
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;"
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpython3u';"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpython3u';"
 }
 
 setup_api() {
   # setup db schema
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_indexes.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/main_loop.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_indexes.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/main_loop.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
 
   
   # must be done by admin because of hive.contexts permissions
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
 
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
+
+
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_account_data.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_block_stats.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operation_types.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_account_data.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_block_stats.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operation_types.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
 
   # setup endpoints schema
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_account.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_block.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_input_type.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_operation_type.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_transaction.sql 
-  sudo -nu $owner_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $endpoints/get_witness.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_account.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_block.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_input_type.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_operation_type.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_operations.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_transaction.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_witness.sql 
 
   # must be done by admin
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -f $backend/hafbe_roles.sql
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f $backend/hafbe_roles.sql
 }
 
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
-  sudo -nu $admin_role psql -d $DB_NAME -a -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
 }
 
+context="no"
 DB_NAME=haf_block_log
-admin_role=haf_admin
 owner_role=hafbe_owner
 
+endpoints=$PWD/../endpoints
+backend=$PWD/../backend
+db_dir=$PWD/../database
+hafah_dir=$PWD/../submodules/hafah
+btracker_dir=$PWD/../submodules/btracker
 
-endpoints=$PWD/endpoints
-backend=$PWD/backend
-db_dir=$PWD/database
-hafah_dir=$PWD/submodules/hafah
-btracker_dir=$PWD/submodules/btracker
-sudo echo
-
-if [ "$1" = "all" ]; then
   setup_owner
   setup_apps
   setup_extensions
   setup_api
   create_haf_indexes
-elif [ "$1" = "owner" ]; then
-  setup_owner
-elif [ "$1" = "apps" ]; then
-  setup_apps
-elif [ "$1" = "extensions" ]; then
-  setup_extensions
-elif [ "$1" = "api" ]; then
-  setup_api
-elif [ "$1" =  "haf-indexes" ]; then
-  create_haf_indexes
-else
-  echo "job not found"
-  exit 1
-fi;
