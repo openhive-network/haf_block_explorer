@@ -20,14 +20,10 @@ To start using haf block explorer, on first setup use:
 ./scripts/setup_db.sh
 
 ```
-If u want setup db only, use:
+If u want setup db only in case dependancies are already set up, use only:
 ```
-./scripts/setup_dependancies.sh
 ./scripts/setup_db.sh
 ```
-This will create required postgres schemas and roles, also [indexes](https://gitlab.syncad.com/hive/haf_block_explorer/-/blob/22-create-witness-table/db/indexes.sql#L20) on haf db.
-
-
 Then install gui dependancies
 ```
 cd gui ; npm install ; cd ..
@@ -37,7 +33,6 @@ cd gui ; npm install ; cd ..
 
 hafbe will process blocks from haf db to own tables
 ```
-
 ./scripts/process-blocks.sh
 ```
 Until hafbe catches up to head block on haf db, it will do massive processing
