@@ -14,3 +14,41 @@
     color: #ada9a9dc;
     font-size: 20px,
 }
+
+.infoContainer {
+    margin-top: 25px;
+    width: 50vw;
+
+}
+
+.infoCard {
+    border-radius: 0;
+    background: #2C3136;
+    color: #fff;
+}
+
+.cardBody {
+    padding: 5px;
+}
+
+.cardValueCol {
+    word-break: break-word;
+    text-align: end;
+}
+
+.cardKeyCol {
+    text-align: start;
+}
+
+.operationsContainer {
+    margin-top: 50px;
+    display: flex;
+    align-items: center;
+}
+
+.rawTransactionContainer {
+    margin-top: 50px;
+    display: flex;
+    justify-content: center;
+
+}
