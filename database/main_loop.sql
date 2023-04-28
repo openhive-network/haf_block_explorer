@@ -48,7 +48,7 @@ BEGIN
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
 
       IF __next_block_range.first_block != __next_block_range.last_block THEN
-        CALL hafbe_app.do_massive_processing(_appContext, _btrackerContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
+        CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         __last_block := __next_block_range.last_block;
