@@ -17,6 +17,18 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_indexes.create_btracker_indexes()
+RETURNS VOID
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  CREATE INDEX IF NOT EXISTS idx_hafbe_app_account_balance_history_nai ON btracker_app.account_balance_history(nai);
+  CREATE INDEX IF NOT EXISTS idx_hafbe_app_account_balance_history_account_nai ON btracker_app.account_balance_history(account, nai);
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_haf_indexes()
 RETURNS VOID
 LANGUAGE 'plpgsql'

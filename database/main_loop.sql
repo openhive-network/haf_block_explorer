@@ -58,7 +58,7 @@ BEGIN
       (SELECT finished_processing_at FROM hafbe_app.app_status LIMIT 1) IS NULL THEN
       UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
         PERFORM hafbe_indexes.create_hafbe_indexes();
-        PERFORM btracker_app.create_btracker_indexes();
+        PERFORM hafbe_indexes.create_btracker_indexes();
       END IF;
 
       IF __next_block_range.first_block = __next_block_range.last_block AND
