@@ -18,9 +18,7 @@ print_help () {
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
-COMMAND=""
 PROCESS_BLOCK_LIMIT=0
-
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -57,8 +55,6 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
-
-POSTGRES_ACCESS_OWNER="postgresql://hafbe_owner@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
 process_blocks() {
     n_blocks="${1:-null}"
