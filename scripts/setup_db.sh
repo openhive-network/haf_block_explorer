@@ -6,7 +6,6 @@ set -o pipefail
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
-COMMAND=""
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
@@ -68,22 +67,6 @@ BEGIN
 END
 \$$;
 EOF
-
-psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
-DO \$$
-BEGIN
-  GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $owner_role;
-  GRANT USAGE ON SCHEMA hive TO $owner_role;
-  GRANT CREATE ON SCHEMA hive TO $owner_role;
-  GRANT SELECT ON ALL TABLES IN SCHEMA hive TO $owner_role;
-  GRANT ALL ON ALL SEQUENCES IN SCHEMA hive TO $owner_role;
-  GRANT ALL ON ALL FUNCTIONS IN SCHEMA hive TO $owner_role;
-  GRANT ALL ON TABLE hive.contexts TO $owner_role;
-  GRANT ALL ON TABLE hive.registered_tables TO $owner_role;
-  GRANT ALL ON TABLE hive.triggers TO $owner_role;
-END
-\$$;
-EOF
 }
 
 find_function() {
@@ -110,7 +93,6 @@ setup_apps() {
   cd $hafah_dir && bash $hafah_dir/scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
   cd $hafah_dir && bash $hafah_dir/scripts/generate_version_sql.bash $PWD "sudo --user=$POSTGRES_USER"
   cd $hafah_dir && bash $hafah_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
-
   cd $btracker_dir && bash $btracker_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context
 }
 
@@ -128,15 +110,10 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
 
-  
   # must be done by admin because of hive.contexts permissions
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
-
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
-
-
-
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema
