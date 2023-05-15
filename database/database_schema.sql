@@ -20,6 +20,12 @@ BEGIN
   INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
   VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.version(
+  git_hash TEXT
+  );
+
+  INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
+
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
