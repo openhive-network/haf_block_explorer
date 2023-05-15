@@ -20,23 +20,10 @@ BEGIN
   INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
   VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    approve BOOLEAN NOT NULL,
-    timestamp TIMESTAMP NOT NULL
-  ) INHERITS (hive.hafbe_app);
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
-
-    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
-  ) INHERITS (hive.hafbe_app);
-
+  -- witnesses
+  
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
-    witness_id INT NOT NULL,
+    witness VARCHAR(16) NOT NULL,
     url TEXT,
     price_feed FLOAT,
     bias NUMERIC,
@@ -48,18 +35,39 @@ BEGIN
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   ) INHERITS (hive.hafbe_app);
 
+  -- witness votes
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
+    id SERIAL PRIMARY KEY,
+    witness VARCHAR(16) NOT NULL,
+    voter VARCHAR(16) NOT NULL,
+    approve BOOLEAN NOT NULL,
+    timestamp TIMESTAMP NOT NULL
+  ) INHERITS (hive.hafbe_app);
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
+    witness VARCHAR(16) NOT NULL,
+    voter VARCHAR(16) NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+
+    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness, voter)
+  ) INHERITS (hive.hafbe_app);
+
+
+  -- witness proxies
+
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
-    account_id INT NOT NULL,
-    proxy_id INT NOT NULL,
-    proxy BOOLEAN NOT NULL,
+    id SERIAL PRIMARY KEY,
+    account VARCHAR(16) NOT NULL,
+    proxy VARCHAR(16) NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
-    account_id INT NOT NULL,
-    proxy_id INT NOT NULL,
+    account VARCHAR(16) NOT NULL,
+    proxy VARCHAR(16) NOT NULL,
 
-    CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
+    CONSTRAINT pk_current_account_proxies PRIMARY KEY (account)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
