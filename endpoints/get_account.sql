@@ -1,3 +1,30 @@
+DROP TYPE IF EXISTS hafbe_endpoints.json_metadata CASCADE;
+CREATE TYPE hafbe_endpoints.json_metadata AS
+(
+  json_metadata TEXT,
+  posting_json_metadata TEXT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_json_metadata(_account TEXT)
+RETURNS hafbe_endpoints.json_metadata
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  _account_id INT;
+  __result hafbe_endpoints.json_metadata;
+BEGIN
+  SELECT id INTO _account_id FROM hive.accounts_view WHERE name = _account;
+
+  SELECT json_metadata, posting_json_metadata FROM hive.hafbe_app_metadata 
+    INTO __result WHERE account_id= _account_id;
+
+RETURN __result;
+
+END
+$$
+;
+
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_account_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_account_balance AS
 (
