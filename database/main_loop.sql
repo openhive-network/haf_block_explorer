@@ -51,6 +51,8 @@ BEGIN
         CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
+        PERFORM hive.app_state_providers_update(__next_block_range.last_block, __next_block_range.last_block, _appContext);
+
         __last_block := __next_block_range.last_block;
       END IF;
 
