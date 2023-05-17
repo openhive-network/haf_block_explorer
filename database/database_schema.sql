@@ -21,7 +21,7 @@ BEGIN
   VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
 
   -- witnesses
-  
+
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
     witness VARCHAR(16) NOT NULL,
     url TEXT,
@@ -114,7 +114,7 @@ BEGIN
   VALUES ('30 minutes', to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
-    witness_id INT NOT NULL,
+    witness VARCHAR(16) NOT NULL,
     voter_id INT NOT NULL,
     vests NUMERIC NOT NULL,
     account_vests NUMERIC NOT NULL,
@@ -125,7 +125,7 @@ BEGIN
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
-    witness_id INT NOT NULL,
+    witness VARCHAR(16) NOT NULL,
     rank INT NOT NULL,
     votes NUMERIC NOT NULL,
     voters_num INT NOT NULL,
@@ -134,8 +134,8 @@ BEGIN
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_change_cache (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
+    witness VARCHAR(16) NOT NULL,
+    voter VARCHAR(16) NOT NULL,
     vests NUMERIC NOT NULL,
     account_vests NUMERIC NOT NULL,
     proxied_vests NUMERIC NOT NULL,
@@ -144,7 +144,7 @@ BEGIN
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
-    witness_id INT NOT NULL,
+    witness VARCHAR(16) NOT NULL,
     votes_daily_change BIGINT NOT NULL,
     voters_num_daily_change INT NOT NULL,
 
