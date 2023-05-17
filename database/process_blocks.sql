@@ -1,10 +1,10 @@
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_first_block INT, _last_block INT)
 RETURNS VOID
-LANGUAGE plpgsql;
-AS
-$function$
+LANGUAGE plpgsql
+AS $function$
 DECLARE
     _raw_op RECORD;
+    _last_block_timestamp TIMESTAMP;
 BEGIN
     -- get all raw operations
     FOR _raw_op IN
@@ -29,11 +29,11 @@ BEGIN
         _last_block_timestamp := _raw_op.timestamp;
     END LOOP;
 END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_operation(_raw_op RECORD)
     RETURNS VOID
-    LANGUAGE plpgsql;
+    LANGUAGE plpgsql
     AS $function$
     DECLARE
         tempnotif JSONB;
@@ -49,4 +49,4 @@ CREATE OR REPLACE FUNCTION hafbe_app.process_operation(_raw_op RECORD)
             PERFORM hafbe_app.witness_update(_raw_op.block_num, _raw_op.timestamp, _raw_op.trx_hash, _raw_op.body);
         END IF;
     END;
-    $function$
+    $function$;

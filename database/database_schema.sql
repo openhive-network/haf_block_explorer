@@ -32,7 +32,7 @@ BEGIN
     signing_key TEXT,
     version TEXT,
 
-    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
+    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness)
   ) INHERITS (hive.hafbe_app);
 
   -- witness votes
@@ -121,7 +121,7 @@ BEGIN
     proxied_vests NUMERIC NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
-    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness_id, voter_id)
+    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness, voter_id)
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
@@ -130,7 +130,7 @@ BEGIN
     votes NUMERIC NOT NULL,
     voters_num INT NOT NULL,
 
-    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
+    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness)
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_change_cache (
@@ -148,7 +148,7 @@ BEGIN
     votes_daily_change BIGINT NOT NULL,
     voters_num_daily_change INT NOT NULL,
 
-    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
+    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness)
   );
 END
 $$

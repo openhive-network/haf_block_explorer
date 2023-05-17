@@ -102,7 +102,7 @@ CREATE OR REPLACE FUNCTION hafbe_app.account_witness_proxy( _block_num INTEGER, 
             _proxy := _body -> 'value' ->> 'proxy';
             -- save historical entry
             INSERT INTO hafbe_app.account_proxies_history (account, proxy, timestamp)
-            VALUES (_account, _proxy, _timestamp)
+            VALUES (_account, _proxy, _timestamp);
             -- update current witnesses proxy
             IF _proxy != '' THEN
                 INSERT INTO hafbe_app.current_witness_proxy (account, proxy)
