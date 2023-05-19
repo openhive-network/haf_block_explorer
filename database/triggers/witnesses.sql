@@ -27,35 +27,29 @@ CREATE OR REPLACE FUNCTION hafbe_app.witness_update( _block_num INTEGER, _timest
             _owner := _body -> 'value' ->> 'owner';
             _url := _body -> 'value' ->> 'url';
             _signing_key := _body -> 'value' ->> 'block_signing_key';
-            _max_block_size := _body -> 'value' ->> 'props' -> 'maximum_block_size';
-            _hbd_interest_rate := _body -> 'value' ->> 'props' -> 'hbd_interest_rate';
+            _max_block_size := _body -> 'value' -> 'props' ->> 'maximum_block_size';
+            --_hbd_interest_rate := _body -> 'value' -> 'props' ->> 'hbd_interest_rate';
             -- Update the current_witnesses table. 
             -- If the witness is not present, it will be added.
 
             INSERT INTO hafbe_app.current_witnesses (
-                account, 
+                witness_id, 
                 url, 
                 signing_key, 
-                max_block_size, 
-                hbd_interest_rate, 
-                timestamp
+                block_size
             )
             VALUES (
-                _owner, 
+                hafbe_app.get_haf_acc_id(_owner), 
                 _url, 
                 _signing_key, 
-                _max_block_size, 
-                _hbd_interest_rate, 
-                _timestamp
+                _max_block_size
             )
-            ON CONFLICT (account) 
+            ON CONFLICT (witness_id) 
             DO UPDATE 
             SET 
                 url = _url, 
                 signing_key = _signing_key, 
-                max_block_size = _max_block_size, 
-                hbd_interest_rate = _hbd_interest_rate, 
-                timestamp = _timestamp;
+                block_size = _max_block_size;
         END;
     $$;
 
@@ -68,24 +62,23 @@ CREATE OR REPLACE FUNCTION hafbe_app.account_witness_vote( _block_num INTEGER, _
     LANGUAGE plpgsql
     AS $$
         DECLARE
-            _account INTEGER;
-            _witness INTEGER;
+            _account_id INT;
+            _witness_id INT;
             _approve BOOLEAN;
         BEGIN
-            _account := _body -> 'value' ->> 'account';
-            _witness := _body -> 'value' ->> 'witness';
+            _account_id := hafbe_app.get_haf_acc_id(_body -> 'value' ->> 'account');
+            _witness_id := hafbe_app.get_haf_acc_id(_body -> 'value' ->> 'witness');
             _approve := _body -> 'value' ->> 'approve';
             -- save historical entry
-            INSERT INTO hafbe_app.witness_votes_history (account, witness, approve)
-            VALUES (_account, _witness, _approve)
-            ON CONFLICT (account, witness) DO UPDATE SET approve = _approve;
+            INSERT INTO hafbe_app.witness_votes_history (voter_id, witness_id, approve, timestamp)
+            VALUES (_account_id, _witness_id, _approve, _timestamp);
             -- update current witnesses
             IF _approve = true THEN
-                INSERT INTO hafbe_app.current_witness_votes (account, witness, timestamp)
-                VALUES (_account, _witness, _timestamp)
-                ON CONFLICT (account, witness) DO NOTHING;
+                INSERT INTO hafbe_app.current_witness_votes (voter_id, witness_id, timestamp)
+                VALUES (_account_id, _witness_id, _timestamp)
+                ON CONFLICT (voter_id, witness_id) DO NOTHING;
             ELSE
-                DELETE FROM hafbe_app.current_witness_votes WHERE account = _account AND witness = _witness;
+                DELETE FROM hafbe_app.current_witness_votes WHERE voter_id = _account_id AND witness_id = _witness_id;
             END IF;
         END;
     $$;
@@ -95,19 +88,19 @@ CREATE OR REPLACE FUNCTION hafbe_app.account_witness_proxy( _block_num INTEGER, 
     LANGUAGE plpgsql
     AS $$
         DECLARE
-            _account INTEGER;
-            _proxy INTEGER;
+            _account_id INT;
+            _proxy_id INT;
         BEGIN
-            _account := _body -> 'value' ->> 'account';
-            _proxy := _body -> 'value' ->> 'proxy';
-            -- save historical entry
-            INSERT INTO hafbe_app.account_proxies_history (account, proxy, timestamp)
-            VALUES (_account, _proxy, _timestamp);
-            -- update current witnesses proxy
-            IF _proxy != '' THEN
-                INSERT INTO hafbe_app.current_witness_proxy (account, proxy)
-                VALUES (_account, _proxy)
-                ON CONFLICT (account) DO UPDATE SET proxy = _proxy;
+            _account_id := hafbe_app.get_haf_acc_id(_body -> 'value' ->> 'account');
+            _proxy_id := hafbe_app.get_haf_acc_id(_body -> 'value' ->> 'proxy');
+            IF _proxy_id IS NOT NULL AND _account_id IS NOT NULL THEN
+                -- save historical entry
+                INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, timestamp)
+                VALUES (_account_id, _proxy_id, _timestamp);
+                -- update current witnesses proxy
+                INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id)
+                VALUES (_account_id, _proxy_id)
+                ON CONFLICT (account_id) DO UPDATE SET proxy_id = _proxy_id;
             END IF;
         END;
     $$;
@@ -118,10 +111,10 @@ CREATE OR REPLACE FUNCTION hafbe_app.account_proxy_cleared( _block_num INTEGER, 
     LANGUAGE plpgsql
     AS $$
         DECLARE
-            _account INTEGER;
+            _account_id INT;
         BEGIN
-            _account := _body -> 'value' ->> 'account';
+            _account_id := hafbe_app.get_haf_acc_id(_body -> 'value' ->> 'account');
             -- update current witnesses proxy
-            DELETE FROM hafbe_app.current_witness_proxy WHERE account = _account;
+            DELETE FROM hafbe_app.current_account_proxies WHERE account_id = _account_id;
         END;
     $$;

@@ -254,14 +254,15 @@ BEGIN
 
       WITH limited_set AS (
         SELECT
-          cw.name::TEXT AS witness,
+          cw.witness_id, hav.name::TEXT AS witness,
           cw.url, cw.price_feed, cw.bias,
           (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
           cw.block_size, cw.signing_key, cw.version
-        FROM hafbe_app.current_witnesses cw 
+        FROM hive.accounts_view hav
+        JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
         ORDER BY
-          (CASE WHEN %L = 'desc' THEN cw.name ELSE NULL END) DESC,
-          (CASE WHEN %L = 'asc' THEN cw.name ELSE NULL END) ASC
+          (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
+          (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
         OFFSET %L
         LIMIT %L
       )
@@ -274,22 +275,21 @@ BEGIN
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
         ls.price_feed, ls.bias, ls.feed_age, ls.block_size, ls.signing_key, ls.version
       FROM limited_set ls
-      LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.name = ls.witness
+      LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
       LEFT JOIN LATERAL (
-        SELECT wvcc.name, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+        SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
         FROM hafbe_app.witness_votes_change_cache wvcc
-        WHERE wvcc.name = ls.witness
-        GROUP BY wvcc.name
+        WHERE wvcc.witness_id = ls.witness_id
+        GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN ls.witness ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN ls.witness ELSE NULL END) ASC
+        (CASE WHEN %L = 'desc' THEN witness ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN witness ELSE NULL END) ASC
 
       $query$,
       _order_is, _order_is, _offset, _limit,
       _order_is, _order_is
     );
-
 
   ELSIF _order_by = ANY('{rank,votes,voters_num}'::TEXT[]) THEN
 
@@ -342,32 +342,35 @@ BEGIN
       $query$
 
       WITH limited_set AS (
-        SELECT name, rank, votes, voters_num
-        FROM hafbe_app.witness_votes_cache
+        SELECT witness_id, votes_daily_change, voters_num_daily_change
+        FROM (
+          SELECT witness_id, votes_daily_change, voters_num_daily_change
+          FROM hafbe_app.witness_votes_change_cache wvcc
+          GROUP BY witness_id
+        ) wvcc
         ORDER BY
           (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
           (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
         OFFSET %L
-        LIMIT %L
+        LIMIT %L        
       )
 
       SELECT
-        ls.name::TEXT, ls.rank, cw.url,
-        ls.votes,
-        COALESCE(todays_votes.votes_daily_change, 0)::BIGINT AS votes_daily_change,
-        ls.voters_num,
-        COALESCE(todays_votes.voters_num_daily_change, 0)::INT AS voters_num_daily_change,
+        hav.name::TEXT, all_votes.rank, cw.url,
+        all_votes.votes::NUMERIC,
+        ls.votes_daily_change,
+        all_votes.voters_num::INT,
+        ls.voters_num_daily_change,
         cw.price_feed, cw.bias,
         (NOW() - cw.feed_updated_at)::INTERVAL,
         cw.block_size, cw.signing_key, cw.version
       FROM limited_set ls
-      JOIN hafbe_app.current_witnesses cw ON cw.name = ls.name
-      LEFT JOIN LATERAL (
-        SELECT wvcc.name, wvcc.votes_daily_change, wvcc.voters_num_daily_change
-        FROM hafbe_app.witness_votes_change_cache wvcc
-        WHERE wvcc.name = ls.name
-        GROUP BY wvcc.name
-      ) todays_votes ON TRUE
+      JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
+      LEFT JOIN (
+        SELECT witness_id, rank, votes, voters_num
+        FROM hafbe_app.witness_votes_cache
+      ) all_votes ON all_votes.witness_id = ls.witness_id
+      JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -377,7 +380,6 @@ BEGIN
       _order_is, _order_by, _order_is, _order_by
     );
 
-
   ELSE
 
     RETURN QUERY EXECUTE format(
@@ -385,7 +387,7 @@ BEGIN
       
       WITH limited_set AS (
         SELECT
-          name, url, price_feed, bias,
+          witness_id, url, price_feed, bias,
           (NOW() - feed_updated_at)::INTERVAL AS feed_age,
           block_size, signing_key, version
         FROM hafbe_app.current_witnesses
@@ -398,7 +400,7 @@ BEGIN
       )
 
       SELECT
-        ls.name::TEXT, rank::INT, url,
+        hav.name::TEXT, rank::INT, url,
         COALESCE(all_votes.votes, 0)::NUMERIC,
         COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
         COALESCE(all_votes.voters_num, 0)::INT,
@@ -406,15 +408,16 @@ BEGIN
         price_feed, bias, feed_age, block_size, signing_key, version
       FROM limited_set ls
       LEFT JOIN (
-        SELECT name, rank, votes, voters_num
+        SELECT witness_id, rank, votes, voters_num
         FROM hafbe_app.witness_votes_cache
-      ) all_votes ON all_votes.name = ls.name
+      ) all_votes ON all_votes.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
-        SELECT wvcc.name, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+        SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
         FROM hafbe_app.witness_votes_change_cache wvcc
-        WHERE wvcc.name = ls.name
-        GROUP BY wvcc.name
+        WHERE wvcc.witness_id = ls.witness_id
+        GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
+      JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
         (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
@@ -423,7 +426,6 @@ BEGIN
       _order_by, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
       _order_is, _order_by, _order_is, _order_by
     );
-
 
   END IF;
 END

@@ -23,7 +23,7 @@ BEGIN
   -- witnesses
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
-    witness VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
     url TEXT,
     price_feed FLOAT,
     bias NUMERIC,
@@ -32,25 +32,25 @@ BEGIN
     signing_key TEXT,
     version TEXT,
 
-    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness)
+    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   ) INHERITS (hive.hafbe_app);
 
   -- witness votes
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     id SERIAL PRIMARY KEY,
-    witness VARCHAR(16) NOT NULL,
-    voter VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
-    witness VARCHAR(16) NOT NULL,
-    voter VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
-    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness, voter)
+    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
   ) INHERITS (hive.hafbe_app);
 
 
@@ -58,16 +58,16 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     id SERIAL PRIMARY KEY,
-    account VARCHAR(16) NOT NULL,
-    proxy VARCHAR(16) NOT NULL,
+    account_id INT NOT NULL,
+    proxy_id INT NOT NULL,
     timestamp TIMESTAMP NOT NULL
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
-    account VARCHAR(16) NOT NULL,
-    proxy VARCHAR(16) NOT NULL,
+    account_id INT NOT NULL,
+    proxy_id INT NOT NULL,
 
-    CONSTRAINT pk_current_account_proxies PRIMARY KEY (account)
+    CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
@@ -114,28 +114,28 @@ BEGIN
   VALUES ('30 minutes', to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
-    witness VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     vests NUMERIC NOT NULL,
     account_vests NUMERIC NOT NULL,
     proxied_vests NUMERIC NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
-    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness, voter_id)
+    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness_id, voter_id)
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
-    witness VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
     rank INT NOT NULL,
     votes NUMERIC NOT NULL,
     voters_num INT NOT NULL,
 
-    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness)
+    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_change_cache (
-    witness VARCHAR(16) NOT NULL,
-    voter VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
+    voter_id INT NOT NULL,
     vests NUMERIC NOT NULL,
     account_vests NUMERIC NOT NULL,
     proxied_vests NUMERIC NOT NULL,
@@ -144,11 +144,11 @@ BEGIN
   );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
-    witness VARCHAR(16) NOT NULL,
+    witness_id INT NOT NULL,
     votes_daily_change BIGINT NOT NULL,
     voters_num_daily_change INT NOT NULL,
 
-    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness)
+    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
 END
 $$
