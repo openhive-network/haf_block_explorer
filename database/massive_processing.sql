@@ -21,6 +21,8 @@ BEGIN
 
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
 
+    PERFORM hive.app_state_providers_update(b, _last_block, _appContext);
+
     COMMIT;
 
     --RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
@@ -47,6 +49,7 @@ BEGIN
     --- Supplement last part of range if anything left.
     PERFORM btracker_app.process_block_range_data_c(_last_block, _to);
     PERFORM hafbe_app.process_block_range_data_c(_last_block, _to);
+    PERFORM hive.app_state_providers_update(_last_block, _to, _appContext);
     _last_block := _to;
 
     COMMIT;
