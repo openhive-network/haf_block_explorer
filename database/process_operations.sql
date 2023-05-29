@@ -165,7 +165,7 @@ WITH decline_voting_rights_operation AS (
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_vote_op(_body jsonb, _timestamp timestamp)
+CREATE OR REPLACE FUNCTION hafbe_app.process_vote_op(op record, vote hive.account_witness_vote_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -173,10 +173,10 @@ $$
 BEGIN
 WITH vote_operation AS (
   SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'account') AS voter_id,
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'witness') AS witness_id,
-    (_body->'value'->>'approve')::BOOLEAN AS approve,
-    _timestamp AS _time
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = vote.account) AS voter_id,
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = vote.witness) AS witness_id,
+    (vote.approve)::BOOLEAN AS approve,
+    op.timestamp AS _time
 ),
 insert_votes_history AS (
   INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
