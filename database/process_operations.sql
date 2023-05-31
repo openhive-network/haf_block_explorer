@@ -304,4 +304,64 @@ WHERE cap.voter_id = spoo.account_id;
 END
 $$;
 
+DROP FUNCTION IF EXISTS hafbe_app.add_new_witness(op RECORD, vote hive.account_witness_vote_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.add_new_witness(op RECORD, vote hive.account_witness_vote_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  FROM hive.hafbe_app_accounts_view hav
+  WHERE hav.name = vote.witness
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.add_new_witness(op RECORD, props hive.witness_set_properties_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.add_new_witness(op RECORD, props hive.witness_set_properties_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  FROM hive.hafbe_app_accounts_view hav
+  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.add_new_witness(op RECORD, upd hive.witness_update_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.add_new_witness(op RECORD, upd hive.witness_update_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  FROM hive.hafbe_app_accounts_view hav
+  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.add_new_witness(op RECORD, feed hive.feed_publish_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.add_new_witness(op RECORD, feed hive.feed_publish_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  FROM hive.hafbe_app_accounts_view hav
+  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
 RESET ROLE;
