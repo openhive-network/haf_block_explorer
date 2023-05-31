@@ -202,7 +202,7 @@ WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_proxy_ops(_body jsonb, _timestamp timestamp, _op_type int)
+CREATE OR REPLACE FUNCTION hafbe_app.process_proxy_op(op RECORD, proxy hive.account_witness_proxy_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -210,27 +210,27 @@ $$
 BEGIN
 WITH proxy_operations AS (
   SELECT
-    _body->'value'->>'account' AS witness_account,
-    _body->'value'->>'proxy' AS proxy_account,
-    CASE WHEN _op_type = 13 THEN TRUE ELSE FALSE END AS proxy,
-    _timestamp AS _time
+    proxy.account AS witness_account,
+    proxy.proxy AS proxy_account,
+    CASE WHEN op.op_type_id = 13 THEN TRUE ELSE FALSE END AS is_proxy,
+    op.timestamp AS _time
 ),
 selected AS (
-    SELECT av_a.id AS account_id, av_p.id AS proxy_id, proxy, _time
+    SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, is_proxy, _time
     FROM proxy_operations proxy_op
-    JOIN hive.hafbe_app_accounts_view av_a ON av_a.name = proxy_op.witness_account
-    JOIN hive.hafbe_app_accounts_view av_p ON av_p.name = proxy_op.proxy_account
+    JOIN hive.hafbe_app_accounts_view hav_a ON hav_a.name = proxy_op.witness_account
+    JOIN hive.hafbe_app_accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
 ),
 insert_proxy_history AS (
   INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
-  SELECT account_id, proxy_id, proxy, _time
+  SELECT account_id, proxy_id, is_proxy, _time
   FROM selected
 ),
 insert_current_proxies AS (
   INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id)
   SELECT account_id, proxy_id
   FROM selected
-  WHERE proxy IS TRUE 
+  WHERE is_proxy IS TRUE 
   ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
     proxy_id = EXCLUDED.proxy_id
 ),
@@ -238,14 +238,66 @@ delete_votes_if_proxy AS (
   DELETE FROM hafbe_app.current_witness_votes cap USING (
     SELECT account_id 
     FROM selected
-    WHERE proxy IS TRUE
+    WHERE is_proxy IS TRUE
   ) spo
   WHERE cap.voter_id = spo.account_id
 )
 DELETE FROM hafbe_app.current_account_proxies cap USING (
   SELECT account_id, proxy_id
   FROM selected
-  WHERE proxy IS FALSE
+  WHERE is_proxy IS FALSE
+) spo
+WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
+;
+
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_proxy_op(op RECORD, proxy hive.proxy_cleared_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+WITH proxy_operations AS (
+  SELECT
+    proxy.account AS witness_account,
+    proxy.proxy AS proxy_account,
+    CASE WHEN op.op_type_id = 13 THEN TRUE ELSE FALSE END AS is_proxy,
+    op.timestamp AS _time
+),
+selected AS (
+    SELECT av_a.id AS account_id, av_p.id AS proxy_id, is_proxy, _time
+    FROM proxy_operations proxy_op
+    JOIN hive.hafbe_app_accounts_view av_a ON av_a.name = proxy_op.witness_account
+    JOIN hive.hafbe_app_accounts_view av_p ON av_p.name = proxy_op.proxy_account
+),
+insert_proxy_history AS (
+  INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
+  SELECT account_id, proxy_id, is_proxy, _time
+  FROM selected
+),
+insert_current_proxies AS (
+  INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id)
+  SELECT account_id, proxy_id
+  FROM selected
+  WHERE is_proxy IS TRUE 
+  ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
+    proxy_id = EXCLUDED.proxy_id
+),
+delete_votes_if_proxy AS (
+  DELETE FROM hafbe_app.current_witness_votes cap USING (
+    SELECT account_id 
+    FROM selected
+    WHERE is_proxy IS TRUE
+  ) spo
+  WHERE cap.voter_id = spo.account_id
+)
+DELETE FROM hafbe_app.current_account_proxies cap USING (
+  SELECT account_id, proxy_id
+  FROM selected
+  WHERE is_proxy IS FALSE
 ) spo
 WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
 ;

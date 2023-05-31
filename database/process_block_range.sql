@@ -140,9 +140,6 @@ LOOP
 
   CASE 
 
-    WHEN __balance_change.op_type = 13 OR __balance_change.op_type = 91 THEN
-    PERFORM hafbe_app.process_proxy_ops(__balance_change.body, __balance_change.timestamp, __balance_change.op_type);
-
     WHEN __balance_change.op_type = 92 OR __balance_change.op_type = 75 THEN
     PERFORM hafbe_app.process_expired_accounts(__balance_change.body);
     
@@ -156,6 +153,10 @@ PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_vot
 FROM hive.hafbe_app_operations_view AS op
 WHERE op.op_type_id = 12 AND op.block_num BETWEEN _from AND _to;
 
+PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_proxy_op')
+FROM hive.hafbe_app_operations_view AS op
+WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to;
+
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE
@@ -168,8 +169,6 @@ CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_b(_from INT, _to I
 RETURNS VOID
 AS
 $function$
-DECLARE
-  __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
