@@ -212,7 +212,7 @@ WITH proxy_operations AS (
   SELECT
     proxy.account AS witness_account,
     proxy.proxy AS proxy_account,
-    CASE WHEN op.op_type_id = 13 THEN TRUE ELSE FALSE END AS is_proxy,
+    TRUE AS is_proxy,
     op.timestamp AS _time
 ),
 selected AS (
@@ -230,24 +230,14 @@ insert_current_proxies AS (
   INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id)
   SELECT account_id, proxy_id
   FROM selected
-  WHERE is_proxy IS TRUE 
   ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
     proxy_id = EXCLUDED.proxy_id
-),
-delete_votes_if_proxy AS (
-  DELETE FROM hafbe_app.current_witness_votes cap USING (
-    SELECT account_id 
-    FROM selected
-    WHERE is_proxy IS TRUE
-  ) spo
-  WHERE cap.voter_id = spo.account_id
 )
-DELETE FROM hafbe_app.current_account_proxies cap USING (
-  SELECT account_id, proxy_id
+DELETE FROM hafbe_app.current_witness_votes cap USING (
+  SELECT account_id 
   FROM selected
-  WHERE is_proxy IS FALSE
 ) spo
-WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
+WHERE cap.voter_id = spo.account_id
 ;
 
 END
@@ -264,7 +254,7 @@ WITH proxy_operations AS (
   SELECT
     proxy.account AS witness_account,
     proxy.proxy AS proxy_account,
-    CASE WHEN op.op_type_id = 13 THEN TRUE ELSE FALSE END AS is_proxy,
+    FALSE AS is_proxy,
     op.timestamp AS _time
 ),
 selected AS (
@@ -277,27 +267,10 @@ insert_proxy_history AS (
   INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
   SELECT account_id, proxy_id, is_proxy, _time
   FROM selected
-),
-insert_current_proxies AS (
-  INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id)
-  SELECT account_id, proxy_id
-  FROM selected
-  WHERE is_proxy IS TRUE 
-  ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
-    proxy_id = EXCLUDED.proxy_id
-),
-delete_votes_if_proxy AS (
-  DELETE FROM hafbe_app.current_witness_votes cap USING (
-    SELECT account_id 
-    FROM selected
-    WHERE is_proxy IS TRUE
-  ) spo
-  WHERE cap.voter_id = spo.account_id
 )
 DELETE FROM hafbe_app.current_account_proxies cap USING (
   SELECT account_id, proxy_id
   FROM selected
-  WHERE is_proxy IS FALSE
 ) spo
 WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
 ;
