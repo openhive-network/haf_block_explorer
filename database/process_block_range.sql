@@ -173,28 +173,9 @@ BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
 
-  WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
-  (
-    SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
-    FROM hive.hafbe_app_operations_view ov
-    WHERE ov.op_type_id IN (12,42,11,7) 
-    AND ov.block_num BETWEEN _from AND _to
-  ),
-  select_witness_names AS MATERIALIZED ( 
-    SELECT DISTINCT
-      CASE WHEN op_type_id = 12 THEN
-        value->>'witness'
-      ELSE
-        (SELECT hive.get_impacted_accounts(body_binary))
-      END AS name
-    FROM ops_in_range
-  )
-  
-  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT av.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-  FROM select_witness_names swn
-  JOIN hive.hafbe_app_accounts_view av ON av.name = swn.name
-  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
+  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'add_new_witness')
+  FROM hive.hafbe_app_operations_view AS op
+  WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to;
 
   -- insert witness node version
   UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
