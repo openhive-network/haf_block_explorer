@@ -1,3 +1,5 @@
+--ACCOUNT METADATA
+
 DROP TYPE IF EXISTS hafbe_endpoints.json_metadata CASCADE;
 CREATE TYPE hafbe_endpoints.json_metadata AS
 (
@@ -24,6 +26,33 @@ RETURN __result;
 END
 $$
 ;
+
+--ACCOUNT DELEGATED AND RECEIVED VESTS
+
+DROP TYPE IF EXISTS hafbe_endpoints.btracker_vests_balance CASCADE;
+CREATE TYPE hafbe_endpoints.btracker_vests_balance AS
+(
+  delegated_vests BIGINT,
+  received_vests BIGINT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_vests_balance(_account TEXT)
+RETURNS hafbe_endpoints.btracker_vests_balance
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __result hafbe_endpoints.btracker_vests_balance;
+BEGIN
+
+SELECT delegated_vests, received_vests INTO __result FROM btracker_app.current_account_vests WHERE account= _account;
+RETURN __result;
+
+END
+$$
+;
+
+--ACCOUNT HIVE, HBD, VEST BALANCES
 
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_account_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_account_balance AS
