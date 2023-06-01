@@ -364,4 +364,43 @@ END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
 
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_url(op RECORD, props hive.witness_set_properties_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_url(op RECORD, props hive.witness_set_properties_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
+    SELECT hav.id AS witness_id, url
+    FROM (
+      SELECT
+        trim(both '"' FROM prop_value::TEXT) AS url, op.witness,
+        ROW_NUMBER() OVER (PARTITION BY op.witness ORDER BY op.operation_id DESC) AS row_n
+      FROM hive.extract_set_witness_properties(op.props)
+      WHERE prop_name = 'url' AND url IS NOT NULL
+    ) p
+    JOIN hive.accounts_view hav ON hav.name = p.witness
+    WHERE row_n = 1
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_url(op RECORD, upd hive.witness_update_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_url(op RECORD, upd hive.witness_update_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
+    SELECT hav.id AS witness_id, upd.url
+    FROM hive.accounts_view AS hav
+    WHERE hav.name = op.witness AND upd.url IS NOT NULL
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
 RESET ROLE;

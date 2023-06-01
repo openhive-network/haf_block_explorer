@@ -198,52 +198,10 @@ BEGIN
   WHERE cw.witness_id = w_node.witness_id;
 
   -- parse witness url
-  WITH select_ops_with_url AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
-  ),
+  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
+  FROM hafbe_views.witness_prop_op_view AS op
+  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
 
-  select_url_from_set_witness_properties AS (
-    SELECT ex_prop.url, operation_id, witness
-    FROM select_ops_with_url sowu
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS url
-      FROM hive.extract_set_witness_properties(sowu.value->>'props')
-      WHERE prop_name = 'url'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = 42
-  ),
-
-  select_url_from_witness_update_op AS (
-    SELECT value->>'url' AS url, operation_id, witness
-    FROM select_ops_with_url
-    WHERE op_type_id != 42
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
-    SELECT av.id AS witness_id, url
-    FROM (
-      SELECT
-        url, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT url, operation_id, witness
-        FROM select_url_from_set_witness_properties
-
-        UNION
-
-        SELECT url, operation_id, witness
-        FROM select_url_from_witness_update_op
-      ) sp
-      WHERE url IS NOT NULL
-    ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-  
   -- parse witness exchange_rate
   WITH select_ops_with_exchange_rate AS (
     SELECT witness, value, op_type_id, operation_id, timestamp
