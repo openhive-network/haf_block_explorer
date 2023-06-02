@@ -214,61 +214,9 @@ BEGIN
   WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to;
 
   -- parse witness signing_key
-  WITH select_ops_with_signing_key AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
-  ),
-
-  select_signing_key_from_set_witness_properties AS (
-    SELECT
-      CASE WHEN ex_prop2.signing_key IS NULL THEN ex_prop1.signing_key ELSE (
-        CASE WHEN ex_prop1.signing_key IS NULL THEN ex_prop2.signing_key ELSE ex_prop1.signing_key END
-      ) END AS signing_key,
-      operation_id, witness
-    FROM select_ops_with_signing_key sowsk
-
-    LEFT JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
-      FROM hive.extract_set_witness_properties(sowsk.value->>'props')
-      WHERE prop_name = 'new_signing_key'
-    ) ex_prop1 ON TRUE
-
-    LEFT JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
-      FROM hive.extract_set_witness_properties(sowsk.value->>'props')
-      WHERE prop_name = 'key'
-    ) ex_prop2 ON TRUE
-    WHERE op_type_id = 42
-  ),
-
-  select_signing_key_from_witness_update_op AS (
-    SELECT value->>'block_signing_key' AS signing_key, operation_id, witness
-    FROM select_ops_with_signing_key
-    WHERE op_type_id != 42
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT hav.id AS witness_id, signing_key
-    FROM (
-      SELECT
-        signing_key, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_set_witness_properties
-
-        UNION
-
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_witness_update_op
-      ) sp
-      WHERE signing_key IS NOT NULL
-    ) prop
-    JOIN hive.accounts_view hav ON hav.name = prop.witness
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
+  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_signing_key')
+  FROM hafbe_views.witness_prop_op_view AS op
+  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
 
 END
 $function$
