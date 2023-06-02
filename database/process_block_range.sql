@@ -204,59 +204,9 @@ BEGIN
   WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
 
   -- parse witness exchange_rate
-  WITH select_ops_with_exchange_rate AS (
-    SELECT witness, value, op_type_id, operation_id, timestamp
-    FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,7}') AND block_num BETWEEN _from AND _to
-  ),
-
-  select_exchange_rate_from_set_witness_properties AS (
-    SELECT ex_prop.exchange_rate, operation_id, timestamp, witness
-    FROM select_ops_with_exchange_rate sower
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS exchange_rate
-      FROM hive.extract_set_witness_properties(sower.value->>'props')
-      WHERE prop_name = 'hbd_exchange_rate'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = 42
-  ),
-
-  select_exchange_rate_from_feed_publish_op AS (
-    SELECT value->>'exchange_rate' AS exchange_rate, operation_id, timestamp, witness
-    FROM select_ops_with_exchange_rate
-    WHERE op_type_id != 42
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET
-    price_feed = ops.price_feed,
-    bias = ops.bias,
-    feed_updated_at = ops.feed_updated_at
-  FROM (
-    SELECT
-      hav.id AS witness_id,
-      (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
-      ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
-      timestamp AS feed_updated_at
-    FROM (
-      SELECT
-        exchange_rate::JSON, witness, timestamp,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT exchange_rate, operation_id, timestamp, witness
-        FROM select_exchange_rate_from_set_witness_properties
-
-        UNION
-
-        SELECT exchange_rate, operation_id, timestamp, witness
-        FROM select_exchange_rate_from_feed_publish_op
-      ) sp
-      WHERE exchange_rate IS NOT NULL
-    ) prop
-    JOIN hive.accounts_view hav ON hav.name = prop.witness
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
+  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_exchange_rate')
+  FROM hafbe_views.witness_prop_op_view AS op
+  WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to;
 
   -- parse witness block_size
   WITH select_ops_with_block_size AS (
