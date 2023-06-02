@@ -465,4 +465,83 @@ END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
 
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_block_size(op RECORD, props hive.witness_set_properties_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_block_size(op RECORD, props hive.witness_set_properties_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
+    SELECT hav.id AS witness_id, block_size
+    FROM (
+      SELECT
+        block_size::INT
+      FROM (
+        SELECT trim(both '"' FROM prop_value::TEXT) AS block_size
+        FROM hive.extract_set_witness_properties(props.props)
+        WHERE prop_name = 'maximum_block_size'
+      ) sp
+      WHERE block_size IS NOT NULL
+    ) p
+    JOIN hive.accounts_view hav ON hav.name = op.witness
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_block_size(op RECORD, upd hive.witness_update_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_block_size(op RECORD, upd hive.witness_update_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw
+  SET block_size = o.block_size
+  FROM (
+    SELECT hav.id AS witness_id, (upd).props.maximum_block_size AS block_size
+    FROM hive.accounts_view AS hav
+    WHERE hav.name = op.witness AND (upd).props.maximum_block_size IS NOT NULL
+  ) o
+  WHERE cw.witness_id = o.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_block_size(op RECORD, pow hive.pow_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_block_size(op RECORD, pow hive.pow_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw
+  SET block_size = o.block_size
+  FROM (
+    SELECT hav.id AS witness_id, (pow).props.maximum_block_size AS block_size
+    FROM hive.accounts_view AS hav
+    WHERE hav.name = op.witness AND (pow).props.maximum_block_size IS NOT NULL
+  ) o
+  WHERE cw.witness_id = o.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_block_size(op RECORD, pow hive.pow2_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_block_size(op RECORD, pow hive.pow2_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw
+  SET block_size = o.block_size
+  FROM (
+    SELECT hav.id AS witness_id, (pow).props.maximum_block_size AS block_size
+    FROM hive.accounts_view AS hav
+    WHERE hav.name = op.witness AND (pow).props.maximum_block_size IS NOT NULL
+  ) o
+  WHERE cw.witness_id = o.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
 RESET ROLE;

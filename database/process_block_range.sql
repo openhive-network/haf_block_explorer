@@ -209,51 +209,9 @@ BEGIN
   WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to;
 
   -- parse witness block_size
-  WITH select_ops_with_block_size AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11,30,14}') AND block_num BETWEEN _from AND _to
-  ),
-
-  select_block_size_from_set_witness_properties AS (
-    SELECT ex_prop.block_size, operation_id, witness
-    FROM select_ops_with_block_size sowbs
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS block_size
-      FROM hive.extract_set_witness_properties(sowbs.value->>'props')
-      WHERE prop_name = 'maximum_block_size'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = 42
-  ),
-
-  select_block_size_from_witness_update_op AS (
-    SELECT value->'props'->>'maximum_block_size' AS block_size, operation_id, witness
-    FROM select_ops_with_block_size
-    WHERE op_type_id != 42
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
-    SELECT av.id AS witness_id, block_size
-    FROM (
-      SELECT
-        block_size::INT, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT block_size, operation_id, witness
-        FROM select_block_size_from_set_witness_properties
-
-        UNION
-
-        SELECT block_size, operation_id, witness
-        FROM select_block_size_from_witness_update_op
-      ) sp
-      WHERE block_size IS NOT NULL
-    ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
+  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_block_size')
+  FROM hafbe_views.witness_prop_op_view AS op
+  WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to;
 
   -- parse witness signing_key
   WITH select_ops_with_signing_key AS (
