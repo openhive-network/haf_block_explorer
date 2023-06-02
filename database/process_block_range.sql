@@ -111,6 +111,7 @@ BEGIN
     END CASE;
   EXCEPTION
     WHEN undefined_function THEN RETURN;
+    WHEN others THEN RAISE;
   END;
 END;
 $BODY$;
