@@ -403,4 +403,66 @@ END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
 
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_exchange_rate(op RECORD, props hive.witness_set_properties_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_exchange_rate(op RECORD, props hive.witness_set_properties_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET
+    price_feed = ops.price_feed,
+    bias = ops.bias,
+    feed_updated_at = ops.feed_updated_at
+  FROM (
+    SELECT
+      hav.id AS witness_id,
+      base / quote AS price_feed,
+      (quote - 1000)::NUMERIC AS bias,
+      props.timestamp AS feed_updated_at
+    FROM (
+      SELECT
+        (exchange_rate->'base'->>'amount')::NUMERIC AS base,
+        (exchange_rate->'quote'->>'amount')::NUMERIC AS quote
+      FROM (
+        SELECT trim(both '"' FROM prop_value::TEXT)::JSON AS exchange_rate
+        FROM hive.extract_set_witness_properties(props.props)
+        WHERE prop_name = 'hbd_exchange_rate' AND exchange_rate IS NOT NULL
+      ) sp
+    ) p
+    JOIN hive.accounts_view hav ON hav.name = props.witness
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_exchange_rate(op RECORD, feed hive.feed_publish_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_exchange_rate(op RECORD, feed hive.feed_publish_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET
+    price_feed = ops.price_feed,
+    bias = ops.bias,
+    feed_updated_at = ops.feed_updated_at
+  FROM (
+    SELECT
+      hav.id AS witness_id,
+      base / quote AS price_feed,
+      (quote - 1000)::NUMERIC AS bias,
+      op.timestamp AS feed_updated_at
+    FROM (
+      SELECT
+        (feed).exchange_rate.base.amount::NUMERIC AS base,
+        (feed).exchange_rate.quote.amount::NUMERIC AS quote
+      WHERE (feed).exchange_rate IS NOT NULL
+    ) p
+    JOIN hive.accounts_view hav ON hav.name = op.witness
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
 RESET ROLE;
