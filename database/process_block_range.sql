@@ -178,26 +178,6 @@ BEGIN
   FROM hive.hafbe_app_operations_view AS op
   WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to;
 
-  -- insert witness node version
-  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
-    SELECT witness_id, version
-    FROM (
-      SELECT
-        cw.witness_id,
-        CASE WHEN extensions->0->>'type' = 'version' THEN
-          extensions->0->>'value'
-        ELSE
-          extensions->1->>'value'
-        END AS version,
-        ROW_NUMBER() OVER (PARTITION BY cw.witness_id ORDER BY num DESC) AS row_n
-      FROM hive.hafbe_app_blocks_view hbv
-      JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
-      WHERE num BETWEEN _from AND _to AND extensions IS NOT NULL
-    ) row_count
-    WHERE row_n = 1 AND version IS NOT NULL
-  ) w_node
-  WHERE cw.witness_id = w_node.witness_id;
-
   -- parse witness url
   PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
   FROM hafbe_views.witness_prop_op_view AS op
@@ -217,6 +197,26 @@ BEGIN
   PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_signing_key')
   FROM hafbe_views.witness_prop_op_view AS op
   WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
+
+  -- insert witness node version
+  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
+    SELECT witness_id, version
+    FROM (
+      SELECT
+        cw.witness_id,
+        CASE WHEN extensions->0->>'type' = 'version' THEN
+          extensions->0->>'value'
+        ELSE
+          extensions->1->>'value'
+        END AS version,
+        ROW_NUMBER() OVER (PARTITION BY cw.witness_id ORDER BY num DESC) AS row_n
+      FROM hive.hafbe_app_blocks_view hbv
+      JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
+      WHERE num BETWEEN _from AND _to AND extensions IS NOT NULL
+    ) row_count
+    WHERE row_n = 1 AND version IS NOT NULL
+  ) w_node
+  WHERE cw.witness_id = w_node.witness_id;
 
 END
 $function$
