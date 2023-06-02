@@ -544,4 +544,58 @@ END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
 
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_signing_key(op RECORD, props hive.witness_set_properties_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_signing_key(op RECORD, props hive.witness_set_properties_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
+    SELECT hav.id AS witness_id, signing_key
+    FROM (
+      SELECT
+        signing_key, op.witness
+      FROM (
+        SELECT COALESCE(
+          (SELECT trim(both '"' FROM prop_value::TEXT)
+            FROM hive.extract_set_witness_properties(props.props)
+            WHERE prop_name = 'new_signing_key'),
+          (SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
+            FROM hive.extract_set_witness_properties(props.props)
+            WHERE prop_name = 'key')) AS signing_key
+      ) sp
+      WHERE signing_key IS NOT NULL
+    ) p
+    JOIN hive.accounts_view hav ON hav.name = op.witness
+  ) o
+  WHERE cw.witness_id = o.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
+DROP FUNCTION IF EXISTS hafbe_app.parse_witness_signing_key(op RECORD, upd hive.witness_update_operation);
+CREATE OR REPLACE FUNCTION hafbe_app.parse_witness_signing_key(op RECORD, upd hive.witness_update_operation)
+RETURNS VOID
+AS
+$function$
+BEGIN
+  UPDATE hafbe_app.current_witnesses cw
+  SET signing_key = o.signing_key
+  FROM (
+    SELECT hav.id AS witness_id, signing_key
+    FROM (
+      SELECT
+        signing_key
+      FROM (
+        SELECT upd.block_signing_key AS signing_key
+      ) sp
+      WHERE signing_key IS NOT NULL
+    ) prop
+    JOIN hive.accounts_view hav ON hav.name = op.witness
+  ) o
+  WHERE cw.witness_id = o.witness_id;
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE;
+
 RESET ROLE;
