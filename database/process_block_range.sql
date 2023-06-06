@@ -152,11 +152,13 @@ END LOOP;
 
 PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_vote_op')
 FROM hive.hafbe_app_operations_view AS op
-WHERE op.op_type_id = 12 AND op.block_num BETWEEN _from AND _to;
+WHERE op.op_type_id = 12 AND op.block_num BETWEEN _from AND _to
+ORDER BY op.id ASC;
 
 PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_proxy_op')
 FROM hive.hafbe_app_operations_view AS op
-WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to;
+WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to
+ORDER BY op.id ASC;
 
 END
 $function$
@@ -174,9 +176,10 @@ BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
 
-  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'add_new_witness')
+  PERFORM op.id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'add_new_witness')
   FROM hive.hafbe_app_operations_view AS op
-  WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to;
+  WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to
+  ORDER BY op.id ASC;
 
   -- parse witness url
   PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
