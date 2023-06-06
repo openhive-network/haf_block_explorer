@@ -122,8 +122,9 @@ setup_api() {
 
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql

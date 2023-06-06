@@ -59,7 +59,7 @@ POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_b
 process_blocks() {
     n_blocks="${1:-null}"
     log_file="hafbe_sync.log"
-    psql $POSTGRES_ACCESS -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', $n_blocks);" 2>&1 | ts '%Y-%m-%d %H:%M:%.S'| tee -i $log_file
+    psql $POSTGRES_ACCESS -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);" 2>&1 | ts '%Y-%m-%d %H:%M:%.S' | tee -i $log_file
 }
 
 process_blocks $PROCESS_BLOCK_LIMIT

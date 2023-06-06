@@ -55,6 +55,7 @@ POSTGRES_ACCESS_OWNER="postgresql://hafbe_owner@$POSTGRES_HOST:$POSTGRES_PORT/ha
 drop_db() {
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT hive.app_remove_context('hafbe_app');"
+    psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT hive.app_remove_context('btracker_app');"
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_app CASCADE;"
 }
