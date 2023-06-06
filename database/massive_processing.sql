@@ -1,11 +1,11 @@
-CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCHAR, IN _from INT, IN _to INT, IN _step INT, INOUT _last_block INT)
+CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCHAR, IN _appContext_btracker VARCHAR, IN _from INT, IN _to INT, IN _step INT, INOUT _last_block INT)
 LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
-  PERFORM hive.app_context_detach(_appContext);
+  PERFORM hive.app_context_detach(ARRAY[_appContext, _appContext_btracker]);
   --- You can do here also other things to speedup your app, i.e. disable constrains, remove indexes etc.
 
   FOR b IN _from .. _to BY _step LOOP
@@ -57,7 +57,7 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'Attaching HAF application context at block: %.', _last_block;
-  PERFORM hive.app_context_attach(_appContext, _last_block);
+  PERFORM hive.app_context_attach(ARRAY[_appContext, _appContext_btracker], _last_block);
  --- You should enable here all things previously disabled at begin of this function...
 
  RAISE NOTICE 'Leaving massive processing of block range: <%, %>...', _from, _to;

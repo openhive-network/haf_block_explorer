@@ -3,7 +3,7 @@
   - creates HAF application context,
   - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _maxBlockLimit INT = NULL)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _appContext_btracker VARCHAR, _maxBlockLimit INT = NULL)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -18,8 +18,8 @@ BEGIN
 
   RAISE NOTICE 'Last block processed by application: %', __last_block;
 
-  IF NOT hive.app_context_is_attached(_appContext) THEN
-    PERFORM hive.app_context_attach(_appContext, __last_block);
+  IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker]) THEN
+    PERFORM hive.app_context_attach(ARRAY[_appContext, _appContext_btracker], __last_block);
   END IF;
 
   RAISE NOTICE 'Entering application main loop...';
@@ -31,7 +31,7 @@ BEGIN
   UPDATE hafbe_app.app_status SET started_processing_at = NOW();
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
-    __next_block_range := hive.app_next_block(_appContext);
+    __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker]);
     COMMIT;
 
     IF __next_block_range IS NULL THEN
@@ -48,7 +48,7 @@ BEGIN
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
 
       IF __next_block_range.first_block != __next_block_range.last_block THEN
-        CALL hafbe_app.do_massive_processing(_appContext, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
+        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, __next_block_range.first_block, __next_block_range.last_block, 100, __last_block);
       ELSE
         CALL hafbe_app.processBlock(__next_block_range.last_block);
         PERFORM hive.app_state_providers_update(__next_block_range.last_block, __next_block_range.last_block, _appContext);
