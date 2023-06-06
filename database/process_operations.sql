@@ -374,13 +374,11 @@ BEGIN
     SELECT hav.id AS witness_id, url
     FROM (
       SELECT
-        trim(both '"' FROM prop_value::TEXT) AS url, op.witness,
-        ROW_NUMBER() OVER (PARTITION BY op.witness ORDER BY op.operation_id DESC) AS row_n
+        trim(both '"' FROM prop_value::TEXT) AS url, op.witness
       FROM hive.extract_set_witness_properties(op.props)
       WHERE prop_name = 'url' AND url IS NOT NULL
     ) p
     JOIN hive.accounts_view hav ON hav.name = p.witness
-    WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 END
