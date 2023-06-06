@@ -182,24 +182,28 @@ BEGIN
   ORDER BY op.id ASC;
 
   -- parse witness url
-  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
   FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
+  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
+  ORDER BY op.operation_id;
 
   -- parse witness exchange_rate
-  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_exchange_rate')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_exchange_rate')
   FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to;
+  WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to
+  ORDER BY op.operation_id;
 
   -- parse witness block_size
-  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_block_size')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_block_size')
   FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to;
+  WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to
+  ORDER BY op.operation_id;
 
   -- parse witness signing_key
-  PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_signing_key')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_signing_key')
   FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to;
+  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
+  ORDER BY op.operation_id;
 
   -- insert witness node version
   UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
