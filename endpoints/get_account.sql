@@ -1,3 +1,29 @@
+--ACCOUNT KEYAUTH
+
+DROP TYPE IF EXISTS hafbe_endpoints.account_keyauth CASCADE;
+CREATE TYPE hafbe_endpoints.account_keyauth AS
+(
+  key_auth TEXT,
+  authority_kind hive.authority_type
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_keyauth(_account TEXT)
+RETURNS SETOF hafbe_endpoints.account_keyauth
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+BEGIN
+
+RETURN QUERY SELECT key_auth, authority_kind 
+FROM hive.hafbe_app_keyauth 
+WHERE account_name= _account 
+ORDER BY authority_kind ASC;
+
+END
+$$
+;
+
 --ACCOUNT METADATA
 
 DROP TYPE IF EXISTS hafbe_endpoints.json_metadata CASCADE;
@@ -132,17 +158,17 @@ BEGIN
   END;
 
   SELECT json_build_object(
-    'id', __response_data->>'id',
-    'name', _account,
-    'owner', __response_data->'owner',
-    'active', __response_data->'active',
-    'posting', __response_data->'posting',
-    'memo_key', __response_data->>'memo_key',
-    'profile_image', __profile_image,
-    'json_metadata', __json_metadata,
-    'posting_json_metadata', __posting_json_metadata,
-    'last_owner_update', __response_data->>'last_owner_update',
-    'last_account_update', __response_data->>'last_account_update',
+    'id', __response_data->>'id', --OK
+    'name', _account, --OK
+    'owner', __response_data->'owner', --OK
+    'active', __response_data->'active', --OK
+    'posting', __response_data->'posting', --OK
+    'memo_key', __response_data->>'memo_key', --??
+    'profile_image', __profile_image, --OK
+    'json_metadata', __json_metadata, --OK
+    'posting_json_metadata', __posting_json_metadata, --OK
+    'last_owner_update', __response_data->>'last_owner_update', 
+    'last_account_update', __response_data->>'last_account_update', 
     'created', __response_data->>'created',
     'mined', __response_data->>'mined',
     'recovery_account', __response_data->>'recovery_account',
@@ -152,17 +178,17 @@ BEGIN
     'voting_manabar', __response_data->'voting_manabar',
     'downvote_manabar', __response_data->'downvote_manabar',
     'voting_power', __response_data->>'voting_power',
-    'balance', __response_data->>'balance',
-    'savings_balance', __response_data->>'savings_balance',
-    'hbd_balance', __response_data->>'hbd_balance',
-    'savings_withdraw_requests', __response_data->>'savings_withdraw_requests',
-    'reward_hbd_balance', __response_data->>'reward_hbd_balance',
-    'reward_hive_balance', __response_data->>'reward_hive_balance',
-    'reward_vesting_balance', __response_data->>'reward_vesting_balance',
-    'reward_vesting_hive', __response_data->>'reward_vesting_hive',
-    'vesting_shares', __response_data->>'vesting_shares',
-    'delegated_vesting_shares', __response_data->>'delegated_vesting_shares',
-    'received_vesting_shares', __response_data->>'received_vesting_shares',
+    'balance', __response_data->>'balance', --OK
+    'savings_balance', __response_data->>'savings_balance', --work in progress
+    'hbd_balance', __response_data->>'hbd_balance', --OK
+    'savings_withdraw_requests', __response_data->>'savings_withdraw_requests', --work in progress
+    'reward_hbd_balance', __response_data->>'reward_hbd_balance', --work in progress
+    'reward_hive_balance', __response_data->>'reward_hive_balance', --work in progress
+    'reward_vesting_balance', __response_data->>'reward_vesting_balance', --work in progress
+    'reward_vesting_hive', __response_data->>'reward_vesting_hive', --work in progress
+    'vesting_shares', __response_data->>'vesting_shares', --OK 
+    'delegated_vesting_shares', __response_data->>'delegated_vesting_shares', --OK
+    'received_vesting_shares', __response_data->>'received_vesting_shares', --OK
     'vesting_withdraw_rate', __response_data->>'vesting_withdraw_rate',
     'post_voting_power', __response_data->>'post_voting_power',
     'posting_rewards', __response_data->>'posting_rewards',
@@ -172,7 +198,7 @@ BEGIN
     'last_root_post', __response_data->>'last_root_post',
     'last_vote_time', __response_data->>'last_vote_time',
     'vesting_balance', __response_data->>'vesting_balance',
-    'reputation', __response_data->>'reputation',
+    'reputation', __response_data->>'reputation', --work in progress
     'witness_votes', __response_data->'witness_votes'
   ) INTO __response_data;
 

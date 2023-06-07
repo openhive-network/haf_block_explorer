@@ -76,7 +76,6 @@ BEGIN
   IF NOT hive.app_context_exists(_appContext) THEN
     RAISE NOTICE 'Attempting to create a HAF application context...';
     PERFORM hive.app_create_context(_appContext);
-    PERFORM hive.app_state_provider_import('METADATA', _appContext);
     COMMIT;
   END IF;
 END
