@@ -25,8 +25,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-  CREATE INDEX IF NOT EXISTS idx_hafbe_app_account_balance_history_nai ON btracker_app.account_balance_history(nai);
-  CREATE INDEX IF NOT EXISTS idx_hafbe_app_account_balance_history_account_nai ON btracker_app.account_balance_history(account, nai);
+  CREATE INDEX IF NOT EXISTS idx_btracker_app_account_balance_history_nai ON btracker_app.account_balance_history(nai);
+  CREATE INDEX IF NOT EXISTS idx_btracker_app_account_balance_history_account_nai ON btracker_app.account_balance_history(account, nai);
 END
 $$
 ;
