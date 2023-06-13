@@ -24,6 +24,46 @@ END
 $$
 ;
 
+DROP TYPE IF EXISTS hafbe_endpoints.current_account_savings CASCADE;
+CREATE TYPE hafbe_endpoints.current_account_savings AS
+(
+  hbd_savings BIGINT,
+  hive_savings BIGINT,
+  savings_withdraw_requests INT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_savings(_account TEXT)
+RETURNS hafbe_endpoints.current_account_savings
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  hive_amount BIGINT;
+  hbd_amount BIGINT;
+  _savings_withdraw_requests INT;
+  __result hafbe_endpoints.current_account_savings;
+BEGIN
+
+SELECT  
+  MAX(CASE WHEN nai = 13 THEN saving_balance END) AS hbd,
+  MAX(CASE WHEN nai = 21 THEN saving_balance END) AS hive
+INTO hbd_amount, hive_amount
+FROM btracker_app.current_account_savings WHERE account= _account;
+
+SELECT SUM (savings_withdraw_requests) AS total
+INTO _savings_withdraw_requests
+FROM btracker_app.current_account_savings
+WHERE account= _account;
+
+  __result.hbd_savings = hbd_amount;
+  __result.hive_savings = hive_amount;
+  __result.savings_withdraw_requests = _savings_withdraw_requests;
+
+RETURN __result;
+END
+$$
+;
+
 --ACCOUNT METADATA
 
 DROP TYPE IF EXISTS hafbe_endpoints.json_metadata CASCADE;
@@ -181,6 +221,7 @@ BEGIN
     'balance', __response_data->>'balance', --OK
     'savings_balance', __response_data->>'savings_balance', --work in progress
     'hbd_balance', __response_data->>'hbd_balance', --OK
+    --hbd_saving_balance work in progress
     'savings_withdraw_requests', __response_data->>'savings_withdraw_requests', --work in progress
     'reward_hbd_balance', __response_data->>'reward_hbd_balance', --work in progress
     'reward_hive_balance', __response_data->>'reward_hive_balance', --work in progress
