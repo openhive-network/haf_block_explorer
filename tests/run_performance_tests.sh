@@ -52,10 +52,13 @@ JTL_PATH=$RESULT_DIR/"report.jtl"
 
 JMETER=jmeter-5.5
 
-args=("${@:2}")
+PORT="$1"
+THREAD_NUM="$2"
+LOOP_COUNT="$3"
+DB_SIZE="$4"
 
 cleanup
-generate_db ${args[3]}
-set_config_values ${args[@]:0:3}
+generate_db "$DB_SIZE"
+set_config_values "$PORT" "$THREAD_NUM" "$LOOP_COUNT"
 run_jmeter
 generate_report
