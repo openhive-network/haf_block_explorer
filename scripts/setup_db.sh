@@ -154,12 +154,14 @@ context="no"
 DB_NAME=haf_block_log
 owner_role=hafbe_owner
 
-endpoints=$PWD/../endpoints
-backend=$PWD/../backend
-db_dir=$PWD/../database
-hafah_dir=$PWD/../submodules/hafah
-btracker_dir=$PWD/../submodules/btracker
-hafbe_dir=$PWD/..
+SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})"
+
+endpoints=$SCRIPT_DIR/../endpoints
+backend=$SCRIPT_DIR/../backend
+db_dir=$SCRIPT_DIR/../database
+hafah_dir=$SCRIPT_DIR/../submodules/hafah
+btracker_dir=$SCRIPT_DIR/../submodules/btracker
+hafbe_dir=$SCRIPT_DIR/..
 
   setup_owner
   setup_apps
