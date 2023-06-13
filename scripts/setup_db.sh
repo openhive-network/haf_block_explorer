@@ -90,11 +90,11 @@ EOF
 }
 
 setup_apps() {
-  cd $hafah_dir && bash $hafah_dir/scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
-  cd $hafah_dir && bash $hafah_dir/scripts/generate_version_sql.bash $PWD "sudo --user=$POSTGRES_USER"
-  cd $hafah_dir && bash $hafah_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN
-  cd $btracker_dir && bash $btracker_dir/scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context
-  cd $hafbe_dir && bash $hafbe_dir/scripts/generate_version_sql.sh $PWD "sudo --user=$POSTGRES_USER"
+  (cd $hafah_dir && bash ./scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
+  (cd $hafah_dir && bash ./scripts/generate_version_sql.bash $PWD "sudo --user=$POSTGRES_USER")
+  (cd $hafah_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
+  (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context)
+  (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD "sudo --user=$POSTGRES_USER")
 }
 
 setup_extensions() {
