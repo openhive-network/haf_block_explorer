@@ -4,7 +4,8 @@ DROP FUNCTION IF EXISTS hafbe_app.process_operation;
 CREATE OR REPLACE FUNCTION hafbe_app.process_operation(
   op RECORD,
   namespace TEXT,
-  proc TEXT
+  proc TEXT,
+  raise_on_undefined_function BOOL DEFAULT TRUE
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -109,7 +110,10 @@ BEGIN
       ELSE RAISE 'Invalid operation type %', op.op_type_id;
     END CASE;
   EXCEPTION
-    WHEN undefined_function THEN RETURN;
+    WHEN undefined_function THEN
+      IF raise_on_undefined_function THEN raise;
+      ELSE RETURN;
+      END IF;
     WHEN others THEN RAISE;
   END;
 END;
