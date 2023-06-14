@@ -3,7 +3,6 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_app.process_operation;
 CREATE OR REPLACE FUNCTION hafbe_app.process_operation(
   op RECORD,
-  op_type smallint,
   namespace TEXT,
   proc TEXT
 )
@@ -13,7 +12,7 @@ VOLATILE
 AS $BODY$
 BEGIN
   BEGIN
-    CASE op_type OF
+    CASE op.op_type_id OF
       WHEN 0 THEN EXECUTE format('SELECT %I.%I($1, $1.body_binary::hive.vote_operation)', namespace, proc) USING op;
       WHEN 1 THEN EXECUTE format('SELECT %I.%I($1, $1.body_binary::hive.comment_operation)', namespace, proc) USING op;
       WHEN 2 THEN EXECUTE format('SELECT %I.%I($1, $1.body_binary::hive.transfer_operation)', namespace, proc) USING op;
@@ -150,12 +149,12 @@ LOOP
 
 END LOOP;
 
-PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_vote_op')
+PERFORM hafbe_app.process_operation(op, 'hafbe_app', 'process_vote_op')
 FROM hive.hafbe_app_operations_view AS op
 WHERE op.op_type_id = 12 AND op.block_num BETWEEN _from AND _to
 ORDER BY op.id ASC;
 
-PERFORM hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'process_proxy_op')
+PERFORM hafbe_app.process_operation(op, 'hafbe_app', 'process_proxy_op')
 FROM hive.hafbe_app_operations_view AS op
 WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to
 ORDER BY op.id ASC;
@@ -176,31 +175,31 @@ BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
 
-  PERFORM op.id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'add_new_witness')
+  PERFORM op.id, hafbe_app.process_operation(op, 'hafbe_app', 'add_new_witness')
   FROM hive.hafbe_app_operations_view AS op
   WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.id ASC;
 
   -- parse witness url
-  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_url')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, 'hafbe_app', 'parse_witness_url')
   FROM hafbe_views.witness_prop_op_view AS op
   WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.operation_id;
 
   -- parse witness exchange_rate
-  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_exchange_rate')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, 'hafbe_app', 'parse_witness_exchange_rate')
   FROM hafbe_views.witness_prop_op_view AS op
   WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.operation_id;
 
   -- parse witness block_size
-  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_block_size')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, 'hafbe_app', 'parse_witness_block_size')
   FROM hafbe_views.witness_prop_op_view AS op
   WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.operation_id;
 
   -- parse witness signing_key
-  PERFORM op.operation_id, hafbe_app.process_operation(op, op.op_type_id, 'hafbe_app', 'parse_witness_signing_key')
+  PERFORM op.operation_id, hafbe_app.process_operation(op, 'hafbe_app', 'parse_witness_signing_key')
   FROM hafbe_views.witness_prop_op_view AS op
   WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.operation_id;
