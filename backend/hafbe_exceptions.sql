@@ -2,6 +2,8 @@ DROP SCHEMA IF EXISTS hafbe_exceptions CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_exceptions AUTHORIZATION hafbe_owner;
 
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_exception(_status INT, _error_id INT, _error TEXT, _message TEXT, _data TEXT = NULL)
 RETURNS JSON
 LANGUAGE 'plpgsql'
@@ -101,3 +103,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

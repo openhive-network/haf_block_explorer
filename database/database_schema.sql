@@ -1,5 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS hafbe_app AUTHORIZATION hafbe_owner;
 
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_app.define_schema()
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -151,3 +153,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;
