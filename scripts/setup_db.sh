@@ -1,11 +1,15 @@
 #!/bin/bash
 
-set -e
+set -xeuo
 set -o pipefail
+
+SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SRCDIR="${SCRIPTDIR}/../"
 
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
+owner_role=hafbe_owner
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
@@ -61,7 +65,8 @@ setup_owner() {
 psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
 DO \$$
 BEGIN
-  CREATE ROLE $owner_role WITH LOGIN NOINHERIT IN ROLE hive_applications_group;
+  CREATE ROLE $owner_role WITH LOGIN INHERIT IN ROLE hive_applications_group;
+  GRANT CREATE ON DATABASE haf_block_log TO $owner_role;
   EXCEPTION WHEN DUPLICATE_OBJECT THEN
   RAISE NOTICE '$owner_role role already exists';
 END
@@ -95,6 +100,10 @@ setup_apps() {
   (cd $hafah_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
   (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context)
   (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD "sudo --user=$POSTGRES_USER")
+  
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_owner TO hafbe_owner;"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_user TO hafbe_owner;"
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;"
 }
 
 setup_extensions() {
@@ -111,11 +120,10 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
 
-  # must be done by admin because of hive.contexts permissions
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
@@ -141,7 +149,7 @@ setup_api() {
 
   # must be done by admin
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f $backend/hafbe_roles.sql
-  psql $POSTGRES_ACCESS_ADMIN -v ON_ERROR_STOP=on -f set_version_in_sql.pgsql
+  psql $POSTGRES_ACCESS_ADMIN -v ON_ERROR_STOP=on -f "${SRCDIR}/set_version_in_sql.pgsql"
 
 }
 
@@ -152,7 +160,6 @@ create_haf_indexes() {
 
 context="no"
 DB_NAME=haf_block_log
-owner_role=hafbe_owner
 
 SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})"
 
