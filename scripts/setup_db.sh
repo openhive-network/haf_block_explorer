@@ -96,10 +96,10 @@ EOF
 
 setup_apps() {
   (cd $hafah_dir && bash ./scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
-  (cd $hafah_dir && bash ./scripts/generate_version_sql.bash $PWD "sudo --user=$POSTGRES_USER")
+  (cd $hafah_dir && bash ./scripts/generate_version_sql.bash $PWD)
   (cd $hafah_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
   (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context)
-  (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD "sudo --user=$POSTGRES_USER")
+  (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD)
   
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_owner TO hafbe_owner;"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_user TO hafbe_owner;"
