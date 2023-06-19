@@ -18,10 +18,13 @@ BEGIN
     RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
 
     PERFORM btracker_app.process_block_range_data_c(b, _last_block);
-
+    RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', b, _last_block;
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
-
+    RAISE NOTICE 'hafbe_app.Block range: <%, %> processed successfully.', b, _last_block;
     PERFORM hive.app_state_providers_update(b, _last_block, _appContext);
+    RAISE NOTICE 'hive.app_state_providers_updateBlock range: <%, %> processed successfully.', b, _last_block;
+
+    PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
 
     COMMIT;
 
@@ -48,9 +51,15 @@ BEGIN
     RAISE NOTICE 'Attempting to process a block range (rest): <%, %>', b, _last_block;
     --- Supplement last part of range if anything left.
     PERFORM btracker_app.process_block_range_data_c(_last_block, _to);
+    RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', _last_block, _to;
     PERFORM hafbe_app.process_block_range_data_c(_last_block, _to);
+    RAISE NOTICE 'hafbe_app.Block range: <%, %> processed successfully.', _last_block, _to;
     PERFORM hive.app_state_providers_update(_last_block, _to, _appContext);
+    RAISE NOTICE 'hive.app_state_providers_update.Block range: <%, %> processed successfully.', _last_block, _to;
+
     _last_block := _to;
+
+    PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
 
     COMMIT;
     RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
@@ -59,6 +68,8 @@ BEGIN
   RAISE NOTICE 'Attaching HAF application context at block: %.', _last_block;
   PERFORM hive.app_context_attach(ARRAY[_appContext, _appContext_btracker], _last_block);
  --- You should enable here all things previously disabled at begin of this function...
+
+
 
  RAISE NOTICE 'Leaving massive processing of block range: <%, %>...', _from, _to;
 END
