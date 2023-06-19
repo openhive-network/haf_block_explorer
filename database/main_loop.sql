@@ -10,6 +10,8 @@ $$
 DECLARE
   __last_block INT;
   __next_block_range hive.blocks_range;
+  __block_range_len INT := 0;
+   __massive_processing_threshold INT := 100;
 BEGIN
   PERFORM hafbe_app.allowProcessing();
   COMMIT;
@@ -47,13 +49,23 @@ BEGIN
 
       RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
 
-      IF __next_block_range.first_block != __next_block_range.last_block THEN
-        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, __next_block_range.first_block, __next_block_range.last_block, 1000, __last_block);
-      ELSE
-        CALL hafbe_app.processBlock(__next_block_range.last_block);
-        PERFORM hive.app_state_providers_update(__next_block_range.last_block, __next_block_range.last_block, _appContext);
+      __block_range_len := __next_block_range.last_block - __next_block_range.first_block + 1;
 
-        __last_block := __next_block_range.last_block;
+      IF __block_range_len >= __massive_processing_threshold THEN
+        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, __next_block_range.first_block, __next_block_range.last_block, 10000, __last_block);
+      ELSE
+        FOR __block IN __next_block_range.first_block .. __next_block_range.last_block LOOP
+          CALL hafbe_app.processBlock(__block, _appContext);
+          __last_block := __block;
+          EXIT WHEN hafbe_app.continueProcessing() OR (_maxBlockLimit != 0 AND __last_block >= _maxBlockLimit);
+        END LOOP;
+
+        IF (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
+           (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
+          RAISE NOTICE 'Process witness cache...';
+          CALL hafbe_app.update_witnesses_cache();
+          RAISE NOTICE 'Witness cache processing done.';
+        END IF;
       END IF;
 
       IF __next_block_range.first_block = __next_block_range.last_block AND 
@@ -61,12 +73,6 @@ BEGIN
       UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
         PERFORM hafbe_indexes.create_hafbe_indexes();
         PERFORM hafbe_indexes.create_btracker_indexes();
-      END IF;
-
-      IF __next_block_range.first_block = __next_block_range.last_block AND
-      (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
-      (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
-        CALL hafbe_app.update_witnesses_cache();
       END IF;
 
   END IF;
