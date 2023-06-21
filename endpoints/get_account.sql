@@ -55,9 +55,34 @@ INTO _savings_withdraw_requests
 FROM btracker_app.current_account_savings
 WHERE account= _account;
 
-  __result.hbd_savings = hbd_amount;
-  __result.hive_savings = hive_amount;
-  __result.savings_withdraw_requests = _savings_withdraw_requests;
+
+--ACCOUNT REWARDS
+
+DROP TYPE IF EXISTS hafbe_endpoints.current_account_rewards CASCADE;
+CREATE TYPE hafbe_endpoints.current_account_rewards AS
+(
+  hbd_rewards numeric,
+  hive_rewards numeric,
+  vests_rewards numeric,
+  hive_vesting_rewards numeric
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_rewards(_account TEXT)
+RETURNS hafbe_endpoints.current_account_rewards
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __result hafbe_endpoints.current_account_rewards;
+BEGIN
+
+SELECT  
+  MAX(CASE WHEN nai = 13 THEN balance END) AS hbd,
+  MAX(CASE WHEN nai = 21 THEN balance END) AS hive,
+  MAX(CASE WHEN nai = 37 THEN balance END) AS vests,
+  MAX(CASE WHEN nai = 38 THEN balance END) AS vesting_hive
+INTO __result
+FROM btracker_app.current_account_rewards WHERE account= _account;
 
 RETURN __result;
 END
