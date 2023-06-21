@@ -24,11 +24,13 @@ END
 $$
 ;
 
+--ACCOUNT SAVINGS
+
 DROP TYPE IF EXISTS hafbe_endpoints.current_account_savings CASCADE;
 CREATE TYPE hafbe_endpoints.current_account_savings AS
 (
-  hbd_savings BIGINT,
-  hive_savings BIGINT,
+  hbd_savings numeric,
+  hive_savings numeric,
   savings_withdraw_requests INT
 );
 
@@ -38,23 +40,24 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  hive_amount BIGINT;
-  hbd_amount BIGINT;
-  _savings_withdraw_requests INT;
   __result hafbe_endpoints.current_account_savings;
 BEGIN
 
 SELECT  
   MAX(CASE WHEN nai = 13 THEN saving_balance END) AS hbd,
   MAX(CASE WHEN nai = 21 THEN saving_balance END) AS hive
-INTO hbd_amount, hive_amount
+INTO __result.hbd_savings, __result.hive_savings
 FROM btracker_app.current_account_savings WHERE account= _account;
 
 SELECT SUM (savings_withdraw_requests) AS total
-INTO _savings_withdraw_requests
+INTO __result.savings_withdraw_requests
 FROM btracker_app.current_account_savings
 WHERE account= _account;
 
+RETURN __result;
+END
+$$
+;
 
 --ACCOUNT REWARDS
 
@@ -123,8 +126,8 @@ $$
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_vests_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_vests_balance AS
 (
-  delegated_vests BIGINT,
-  received_vests BIGINT
+  delegated_vests numeric,
+  received_vests numeric
 );
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_vests_balance(_account TEXT)
@@ -148,9 +151,9 @@ $$
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_account_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_account_balance AS
 (
-  hbd_balance INT,
-  hive_balance INT,
-  vesting_shares BIGINT
+  hbd_balance numeric,
+  hive_balance numeric,
+  vesting_shares numeric
 );
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_account_balance(_account TEXT)
@@ -159,9 +162,6 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  hive_amount TEXT;
-  hbd_amount TEXT;
-  vest_amount TEXT;
   __result hafbe_endpoints.btracker_account_balance;
 BEGIN
 
@@ -169,12 +169,8 @@ SELECT
   MAX(CASE WHEN nai = 13 THEN balance END) AS hbd,
   MAX(CASE WHEN nai = 21 THEN balance END) AS hive, 
   MAX(CASE WHEN nai = 37 THEN balance END) AS vest 
-INTO hbd_amount, hive_amount, vest_amount
+INTO __result
 FROM btracker_app.current_account_balances WHERE account= _account;
-
-  __result.hbd_balance = hbd_amount;
-  __result.hive_balance = hive_amount;
-  __result.vesting_shares = vest_amount;
 
 RETURN __result;
 
@@ -225,9 +221,9 @@ BEGIN
   SELECT json_build_object(
     'id', __response_data->>'id', --OK
     'name', _account, --OK
-    'owner', __response_data->'owner', --OK
-    'active', __response_data->'active', --OK
-    'posting', __response_data->'posting', --OK
+    'owner', __response_data->'owner', --work in progress
+    'active', __response_data->'active', --work in progress
+    'posting', __response_data->'posting', --work in progress
     'memo_key', __response_data->>'memo_key', --??
     'profile_image', __profile_image, --OK
     'json_metadata', __json_metadata, --OK
@@ -244,14 +240,14 @@ BEGIN
     'downvote_manabar', __response_data->'downvote_manabar',
     'voting_power', __response_data->>'voting_power',
     'balance', __response_data->>'balance', --OK
-    'savings_balance', __response_data->>'savings_balance', --work in progress
+    'savings_balance', __response_data->>'savings_balance', --OK
     'hbd_balance', __response_data->>'hbd_balance', --OK
-    --hbd_saving_balance work in progress
-    'savings_withdraw_requests', __response_data->>'savings_withdraw_requests', --work in progress
-    'reward_hbd_balance', __response_data->>'reward_hbd_balance', --work in progress
-    'reward_hive_balance', __response_data->>'reward_hive_balance', --work in progress
-    'reward_vesting_balance', __response_data->>'reward_vesting_balance', --work in progress
-    'reward_vesting_hive', __response_data->>'reward_vesting_hive', --work in progress
+    --hbd_saving_balance OK
+    'savings_withdraw_requests', __response_data->>'savings_withdraw_requests', --OK
+    'reward_hbd_balance', __response_data->>'reward_hbd_balance', --OK
+    'reward_hive_balance', __response_data->>'reward_hive_balance', --OK
+    'reward_vesting_balance', __response_data->>'reward_vesting_balance', --OK
+    'reward_vesting_hive', __response_data->>'reward_vesting_hive', --OK
     'vesting_shares', __response_data->>'vesting_shares', --OK 
     'delegated_vesting_shares', __response_data->>'delegated_vesting_shares', --OK
     'received_vesting_shares', __response_data->>'received_vesting_shares', --OK
@@ -263,7 +259,7 @@ BEGIN
     'last_post', __response_data->>'last_post',
     'last_root_post', __response_data->>'last_root_post',
     'last_vote_time', __response_data->>'last_vote_time',
-    'vesting_balance', __response_data->>'vesting_balance',
+    'vesting_balance', __response_data->>'vesting_balance', --OK, NOT USED ANYMORE (ALWAYS 0)
     'reputation', __response_data->>'reputation', --work in progress
     'witness_votes', __response_data->'witness_votes'
   ) INTO __response_data;
