@@ -2,3 +2,4 @@ tests/performance/result
 build/
 block_processing.log
 set_version_in_sql.pgsql
+hafbe_sync.log
