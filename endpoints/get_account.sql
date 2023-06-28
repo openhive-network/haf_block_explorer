@@ -126,8 +126,8 @@ $$
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_vests_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_vests_balance AS
 (
-  delegated_vests numeric,
-  received_vests numeric
+  delegated_vests BIGINT,
+  received_vests BIGINT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_vests_balance(_account TEXT)
@@ -136,10 +136,47 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __result hafbe_endpoints.btracker_vests_balance;
+_result hafbe_endpoints.btracker_vests_balance;
+BEGIN
+    SELECT 
+        cv.delegated_vests, 
+        cv.received_vests
+    INTO _result
+    FROM 
+        btracker_app.current_account_vests cv
+    WHERE 
+        cv.account = _account;
+
+    IF NOT FOUND THEN 
+      _result = (0::BIGINT, 0::BIGINT);
+    END IF;
+
+    RETURN _result;
+END
+$$
+;
+
+--ACCOUNT WITHDRAWALS
+
+DROP TYPE IF EXISTS hafbe_endpoints.current_account_withdraws CASCADE;
+CREATE TYPE hafbe_endpoints.current_account_withdraws AS
+(
+  vesting_withdraw_rate numeric,
+  to_withdraw numeric,
+  withdrawn numeric,
+  withdraw_routes INT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_withdraws(_account TEXT)
+RETURNS hafbe_endpoints.current_account_withdraws
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __result hafbe_endpoints.current_account_withdraws;
 BEGIN
 
-SELECT delegated_vests, received_vests INTO __result FROM btracker_app.current_account_vests WHERE account= _account;
+SELECT vesting_withdraw_rate, to_withdraw, withdrawn, withdraw_routes INTO __result FROM btracker_app.current_account_withdraws WHERE account= _account;
 RETURN __result;
 
 END
@@ -151,9 +188,11 @@ $$
 DROP TYPE IF EXISTS hafbe_endpoints.btracker_account_balance CASCADE;
 CREATE TYPE hafbe_endpoints.btracker_account_balance AS
 (
-  hbd_balance numeric,
-  hive_balance numeric,
-  vesting_shares numeric
+  hbd_balance BIGINT,
+  hive_balance BIGINT,
+  vesting_shares BIGINT,
+  vesting_balance_hive BIGINT,
+  post_voting_power_vests BIGINT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_account_balance(_account TEXT)
@@ -171,6 +210,14 @@ SELECT
   MAX(CASE WHEN nai = 37 THEN balance END) AS vest 
 INTO __result
 FROM btracker_app.current_account_balances WHERE account= _account;
+
+SELECT hive.get_vesting_balance((SELECT num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), __result.vesting_shares) 
+INTO __result.vesting_balance_hive;
+
+
+SELECT (__result.vesting_shares - delegated_vests + received_vests) 
+INTO __result.post_voting_power_vests
+FROM hafbe_endpoints.get_btracker_vests_balance(_account);
 
 RETURN __result;
 
