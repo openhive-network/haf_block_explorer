@@ -9,6 +9,22 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_matching_operation_types(_operation_type_pattern TEXT)
+RETURNS JSON
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+__operation_name TEXT = '%' || _operation_name || '%';
+BEGIN
+  RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
+    SELECT json_agg(hafbe_endpoints.format_op_types(op_type_id,operation_name, is_virtual)) AS arr
+    FROM hafbe_backend.get_set_of_op_types_by_name(__operation_name)
+  ) res;
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_types()
 RETURNS JSON
 LANGUAGE 'plpgsql'

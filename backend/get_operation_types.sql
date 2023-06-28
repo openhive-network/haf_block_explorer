@@ -13,6 +13,21 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_op_types_by_name(_operation_name TEXT)
+RETURNS SETOF hafbe_types.op_types
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+  RETURN QUERY SELECT
+    id, name, is_virtual
+  FROM hive.operation_types
+  WHERE name LIKE _operation_name
+  ORDER BY id ASC;
+END
+$$
+;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_acc_op_types(_account_id INT)
 RETURNS SETOF hafbe_types.op_types
 AS
