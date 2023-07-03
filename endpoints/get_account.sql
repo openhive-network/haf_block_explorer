@@ -34,7 +34,7 @@ CREATE TYPE hafbe_endpoints.current_account_savings AS
   savings_withdraw_requests INT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_savings(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_savings(_account INT)
 RETURNS hafbe_endpoints.current_account_savings
 LANGUAGE 'plpgsql'
 AS
@@ -70,7 +70,7 @@ CREATE TYPE hafbe_endpoints.current_account_rewards AS
   hive_vesting_rewards numeric
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_rewards(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_rewards(_account INT)
 RETURNS hafbe_endpoints.current_account_rewards
 LANGUAGE 'plpgsql'
 AS
@@ -101,19 +101,17 @@ CREATE TYPE hafbe_endpoints.json_metadata AS
   posting_json_metadata TEXT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_json_metadata(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_json_metadata(_account INT)
 RETURNS hafbe_endpoints.json_metadata
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  _account_id INT;
   __result hafbe_endpoints.json_metadata;
 BEGIN
-  SELECT id INTO _account_id FROM hive.accounts_view WHERE name = _account;
 
   SELECT json_metadata, posting_json_metadata FROM hive.hafbe_app_metadata 
-    INTO __result WHERE account_id= _account_id;
+    INTO __result WHERE account_id= _account;
 
 RETURN __result;
 
@@ -130,7 +128,7 @@ CREATE TYPE hafbe_endpoints.btracker_vests_balance AS
   received_vests BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_vests_balance(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_vests_balance(_account INT)
 RETURNS hafbe_endpoints.btracker_vests_balance
 LANGUAGE 'plpgsql'
 AS
@@ -156,6 +154,41 @@ END
 $$
 ;
 
+--ACCOUNT CURATION, POSTING REWARDS
+
+DROP TYPE IF EXISTS hafbe_endpoints.account_posting_curation_rewards CASCADE;
+CREATE TYPE hafbe_endpoints.account_posting_curation_rewards AS
+(
+  curation_rewards BIGINT,
+  posting_rewards BIGINT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_posting_curation_rewards(_account INT)
+RETURNS hafbe_endpoints.account_posting_curation_rewards
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+_result hafbe_endpoints.account_posting_curation_rewards;
+BEGIN
+    SELECT 
+        cv.curation_rewards, 
+        cv.posting_rewards
+    INTO _result
+    FROM 
+        btracker_app.account_posting_curation_rewards cv
+    WHERE 
+        cv.account = _account;
+
+    IF NOT FOUND THEN 
+      _result = (0::BIGINT, 0::BIGINT);
+    END IF;
+
+    RETURN _result;
+END
+$$
+;
+
 --ACCOUNT WITHDRAWALS
 
 DROP TYPE IF EXISTS hafbe_endpoints.current_account_withdraws CASCADE;
@@ -167,7 +200,7 @@ CREATE TYPE hafbe_endpoints.current_account_withdraws AS
   withdraw_routes INT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_withdraws(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_current_account_withdraws(_account INT)
 RETURNS hafbe_endpoints.current_account_withdraws
 LANGUAGE 'plpgsql'
 AS
@@ -195,7 +228,7 @@ CREATE TYPE hafbe_endpoints.btracker_account_balance AS
   post_voting_power_vests BIGINT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_account_balance(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_btracker_account_balance(_account INT)
 RETURNS hafbe_endpoints.btracker_account_balance
 LANGUAGE 'plpgsql'
 AS
@@ -236,7 +269,11 @@ DECLARE
   __json_metadata JSON;
   __posting_json_metadata JSON;
   __profile_image TEXT;
+  __account_id INT;
 BEGIN
+  SELECT id INTO __account_id
+  FROM hive.hafbe_app_accounts_view WHERE name = _account;
+
   SELECT INTO __response_data
     data
   FROM hafbe_app.hived_account_cache
@@ -288,19 +325,20 @@ BEGIN
   COALESCE(_result_savings.hbd_savings, 0) AS hbd_savings,
   COALESCE(_result_savings.hive_savings, 0) AS hive_savings,
   COALESCE(_result_savings.savings_withdraw_requests, 0) AS savings_withdraw_requests,
-  _id.id
+  COALESCE(_result_curation_posting.posting_rewards, 0) AS posting_rewards,
+  COALESCE(_result_curation_posting.curation_rewards, 0) AS curation_rewards
   FROM
-  (SELECT * FROM hafbe_endpoints.get_btracker_account_balance(_account)) AS _result_balance,
-  (SELECT * FROM hafbe_endpoints.get_current_account_withdraws(_account)) AS _result_withdraws,
-  (SELECT * FROM hafbe_endpoints.get_btracker_vests_balance(_account)) AS _result_vest_balance,
-  (SELECT * FROM hafbe_endpoints.get_json_metadata(_account)) AS _result_json_metadata,
-  (SELECT * FROM hafbe_endpoints.get_current_account_rewards(_account)) AS _result_rewards,
-  (SELECT * FROM hafbe_endpoints.get_current_account_savings(_account)) AS _result_savings,
-  (SELECT id FROM hive.accounts_view where name = _account) AS _id
+  (SELECT * FROM hafbe_endpoints.get_btracker_account_balance(__account_id)) AS _result_balance,
+  (SELECT * FROM hafbe_endpoints.get_current_account_withdraws(__account_id)) AS _result_withdraws,
+  (SELECT * FROM hafbe_endpoints.get_btracker_vests_balance(__account_id)) AS _result_vest_balance,
+  (SELECT * FROM hafbe_endpoints.get_json_metadata(__account_id)) AS _result_json_metadata,
+  (SELECT * FROM hafbe_endpoints.get_current_account_rewards(__account_id)) AS _result_rewards,
+  (SELECT * FROM hafbe_endpoints.get_current_account_savings(__account_id)) AS _result_savings,
+  (SELECT * FROM hafbe_endpoints.get_account_posting_curation_rewards(__account_id)) AS _result_curation_posting
   )
 
   SELECT json_build_object(
-    'id', id, --OK
+    'id', __account_id, --OK
     'name', _account, --OK
     'owner', __response_data->'owner', --work in progress
     'active', __response_data->'active', --work in progress
@@ -337,7 +375,8 @@ BEGIN
     'withdrawn', withdrawn,--OK
     'withdraw_routes', withdraw_routes,--OK
     'post_voting_power', post_voting_power_vests, --OK
-    'posting_rewards', __response_data->>'posting_rewards', --do we want it? curation_rewards aswell
+    'posting_rewards', posting_rewards, --OK
+    'curation_rewards', curation_rewards, --OK
     'proxied_vsf_votes', __response_data->'proxied_vsf_votes',
     'witnesses_voted_for', __response_data->>'witnesses_voted_for',
     'last_post', __response_data->>'last_post',
