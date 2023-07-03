@@ -290,13 +290,13 @@ BEGIN
   COALESCE(_result_savings.savings_withdraw_requests, 0) AS savings_withdraw_requests,
   _id.id
   FROM
-  (SELECT * FROM hafbe_endpoints.get_btracker_account_balance('abit')) AS _result_balance,
-  (SELECT * FROM hafbe_endpoints.get_current_account_withdraws('abit')) AS _result_withdraws,
-  (SELECT * FROM hafbe_endpoints.get_btracker_vests_balance('abit')) AS _result_vest_balance,
-  (SELECT * FROM hafbe_endpoints.get_json_metadata('abit')) AS _result_json_metadata,
-  (SELECT * FROM hafbe_endpoints.get_current_account_rewards('abit')) AS _result_rewards,
-  (SELECT * FROM hafbe_endpoints.get_current_account_savings('abit')) AS _result_savings,
-  (SELECT id FROM hive.accounts_view where name = 'abit') AS _id
+  (SELECT * FROM hafbe_endpoints.get_btracker_account_balance(_account)) AS _result_balance,
+  (SELECT * FROM hafbe_endpoints.get_current_account_withdraws(_account)) AS _result_withdraws,
+  (SELECT * FROM hafbe_endpoints.get_btracker_vests_balance(_account)) AS _result_vest_balance,
+  (SELECT * FROM hafbe_endpoints.get_json_metadata(_account)) AS _result_json_metadata,
+  (SELECT * FROM hafbe_endpoints.get_current_account_rewards(_account)) AS _result_rewards,
+  (SELECT * FROM hafbe_endpoints.get_current_account_savings(_account)) AS _result_savings,
+  (SELECT id FROM hive.accounts_view where name = _account) AS _id
   )
 
   SELECT json_build_object(
