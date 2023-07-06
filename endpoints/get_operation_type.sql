@@ -15,7 +15,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-__operation_name TEXT = '%' || _operation_name || '%';
+  __operation_name TEXT = '%' || _operation_type_pattern || '%';
 BEGIN
   RETURN CASE WHEN res.arr IS NOT NULL THEN res.arr ELSE '[]'::JSON END FROM (
     SELECT json_agg(hafbe_endpoints.format_op_types(op_type_id,operation_name, is_virtual)) AS arr
