@@ -139,6 +139,7 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_balances.sql
 
   # setup endpoints schema
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
