@@ -9,7 +9,7 @@ raises exceptions:
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(_input TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE

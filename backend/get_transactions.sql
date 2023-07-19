@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction(_trx_hash TEXT)
 RETURNS JSONB
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

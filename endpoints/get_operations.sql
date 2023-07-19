@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _top_op_id INT = 2147483647, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
@@ -35,7 +35,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

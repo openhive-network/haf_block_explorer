@@ -2,7 +2,7 @@
 --- Helper function telling application main-loop to continue execution.
 CREATE OR REPLACE FUNCTION hafbe_app.continueProcessing()
 RETURNS BOOLEAN
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
@@ -13,7 +13,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_app.allowProcessing()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -25,7 +25,7 @@ $$
 --- Helper function to be called from separate transaction (must be committed) to safely stop execution of the application.
 CREATE OR REPLACE FUNCTION hafbe_app.stopProcessing()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -36,7 +36,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_app.storeLastProcessedBlock(_lastBlock INT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -47,7 +47,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_app.lastProcessedBlock()
 RETURNS INT
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
 RETURNS INT
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
@@ -11,7 +11,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block(_block_num INT)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

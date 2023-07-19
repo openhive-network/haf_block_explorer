@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_id(_account TEXT)
-RETURNS INT
+RETURNS INT STABLE
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -10,7 +10,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
-RETURNS JSON
+RETURNS JSON IMMUTABLE
 LANGUAGE 'plpython3u'
 AS
 $$
@@ -32,7 +32,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
-RETURNS TEXT
+RETURNS TEXT IMMUTABLE
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -62,7 +62,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_profile_picture_link(__profile_image_url TEXT)
-RETURNS INT
+RETURNS INT IMMUTABLE
 LANGUAGE 'plpython3u'
 AS 
 $$
@@ -81,7 +81,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_resource_credits(_account TEXT)
-RETURNS JSON
+RETURNS JSON IMMUTABLE
 LANGUAGE 'plpython3u'
 AS 
 $$

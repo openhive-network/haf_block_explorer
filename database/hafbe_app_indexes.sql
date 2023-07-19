@@ -6,7 +6,7 @@ SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_hafbe_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -23,7 +23,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_btracker_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -37,7 +37,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_haf_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
@@ -46,6 +46,9 @@ BEGIN
 
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_created_at ON hive.blocks USING btree (created_at);
+
+  CREATE INDEX IF NOT EXISTS comments_permlink_author_idx ON hive.operations ((body::jsonb->'value'->>'permlink'), (body::jsonb->'value'->>'author'));
+  CREATE INDEX IF NOT EXISTS comments_permlink_author_reversible_idx ON hive.operations_reversible ((body::jsonb->'value'->>'permlink'), (body::jsonb->'value'->>'author'));
   
   ANALYZE VERBOSE;
 END

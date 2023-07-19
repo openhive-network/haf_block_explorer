@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION hafbe_endpoints.format_op_types(op_type_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
@@ -11,7 +11,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_matching_operation_types(_operation_type_pattern TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
@@ -27,7 +27,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_types()
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
@@ -41,7 +41,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
@@ -57,7 +57,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
 RETURNS JSON
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

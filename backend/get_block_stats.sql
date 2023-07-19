@@ -37,7 +37,7 @@ SET from_collapse_limit=16
 
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_todays_date()
-RETURNS DATE
+RETURNS DATE STABLE
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -57,7 +57,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.vests_to_hive_power(VARIADIC vests_value NUMERIC[])
-RETURNS SETOF FLOAT
+RETURNS SETOF FLOAT STABLE
 LANGUAGE 'plpgsql'
 AS
 $$

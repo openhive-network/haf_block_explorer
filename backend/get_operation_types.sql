@@ -1,7 +1,7 @@
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_op_types()
 RETURNS SETOF hafbe_types.op_types
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
@@ -15,7 +15,7 @@ $$
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_op_types_by_name(_operation_name TEXT)
 RETURNS SETOF hafbe_types.op_types
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN

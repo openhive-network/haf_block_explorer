@@ -4,7 +4,7 @@ witness voters
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_num(_witness_id INT)
 RETURNS INT
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
