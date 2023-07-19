@@ -140,6 +140,9 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_balances.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/account_stats_hived.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/account_stats_hafbe.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/compare_accounts.sql
 
   # setup endpoints schema
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
@@ -167,6 +170,7 @@ DB_NAME=haf_block_log
 
 SCRIPT_DIR="$(dirname ${BASH_SOURCE[0]})"
 
+account_dump=$SCRIPT_DIR/../account_dump
 endpoints=$SCRIPT_DIR/../endpoints
 backend=$SCRIPT_DIR/../backend
 db_dir=$SCRIPT_DIR/../database
