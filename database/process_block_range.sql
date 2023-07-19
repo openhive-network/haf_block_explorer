@@ -4,6 +4,7 @@ AS
 $function$
 DECLARE
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
+  ___balance_change RECORD;
 BEGIN
   -- process vote ops
 WITH raw_ops AS MATERIALIZED
@@ -394,6 +395,106 @@ WITH raw_ops AS MATERIALIZED
   ON CONFLICT ON CONSTRAINT pk_account_vests DO 
     UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests
   ;
+
+  WITH vote_operation AS (
+    SELECT 
+      DISTINCT ON ((lvt.body::jsonb)->'value'->>'voter') body::jsonb AS _body,
+      lvt.id AS source_op,
+      lvt.block_num AS source_op_block,
+      lvt.timestamp AS _timestamp
+		FROM hive.hafbe_app_operations_view lvt
+		WHERE lvt.op_type_id = 72
+		AND lvt.block_num BETWEEN _from AND _to
+		ORDER BY (lvt.body::jsonb)->'value'->>'voter', lvt.id DESC
+  ),
+  select_votes AS (
+    SELECT * FROM vote_operation 
+    ORDER BY source_op_block, source_op
+  )
+  INSERT INTO hafbe_app.account_posts
+  (
+  account,
+  last_vote_time
+  ) 
+  SELECT
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (_body)->'value'->>'voter'),
+    _timestamp
+  FROM select_votes
+
+  ON CONFLICT ON CONSTRAINT pk_account_posts
+  DO UPDATE SET
+      last_vote_time = EXCLUDED.last_vote_time;
+
+FOR ___balance_change IN
+  WITH comment_operation AS (
+  	SELECT 
+      DISTINCT ON ((up.body::jsonb)->'value'->>'permlink') body::jsonb AS _body,
+      up.id AS source_op,
+      up.block_num AS source_op_block,
+      up.op_type_id AS op_type,
+      up.timestamp AS _timestamp
+		FROM hive.hafbe_app_operations_view up
+		WHERE up.op_type_id = 1
+		AND up.block_num BETWEEN _from AND _to
+		ORDER BY (up.body::jsonb)->'value'->>'permlink', up.block_num, up.id DESC
+  )
+  SELECT * FROM comment_operation 
+  ORDER BY source_op_block, source_op
+
+LOOP
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM hafbe_app.comments_view ov
+    WHERE 
+      ov.permlink = (___balance_change._body)->'value'->>'permlink'
+      AND ov.author = (___balance_change._body)->'value'->>'author'
+      AND ov.block_num BETWEEN 1 AND _from
+  ) THEN
+    IF NULLIF((___balance_change._body)->'value'->>'parent_author', '') IS NULL THEN
+
+      INSERT INTO hafbe_app.account_posts
+      (
+        account,
+        last_post,
+        last_root_post,
+        post_count
+      ) 
+      SELECT
+        (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (___balance_change._body)->'value'->>'author'),
+        ___balance_change._timestamp,
+        ___balance_change._timestamp,
+        1
+
+      ON CONFLICT ON CONSTRAINT pk_account_posts
+      DO UPDATE SET
+        last_post = EXCLUDED.last_post,
+        last_root_post = EXCLUDED.last_root_post,
+        post_count = hafbe_app.account_posts.post_count + EXCLUDED.post_count;
+
+    ELSE
+
+      INSERT INTO hafbe_app.account_posts
+      (
+        account,
+        last_post,
+        post_count
+      ) 
+      SELECT
+        (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (___balance_change._body)->'value'->>'author'),
+        ___balance_change._timestamp,
+        1
+
+      ON CONFLICT ON CONSTRAINT pk_account_posts
+      DO UPDATE SET
+        last_post = EXCLUDED.last_post,
+        post_count = hafbe_app.account_posts.post_count + EXCLUDED.post_count;
+
+    END IF;
+
+  END IF;
+
+END LOOP;
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE

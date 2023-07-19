@@ -2,6 +2,28 @@ CREATE SCHEMA IF NOT EXISTS hafbe_app AUTHORIZATION hafbe_owner;
 
 SET ROLE hafbe_owner;
 
+--TIME OF HAFBE SYNC FOR 15m BLOCKS
+
+--0 pre changes around 38 minutes
+--1st pass 55.67 minutes
+--2nd pass after optimalization 53.45 minutes
+--3rd pass without rewards, with optimalizations 33.65 minutes
+--4th pass without hive_vesting_balance 44.95 minutes
+
+--withdraws 86.44m
+--2nd pass after optimalizations 61m
+--3rd pass more opt 59.80m
+--4rd pass changing to CTE only on rewards 59.63m
+--5rd pass changing to CTE where its possible 59.67m
+
+--changing account string into account_id 49.24m
+--withdraws had an issue, it didn't update on the end of a withdraw, fixing it added +-4 minutes to sync. 54m
+
+--extendend rewards (posting, curation rewards) 61.56m
+
+--posts and votes 69.61m
+
+
 CREATE OR REPLACE FUNCTION hafbe_app.define_schema()
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -27,6 +49,17 @@ BEGIN
   );
 
   INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_posts
+  (
+  account INT NOT NULL, 
+  last_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+  last_root_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+  last_vote_time TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+  post_count INT DEFAULT 0,
+
+  CONSTRAINT pk_account_posts PRIMARY KEY (account)
+  ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
@@ -150,6 +183,18 @@ BEGIN
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
+
+  CREATE OR REPLACE VIEW hafbe_app.comments_view
+  AS
+    SELECT
+      (ov.body::jsonb)->'value'->>'permlink' AS permlink,
+      (ov.body::jsonb)->'value'->>'author' AS author,
+      ov.block_num
+    FROM
+      hive.hafbe_app_operations_view ov
+    WHERE 
+      ov.op_type_id = 1;
+
 END
 $$
 ;
