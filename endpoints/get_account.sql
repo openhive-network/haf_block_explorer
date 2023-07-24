@@ -12,7 +12,7 @@ DECLARE
   __account_id INT;
 BEGIN
   SELECT id INTO __account_id
-  FROM hive.hafbe_app_accounts_view WHERE name = _account;
+  FROM hive.accounts_view WHERE name = _account;
 
   SELECT hafbe_backend.get_account(_account) INTO __response_data;
 
@@ -76,18 +76,18 @@ BEGIN
   SELECT json_build_object(
     'id', __account_id, --OK
     'name', _account, --OK
-    'owner', __response_data->'owner', --work in progress
-    'active', __response_data->'active', --work in progress
-    'posting', __response_data->'posting', --work in progress
-    'memo_key', __response_data->>'memo_key', --??
-    'profile_image', __profile_image, --OK
-    'json_metadata', json_metadata, --OK
-    'posting_json_metadata', posting_json_metadata, --OK
-    'last_owner_update', __response_data->>'last_owner_update', 
-    'last_account_update', __response_data->>'last_account_update', 
+    'owner', __response_data->'owner', --work in progress 10
+    'active', __response_data->'active', --work in progress 10
+    'posting', __response_data->'posting', --work in progress 10
+    'memo_key', __response_data->>'memo_key', --work in progress 10
+    'profile_image', __profile_image, --work in progress 10
+    'json_metadata', json_metadata, --work in progress 10
+    'posting_json_metadata', posting_json_metadata, --work in progress 10
+    'last_owner_update', __response_data->>'last_owner_update', --work in progress 10
+    'last_account_update', __response_data->>'last_account_update', --work in progress 10
     'created', __response_data->>'created',
     'mined', __response_data->>'mined',
-    'recovery_account', __response_data->>'recovery_account',
+    'recovery_account', __response_data->>'recovery_account', --work in progress 76
     'post_count', post_count, --OK
     'can_vote', __response_data->>'can_vote',
     'voting_manabar', __response_data->'voting_manabar', --can't be track it without consensus_state_provider

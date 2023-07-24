@@ -47,9 +47,60 @@ BEGIN
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
   CREATE UNIQUE INDEX IF NOT EXISTS uq_hive_blocks_created_at ON hive.blocks USING btree (created_at);
 
-  CREATE INDEX IF NOT EXISTS comments_permlink_author_idx ON hive.operations ((body::jsonb->'value'->>'permlink'), (body::jsonb->'value'->>'author'));
-  CREATE INDEX IF NOT EXISTS comments_permlink_author_reversible_idx ON hive.operations_reversible ((body::jsonb->'value'->>'permlink'), (body::jsonb->'value'->>'author'));
+  --Indexes for comment_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_permlink_author ON hive.operations USING btree
+  (
+	  (body::jsonb->'value'->>'permlink'::TEXT),
+	  (body::jsonb->'value'->>'author'::TEXT)
+  )
+  WHERE op_type_id = 1;
   
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_permlink_author ON hive.operations_reversible USING btree
+  (
+    (body::jsonb->'value'->>'permlink'::TEXT), 
+    (body::jsonb->'value'->>'author'::TEXT)
+  )
+  WHERE op_type_id=1;
+
+  --Indexes for interest_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_is_saved_into_hbd_balance ON hive.operations USING btree
+  (
+  	((body::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
+  )
+  WHERE op_type_id = 55;
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_is_saved_into_hbd_balance ON hive.operations_reversible USING btree
+  (
+  	((body::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
+  )
+  WHERE op_type_id = 55;
+  
+  --Indexes for reward_operations
+    CREATE INDEX IF NOT EXISTS hive_operations_payout_must_be_claimed ON hive.operations USING btree
+  (
+  	((body::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
+  )
+  WHERE op_type_id in (51,63);
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_payout_must_be_claimed ON hive.operations_reversible USING btree
+  (
+  	((body::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
+  )
+  WHERE op_type_id in (51,63);
+
+  --Indexes for vote_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_voter ON hive.operations USING btree
+  (
+  	(body::jsonb->'value'->>'voter'::TEXT)
+  )
+  WHERE op_type_id = 72;
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_voter ON hive.operations_reversible USING btree
+  (
+  	(body::jsonb->'value'->>'voter'::TEXT)
+  )
+  WHERE op_type_id = 72;
+
   ANALYZE VERBOSE;
 END
 $$
