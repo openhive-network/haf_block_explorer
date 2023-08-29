@@ -52,13 +52,13 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_posts
   (
-  account INT NOT NULL, 
-  last_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-  last_root_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-  last_vote_time TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-  post_count INT DEFAULT 0,
+    account INT NOT NULL, 
+    last_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    last_root_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    last_vote_time TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    post_count INT DEFAULT 0,
 
-  CONSTRAINT pk_account_posts PRIMARY KEY (account)
+    CONSTRAINT pk_account_posts PRIMARY KEY (account)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters
@@ -149,7 +149,7 @@ BEGIN
   );
 
   INSERT INTO hafbe_app.witnesses_cache_config (update_interval, last_updated_at)
-  VALUES ('30 minutes', to_timestamp(0));
+  VALUES ('10 minutes', to_timestamp(0));
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
     witness_id INT NOT NULL,
