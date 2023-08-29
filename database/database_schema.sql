@@ -61,6 +61,18 @@ BEGIN
   CONSTRAINT pk_account_posts PRIMARY KEY (account)
   ) INHERITS (hive.hafbe_app);
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters
+  (
+    account INT NOT NULL, 
+    can_vote BOOLEAN DEFAULT TRUE,
+    mined BOOLEAN DEFAULT TRUE,
+    recovery_account TEXT DEFAULT 'steem',
+    last_account_recovery TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+
+    CONSTRAINT pk_account_parameters PRIMARY KEY (account)
+  ) INHERITS (hive.hafbe_app);
+
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
@@ -130,13 +142,6 @@ BEGIN
     SELECT get_balance_impacting_operations AS name
     FROM hive.get_balance_impacting_operations()
   ) bio ON bio.name = hot.name::TEXT;
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.account_vests (
-    account_id INT NOT NULL,
-    vests BIGINT NOT NULL,
-
-    CONSTRAINT pk_account_vests PRIMARY KEY (account_id)
-  ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.witnesses_cache_config (
     update_interval INTERVAL,

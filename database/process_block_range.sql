@@ -373,128 +373,6 @@ WITH raw_ops AS MATERIALIZED
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
-  -- get impacted vests balance for block range and update account_vests
-  WITH balance_change AS (
-    SELECT hav.id AS account_id, bio.amount AS vests
-    FROM hive.operations_view hov
-
-    JOIN LATERAL (
-      SELECT account_name, amount
-      FROM hive.get_impacted_balances(hov.body, hov.block_num > 905693)
-      WHERE asset_symbol_nai = 37
-    ) bio ON TRUE
-
-    JOIN hive.accounts_view hav ON hav.name = bio.account_name
-    WHERE hov.op_type_id = ANY(__balance_impacting_ops_ids) AND hov.block_num BETWEEN _from AND _to
-  )
-
-  INSERT INTO hafbe_app.account_vests (account_id, vests)
-  SELECT account_id, SUM(vests) AS vests
-  FROM balance_change
-  GROUP BY account_id
-  ON CONFLICT ON CONSTRAINT pk_account_vests DO 
-    UPDATE SET vests = hafbe_app.account_vests.vests + EXCLUDED.vests
-  ;
-
-  WITH vote_operation AS (
-    SELECT 
-      DISTINCT ON ((lvt.body::jsonb)->'value'->>'voter') body::jsonb AS _body,
-      lvt.id AS source_op,
-      lvt.block_num AS source_op_block,
-      lvt.timestamp AS _timestamp
-		FROM hive.hafbe_app_operations_view lvt
-		WHERE lvt.op_type_id = 72
-		AND lvt.block_num BETWEEN _from AND _to
-		ORDER BY (lvt.body::jsonb)->'value'->>'voter', lvt.id DESC
-  ),
-  select_votes AS (
-    SELECT * FROM vote_operation 
-    ORDER BY source_op_block, source_op
-  )
-  INSERT INTO hafbe_app.account_posts
-  (
-  account,
-  last_vote_time
-  ) 
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (_body)->'value'->>'voter'),
-    _timestamp
-  FROM select_votes
-
-  ON CONFLICT ON CONSTRAINT pk_account_posts
-  DO UPDATE SET
-      last_vote_time = EXCLUDED.last_vote_time;
-
-FOR ___balance_change IN
-  WITH comment_operation AS (
-  	SELECT 
-      DISTINCT ON ((up.body::jsonb)->'value'->>'permlink') body::jsonb AS _body,
-      up.id AS source_op,
-      up.block_num AS source_op_block,
-      up.op_type_id AS op_type,
-      up.timestamp AS _timestamp
-		FROM hive.hafbe_app_operations_view up
-		WHERE up.op_type_id = 1
-		AND up.block_num BETWEEN _from AND _to
-		ORDER BY (up.body::jsonb)->'value'->>'permlink', up.block_num, up.id DESC
-  )
-  SELECT * FROM comment_operation 
-  ORDER BY source_op_block, source_op
-
-LOOP
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM hafbe_app.comments_view ov
-    WHERE 
-      ov.permlink = (___balance_change._body)->'value'->>'permlink'
-      AND ov.author = (___balance_change._body)->'value'->>'author'
-      AND ov.block_num BETWEEN 1 AND _from
-  ) THEN
-    IF NULLIF((___balance_change._body)->'value'->>'parent_author', '') IS NULL THEN
-
-      INSERT INTO hafbe_app.account_posts
-      (
-        account,
-        last_post,
-        last_root_post,
-        post_count
-      ) 
-      SELECT
-        (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (___balance_change._body)->'value'->>'author'),
-        ___balance_change._timestamp,
-        ___balance_change._timestamp,
-        1
-
-      ON CONFLICT ON CONSTRAINT pk_account_posts
-      DO UPDATE SET
-        last_post = EXCLUDED.last_post,
-        last_root_post = EXCLUDED.last_root_post,
-        post_count = hafbe_app.account_posts.post_count + EXCLUDED.post_count;
-
-    ELSE
-
-      INSERT INTO hafbe_app.account_posts
-      (
-        account,
-        last_post,
-        post_count
-      ) 
-      SELECT
-        (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = (___balance_change._body)->'value'->>'author'),
-        ___balance_change._timestamp,
-        1
-
-      ON CONFLICT ON CONSTRAINT pk_account_posts
-      DO UPDATE SET
-        last_post = EXCLUDED.last_post,
-        post_count = hafbe_app.account_posts.post_count + EXCLUDED.post_count;
-
-    END IF;
-
-  END IF;
-
-END LOOP;
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE
@@ -502,4 +380,126 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
+SET cursor_tuple_fraction='0.9'
+  ;
+
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __balance_change RECORD;
+BEGIN
+
+FOR __balance_change IN
+  WITH comment_operation AS (
+
+SELECT 
+    cao.body AS body,
+    cao.id AS source_op,
+    cao.block_num AS source_op_block,
+    cao.timestamp AS _timestamp,
+    cao.op_type_id AS op_type
+FROM hive.hafbe_app_operations_view cao
+LEFT JOIN (
+  SELECT 
+      DISTINCT ON (lvt.voter) 
+      voter,
+      lvt.id AS source_op
+  FROM hafbe_views.votes_view lvt
+  WHERE lvt.block_num BETWEEN _from AND _to
+  ORDER BY voter, lvt.id DESC
+) lvt_subquery ON cao.id = lvt_subquery.source_op
+LEFT JOIN (
+  SELECT 
+      DISTINCT ON (po.worker_account) 
+      worker_account,
+      po.id AS source_op
+  FROM hafbe_views.pow_view po
+  WHERE po.block_num BETWEEN _from AND _to
+) po_subquery ON cao.id = po_subquery.source_op
+LEFT JOIN (
+  SELECT 
+      DISTINCT ON (pto.worker_account) 
+      worker_account,
+      pto.id AS source_op
+  FROM hafbe_views.pow_two_view pto
+  WHERE pto.block_num BETWEEN _from AND _to
+) pto_subquery ON cao.id = pto_subquery.source_op
+LEFT JOIN (
+ SELECT source_op FROM (
+  	SELECT 
+      up.id AS source_op,
+	coalesce((SELECT 1
+    FROM 
+      hafbe_views.comments_view prd
+    WHERE 
+      prd.author = up.author 
+      AND prd.permlink = up.permlink AND prd.id < up.id 
+	  AND NOT EXISTS (
+        SELECT 1 
+        FROM 
+          hafbe_views.deleted_comments_view dp
+        WHERE 
+          dp.author = up.author 
+          and dp.permlink = up.permlink 
+          and dp.id between prd.id and up.id)
+	 ORDER BY prd.id DESC LIMIT 1), 0) AS filtered
+  FROM hafbe_views.comments_view up
+  WHERE up.block_num BETWEEN _from AND _to 
+  ORDER BY up.permlink, up.block_num, up.id DESC) as filtered2
+  WHERE filtered = 0
+) up_subquery ON cao.id = up_subquery.source_op
+WHERE 
+  (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
+  OR (cao.op_type_id = 72 AND lvt_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 1  AND up_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 13 AND po_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
+  AND cao.block_num BETWEEN _from AND _to
+  )
+  SELECT * FROM comment_operation 
+  ORDER BY source_op_block, source_op
+
+LOOP
+
+  CASE 
+
+    WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
+    PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+
+    WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
+    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change.op_type);
+
+    WHEN __balance_change.op_type = 76 THEN
+    PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
+
+    WHEN __balance_change.op_type = 25 THEN
+    PERFORM hafbe_app.process_recover_account_operation(__balance_change.body, __balance_change._timestamp);
+
+    WHEN __balance_change.op_type = 36 THEN
+    PERFORM hafbe_app.process_decline_voting_rights_operation(__balance_change.body);
+
+    WHEN __balance_change.op_type = 1 THEN
+    PERFORM hafbe_app.process_comment_operation(__balance_change.body, __balance_change._timestamp);
+
+    WHEN __balance_change.op_type = 72 THEN
+    PERFORM hafbe_app.process_vote_operation(__balance_change.body, __balance_change._timestamp);
+
+    ELSE
+  END CASE;
+
+END LOOP;
+
+
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET enable_bitmapscan = OFF
+set enable_hashjoin= OFF
+SET cursor_tuple_fraction='0.9'
 ;
