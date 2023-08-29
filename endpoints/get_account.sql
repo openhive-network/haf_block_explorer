@@ -30,6 +30,7 @@ BEGIN
   COALESCE(_result_withdraws.withdraw_routes, 0) AS withdraw_routes,
   COALESCE(_result_vest_balance.delegated_vests, 0) AS delegated_vests,
   COALESCE(_result_vest_balance.received_vests, 0) AS received_vests,
+  COALESCE(_result_withdraws.delayed_vests, 0) AS delayed_vests,
   COALESCE(_result_json_metadata.json_metadata,'') AS json_metadata,
   COALESCE(_result_json_metadata.posting_json_metadata, '') AS posting_json_metadata,
   COALESCE((SELECT hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata)), '') AS profile_image,
@@ -51,6 +52,10 @@ BEGIN
   COALESCE(_result_parameters.recovery_account, 'steem') AS recovery_account,
   COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00') AS last_account_recovery,
   COALESCE(_result_parameters.created,'1970-01-01T00:00:00') AS created,
+  COALESCE(_result_votes.witness_votes, '[]') AS witness_votes,
+  COALESCE(_result_votes.witnesses_voted_for, 0) AS witnesses_voted_for,
+  COALESCE(_result_votes.proxied_vsf_votes, '[]') AS proxied_vsf_votes,
+  COALESCE(_result_proxy.get_account_proxy, '') AS proxy_name
   FROM
   (SELECT * FROM hafbe_backend.get_btracker_account_balance(__account_id)) AS _result_balance,
   (SELECT * FROM hafbe_backend.get_account_withdraws(__account_id)) AS _result_withdraws,
@@ -61,6 +66,8 @@ BEGIN
   (SELECT * FROM hafbe_backend.get_account_info_rewards(__account_id)) AS _result_curation_posting,
   (SELECT * FROM hafbe_backend.get_last_post_vote_time(__account_id)) AS _result_post,
   (SELECT * FROM hafbe_backend.get_account_parameters(__account_id)) AS _result_parameters,
+  (SELECT * FROM hafbe_backend.get_account_votes(__account_id)) AS _result_votes,
+  (SELECT * FROM hafbe_backend.get_account_proxy(__account_id)) AS _result_proxy
   )
 
   SELECT json_build_object(
@@ -75,6 +82,8 @@ BEGIN
     'posting_json_metadata', posting_json_metadata, --work in progress 10
     'last_owner_update', __response_data->>'last_owner_update', --work in progress 10
     'last_account_update', __response_data->>'last_account_update', --work in progress 10
+
+    'proxy', proxy_name,
     'created', created, --work in progress 9,23,41,80
     'mined', mined, --work in progress 9,23,41,  14,30
     'recovery_account', recovery_account, --work in progress 76
@@ -103,13 +112,16 @@ BEGIN
     'post_voting_power', post_voting_power_vests, --OK
     'posting_rewards', posting_rewards, --OK
     'curation_rewards', curation_rewards, --OK, may have slight diffrences
+    'proxied_vsf_votes', proxied_vsf_votes, -- hafbe_app.current_witness_votes
+    'witnesses_voted_for', witnesses_voted_for, -- hafbe_views.voters_proxied_vests_view
     'post_count', post_count, --OK
     'last_post', last_post, --OK
     'last_root_post', last_root_post, --OK
     'last_vote_time', last_vote_time, --OK
+    'delayed_vests', delayed_vests, --work in progress 70,76,56
     'vesting_balance', vesting_balance_hive, --OK
-    'reputation', __response_data->>'reputation', --work in progress
-    'witness_votes', __response_data->'witness_votes'
+  --  'reputation', __response_data->>'reputation', --work in progress
+    'witness_votes', witness_votes -- hafbe_app.current_witness_votes
   ) INTO __response_data
    FROM btracker_balance;
 

@@ -65,6 +65,27 @@ BEGIN
 END
 $$
 ;
+
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
+RETURNS TEXT
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE 
+_result TEXT := (SELECT a.name FROM hafbe_app.current_account_proxies o
+JOIN hive.accounts_view a on a.id = o.proxy_id
+WHERE o.account_id = _account);
+BEGIN
+
+RETURN _result;
+
+END
+$$
+;
+
+
 --ACCOUNT can_vote, mined, created, recovery
 
 DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE;
@@ -94,6 +115,46 @@ BEGIN
 END
 $$
 ;
+
+--ACCOUNT can_vote, mined, created, recovery
+
+DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE;
+CREATE TYPE hafbe_backend.account_votes AS
+(
+  proxied_vsf_votes JSON,
+  witnesses_voted_for INT,
+  witness_votes JSON
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_votes(_account INT)
+RETURNS hafbe_backend.account_votes
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __result hafbe_backend.account_votes;
+BEGIN
+  SELECT json_agg(vote), COUNT(*)
+  INTO __result.witness_votes, __result.witnesses_voted_for
+  FROM hafbe_views.current_witness_votes_view WHERE account= _account;
+
+  With selected_poxied_vests AS (
+    SELECT proxied_vests, which_proxy FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account
+  )
+
+  SELECT json_agg(
+    proxied_vests
+  ) INTO __result.proxied_vsf_votes
+  FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account;
+
+  RETURN __result;
+
+END
+$$
+;
+
+-- GOING TO BE REMOVED
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON IMMUTABLE
 LANGUAGE 'plpython3u'

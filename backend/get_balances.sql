@@ -139,7 +139,7 @@ $$
 DECLARE
   _result hafbe_backend.btracker_vests_balance;
 BEGIN
-  SELECT cv.delegated_vests, cv.received_vests 
+  SELECT cv.delegated_vests, cv.received_vests
   INTO _result
   FROM btracker_app.account_delegations cv WHERE cv.account = _account;
 
@@ -189,10 +189,11 @@ $$
 DROP TYPE IF EXISTS hafbe_backend.account_withdraws CASCADE;
 CREATE TYPE hafbe_backend.account_withdraws AS
 (
-  vesting_withdraw_rate numeric,
-  to_withdraw numeric,
-  withdrawn numeric,
-  withdraw_routes INT
+  vesting_withdraw_rate BIGINT,
+  to_withdraw BIGINT,
+  withdrawn BIGINT,
+  withdraw_routes INT,
+  delayed_vests BIGINT
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_withdraws(_account INT)
@@ -204,7 +205,7 @@ $$
 DECLARE
   __result hafbe_backend.account_withdraws;
 BEGIN
-  SELECT vesting_withdraw_rate, to_withdraw, withdrawn, withdraw_routes 
+  SELECT vesting_withdraw_rate, to_withdraw, withdrawn, withdraw_routes, delayed_vests
   INTO __result
   FROM btracker_app.account_withdraws WHERE account= _account;
   RETURN __result;
