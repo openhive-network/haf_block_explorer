@@ -127,7 +127,7 @@ WITH raw_ops AS MATERIALIZED
   
   WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
   (
-  SELECT body, (body::jsonb)->'value' AS value, op_type_id
+  SELECT body_binary, (body)->'value' AS value, op_type_id
   FROM hive.hafbe_app_operations_view
   WHERE op_type_id IN (12,42,11,7) AND block_num BETWEEN _from AND _to
   ),
@@ -136,7 +136,7 @@ WITH raw_ops AS MATERIALIZED
       CASE WHEN op_type_id = 12 THEN
         value->>'witness'
       ELSE
-        (SELECT hive.get_impacted_accounts(body))
+        (SELECT hive.get_impacted_accounts(body_binary))
       END AS name
     FROM ops_in_range
   )

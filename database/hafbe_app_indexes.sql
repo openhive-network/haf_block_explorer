@@ -50,54 +50,54 @@ BEGIN
   --Indexes for comment_operation
   CREATE INDEX IF NOT EXISTS hive_operations_permlink_author ON hive.operations USING btree
   (
-	  (body::jsonb->'value'->>'permlink'::TEXT),
-	  (body::jsonb->'value'->>'author'::TEXT)
+	  (body_binary::jsonb->'value'->>'author'),
+  	(body_binary::jsonb->'value'->>'permlink')
   )
   WHERE op_type_id = 1;
   
   CREATE INDEX IF NOT EXISTS hive_operations_reversible_permlink_author ON hive.operations_reversible USING btree
   (
-    (body::jsonb->'value'->>'permlink'::TEXT), 
-    (body::jsonb->'value'->>'author'::TEXT)
+    (body_binary::jsonb->'value'->>'author'),
+    (body_binary::jsonb->'value'->>'permlink')
   )
   WHERE op_type_id=1;
 
   --Indexes for interest_operation
   CREATE INDEX IF NOT EXISTS hive_operations_is_saved_into_hbd_balance ON hive.operations USING btree
   (
-  	((body::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
+  	((body_binary::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
   )
   WHERE op_type_id = 55;
   
   CREATE INDEX IF NOT EXISTS hive_operations_reversible_is_saved_into_hbd_balance ON hive.operations_reversible USING btree
   (
-  	((body::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
+  	((body_binary::jsonb->'value'->>'is_saved_into_hbd_balance')::BOOLEAN)
   )
   WHERE op_type_id = 55;
   
   --Indexes for reward_operations
     CREATE INDEX IF NOT EXISTS hive_operations_payout_must_be_claimed ON hive.operations USING btree
   (
-  	((body::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
+  	((body_binary::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
   )
   WHERE op_type_id in (51,63);
   
   CREATE INDEX IF NOT EXISTS hive_operations_reversible_payout_must_be_claimed ON hive.operations_reversible USING btree
   (
-  	((body::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
+  	((body_binary::jsonb->'value'->>'payout_must_be_claimed')::BOOLEAN)
   )
   WHERE op_type_id in (51,63);
 
   --Indexes for vote_operation
   CREATE INDEX IF NOT EXISTS hive_operations_voter ON hive.operations USING btree
   (
-  	(body::jsonb->'value'->>'voter'::TEXT)
+  	(body_binary::jsonb->'value'->>'voter')
   )
   WHERE op_type_id = 72;
   
   CREATE INDEX IF NOT EXISTS hive_operations_reversible_voter ON hive.operations_reversible USING btree
   (
-  	(body::jsonb->'value'->>'voter'::TEXT)
+  	(body_binary::jsonb->'value'->>'voter')
   )
   WHERE op_type_id = 72;
 

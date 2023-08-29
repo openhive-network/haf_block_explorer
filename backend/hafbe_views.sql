@@ -4,13 +4,14 @@ CREATE SCHEMA IF NOT EXISTS hafbe_views AUTHORIZATION hafbe_owner;
 CREATE OR REPLACE VIEW hafbe_views.witness_prop_op_view AS
 SELECT
   bia.name AS witness,
-  (body::jsonb)->'value' AS value,
+  (body)->'value' AS value,
+  body_binary,
   block_num, op_type_id, timestamp, id AS operation_id
 FROM hive.hafbe_app_operations_view hov
 
 JOIN LATERAL (
   SELECT get_impacted_accounts AS name
-  FROM hive.get_impacted_accounts(hov.body)
+  FROM hive.get_impacted_accounts(hov.body_binary)
 ) bia ON TRUE;
 
 ------
