@@ -64,10 +64,14 @@ BEGIN
   RAISE NOTICE 'Starting single block processing: %', _block;
   PERFORM btracker_app.process_block_range_data_c(_block, _block);
   RAISE NOTICE 'btracker_app processed block: %.', _block;
+  PERFORM hafbe_app.process_block_range_data_a(_block, _block);
+  RAISE NOTICE 'hafbe_app processed block a: %.', _block;
+  PERFORM hafbe_app.process_block_range_data_b(_block, _block);
+  RAISE NOTICE 'hafbe_app processed block b: %.', _block;
   PERFORM hafbe_app.process_block_range_data_c(_block, _block);
-  RAISE NOTICE 'hafbe_app processed block: %.', _block;
+  RAISE NOTICE 'hafbe_app processed block c: %.', _block;
   PERFORM hive.app_state_providers_update(_block, _block, _appContext);
-  RAISE NOTICE 'hive.app_state_providers_update processed block: %.', _block;
+  RAISE NOTICE 'app_state_providers_update processed block: %.', _block;
   PERFORM hafbe_app.storeLastProcessedBlock(_block);
 
   COMMIT; -- For single block processing we want to commit all changes for each one.

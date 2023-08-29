@@ -19,10 +19,14 @@ BEGIN
 
     PERFORM btracker_app.process_block_range_data_c(b, _last_block);
     RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', b, _last_block;
+    PERFORM hafbe_app.process_block_range_data_a(b, _last_block);
+    RAISE NOTICE 'hafbe_app Block range a: <%, %> processed successfully.', b, _last_block;
+    PERFORM hafbe_app.process_block_range_data_b(b, _last_block);
+    RAISE NOTICE 'hafbe_app Block range b: <%, %> processed successfully.', b, _last_block;
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
-    RAISE NOTICE 'hafbe_app.Block range: <%, %> processed successfully.', b, _last_block;
+    RAISE NOTICE 'hafbe_app Block range c: <%, %> processed successfully.', b, _last_block;
     PERFORM hive.app_state_providers_update(b, _last_block, _appContext);
-    RAISE NOTICE 'hive.app_state_providers_updateBlock range: <%, %> processed successfully.', b, _last_block;
+    RAISE NOTICE 'app_state_provider Block range: <%, %> processed successfully.', b, _last_block;
 
     PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
 
@@ -52,10 +56,14 @@ BEGIN
     --- Supplement last part of range if anything left.
     PERFORM btracker_app.process_block_range_data_c(_last_block, _to);
     RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', _last_block, _to;
+    PERFORM hafbe_app.process_block_range_data_a(_last_block, _to);
+    RAISE NOTICE 'hafbe_app Block range a: <%, %> processed successfully.', _last_block, _to;
+    PERFORM hafbe_app.process_block_range_data_b(_last_block, _to);
+    RAISE NOTICE 'hafbe_app Block range b: <%, %> processed successfully.', _last_block, _to;
     PERFORM hafbe_app.process_block_range_data_c(_last_block, _to);
-    RAISE NOTICE 'hafbe_app.Block range: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'hafbe_app Block range c: <%, %> processed successfully.', _last_block, _to;
     PERFORM hive.app_state_providers_update(_last_block, _to, _appContext);
-    RAISE NOTICE 'hive.app_state_providers_update.Block range: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'app_state_provider Block range: <%, %> processed successfully.', _last_block, _to;
 
     _last_block := _to;
 
