@@ -16,23 +16,6 @@ BEGIN
 
   SELECT hafbe_backend.get_account(_account) INTO __response_data;
 
-  SELECT hafbe_backend.parse_profile_picture(__response_data, 'json_metadata') INTO __profile_image;
-  IF __profile_image IS NULL THEN
-    SELECT hafbe_backend.parse_profile_picture(__response_data, 'posting_json_metadata') INTO __profile_image;
-  END IF;
-
-  BEGIN
-    SELECT TRIM(BOTH '"' FROM __response_data->>'json_metadata')::JSON INTO __json_metadata;
-  EXCEPTION WHEN others THEN
-    SELECT NULL INTO __json_metadata;
-  END;
-
-  BEGIN
-    SELECT TRIM(BOTH '"' FROM __response_data->>'posting_json_metadata')::JSON INTO __posting_json_metadata;
-  EXCEPTION WHEN others THEN
-    SELECT NULL INTO __posting_json_metadata;
-  END;
-
   WITH btracker_balance AS 
   (
   SELECT
@@ -47,8 +30,9 @@ BEGIN
   COALESCE(_result_withdraws.withdraw_routes, 0) AS withdraw_routes,
   COALESCE(_result_vest_balance.delegated_vests, 0) AS delegated_vests,
   COALESCE(_result_vest_balance.received_vests, 0) AS received_vests,
-  _result_json_metadata.json_metadata AS json_metadata,
-  _result_json_metadata.posting_json_metadata AS posting_json_metadata,
+  COALESCE(_result_json_metadata.json_metadata,'') AS json_metadata,
+  COALESCE(_result_json_metadata.posting_json_metadata, '') AS posting_json_metadata,
+  COALESCE((SELECT hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata)), '') AS profile_image,
   COALESCE(_result_rewards.hbd_rewards, 0) AS hbd_rewards,
   COALESCE(_result_rewards.hive_rewards, 0) AS hive_rewards,
   COALESCE(_result_rewards.vests_rewards, 0) AS vests_rewards,
@@ -86,7 +70,7 @@ BEGIN
     'active', __response_data->'active', --work in progress 10
     'posting', __response_data->'posting', --work in progress 10
     'memo_key', __response_data->>'memo_key', --work in progress 10
-    'profile_image', __profile_image, --work in progress 10
+    'profile_image', profile_image, --work in progress 10
     'json_metadata', json_metadata, --work in progress 10
     'posting_json_metadata', posting_json_metadata, --work in progress 10
     'last_owner_update', __response_data->>'last_owner_update', --work in progress 10

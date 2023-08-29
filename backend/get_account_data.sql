@@ -9,6 +9,35 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(json_metadata TEXT, posting_json_metadata TEXT)
+RETURNS TEXT IMMUTABLE
+LANGUAGE 'plpgsql'
+AS
+$$
+DECLARE
+  __profile_image_url TEXT;
+BEGIN
+
+  BEGIN
+    SELECT json_metadata::JSON->'profile'->>'profile_image' INTO __profile_image_url;
+  EXCEPTION WHEN invalid_text_representation THEN
+    SELECT NULL INTO __profile_image_url;
+  END;
+
+  IF __profile_image_url IS NULL THEN 
+  BEGIN
+    SELECT posting_json_metadata::JSON->'profile'->>'profile_image' INTO __profile_image_url;
+  EXCEPTION WHEN invalid_text_representation THEN
+    SELECT NULL INTO __profile_image_url;
+  END;
+  END IF;
+
+  RETURN __profile_image_url;
+END
+$$
+;
+
+--ACCOUNT LAST POST TIME
 
 DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE;
 CREATE TYPE hafbe_backend.last_post_vote_time AS
@@ -87,36 +116,7 @@ $$
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(_account_data JSON, _key TEXT)
-RETURNS TEXT IMMUTABLE
-LANGUAGE 'plpgsql'
-AS
-$$
-DECLARE
-  __profile_image_url TEXT;
-  __response_code INT;
-BEGIN
-  BEGIN
-    SELECT INTO __profile_image_url ( (
-      ((_account_data->>_key)::JSON)->>'profile'
-      )::JSON )->>'profile_image';
-  EXCEPTION WHEN invalid_text_representation THEN
-    SELECT NULL INTO __profile_image_url;
-  END;
-
-  IF __profile_image_url IS NOT NULL AND LENGTH(__profile_image_url) != 0 THEN
-    SELECT hafbe_backend.validate_profile_picture_link(__profile_image_url) INTO __response_code;
-  END IF;
-
-  IF __profile_image_url IS NOT NULL AND LENGTH(__profile_image_url) != 0 AND __response_code > 299 THEN
-    SELECT NULL INTO __profile_image_url;
-  END IF;
-
-  RETURN __profile_image_url;
-END
-$$
-;
-
+-- GOING TO BE REMOVED
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_profile_picture_link(__profile_image_url TEXT)
 RETURNS INT IMMUTABLE
 LANGUAGE 'plpython3u'
@@ -136,6 +136,7 @@ $$
 $$
 ;
 
+-- GOING TO BE REMOVED
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_resource_credits(_account TEXT)
 RETURNS JSON IMMUTABLE
 LANGUAGE 'plpython3u'
