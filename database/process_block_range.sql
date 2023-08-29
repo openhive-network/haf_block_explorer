@@ -1,129 +1,57 @@
-CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
+CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_a(_from INT, _to INT)
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __balance_change RECORD;
+BEGIN
+
+FOR __balance_change IN
+  SELECT 
+    ov.body AS body,
+    ov.op_type_id as op_type,
+    ov.timestamp
+  FROM hive.btracker_app_operations_view ov
+  WHERE 
+    ov.op_type_id IN (12,13,91,92,75)
+    AND ov.block_num BETWEEN _from AND _to
+  ORDER BY ov.block_num, ov.id
+
+LOOP
+
+  CASE 
+
+    WHEN __balance_change.op_type = 12 THEN
+    PERFORM hafbe_app.process_vote_op(__balance_change.body, __balance_change.timestamp);
+
+    WHEN __balance_change.op_type = 13 OR __balance_change.op_type = 91 THEN
+    PERFORM hafbe_app.process_proxy_ops(__balance_change.body, __balance_change.timestamp, __balance_change.op_type);
+
+    WHEN __balance_change.op_type = 92 OR __balance_change.op_type = 75 THEN
+    PERFORM hafbe_app.process_expired_accounts(__balance_change.body);
+    
+
+    ELSE
+  END CASE;
+
+END LOOP;
+
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET cursor_tuple_fraction='0.9'
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_b(_from INT, _to INT)
 RETURNS VOID
 AS
 $function$
 DECLARE
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
-  ___balance_change RECORD;
 BEGIN
-  -- process vote ops
-WITH raw_ops AS MATERIALIZED
-  (
-  SELECT (ov.body::jsonb)->'value' AS value,
-          ov.timestamp,
-          ov.id AS operation_id
-  FROM hive.hafbe_app_operations_view ov
-  WHERE ov.op_type_id = 12 AND ov.block_num BETWEEN _from AND _to
-  ),
-  source_ops AS MATERIALIZED
-  (
-   SELECT ro.value->>'witness' AS witness,
-          ro.value->>'account' AS voter,
-          (ro.value->'approve')::BOOLEAN AS approve,
-          timestamp, operation_id
-    from raw_ops ro
-  ),
-  select_votes_ops AS MATERIALIZED
-  (
-  SELECT hav_w.id AS witness_id, hav_v.id AS voter_id, approve, timestamp, operation_id
-    FROM source_ops vote_op
-    --- Warning Here we can use `hive.accounts_view` instead of `hive.hafbe_app_accounts_view`,
-    --- since set of operations being visible to hafbe_app is already constrained by `hive.hafbe_app_operations_view`
-    JOIN hive.accounts_view hav_w ON hav_w.name = vote_op.witness
-    JOIN hive.accounts_view hav_v ON hav_v.name = vote_op.voter
-  ),
-  insert_votes_history AS (
-    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, timestamp)
-    SELECT witness_id, voter_id, approve, timestamp
-    FROM select_votes_ops
-  ),
-  select_latest_vote_ops AS (
-    SELECT witness_id, voter_id, approve, timestamp
-    FROM (
-      SELECT
-        ROW_NUMBER() OVER (PARTITION BY witness_id, voter_id ORDER BY operation_id DESC) AS row_n,
-        witness_id, voter_id, approve, timestamp
-      FROM select_votes_ops
-    ) row_count
-    WHERE row_n = 1
-  ),
-
-  insert_current_votes AS (
-    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, timestamp)
-    SELECT witness_id, voter_id, timestamp
-    FROM select_latest_vote_ops
-    WHERE approve IS TRUE
-    ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
-      timestamp = EXCLUDED.timestamp
-  )
-
-  DELETE FROM hafbe_app.current_witness_votes cwv USING (
-    SELECT witness_id, voter_id
-    FROM select_latest_vote_ops
-    WHERE approve IS FALSE
-  ) svo
-  WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
-
-  WITH raw_ops AS MATERIALIZED -- process proxy ops
-  (
-    SELECT (ov.body::jsonb)->'value' AS value,
-           ov.timestamp,
-           ov.id AS operation_id,
-           ov.op_type_id
-  FROM hive.hafbe_app_operations_view ov
-  WHERE ov.op_type_id IN (13,91) AND ov.block_num BETWEEN _from AND _to
-  ),
-  source_ops AS MATERIALIZED
-  (
-    SELECT ro.value->>'account' AS account,
-           ro.value->>'proxy' AS proxy_account,
-           CASE WHEN ro.op_type_id = 13 THEN TRUE ELSE FALSE END AS proxy,
-           ro.timestamp,
-           ro.operation_id
-    FROM raw_ops ro
-  ),
-  select_proxy_ops AS MATERIALIZED
-  (
-    SELECT hav_a.id AS account_id, hav_p.id AS proxy_id, proxy, timestamp, operation_id
-    FROM source_ops proxy_op
-    --- Warning Here we can use `hive.accounts_view` instead of `hive.hafbe_app_accounts_view`,
-    --- since set of operations being visible to hafbe_app is already constrained by `hive.hafbe_app_operations_view`
-    JOIN hive.accounts_view hav_a ON hav_a.name = proxy_op.account
-    JOIN hive.accounts_view hav_p ON hav_p.name = proxy_op.proxy_account
-  ),
-  insert_proxy_history AS (
-    INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
-    SELECT account_id, proxy_id, proxy, timestamp
-    FROM select_proxy_ops
-  ),
-  select_latest_proxy_ops AS (
-    SELECT account_id, proxy_id, proxy, timestamp
-    FROM (
-      SELECT
-        ROW_NUMBER() OVER (PARTITION BY account_id, proxy_id ORDER BY operation_id DESC) AS row_n,
-        account_id, proxy_id, proxy, timestamp
-      FROM select_proxy_ops
-    ) row_count
-    WHERE row_n = 1
-  ),
-
-  insert_current_proxies AS (
-    INSERT INTO hafbe_app.current_account_proxies AS cap (account_id, proxy_id)
-    SELECT account_id, proxy_id
-    FROM select_latest_proxy_ops
-    WHERE proxy IS TRUE
-    ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
-      proxy_id = EXCLUDED.proxy_id
-  )
-
-  DELETE FROM hafbe_app.current_account_proxies cap USING (
-    SELECT account_id
-    FROM select_latest_proxy_ops
-    WHERE proxy IS FALSE
-  ) spo
-  WHERE cap.account_id = spo.account_id
-  ;
-
   
   WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
   (
@@ -381,7 +309,7 @@ SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
 SET cursor_tuple_fraction='0.9'
-  ;
+;
 
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
@@ -429,8 +357,8 @@ LEFT JOIN (
 ) pto_subquery ON cao.id = pto_subquery.source_op
 LEFT JOIN (
  SELECT source_op FROM (
-  	SELECT 
-      up.id AS source_op,
+ SELECT
+    up.id AS source_op, 
 	coalesce((SELECT 1
     FROM 
       hafbe_views.comments_view prd
@@ -458,7 +386,7 @@ WHERE
   OR (cao.op_type_id = 13 AND po_subquery.source_op IS NOT NULL)
   OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND cao.block_num BETWEEN _from AND _to
-  )
+)
   SELECT * FROM comment_operation 
   ORDER BY source_op_block, source_op
 
@@ -471,7 +399,7 @@ LOOP
 
     WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
     PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change.op_type);
-
+    
     WHEN __balance_change.op_type = 76 THEN
     PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
 

@@ -81,11 +81,11 @@ BEGIN
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
-    witness_id INT NOT NULL,
     voter_id INT NOT NULL,
+    witness_id INT NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
-    CONSTRAINT pk_current_witness_votes PRIMARY KEY (witness_id, voter_id)
+    CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
