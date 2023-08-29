@@ -75,6 +75,7 @@ BEGIN
   (SELECT * FROM hafbe_backend.get_account_rewards(__account_id)) AS _result_rewards,
   (SELECT * FROM hafbe_backend.get_account_savings(__account_id)) AS _result_savings,
   (SELECT * FROM hafbe_backend.get_account_info_rewards(__account_id)) AS _result_curation_posting,
+  (SELECT * FROM hafbe_backend.get_last_post_vote_time(__account_id)) AS _result_post,
   (SELECT * FROM hafbe_backend.get_account_parameters(__account_id)) AS _result_parameters,
   )
 

@@ -119,6 +119,7 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/main_loop.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/massive_processing.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_operations.sql
 
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"

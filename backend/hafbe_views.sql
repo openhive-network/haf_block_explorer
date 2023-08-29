@@ -140,6 +140,73 @@ GROUP BY aph.account_id;
 
 ------
 
+CREATE OR REPLACE VIEW hafbe_views.comments_view
+AS
+  SELECT
+    (ov.body)->'value'->>'author' AS author,
+    (ov.body)->'value'->>'permlink' AS permlink,
+    ov.block_num,
+    ov.id
+  FROM
+    hive.hafbe_app_operations_view ov
+  WHERE 
+    ov.op_type_id = 1;
+
+------
+
+CREATE OR REPLACE VIEW hafbe_views.votes_view
+AS
+  SELECT
+    (ov.body)->'value'->>'voter' AS voter,
+    ov.block_num,
+    ov.id
+  FROM
+    hive.hafbe_app_operations_view ov
+  WHERE 
+    ov.op_type_id = 72;
+
+------
+
+CREATE OR REPLACE VIEW hafbe_views.pow_view
+AS
+  SELECT
+    (ov.body)->'value'->>'worker_account' AS worker_account,
+    ov.block_num,
+    ov.id
+  FROM
+    hive.hafbe_app_operations_view ov
+  WHERE 
+    ov.op_type_id = 14;
+
+------
+
+CREATE OR REPLACE VIEW hafbe_views.pow_two_view
+AS
+  SELECT
+    (ov.body)->'value'->'work'->'value'->'input'->>'worker_account' AS worker_account,
+    ov.block_num,
+    ov.id
+  FROM
+    hive.hafbe_app_operations_view ov
+  WHERE 
+    ov.op_type_id = 30;
+
+------
+
+CREATE OR REPLACE VIEW hafbe_views.deleted_comments_view
+AS
+  SELECT
+    o.body-> 'value'->> 'author' AS author,
+    o.body-> 'value'->> 'permlink' AS permlink,
+    o.block_num,
+    o.id
+  FROM 
+    hive.hafbe_app_operations_view o
+  WHERE 
+    o.op_type_id =17;
+
+------
+
 CREATE OR REPLACE VIEW hafbe_views.voters_stats_change_view AS
 SELECT
   vavcv.witness_id, vavcv.voter_id,

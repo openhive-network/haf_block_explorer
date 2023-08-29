@@ -189,17 +189,6 @@ BEGIN
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
 
-  CREATE OR REPLACE VIEW hafbe_app.comments_view
-  AS
-    SELECT
-      (ov.body::jsonb)->'value'->>'permlink' AS permlink,
-      (ov.body::jsonb)->'value'->>'author' AS author,
-      ov.block_num
-    FROM
-      hive.hafbe_app_operations_view ov
-    WHERE 
-      ov.op_type_id = 1;
-
 END
 $$
 ;

@@ -14,8 +14,7 @@ BEGIN
   CREATE INDEX IF NOT EXISTS witness_votes_history_timestamp ON hafbe_app.witness_votes_history USING btree (timestamp);
   CREATE INDEX IF NOT EXISTS account_proxies_history_timestamp ON hafbe_app.account_proxies_history USING btree (timestamp); 
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id ON hafbe_app.account_proxies_history USING btree (account_id);
-  CREATE INDEX IF NOT EXISTS account_vests_account_id ON hafbe_app.account_vests USING btree (account_id);
-  
+
   ANALYZE VERBOSE;
 END
 $$
@@ -100,6 +99,47 @@ BEGIN
   	(body_binary::jsonb->'value'->>'voter')
   )
   WHERE op_type_id = 72;
+
+  --Indexes for delete_comment_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_delete_permlink_author ON hive.operations USING btree
+  (
+	  (body_binary::jsonb->'value'->>'author'),
+  	(body_binary::jsonb->'value'->>'permlink')
+  )
+  WHERE op_type_id = 17;
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_delete_permlink_author ON hive.operations_reversible USING btree
+  (
+    (body_binary::jsonb->'value'->>'author'),
+    (body_binary::jsonb->'value'->>'permlink')
+  )
+  WHERE op_type_id=17;
+
+    --Indexes for pow_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_pow_operation ON hive.operations USING btree
+  (
+  	(body_binary::jsonb->'value'->>'worker_account')
+  )
+  WHERE op_type_id = 14;
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_pow_operation ON hive.operations_reversible USING btree
+  (
+  	(body_binary::jsonb->'value'->>'worker_account')
+  )
+  WHERE op_type_id = 14;
+
+    --Indexes for pow2_operation
+  CREATE INDEX IF NOT EXISTS hive_operations_pow2_operation ON hive.operations USING btree
+  (
+  	(body_binary::jsonb->'value'->'work'->'value'->'input'->>'worker_account')
+  )
+  WHERE op_type_id = 30;
+  
+  CREATE INDEX IF NOT EXISTS hive_operations_reversible_pow2_operation ON hive.operations_reversible USING btree
+  (
+  	(body_binary::jsonb->'value'->'work'->'value'->'input'->>'worker_account')
+  )
+  WHERE op_type_id = 30;
 
   ANALYZE VERBOSE;
 END
