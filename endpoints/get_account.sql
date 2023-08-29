@@ -61,7 +61,12 @@ BEGIN
   COALESCE(_result_post.last_post, '1970-01-01T00:00:00') AS last_post,
   COALESCE(_result_post.last_root_post, '1970-01-01T00:00:00') AS last_root_post,
   COALESCE(_result_post.last_vote_time, '1970-01-01T00:00:00') AS last_vote_time,
-  COALESCE(_result_post.post_count, 0) AS post_count
+  COALESCE(_result_post.post_count, 0) AS post_count,
+  COALESCE(_result_parameters.can_vote, TRUE) AS can_vote,
+  COALESCE(_result_parameters.mined, TRUE) AS mined,
+  COALESCE(_result_parameters.recovery_account, 'steem') AS recovery_account,
+  COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00') AS last_account_recovery,
+  COALESCE(_result_parameters.created,'1970-01-01T00:00:00') AS created,
   FROM
   (SELECT * FROM hafbe_backend.get_btracker_account_balance(__account_id)) AS _result_balance,
   (SELECT * FROM hafbe_backend.get_account_withdraws(__account_id)) AS _result_withdraws,
@@ -70,7 +75,7 @@ BEGIN
   (SELECT * FROM hafbe_backend.get_account_rewards(__account_id)) AS _result_rewards,
   (SELECT * FROM hafbe_backend.get_account_savings(__account_id)) AS _result_savings,
   (SELECT * FROM hafbe_backend.get_account_info_rewards(__account_id)) AS _result_curation_posting,
-  (SELECT * FROM hafbe_backend.get_last_post_vote_time(__account_id)) AS _result_post
+  (SELECT * FROM hafbe_backend.get_account_parameters(__account_id)) AS _result_parameters,
   )
 
   SELECT json_build_object(
@@ -85,14 +90,15 @@ BEGIN
     'posting_json_metadata', posting_json_metadata, --work in progress 10
     'last_owner_update', __response_data->>'last_owner_update', --work in progress 10
     'last_account_update', __response_data->>'last_account_update', --work in progress 10
-    'created', __response_data->>'created',
-    'mined', __response_data->>'mined',
-    'recovery_account', __response_data->>'recovery_account', --work in progress 76
-    'post_count', post_count, --OK
-    'can_vote', __response_data->>'can_vote',
-    'voting_manabar', __response_data->'voting_manabar', --can't be track it without consensus_state_provider
-    'downvote_manabar', __response_data->'downvote_manabar', --can't be track it without consensus_state_provider
-    'voting_power', __response_data->>'voting_power', --can't be track it without consensus_state_provider
+    'created', created, --work in progress 9,23,41,80
+    'mined', mined, --work in progress 9,23,41,  14,30
+    'recovery_account', recovery_account, --work in progress 76
+    'last_account_recovery', last_account_recovery, --work in progress 25
+    'can_vote', can_vote, --work in progress 36
+    
+  --  'voting_manabar', __response_data->'voting_manabar', --can't be track it without consensus_state_provider
+  --  'downvote_manabar', __response_data->'downvote_manabar', --can't be track it without consensus_state_provider
+  --  'voting_power', __response_data->>'voting_power', --can't be track it without consensus_state_provider
     'balance', hive_balance, --OK
     'savings_balance', hive_savings, --OK
     'hbd_balance', hbd_balance, --OK
@@ -112,8 +118,7 @@ BEGIN
     'post_voting_power', post_voting_power_vests, --OK
     'posting_rewards', posting_rewards, --OK
     'curation_rewards', curation_rewards, --OK, may have slight diffrences
-    'proxied_vsf_votes', __response_data->'proxied_vsf_votes',
-    'witnesses_voted_for', __response_data->>'witnesses_voted_for',
+    'post_count', post_count, --OK
     'last_post', last_post, --OK
     'last_root_post', last_root_post, --OK
     'last_vote_time', last_vote_time, --OK
@@ -127,6 +132,7 @@ BEGIN
 END
 $$
 ;
+
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_resource_credits(_account TEXT)
 RETURNS JSON

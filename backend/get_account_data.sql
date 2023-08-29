@@ -9,6 +9,62 @@ END
 $$
 ;
 
+
+DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE;
+CREATE TYPE hafbe_backend.last_post_vote_time AS
+(
+  last_post TIMESTAMP,
+  last_root_post TIMESTAMP,
+  last_vote_time TIMESTAMP,
+  post_count INT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_last_post_vote_time(_account INT)
+RETURNS hafbe_backend.last_post_vote_time
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __result hafbe_backend.last_post_vote_time;
+BEGIN
+  SELECT last_post, last_root_post, last_vote_time, post_count 
+  INTO __result
+  FROM hafbe_app.account_posts WHERE account= _account;
+  RETURN __result;
+
+END
+$$
+;
+--ACCOUNT can_vote, mined, created, recovery
+
+DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE;
+CREATE TYPE hafbe_backend.account_parameters AS
+(
+  can_vote BOOLEAN,
+  mined BOOLEAN,
+  recovery_account TEXT,
+  last_account_recovery TIMESTAMP,
+  created TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_parameters(_account INT)
+RETURNS hafbe_backend.account_parameters
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __result hafbe_backend.account_parameters;
+BEGIN
+  SELECT can_vote, mined, recovery_account, last_account_recovery, created
+  INTO __result
+  FROM hafbe_app.account_parameters WHERE account= _account;
+  RETURN __result;
+
+END
+$$
+;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON IMMUTABLE
 LANGUAGE 'plpython3u'

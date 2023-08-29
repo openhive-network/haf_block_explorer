@@ -254,31 +254,3 @@ END
 $$
 ;
 
---ACCOUNT LAST POST TIME
-
-DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE;
-CREATE TYPE hafbe_backend.last_post_vote_time AS
-(
-  last_post TIMESTAMP,
-  last_root_post TIMESTAMP,
-  last_vote_time TIMESTAMP,
-  post_count INT
-);
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_last_post_vote_time(_account INT)
-RETURNS hafbe_backend.last_post_vote_time
-LANGUAGE 'plpgsql'
-STABLE
-AS
-$$
-DECLARE
-  __result hafbe_backend.last_post_vote_time;
-BEGIN
-  SELECT last_post, last_root_post, last_vote_time, post_count 
-  INTO __result
-  FROM hafbe_app.account_posts WHERE account= _account;
-  RETURN __result;
-
-END
-$$
-;
