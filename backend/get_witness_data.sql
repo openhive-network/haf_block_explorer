@@ -13,10 +13,16 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_in_vests
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters
+LANGUAGE 'plpgsql'
+STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET cursor_tuple_fraction='0.9'
 AS
-$function$
+$$
 BEGIN
   IF _order_by = 'voter' THEN
 
@@ -24,7 +30,9 @@ BEGIN
       $query$
 
       WITH limited_set AS (
-        SELECT cwv.voter_id, hav.name::TEXT AS voter
+        SELECT 
+          cwv.voter_id,
+          hav.name::TEXT AS voter
         FROM hafbe_app.current_witness_votes cwv
 
         JOIN LATERAL (
@@ -40,11 +48,20 @@ BEGIN
         LIMIT %L
       )
 
-      SELECT ls.voter, vsv.vests, vsv.account_vests::NUMERIC, vsv.proxied_vests, vsv.timestamp
+      SELECT 
+        ls.voter,
+        (vsv.vests/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), vsv.vests))/1000000)::BIGINT,
+        (vsv.account_vests/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), vsv.account_vests))/1000000)::BIGINT,
+        (vsv.proxied_vests/1000000)::BIGINT, 
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), vsv.proxied_vests))/1000000)::BIGINT,
+        vsv.timestamp
       FROM limited_set ls
-
+      JOIN 
       JOIN (
-        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+        SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp
+        --hafbe_app.witness_voters_stats_cache
         FROM hafbe_app.witness_voters_stats_cache
         WHERE witness_id = %L
       ) vsv ON vsv.voter_id = ls.voter_id
@@ -64,7 +81,8 @@ BEGIN
       $query$
 
       WITH limited_set AS (
-        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+        SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp
+        --hafbe_app.witness_voters_stats_cache
         FROM hafbe_app.witness_voters_stats_cache
         WHERE witness_id = %L
         ORDER BY
@@ -74,7 +92,14 @@ BEGIN
         LIMIT %L        
       )
 
-      SELECT hav.name::TEXT, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
+      SELECT hav.name::TEXT, 
+      (ls.vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.vests))/1000000)::BIGINT,
+      (ls.account_vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.account_vests))/1000000)::BIGINT,
+      (ls.proxied_vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.proxied_vests))/1000000)::BIGINT,
+      ls.timestamp
       FROM limited_set ls
       JOIN hive.accounts_view hav ON hav.id = ls.voter_id
       ORDER BY
@@ -89,44 +114,22 @@ BEGIN
 
   END IF;
 END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+$$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_in_hp
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_voters_daily_change
+LANGUAGE 'plpgsql'
+STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET cursor_tuple_fraction='0.9'
 AS
-$function$
-BEGIN
-  RETURN QUERY SELECT account, hive_power, account_hive_power, proxied_hive_power, timestamp
-  FROM hafbe_backend.get_set_of_witness_voters_in_vests(_witness_id, _limit, _offset, _order_by, _order_is)
-  JOIN LATERAL (
-    SELECT arr_hp[1] AS hive_power, arr_hp[2] AS account_hive_power, arr_hp[3] AS proxied_hive_power
-    FROM (
-      SELECT array_agg(hp) AS arr_hp
-      FROM hafbe_backend.vests_to_hive_power(vests, account_vests, proxied_vests) hp
-    ) to_arr
-  ) conv ON TRUE;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_daily_change_in_vests
-AS
-$function$
+$$
 DECLARE
-  __today DATE;
+  __today DATE := (SELECT hafbe_backend.get_todays_date());
 BEGIN
-  SELECT hafbe_backend.get_todays_date() INTO __today;
-
   IF _order_by = 'voter' THEN
 
     RETURN QUERY EXECUTE format(
@@ -149,14 +152,19 @@ BEGIN
       )
 
       SELECT
-        ls.voter, ls.approve,
-        COALESCE(wvcc.vests, 0)::BIGINT,
-        COALESCE(wvcc.account_vests, 0)::BIGINT,
-        COALESCE(wvcc.proxied_vests, 0)::BIGINT,
+        ls.voter, 
+        ls.approve,
+        ((COALESCE(wvcc.vests, 0))/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(wvcc.vests, 0)))/1000000)::BIGINT,
+        ((COALESCE(wvcc.account_vests, 0))/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(wvcc.account_vests, 0)))/1000000)::BIGINT,
+        ((COALESCE(wvcc.proxied_vests, 0))/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(wvcc.proxied_vests, 0)))/1000000)::BIGINT,
         wvcc.timestamp
       FROM limited_set ls
       LEFT JOIN (
-        SELECT voter_id, vests, account_vests, proxied_vests, timestamp
+        SELECT voter_id, vests::BIGINT, account_vests::BIGINT, proxied_vests::BIGINT, timestamp
+        --hafbe_app.witness_voters_stats_change_cache
         FROM hafbe_app.witness_voters_stats_change_cache
         WHERE witness_id = %L
       ) wvcc ON wvcc.voter_id = ls.voter_id
@@ -188,7 +196,16 @@ BEGIN
         LIMIT %L
       )
 
-      SELECT hav.name::TEXT, ls.approve, ls.vests, ls.account_vests, ls.proxied_vests, ls.timestamp
+      SELECT 
+      hav.name::TEXT, 
+      ls.approve, 
+      (ls.vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.vests))/1000000)::BIGINT, 
+      (ls.account_vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.account_vests))/1000000)::BIGINT,
+      (ls.proxied_vests/1000000)::BIGINT,
+      ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.proxied_vests))/1000000)::BIGINT,
+      ls.timestamp
       FROM limited_set ls
       JOIN hive.accounts_view hav ON hav.id = ls.voter_id
       ORDER BY
@@ -204,49 +221,26 @@ BEGIN
 
   END IF;
 END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters_daily_change_in_hp(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witness_voters_in_hp
-AS
-$function$
-BEGIN
-  RETURN QUERY SELECT account, hive_power, account_hive_power, proxied_hive_power, timestamp
-  FROM hafbe_backend.get_set_of_witness_voters_daily_change_in_vests(_witness_id, _limit, _offset, _order_by, _order_is)
-  JOIN LATERAL (
-    SELECT arr_hp[1] AS hive_power, arr_hp[2] AS account_hive_power, arr_hp[3] AS proxied_hive_power
-    FROM (
-      SELECT array_agg(hp) AS arr_hp
-      FROM hafbe_backend.vests_to_hive_power(vests, account_vests, proxied_vests) hp
-    ) to_arr
-  ) conv ON TRUE;
-END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+$$
 ;
 
 /*
 witnesses
 */
 
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses_in_vests(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses_in_vests
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_setof
+LANGUAGE 'plpgsql'
+STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET cursor_tuple_fraction='0.9'
 AS
-$function$
+$$
 DECLARE
-  __today DATE;
+  __today DATE := (SELECT hafbe_backend.get_todays_date());
 BEGIN
-  SELECT hafbe_backend.get_todays_date() INTO __today;
-
   IF _order_by = 'witness' THEN
 
     RETURN QUERY EXECUTE format(
@@ -268,19 +262,28 @@ BEGIN
       )
 
       SELECT
-        ls.witness, all_votes.rank, ls.url,
-        COALESCE(all_votes.votes, 0)::NUMERIC,
-        COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
+        ls.witness, 
+        all_votes.rank::INT, 
+        ls.url,
+        (COALESCE(all_votes.votes, 0)/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(all_votes.votes, 0)::BIGINT))/1000000)::BIGINT, 
+        (COALESCE(todays_votes.votes_daily_change, 0)/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(todays_votes.votes_daily_change, 0)::BIGINT))/1000000)::BIGINT, 
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
-        ls.price_feed, ls.bias, ls.feed_age, ls.block_size, ls.signing_key, ls.version
+        ls.price_feed, 
+        ls.bias, 
+        ls.feed_age, 
+        ls.block_size, 
+        ls.signing_key, 
+        ls.version
       FROM limited_set ls
       LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
       LEFT JOIN LATERAL (
         SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
         FROM hafbe_app.witness_votes_change_cache wvcc
         WHERE wvcc.witness_id = ls.witness_id
-        GROUP BY wvcc.witness_id
+          GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       ORDER BY
         (CASE WHEN %L = 'desc' THEN witness ELSE NULL END) DESC,
@@ -307,21 +310,28 @@ BEGIN
       )
 
       SELECT
-        hav.name::TEXT, ls.rank, cw.url,
-        ls.votes,
-        COALESCE(todays_votes.votes_daily_change, 0)::BIGINT AS votes_daily_change,
-        ls.voters_num,
+        hav.name::TEXT, 
+        ls.rank::INT, 
+        cw.url,
+        (ls.votes/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.votes::BIGINT))/1000000)::BIGINT, 
+        (COALESCE(todays_votes.votes_daily_change, 0)/1000000)::BIGINT AS votes_daily_change,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(todays_votes.votes_daily_change, 0)::BIGINT))/1000000)::BIGINT, 
+        ls.voters_num::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT AS voters_num_daily_change,
-        cw.price_feed, cw.bias,
+        cw.price_feed, 
+        cw.bias,
         (NOW() - cw.feed_updated_at)::INTERVAL,
-        cw.block_size, cw.signing_key, cw.version
+        cw.block_size, 
+        cw.signing_key, 
+        cw.version
       FROM limited_set ls
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = ls.witness_id
       LEFT JOIN LATERAL (
         SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
         FROM hafbe_app.witness_votes_change_cache wvcc
         WHERE wvcc.witness_id = ls.witness_id
-        GROUP BY wvcc.witness_id
+          GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       JOIN (
         SELECT name, id
@@ -356,12 +366,17 @@ BEGIN
       )
 
       SELECT
-        hav.name::TEXT, all_votes.rank, cw.url,
-        all_votes.votes::NUMERIC,
-        ls.votes_daily_change,
+        hav.name::TEXT, 
+        all_votes.rank::INT, 
+        w.url,
+        (all_votes.votes/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), all_votes.votes::BIGINT))/1000000)::BIGINT, 
+        (ls.votes_daily_change/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), ls.votes_daily_change))/1000000)::BIGINT,
         all_votes.voters_num::INT,
         ls.voters_num_daily_change,
-        cw.price_feed, cw.bias,
+        cw.price_feed, 
+        cw.bias,
         (NOW() - cw.feed_updated_at)::INTERVAL,
         cw.block_size, cw.signing_key, cw.version
       FROM limited_set ls
@@ -401,8 +416,10 @@ BEGIN
 
       SELECT
         hav.name::TEXT, rank::INT, url,
-        COALESCE(all_votes.votes, 0)::NUMERIC,
-        COALESCE(todays_votes.votes_daily_change, 0)::BIGINT,
+        (COALESCE(all_votes.votes, 0)/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(all_votes.votes, 0)::BIGINT))/1000000)::BIGINT, 
+        (COALESCE(todays_votes.votes_daily_change, 0)/1000000)::BIGINT,
+        ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(todays_votes.votes_daily_change, 0)::BIGINT))/1000000)::BIGINT, 
         COALESCE(all_votes.voters_num, 0)::INT,
         COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
         price_feed, bias, feed_age, block_size, signing_key, version
@@ -415,7 +432,7 @@ BEGIN
         SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
         FROM hafbe_app.witness_votes_change_cache wvcc
         WHERE wvcc.witness_id = ls.witness_id
-        GROUP BY wvcc.witness_id
+          GROUP BY wvcc.witness_id
       ) todays_votes ON TRUE
       JOIN hive.accounts_view hav ON hav.id = ls.witness_id
       ORDER BY
@@ -429,34 +446,26 @@ BEGIN
 
   END IF;
 END
-$function$
-LANGUAGE 'plpgsql' STABLE
-COST 10000
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+$$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witnesses_in_hp(_limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
-RETURNS SETOF hafbe_types.witnesses_in_hp
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_setof_witness(_account TEXT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+RETURNS SETOF hafbe_types.witness_setof
+LANGUAGE 'plpgsql'
+STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET cursor_tuple_fraction='0.9'
 AS
-$function$
+$$
 BEGIN
   RETURN QUERY SELECT
-    witness, rank, url, conv.votes, conv.votes_daily_change, voters_num, voters_num_daily_change,
+    witness, rank, url, votes_vests, votes_hive_power, votes_daily_change_vests, votes_daily_change_hive_power, voters_num, voters_num_daily_change,
     price_feed, bias, feed_age, block_size, signing_key, version
-  FROM hafbe_backend.get_set_of_witnesses_in_vests(_limit, _offset, _order_by, _order_is)
-  JOIN LATERAL (
-    SELECT arr_hp[1] AS votes, arr_hp[2] AS votes_daily_change
-    FROM (
-      SELECT array_agg(hp) AS arr_hp
-      FROM hafbe_backend.vests_to_hive_power(votes, votes_daily_change) hp
-    ) to_arr
-  ) conv ON TRUE;
+  FROM hafbe_backend.get_set_of_witnesses(_limit, _offset, _order_by, _order_is)
+  WHERE witness = _account;
 END
-$function$
-LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+$$
 ;

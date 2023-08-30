@@ -16,7 +16,7 @@ CREATE TYPE hafbe_types.operations AS (
   virtual_op BOOLEAN,
   timestamp TIMESTAMP,
   age INTERVAL,
-  operations JSONB,
+  operation JSONB,
   operation_id BIGINT,
   acc_operation_id INT
 );
@@ -29,62 +29,38 @@ CREATE TYPE hafbe_types.block AS (
   signing_key TEXT
 );
 
-CREATE TYPE hafbe_types.witness_voters_in_vests AS (
+CREATE TYPE hafbe_types.witness_voters AS (
   account TEXT,
-  vests NUMERIC,
-  account_vests NUMERIC,
-  proxied_vests NUMERIC,
+  votes_vests BIGINT,
+  votes_hive_power BIGINT,
+  account_vests BIGINT,
+  account_hive_power BIGINT,
+  proxied_vests BIGINT,
+  proxied_hive_power BIGINT,
   timestamp TIMESTAMP
 );
 
-CREATE TYPE hafbe_types.witness_voters_in_hp AS (
-  account TEXT,
-  hive_power FLOAT,
-  account_hive_power FLOAT,
-  proxied_hive_power FLOAT,
-  timestamp TIMESTAMP
-);
-
-CREATE TYPE hafbe_types.witness_voters_daily_change_in_vests AS (
+CREATE TYPE hafbe_types.witness_voters_daily_change AS (
   account TEXT,
   approve BOOLEAN,
   vests BIGINT,
+  hive_power BIGINT,
   account_vests BIGINT,
+  account_hive_power BIGINT,
   proxied_vests BIGINT,
+  proxied_hive_power BIGINT,
   timestamp TIMESTAMP
 );
 
-CREATE TYPE hafbe_types.witness_voters_daily_change_in_hp AS (
-  account TEXT,
-  approve BOOLEAN,
-  hive_power FLOAT,
-  account_hive_power FLOAT,
-  proxied_hive_power FLOAT,
-  timestamp TIMESTAMP
-);
 
-CREATE TYPE hafbe_types.witnesses_in_vests AS (
+CREATE TYPE hafbe_types.witness_setof AS (
   witness TEXT,
   rank INT,
   url TEXT,
-  votes NUMERIC,
-  votes_daily_change BIGINT,
-  voters_num INT,
-  voters_num_daily_change INT,
-  price_feed FLOAT,
-  bias NUMERIC,
-  feed_age INTERVAL,
-  block_size INT,
-  signing_key TEXT,
-  version TEXT
-);
-
-CREATE TYPE hafbe_types.witnesses_in_hp AS (
-  witness TEXT,
-  rank INT,
-  url TEXT,
-  votes FLOAT,
-  votes_daily_change FLOAT,
+  votes_vests BIGINT,
+  votes_hive_power BIGINT,
+  votes_daily_change_vests BIGINT,
+  votes_daily_change_hive_power BIGINT,
   voters_num INT,
   voters_num_daily_change INT,
   price_feed FLOAT,

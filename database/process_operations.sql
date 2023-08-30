@@ -326,11 +326,11 @@ delete_votes_if_proxy AS (
   WHERE cap.voter_id = spo.account_id
 )
 DELETE FROM hafbe_app.current_account_proxies cap USING (
-  SELECT account_id
+  SELECT account_id, proxy_id
   FROM selected
   WHERE proxy IS FALSE
 ) spo
-WHERE cap.account_id = spo.account_id
+WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
 ;
 
 END
