@@ -449,8 +449,7 @@ END
 $$
 ;
 
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_setof_witness(_account TEXT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_setof_witness(_account TEXT)
 RETURNS SETOF hafbe_types.witness_setof
 LANGUAGE 'plpgsql'
 STABLE
@@ -461,11 +460,42 @@ SET cursor_tuple_fraction='0.9'
 AS
 $$
 BEGIN
-  RETURN QUERY SELECT
-    witness, rank, url, votes_vests, votes_hive_power, votes_daily_change_vests, votes_daily_change_hive_power, voters_num, voters_num_daily_change,
-    price_feed, bias, feed_age, block_size, signing_key, version
-  FROM hafbe_backend.get_set_of_witnesses(_limit, _offset, _order_by, _order_is)
-  WHERE witness = _account;
+RETURN QUERY
+WITH limited_set AS (
+  SELECT
+    cw.witness_id, hav.name::TEXT AS witness,
+    cw.url, cw.price_feed, cw.bias,
+    (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
+    cw.block_size, cw.signing_key, cw.version
+  FROM hive.accounts_view hav
+  JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
+  WHERE hav.name = _account
+)
+
+SELECT
+  ls.witness, 
+  all_votes.rank::INT, 
+  ls.url,
+  (COALESCE(all_votes.votes, 0)/1000000)::BIGINT,
+  ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(all_votes.votes, 0)::BIGINT))/1000000)::BIGINT, 
+  (COALESCE(todays_votes.votes_daily_change, 0)/1000000)::BIGINT,
+  ((SELECT hive.get_vesting_balance((SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1), COALESCE(todays_votes.votes_daily_change, 0)::BIGINT))/1000000)::BIGINT, 
+  COALESCE(all_votes.voters_num, 0)::INT,
+  COALESCE(todays_votes.voters_num_daily_change, 0)::INT,
+  ls.price_feed, 
+  ls.bias, 
+  ls.feed_age, 
+  ls.block_size, 
+  ls.signing_key, 
+  ls.version
+FROM limited_set ls
+LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
+LEFT JOIN LATERAL (
+  SELECT wvcc.witness_id, wvcc.votes_daily_change, wvcc.voters_num_daily_change
+  FROM hafbe_app.witness_votes_change_cache wvcc
+  WHERE wvcc.witness_id = ls.witness_id
+    GROUP BY wvcc.witness_id
+) todays_votes ON TRUE;
 END
 $$
 ;
