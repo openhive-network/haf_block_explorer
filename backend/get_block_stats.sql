@@ -56,17 +56,3 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.vests_to_hive_power(VARIADIC vests_value NUMERIC[])
-RETURNS SETOF FLOAT STABLE
-LANGUAGE 'plpgsql'
-AS
-$$
-BEGIN
-  RETURN QUERY SELECT
-    (unnest(vests_value) * total_vesting_fund_hive / total_vesting_shares)::FLOAT
-  FROM hive.blocks
-  ORDER BY num DESC
-  LIMIT 1;
-END
-$$
-;
