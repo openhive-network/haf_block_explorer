@@ -13,7 +13,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _limit INT, _offset INT, _order_by TEXT, _order_is TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_witness_voters(_witness_id INT, _order_by TEXT, _order_is TEXT)
 RETURNS SETOF hafbe_types.witness_voters
 LANGUAGE 'plpgsql'
 STABLE
@@ -44,8 +44,6 @@ BEGIN
         ORDER BY
           (CASE WHEN %L = 'desc' THEN hav.name ELSE NULL END) DESC,
           (CASE WHEN %L = 'asc' THEN hav.name ELSE NULL END) ASC
-        OFFSET %L
-        LIMIT %L
       )
 
       SELECT 
@@ -71,7 +69,7 @@ BEGIN
       ;
 
       $query$,
-      _witness_id, _order_is, _order_is, _offset, _limit,
+      _witness_id, _order_is, _order_is,
       _witness_id, _order_is, _order_is
     ) res;
 
@@ -87,9 +85,7 @@ BEGIN
         WHERE witness_id = %L
         ORDER BY
           (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-        OFFSET %L
-        LIMIT %L        
+          (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC     
       )
 
       SELECT hav.name::TEXT, 
@@ -108,7 +104,7 @@ BEGIN
       ;
 
       $query$,
-      _witness_id, _order_is, _order_by, _order_is, _order_by, _offset, _limit,
+      _witness_id, _order_is, _order_by, _order_is, _order_by,
       _order_is, _order_by, _order_is, _order_by
     ) res;
 
