@@ -56,12 +56,12 @@ BEGIN
     COALESCE(_result_post.post_count, 0) AS post_count
   INTO __result
   FROM
-    (SELECT * FROM hafbe_backend.get_btracker_account_balance(__account_id)) AS _result_balance,
-    (SELECT * FROM hafbe_backend.get_account_withdraws(__account_id)) AS _result_withdraws,
-    (SELECT * FROM hafbe_backend.get_btracker_vests_balance(__account_id)) AS _result_vest_balance,
-    (SELECT * FROM hafbe_backend.get_account_rewards(__account_id)) AS _result_rewards,
-    (SELECT * FROM hafbe_backend.get_account_savings(__account_id)) AS _result_savings,
-    (SELECT * FROM hafbe_backend.get_account_info_rewards(__account_id)) AS _result_curation_posting,
+    (SELECT * FROM btracker_endpoints.get_account_balances(__account_id)) AS _result_balance,
+    (SELECT * FROM btracker_endpoints.get_account_withdraws(__account_id)) AS _result_withdraws,
+    (SELECT * FROM btracker_endpoints.get_account_delegations(__account_id)) AS _result_vest_balance,
+    (SELECT * FROM btracker_endpoints.get_account_rewards(__account_id)) AS _result_rewards,
+    (SELECT * FROM btracker_endpoints.get_account_savings(__account_id)) AS _result_savings,
+    (SELECT * FROM btracker_endpoints.get_account_info_rewards(__account_id)) AS _result_curation_posting,
     (SELECT * FROM hafbe_backend.get_last_post_vote_time(__account_id)) AS _result_post;
 
   RETURN __result;

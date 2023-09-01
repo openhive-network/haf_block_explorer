@@ -154,6 +154,60 @@ END
 $$
 ;
 
+--ACCOUNT METADATA
+
+DROP TYPE IF EXISTS hafbe_backend.json_metadata CASCADE;
+CREATE TYPE hafbe_backend.json_metadata AS
+(
+  json_metadata TEXT,
+  posting_json_metadata TEXT
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_json_metadata(_account INT)
+RETURNS hafbe_backend.json_metadata
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __result hafbe_backend.json_metadata;
+BEGIN
+  SELECT json_metadata, posting_json_metadata 
+  INTO __result
+  FROM hive.hafbe_app_metadata WHERE account_id= _account;
+  RETURN __result;
+END
+$$
+;
+
+--ACCOUNT KEYAUTH
+
+DROP TYPE IF EXISTS hafbe_backend.account_keyauth CASCADE;
+CREATE TYPE hafbe_backend.account_keyauth AS
+(
+  key_auth TEXT,
+  authority_kind hive.authority_type
+);
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_keyauth(_account TEXT)
+RETURNS SETOF hafbe_backend.account_keyauth
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+BEGIN
+
+RETURN QUERY SELECT key_auth, authority_kind 
+FROM hive.hafbe_app_keyauth 
+WHERE account_name= _account 
+ORDER BY authority_kind ASC;
+
+END
+$$
+;
+
+
 -- GOING TO BE REMOVED
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account(_account TEXT)
 RETURNS JSON IMMUTABLE
