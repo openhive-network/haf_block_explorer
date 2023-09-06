@@ -11,7 +11,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _top_op_id INT, _limit INT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_set_of_ops_by_account(_account_id INT, _page_num INT, _limit INT, _filter SMALLINT[], _date_start TIMESTAMP, _date_end TIMESTAMP)
 RETURNS SETOF hafbe_types.operations
 AS
 $function$
@@ -24,18 +24,19 @@ DECLARE
   __lastest_account_op_seq_no INT;
   __block_start INT;
   __block_end INT;
+  _top_op_id INT ;
 BEGIN
   IF __no_ops_filter AND __no_start_date AND __no_end_date THEN
     SELECT TRUE INTO __no_filters;
     SELECT NULL INTO __subq_limit;
-    SELECT INTO __lastest_account_op_seq_no
-      account_op_seq_no FROM hive.account_operations_view WHERE account_id = _account_id ORDER BY account_op_seq_no DESC LIMIT 1;
-    SELECT INTO _top_op_id
-      CASE WHEN __lastest_account_op_seq_no < _top_op_id THEN __lastest_account_op_seq_no ELSE _top_op_id END; 
   ELSE
     SELECT FALSE INTO __no_filters;
     SELECT _limit INTO __subq_limit;
   END IF;
+
+  SELECT INTO __lastest_account_op_seq_no
+    account_op_seq_no FROM hive.account_operations_view WHERE account_id = _account_id ORDER BY account_op_seq_no DESC LIMIT 1;
+  SELECT __lastest_account_op_seq_no - (_page_num * 100) INTO _top_op_id;
 
   IF __no_start_date IS FALSE THEN
     SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1 INTO __block_start;
