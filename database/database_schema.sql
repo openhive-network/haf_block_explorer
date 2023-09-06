@@ -1,5 +1,3 @@
-CREATE SCHEMA IF NOT EXISTS hafbe_app AUTHORIZATION hafbe_owner;
-
 SET ROLE hafbe_owner;
 
 --TIME OF HAFBE SYNC FOR 15m BLOCKS
@@ -23,13 +21,17 @@ SET ROLE hafbe_owner;
 
 --posts and votes 69.61m
 
-
-CREATE OR REPLACE FUNCTION hafbe_app.define_schema()
-RETURNS VOID
-LANGUAGE 'plpgsql'
-AS
-$$
+DO $$
 BEGIN
+
+  CREATE SCHEMA hafbe_app AUTHORIZATION hafbe_owner;
+
+  IF NOT hive.app_context_exists('hafbe_app') THEN 
+
+  PERFORM hive.app_create_context('hafbe_app');
+
+  END IF;
+
   RAISE NOTICE 'Attempting to create an application schema tables...';
 
   CREATE TABLE IF NOT EXISTS hafbe_app.app_status (
@@ -188,6 +190,11 @@ BEGIN
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
+
+GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
+
+
+EXCEPTION WHEN duplicate_schema THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 
 END
 $$

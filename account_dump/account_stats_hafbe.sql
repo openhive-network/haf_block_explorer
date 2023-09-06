@@ -1,3 +1,41 @@
+CREATE OR REPLACE FUNCTION hafbe_backend.dump_current_account_stats(account_data jsonb)
+RETURNS VOID
+LANGUAGE 'plpgsql'
+VOLATILE
+AS
+$$
+BEGIN
+INSERT INTO hafbe_backend.account_balances 
+
+SELECT
+    account_data->>'name'AS name,
+    (account_data->'balance'->>'amount')::BIGINT AS balance,
+    (account_data->'hbd_balance'->>'amount')::BIGINT AS hbd_balance,
+    (account_data->'vesting_shares'->>'amount')::BIGINT AS vesting_shares,
+    (account_data->'savings_balance'->>'amount')::BIGINT AS savings_balance,
+    (account_data->'savings_hbd_balance'->>'amount')::BIGINT AS savings_hbd_balance,
+    (account_data->>'savings_withdraw_requests')::INT AS savings_withdraw_requests,
+    (account_data->'reward_hbd_balance'->>'amount')::BIGINT AS reward_hbd_balance,
+    (account_data->'reward_hive_balance'->>'amount')::BIGINT AS reward_hive_balance,
+    (account_data->'reward_vesting_balance'->>'amount')::BIGINT AS reward_vesting_balance,
+    (account_data->'reward_vesting_hive'->>'amount')::BIGINT AS reward_vesting_hive,
+    (account_data->'delegated_vesting_shares'->>'amount')::BIGINT AS delegated_vesting_shares,
+    (account_data->'received_vesting_shares'->>'amount')::BIGINT AS received_vesting_shares,
+    (account_data->'vesting_withdraw_rate'->>'amount')::BIGINT AS vesting_withdraw_rate,
+    (account_data->>'to_withdraw')::BIGINT AS to_withdraw,
+    (account_data->>'withdrawn')::BIGINT AS withdrawn,
+    (account_data->>'withdraw_routes')::INT AS withdraw_routes,
+    (account_data->'post_voting_power'->>'amount')::BIGINT AS post_voting_power,
+    (account_data->>'posting_rewards')::BIGINT AS posting_rewards,
+    (account_data->>'curation_rewards')::BIGINT AS curation_rewards,
+    (account_data->>'last_post')::TIMESTAMP AS last_post,
+    (account_data->>'last_root_post')::TIMESTAMP AS last_root_post,
+    (account_data->>'last_vote_time')::TIMESTAMP AS last_vote_time,
+    (account_data->>'post_count')::BIGINT AS post_count; 
+END
+$$
+;
+
 DROP TYPE IF EXISTS hafbe_backend.account_type CASCADE;
 CREATE TYPE hafbe_backend.account_type AS
 (

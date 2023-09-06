@@ -1,5 +1,3 @@
-DROP SCHEMA IF EXISTS hafbe_exceptions CASCADE;
-
 CREATE SCHEMA IF NOT EXISTS hafbe_exceptions AUTHORIZATION hafbe_owner;
 
 SET ROLE hafbe_owner;

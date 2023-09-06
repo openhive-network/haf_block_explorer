@@ -1,7 +1,3 @@
-CREATE TABLE IF NOT EXISTS hafbe_backend.differing_accounts (
-  account_name TEXT
-);
-
 CREATE OR REPLACE FUNCTION hafbe_backend.compare_accounts()
 RETURNS VOID
 LANGUAGE 'plpgsql'

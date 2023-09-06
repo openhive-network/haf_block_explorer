@@ -1,13 +1,15 @@
-DROP SCHEMA IF EXISTS hafbe_types CASCADE;
+SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
 
+DROP TYPE IF EXISTS hafbe_types.op_types CASCADE;
 CREATE TYPE hafbe_types.op_types AS (
   op_type_id SMALLINT,
   operation_name TEXT,
   is_virtual BOOLEAN
 );
 
+DROP TYPE IF EXISTS hafbe_types.operations CASCADE;
 CREATE TYPE hafbe_types.operations AS (
   trx_id TEXT,
   block INT,
@@ -21,6 +23,7 @@ CREATE TYPE hafbe_types.operations AS (
   acc_operation_id INT
 );
 
+DROP TYPE IF EXISTS hafbe_types.block CASCADE;
 CREATE TYPE hafbe_types.block AS (
   block_num INT,
   block_hash TEXT,
@@ -29,6 +32,7 @@ CREATE TYPE hafbe_types.block AS (
   signing_key TEXT
 );
 
+DROP TYPE IF EXISTS hafbe_types.witness_voters CASCADE;
 CREATE TYPE hafbe_types.witness_voters AS (
   account TEXT,
   votes_vests BIGINT,
@@ -40,6 +44,7 @@ CREATE TYPE hafbe_types.witness_voters AS (
   timestamp TIMESTAMP
 );
 
+DROP TYPE IF EXISTS hafbe_types.witness_voters_daily_change CASCADE;
 CREATE TYPE hafbe_types.witness_voters_daily_change AS (
   account TEXT,
   approve BOOLEAN,
@@ -52,7 +57,7 @@ CREATE TYPE hafbe_types.witness_voters_daily_change AS (
   timestamp TIMESTAMP
 );
 
-
+DROP TYPE IF EXISTS hafbe_types.witness_setof CASCADE;
 CREATE TYPE hafbe_types.witness_setof AS (
   witness TEXT,
   rank INT,
@@ -70,3 +75,5 @@ CREATE TYPE hafbe_types.witness_setof AS (
   signing_key TEXT,
   version TEXT
 );
+
+RESET ROLE;

@@ -1,5 +1,8 @@
 DROP SCHEMA IF EXISTS hafbe_views CASCADE;
-CREATE SCHEMA IF NOT EXISTS hafbe_views AUTHORIZATION hafbe_owner;
+
+SET ROLE hafbe_owner;
+
+CREATE SCHEMA hafbe_views AUTHORIZATION hafbe_owner;
 
 CREATE OR REPLACE VIEW hafbe_views.witness_prop_op_view AS
 SELECT
@@ -255,3 +258,6 @@ LEFT JOIN LATERAL (
   FROM hafbe_views.voters_proxy_vests_change_view
   WHERE voter_id = vavcv.voter_id
 ) vpvcv ON TRUE;
+
+
+RESET ROLE;
