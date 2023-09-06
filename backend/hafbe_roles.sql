@@ -8,11 +8,6 @@ END
 $$
 ;
 
--- recreate hafbe schemas user
-DROP ROLE IF EXISTS hafbe_user;
-CREATE ROLE hafbe_user NOLOGIN;
-GRANT hafbe_user TO hafbe_owner;
-
 -- grant new priviliges
 GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;

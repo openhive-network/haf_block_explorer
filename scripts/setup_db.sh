@@ -61,17 +61,8 @@ setup_owner() {
     sudo useradd -m $owner_role
     sudo chsh -s /bin/bash $owner_role
   fi;
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f $db_dir/builtin_roles.sql
 
-psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f - <<EOF
-DO \$$
-BEGIN
-  CREATE ROLE $owner_role WITH LOGIN INHERIT IN ROLE hive_applications_group;
-  GRANT CREATE ON DATABASE haf_block_log TO $owner_role;
-  EXCEPTION WHEN DUPLICATE_OBJECT THEN
-  RAISE NOTICE '$owner_role role already exists';
-END
-\$$;
-EOF
 }
 
 find_function() {
@@ -100,7 +91,7 @@ setup_apps() {
   (cd $hafah_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
   (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context)
   (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD)
-  
+
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_owner TO hafbe_owner;"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_user TO hafbe_owner;"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;"
@@ -113,7 +104,7 @@ setup_extensions() {
 
 setup_api() {
   # setup db schema
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql 
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_indexes.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/main_loop.sql
@@ -121,11 +112,11 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_operations.sql
 
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
+  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
   #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
+  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
+  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
