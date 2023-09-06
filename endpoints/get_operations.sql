@@ -59,3 +59,14 @@ BEGIN
 END
 $$
 ;
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation(_operation_id INT)
+RETURNS JSON
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN hafbe_backend.get_operation(_operation_id);
+END
+$$
+;

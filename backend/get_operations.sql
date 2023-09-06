@@ -133,3 +133,29 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
+
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_operation(_operation_id INT)
+RETURNS JSONB
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN
+    jsonb_build_object(
+      'id', o.id,
+      'block_num', o.block_num,
+      'trx_in_block', o.trx_in_block,
+      'op_pos',  o.op_pos,
+      'op_type_id', o.op_type_id,
+      'body_binary', o.body_binary,
+      'body_jsonb', o.body,
+      'timestamp', o.timestamp,
+      'age', NOW() - o.timestamp
+    )
+  FROM hive.operations_view o WHERE o.id = _operation_id
+  ;
+END
+$$
+;
+
