@@ -623,4 +623,55 @@ END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
 
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_a(op RECORD, vote hive.account_witness_vote_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  PERFORM hafbe_app.process_vote_op(op, vote);
+END
+$$
+;
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_a(op RECORD, proxy hive.account_witness_proxy_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  PERFORM hafbe_app.process_proxy_op(op, proxy);
+END
+$$
+;
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_a(op RECORD, proxy hive.proxy_cleared_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  PERFORM hafbe_app.process_proxy_op(op, proxy);
+END
+$$
+;
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_a(op RECORD, notification hive.expired_account_notification_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  PERFORM hafbe_app.process_expired_account(op, notification);
+END
+$$
+;
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_a(op RECORD, decline hive.declined_voting_rights_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  PERFORM hafbe_app.process_expired_account(op, decline);
+END
+$$
+;
+
 RESET ROLE;
