@@ -7,32 +7,8 @@ $function$
 DECLARE
   __balance_change RECORD;
 BEGIN
-
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
-FOR __balance_change IN
-  SELECT 
-    ov.body AS body,
-    ov.op_type_id as op_type,
-    ov.timestamp
-  FROM hive.btracker_app_operations_view ov
-  WHERE 
-    ov.op_type_id IN (12,13,91,92,75)
-    AND ov.block_num BETWEEN _from AND _to
-  ORDER BY ov.block_num, ov.id
-
-LOOP
-
-  CASE 
-
-    WHEN __balance_change.op_type = 92 OR __balance_change.op_type = 75 THEN
-    PERFORM hafbe_app.process_expired_accounts(__balance_change.body);
-    
-
-    ELSE
-  END CASE;
-
-END LOOP;
 
 PERFORM hive.process_operation(op, 'hafbe_app', 'process_vote_op')
 FROM hive.hafbe_app_operations_view AS op
@@ -42,6 +18,11 @@ ORDER BY op.id ASC;
 PERFORM hive.process_operation(op, 'hafbe_app', 'process_proxy_op')
 FROM hive.hafbe_app_operations_view AS op
 WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to
+ORDER BY op.id ASC;
+
+PERFORM hive.process_operation(op, 'hafbe_app', 'process_expired_account')
+FROM hive.hafbe_app_operations_view AS op
+WHERE op.op_type_id IN (75,92) AND op.block_num BETWEEN _from AND _to
 ORDER BY op.id ASC;
 
 END

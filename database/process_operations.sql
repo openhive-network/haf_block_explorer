@@ -278,7 +278,7 @@ WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_expired_accounts(_body jsonb)
+CREATE OR REPLACE FUNCTION hafbe_app.process_expired_account(op RECORD, notification hive.expired_account_notification_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -286,17 +286,44 @@ $$
 BEGIN
 WITH proxy_operations AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account') AS account_id
+    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name =  notification.account) AS account_id
 ),
 delete_proxies AS (
   DELETE FROM hafbe_app.current_account_proxies cap USING (
-    SELECT account_id 
+    SELECT account_id
     FROM proxy_operations
   ) spo
   WHERE cap.account_id = spo.account_id
 )
 DELETE FROM hafbe_app.current_witness_votes cap USING (
-  SELECT account_id 
+  SELECT account_id
+  FROM proxy_operations
+) spoo
+WHERE cap.voter_id = spoo.account_id;
+
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_expired_account(op RECORD, decline hive.declined_voting_rights_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+WITH proxy_operations AS (
+  SELECT
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = decline.account) AS account_id
+),
+delete_proxies AS (
+  DELETE FROM hafbe_app.current_account_proxies cap USING (
+    SELECT account_id
+    FROM proxy_operations
+  ) spo
+  WHERE cap.account_id = spo.account_id
+)
+DELETE FROM hafbe_app.current_witness_votes cap USING (
+  SELECT account_id
   FROM proxy_operations
 ) spoo
 WHERE cap.voter_id = spoo.account_id;
