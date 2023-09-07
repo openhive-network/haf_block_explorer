@@ -56,3 +56,39 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block(_timestamp TIMESTAMP)
+RETURNS JSONB
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+
+  RETURN
+    jsonb_build_object(
+      'num', o.num,
+      'hash', o.hash,
+      'prev', o.prev,
+      'producer_account_id',  o.producer_account_id,
+      'transaction_merkle_root', o.transaction_merkle_root,
+      'extensions', o.extensions,
+      'witness_signature', o.witness_signature,
+      'signing_key', o.signing_key,
+      'hbd_interest_rate', o.hbd_interest_rate,
+      'total_vesting_fund_hive', o.total_vesting_fund_hive,
+      'total_vesting_shares', o.total_vesting_shares,
+      'total_reward_fund_hive',  o.total_reward_fund_hive,
+      'virtual_supply', o.virtual_supply,
+      'current_supply', o.current_supply,
+      'current_hbd_supply', o.current_hbd_supply,
+      'dhf_interval_ledger', o.dhf_interval_ledger,
+      'created_at', o.created_at,
+      'age', NOW() - o.created_at
+    )
+  FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '3 seconds' AND _timestamp ORDER BY o.created_at LIMIT 1
+  ;
+
+
+END
+$$
+;
+

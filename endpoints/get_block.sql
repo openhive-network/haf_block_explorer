@@ -27,3 +27,14 @@ BEGIN
 END
 $$
 ;
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_time(_timestamp TIMESTAMP)
+RETURNS JSON
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN hafbe_backend.get_block(_timestamp);
+END
+$$
+;
