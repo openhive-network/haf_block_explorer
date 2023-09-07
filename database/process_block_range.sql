@@ -10,19 +10,9 @@ BEGIN
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
 
-PERFORM hive.process_operation(op, 'hafbe_app', 'process_vote_op')
+PERFORM hive.process_operation(op, 'hafbe_app', 'process_op_a')
 FROM hive.hafbe_app_operations_view AS op
-WHERE op.op_type_id = 12 AND op.block_num BETWEEN _from AND _to
-ORDER BY op.id ASC;
-
-PERFORM hive.process_operation(op, 'hafbe_app', 'process_proxy_op')
-FROM hive.hafbe_app_operations_view AS op
-WHERE op.op_type_id IN (13,91) AND op.block_num BETWEEN _from AND _to
-ORDER BY op.id ASC;
-
-PERFORM hive.process_operation(op, 'hafbe_app', 'process_expired_account')
-FROM hive.hafbe_app_operations_view AS op
-WHERE op.op_type_id IN (75,92) AND op.block_num BETWEEN _from AND _to
+WHERE op.op_type_id IN (12,13,75,91,92) AND op.block_num BETWEEN _from AND _to
 ORDER BY op.id ASC;
 
 END
