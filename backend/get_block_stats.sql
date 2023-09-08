@@ -84,7 +84,7 @@ BEGIN
       'created_at', o.created_at,
       'age', NOW() - o.created_at
     )
-  FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '3 seconds' AND _timestamp ORDER BY o.created_at LIMIT 1
+  FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '2 seconds' AND _timestamp ORDER BY o.created_at LIMIT 1
   ;
 
 
