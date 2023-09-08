@@ -55,7 +55,8 @@ BEGIN
   COALESCE(_result_votes.witness_votes, '[]') AS witness_votes,
   COALESCE(_result_votes.witnesses_voted_for, 0) AS witnesses_voted_for,
   COALESCE(_result_votes.proxied_vsf_votes, '[]') AS proxied_vsf_votes,
-  COALESCE(_result_proxy.get_account_proxy, '') AS proxy_name
+  COALESCE(_result_proxy.get_account_proxy, '') AS proxy_name,
+  COALESCE(_result_count.get_account_ops_count, 0) AS ops_count
   FROM
   (SELECT * FROM btracker_endpoints.get_account_balances(__account_id)) AS _result_balance,
   (SELECT * FROM btracker_endpoints.get_account_withdraws(__account_id)) AS _result_withdraws,
@@ -67,7 +68,8 @@ BEGIN
   (SELECT * FROM hafbe_backend.get_last_post_vote_time(__account_id)) AS _result_post,
   (SELECT * FROM hafbe_backend.get_account_parameters(__account_id)) AS _result_parameters,
   (SELECT * FROM hafbe_backend.get_account_votes(__account_id)) AS _result_votes,
-  (SELECT * FROM hafbe_backend.get_account_proxy(__account_id)) AS _result_proxy
+  (SELECT * FROM hafbe_backend.get_account_proxy(__account_id)) AS _result_proxy,
+  (SELECT * FROM hafbe_backend.get_account_ops_count(__account_id)) AS _result_count
   )
 
   SELECT json_build_object(
@@ -121,7 +123,8 @@ BEGIN
     'delayed_vests', delayed_vests, --work in progress 70,76,56
     'vesting_balance', vesting_balance_hive, --OK
   --  'reputation', __response_data->>'reputation', --work in progress
-    'witness_votes', witness_votes -- hafbe_app.current_witness_votes
+    'witness_votes', witness_votes, -- hafbe_app.current_witness_votes
+    'ops_count', ops_count
   ) INTO __response_data
    FROM btracker_balance;
 

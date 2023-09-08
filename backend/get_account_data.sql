@@ -86,6 +86,22 @@ $$
 ;
 
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
+RETURNS INT
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE 
+_result INT := (SELECT (account_op_seq_no + 1) FROM hive.account_operations_view where account_id = _account  order by account_op_seq_no DESC limit 1);
+BEGIN
+
+RETURN _result;
+
+END
+$$
+;
+
 --ACCOUNT can_vote, mined, created, recovery
 
 DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE;
@@ -116,7 +132,7 @@ END
 $$
 ;
 
---ACCOUNT can_vote, mined, created, recovery
+--ACCOUNT votes
 
 DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE;
 CREATE TYPE hafbe_backend.account_votes AS
