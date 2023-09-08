@@ -193,6 +193,7 @@ BEGIN
 
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
 
+GRANT ALL ON SCHEMA btracker_endpoints TO hafbe_owner;
 
 EXCEPTION WHEN duplicate_schema THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 

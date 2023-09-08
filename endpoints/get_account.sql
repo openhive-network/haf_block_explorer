@@ -14,7 +14,7 @@ BEGIN
   SELECT id INTO __account_id
   FROM hive.accounts_view WHERE name = _account;
 
-  SELECT hafbe_backend.get_account(_account) INTO __response_data;
+  --SELECT hafbe_backend.get_account(_account) INTO __response_data;
 
   WITH btracker_balance AS 
   (
@@ -73,15 +73,15 @@ BEGIN
   SELECT json_build_object(
     'id', __account_id, --OK
     'name', _account, --OK
-    'owner', __response_data->'owner', --work in progress 10
-    'active', __response_data->'active', --work in progress 10
-    'posting', __response_data->'posting', --work in progress 10
-    'memo_key', __response_data->>'memo_key', --work in progress 10
+    --'owner', __response_data->'owner', --work in progress 10
+    --'active', __response_data->'active', --work in progress 10
+    --'posting', __response_data->'posting', --work in progress 10
+    --'memo_key', __response_data->>'memo_key', --work in progress 10
     'profile_image', profile_image, --work in progress 10
     'json_metadata', json_metadata, --work in progress 10
     'posting_json_metadata', posting_json_metadata, --work in progress 10
-    'last_owner_update', __response_data->>'last_owner_update', --work in progress 10
-    'last_account_update', __response_data->>'last_account_update', --work in progress 10
+    --'last_owner_update', __response_data->>'last_owner_update', --work in progress 10
+    --'last_account_update', __response_data->>'last_account_update', --work in progress 10
 
     'proxy', proxy_name,
     'created', created, --work in progress 9,23,41,80

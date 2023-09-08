@@ -1,13 +1,3 @@
--- drop priviliges of schemas user
-DO $$
-BEGIN
-  IF (SELECT rolname FROM pg_roles WHERE rolname='hafbe_user') IS NOT NULL THEN
-    DROP OWNED BY hafbe_user CASCADE;
-  END IF;
-END
-$$
-;
-
 -- grant new priviliges
 GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;
@@ -28,6 +18,10 @@ GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
 
+GRANT USAGE ON SCHEMA btracker_endpoints TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA btracker_endpoints TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_endpoints TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hafah_python TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafah_python TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_python TO hafbe_user;
@@ -44,4 +38,4 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
 GRANT INSERT, UPDATE ON hafbe_app.hived_account_cache, hafbe_app.hived_account_resource_credits_cache TO hafbe_user;
 
 -- plpython3u must be GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;trusted language
-GRANT USAGE ON LANGUAGE plpython3u TO hafbe_owner;
+--GRANT USAGE ON LANGUAGE plpython3u TO hafbe_owner;
