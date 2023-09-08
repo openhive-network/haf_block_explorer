@@ -36,7 +36,7 @@ BEGIN
 
   SELECT INTO __lastest_account_op_seq_no
     account_op_seq_no FROM hive.account_operations_view WHERE account_id = _account_id ORDER BY account_op_seq_no DESC LIMIT 1;
-  SELECT __lastest_account_op_seq_no - (_page_num * 100) INTO _top_op_id;
+  SELECT GREATEST(__lastest_account_op_seq_no - ((_page_num - 1) * 100), 0) INTO _top_op_id;
 
   IF __no_start_date IS FALSE THEN
     SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1 INTO __block_start;
