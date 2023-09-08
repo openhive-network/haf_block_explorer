@@ -18,19 +18,17 @@ insert_created_accounts AS (
     created,
     mined
   ) 
-    SELECT
-      _account,
-      _time,
-      FALSE
-    FROM create_account_operation
-    WHERE _op_type_id != 80
+  SELECT
+    _account,
+    _time,
+    FALSE
+  FROM create_account_operation
+  WHERE _op_type_id != 80
 
   ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO UPDATE SET
-    created = EXCLUDED.created,
-    mined = EXCLUDED.mined
+  DO NOTHING
 )
-  INSERT INTO hafbe_app.account_parameters
+    INSERT INTO hafbe_app.account_parameters
   (
     account,
     created
@@ -42,14 +40,14 @@ insert_created_accounts AS (
   WHERE _op_type_id = 80
 
   ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO UPDATE SET
-    created = EXCLUDED.created;
-    
+  DO NOTHING;
+
+
 END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_pow_operation(_body jsonb, _op_type INT)
+CREATE OR REPLACE FUNCTION hafbe_app.process_pow_operation(_body jsonb, _timestamp TIMESTAMP, _op_type INT)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -61,22 +59,24 @@ WITH pow_operation AS (
     (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'worker_account')
     ELSE
     (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->'work'->'value'->'input'->>'worker_account')
-    END AS _account
+    END AS _account,
+    _timestamp AS _time
 )
   INSERT INTO hafbe_app.account_parameters
   (
     account,
+    created,
     mined
   ) 
   SELECT
     _account,
+    _time,
     TRUE
   FROM pow_operation
 
   ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO UPDATE SET
-    mined = EXCLUDED.mined;
-
+  DO NOTHING
+;
 END
 $$
 ;

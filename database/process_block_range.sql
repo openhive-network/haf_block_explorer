@@ -345,7 +345,11 @@ LEFT JOIN (
       worker_account,
       po.id AS source_op
   FROM hafbe_views.pow_view po
+  LEFT JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE po.block_num BETWEEN _from AND _to
+  AND ap.account IS NULL
+  ORDER BY worker_account, po.block_num, po.id DESC
 ) po_subquery ON cao.id = po_subquery.source_op
 LEFT JOIN (
   SELECT 
@@ -353,7 +357,11 @@ LEFT JOIN (
       worker_account,
       pto.id AS source_op
   FROM hafbe_views.pow_two_view pto
+  LEFT JOIN hive.hafbe_app_accounts_view a ON a.name = pto.worker_account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE pto.block_num BETWEEN _from AND _to
+  AND ap.account IS NULL
+  ORDER BY worker_account, pto.block_num, pto.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
 LEFT JOIN (
  SELECT source_op FROM (
@@ -383,7 +391,7 @@ WHERE
   (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
   OR (cao.op_type_id = 72 AND lvt_subquery.source_op IS NOT NULL)
   OR (cao.op_type_id = 1  AND up_subquery.source_op IS NOT NULL)
-  OR (cao.op_type_id = 13 AND po_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
   OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND cao.block_num BETWEEN _from AND _to
 )
@@ -398,7 +406,7 @@ LOOP
     PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
 
     WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
-    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change.op_type);
+    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
     
     WHEN __balance_change.op_type = 76 THEN
     PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
