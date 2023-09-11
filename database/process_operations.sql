@@ -354,8 +354,8 @@ $function$
 BEGIN
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
   SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-  FROM hive.hafbe_app_accounts_view hav
-  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  FROM (SELECT DISTINCT hive.get_impacted_accounts(op.body_binary) AS name) AS swn
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 END
 $function$
@@ -369,8 +369,8 @@ $function$
 BEGIN
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
   SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-  FROM hive.hafbe_app_accounts_view hav
-  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  FROM (SELECT DISTINCT hive.get_impacted_accounts(op.body_binary) AS name) AS swn
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 END
 $function$
@@ -384,8 +384,8 @@ $function$
 BEGIN
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
   SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-  FROM hive.hafbe_app_accounts_view hav
-  WHERE hav.name = (SELECT hive.get_impacted_accounts(op.body_binary))
+  FROM (SELECT DISTINCT hive.get_impacted_accounts(op.body_binary) AS name) AS swn
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 END
 $function$
