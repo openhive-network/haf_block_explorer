@@ -8,7 +8,6 @@ SRCDIR="${SCRIPTDIR}/../"
 
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
-POSTGRES_USER="haf_admin"
 owner_role=hafbe_owner
 
 print_help () {
@@ -28,9 +27,6 @@ while [ $# -gt 0 ]; do
         ;;
     --port=*)
         POSTGRES_PORT="${1#*=}"
-        ;;
-    --user=*)
-        POSTGRES_USER="${1#*=}"
         ;;
     --help)
         print_help
@@ -52,7 +48,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
+POSTGRES_ACCESS_ADMIN="postgresql://haf_admin@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
 POSTGRES_ACCESS_OWNER="postgresql://$owner_role@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
@@ -61,7 +57,6 @@ setup_owner() {
     sudo useradd -m $owner_role
     sudo chsh -s /bin/bash $owner_role
   fi;
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f $db_dir/builtin_roles.sql
 
 }
 
@@ -89,21 +84,15 @@ setup_apps() {
   (cd $hafah_dir && bash ./scripts/setup_postgres.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
   (cd $hafah_dir && bash ./scripts/generate_version_sql.bash $PWD)
   (cd $hafah_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
-  (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN --no-context=$context)
+  (cd $btracker_dir && bash ./scripts/setup_db.sh --postgres-url=$POSTGRES_ACCESS_ADMIN)
   (cd $hafbe_dir && bash ./scripts/generate_version_sql.sh $PWD)
 
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_owner TO hafbe_owner;"
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT btracker_user TO hafbe_owner;"
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;"
-}
-
-setup_extensions() {
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "CREATE EXTENSION IF NOT EXISTS plpython3u SCHEMA pg_catalog;"
-  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpython3u';"
 }
 
 setup_api() {
   # setup db schema
+
+  psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -f $db_dir/builtin_roles.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/database_schema.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_helpers.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/hafbe_app_indexes.sql
@@ -112,12 +101,9 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_block_range.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $db_dir/process_operations.sql
 
-  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('hafbe_app');"
+
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
   #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
-  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT hafbe_app.define_schema();"
-  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.create_context_if_not_exists('btracker_app');"
-  #psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -c "SELECT btracker_app.define_schema();"
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema
@@ -170,6 +156,5 @@ hafbe_dir=$SCRIPT_DIR/..
 
   setup_owner
   setup_apps
-  #setup_extensions
   setup_api
   create_haf_indexes

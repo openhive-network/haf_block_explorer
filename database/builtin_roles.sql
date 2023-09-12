@@ -9,4 +9,6 @@ EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING E
 END
 $$;
 
-
+GRANT btracker_owner TO hafbe_owner;
+GRANT btracker_user TO hafbe_owner;
+GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
