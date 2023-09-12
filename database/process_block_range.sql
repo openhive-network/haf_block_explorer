@@ -89,13 +89,25 @@ SET jit = OFF
 SET enable_bitmapscan = OFF
 SET cursor_tuple_fraction = '0.9';
 
+-- TODO: temporary type
+DROP type IF EXISTS tt;
+CREATE type tt AS (
+  body JSONB,
+  source_op BIGINT,
+  source_block_op INT,
+  _timestamp TIMESTAMP,
+  op_type SMALLINT,
+  body_binary hive.operation,
+  "timestamp" TIMESTAMP,
+  op_type_id SMALLINT
+);
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
 RETURNS VOID
 AS
 $function$
 DECLARE
-  __balance_change RECORD;
+  __balance_change tt;
 BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
@@ -110,7 +122,10 @@ SELECT
     ov.id AS source_op,
     ov.block_num AS source_op_block,
     ov.timestamp AS _timestamp,
-    ov.op_type_id AS op_type
+    ov.op_type_id AS op_type,
+    ov.body_binary,
+    ov.timestamp,
+    ov.op_type_id
 FROM hive.hafbe_app_operations_view ov
 LEFT JOIN (
   WITH pow AS MATERIALIZED (
@@ -150,15 +165,15 @@ WHERE
   OR (ov.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND ov.block_num BETWEEN _from AND _to
 )
-  SELECT * FROM comment_operation 
-  ORDER BY source_op_block, source_op
+SELECT * FROM comment_operation
+ORDER BY source_op_block, source_op
 
 LOOP
 
   CASE 
 
     WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
-    PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_create_account_op');
 
     WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
     PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
