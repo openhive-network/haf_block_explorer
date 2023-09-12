@@ -6,12 +6,6 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH create_account_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
-    op.timestamp AS _time,
-    op.op_type_id
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
@@ -19,10 +13,11 @@ WITH create_account_operation AS (
     mined
   )
   SELECT
-    _account,
-    _time,
+    id AS _account,
+    op.timestamp AS _time,
     FALSE
-  FROM create_account_operation
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = account.new_account_name
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
@@ -36,12 +31,6 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH create_account_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
-    op.timestamp AS _time,
-    op.op_type_id
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
@@ -49,10 +38,11 @@ WITH create_account_operation AS (
     mined
   )
   SELECT
-    _account,
-    _time,
+    id AS _account,
+    op.timestamp AS _time,
     FALSE
-  FROM create_account_operation
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = account.new_account_name
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
@@ -66,21 +56,16 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH create_account_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
-    op.timestamp AS _time,
-    op.op_type_id
-)
-    INSERT INTO hafbe_app.account_parameters
+  INSERT INTO hafbe_app.account_parameters
   (
     account,
     created
   )
   SELECT
-    _account,
-    _time
-  FROM create_account_operation
+    id  AS _account,
+    op.timestamp AS _time
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = account.new_account_name
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
@@ -94,21 +79,18 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH create_account_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
-    op.timestamp AS _time,
-    op.op_type_id
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
-    created
+    created,
+    mined
   )
   SELECT
-    _account,
-    _time
-  FROM create_account_operation
+    id AS _account,
+    op.timestamp AS _time,
+    FALSE
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = account.new_account_name
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
