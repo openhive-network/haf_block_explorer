@@ -1,6 +1,6 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_operation(_body jsonb, _timestamp timestamp, _op_type int)
+CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_create_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -8,42 +8,109 @@ $$
 BEGIN
 WITH create_account_operation AS (
   SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'new_account_name') AS _account,
-    _timestamp AS _time,
-    _op_type AS _op_type_id
-),
-insert_created_accounts AS (
-
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
+    op.timestamp AS _time,
+    op.op_type_id
+)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
     created,
     mined
-  ) 
+  )
   SELECT
     _account,
     _time,
     FALSE
   FROM create_account_operation
-  WHERE _op_type_id != 80
-
   ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO NOTHING
+  DO NOTHING;
+
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.create_claimed_account_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+WITH create_account_operation AS (
+  SELECT
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
+    op.timestamp AS _time,
+    op.op_type_id
+)
+  INSERT INTO hafbe_app.account_parameters
+  (
+    account,
+    created,
+    mined
+  )
+  SELECT
+    _account,
+    _time,
+    FALSE
+  FROM create_account_operation
+  ON CONFLICT ON CONSTRAINT pk_account_parameters
+  DO NOTHING;
+
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_created_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+WITH create_account_operation AS (
+  SELECT
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
+    op.timestamp AS _time,
+    op.op_type_id
 )
     INSERT INTO hafbe_app.account_parameters
   (
     account,
     created
-  ) 
+  )
   SELECT
     _account,
     _time
   FROM create_account_operation
-  WHERE _op_type_id = 80
-
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
+END
+$$
+;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_create_with_delegation_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+WITH create_account_operation AS (
+  SELECT
+    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = account.new_account_name) AS _account,
+    op.timestamp AS _time,
+    op.op_type_id
+)
+  INSERT INTO hafbe_app.account_parameters
+  (
+    account,
+    created
+  )
+  SELECT
+    _account,
+    _time
+  FROM create_account_operation
+  ON CONFLICT ON CONSTRAINT pk_account_parameters
+  DO NOTHING;
 
 END
 $$;
