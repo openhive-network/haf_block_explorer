@@ -176,8 +176,8 @@ LOOP
     PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_create_account_op');
 
     WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
-    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
-    
+    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_pow_op');
+
     WHEN __balance_change.op_type = 76 THEN
     PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
 
