@@ -97,36 +97,50 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_pow_operation(_body jsonb, _timestamp timestamp, _op_type int)
+CREATE OR REPLACE FUNCTION hafbe_app.process_pow_op(op RECORD, pow hive.pow_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH pow_operation AS (
-  SELECT
-    CASE WHEN _op_type = 14 THEN
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'worker_account')
-    ELSE
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->'work'->'value'->'input'->>'worker_account')
-    END AS _account,
-    _timestamp AS _time
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
     created,
     mined
-  ) 
+  )
   SELECT
-    _account,
-    _time,
+    id AS _account,
+    op.timestamp,
     TRUE
-  FROM pow_operation
-
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = pow.worker_account
   ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO NOTHING
+  DO NOTHING;
+END
+$$
 ;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_pow_op(op RECORD, pow hive.pow2_operation)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  INSERT INTO hafbe_app.account_parameters
+  (
+    account,
+    created,
+    mined
+  )
+  SELECT
+    id AS _account,
+    op.timestamp,
+    TRUE
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = (pow).work.pow2.input.worker_account
+  ON CONFLICT ON CONSTRAINT pk_account_parameters
+  DO NOTHING;
 END
 $$;
 
