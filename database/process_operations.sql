@@ -144,31 +144,25 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_changed_recovery_account_operation(_body jsonb)
+CREATE OR REPLACE FUNCTION hafbe_app.process_changed_recovery_account_op(op RECORD, account hive.changed_recovery_account_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH changed_recovery_account_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'account') AS _account,
-    _body->'value'->>'new_recovery_account' AS _new_recovery_account
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
     recovery_account
-  ) 
+  )
   SELECT
-    _account,
-    _new_recovery_account
-  FROM changed_recovery_account_operation
-
+    id  AS _account,
+    account.new_recovery_account AS _new_recovery_account
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = account.account
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO UPDATE SET
     recovery_account = EXCLUDED.recovery_account;
-
 END
 $$;
 
