@@ -269,26 +269,25 @@ $$
 ;
 
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_vote_operation(_body jsonb, _timestamp TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_app.process_vote_operation(op RECORD, vote hive.effective_comment_vote_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-
   INSERT INTO hafbe_app.account_posts
   (
   account,
   last_vote_time
-  ) 
+  )
   SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'voter'),
-    _timestamp
-
+    id,
+    op.timestamp
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = vote.voter
   ON CONFLICT ON CONSTRAINT pk_account_posts
   DO UPDATE SET
       last_vote_time = EXCLUDED.last_vote_time;
-
 END
 $$
 ;
