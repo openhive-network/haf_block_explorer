@@ -215,15 +215,13 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_comment_operation(_body jsonb, _timestamp TIMESTAMP)
+CREATE OR REPLACE FUNCTION hafbe_app.process_comment_op(op RECORD, _comment hive.comment_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
-DECLARE
-  parent_author TEXT := (_body->'value'->>'parent_author');
 BEGIN
-IF parent_author = '' OR parent_author IS NULL THEN
+IF _comment.parent_author = '' OR _comment.parent_author IS NULL THEN
 
   INSERT INTO hafbe_app.account_posts
   (
@@ -231,13 +229,14 @@ IF parent_author = '' OR parent_author IS NULL THEN
     last_post,
     last_root_post,
     post_count
-  ) 
+  )
   SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'author'),
-    _timestamp,
-    _timestamp,
+    id,
+    op.timestamp,
+    op.timestamp,
     1
-
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = _comment.author
   ON CONFLICT ON CONSTRAINT pk_account_posts
   DO UPDATE SET
     last_post = EXCLUDED.last_post,
@@ -251,12 +250,13 @@ ELSE
     account,
     last_post,
     post_count
-  ) 
+  )
   SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'author'),
-    _timestamp,
+    id,
+    op.timestamp,
     1
-
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = _comment.author
   ON CONFLICT ON CONSTRAINT pk_account_posts
   DO UPDATE SET
     last_post = EXCLUDED.last_post,

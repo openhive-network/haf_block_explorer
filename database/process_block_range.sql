@@ -224,7 +224,7 @@ LOOP
     PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_decline_voting_rights_op');
 
     WHEN __balance_change.op_type = 1 THEN
-    PERFORM hafbe_app.process_comment_operation(__balance_change.body, __balance_change._timestamp);
+    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_comment_op');
 
     WHEN __balance_change.op_type = 72 THEN
     PERFORM hafbe_app.process_vote_operation(__balance_change.body, __balance_change._timestamp);
