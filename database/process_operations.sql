@@ -188,31 +188,25 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_decline_voting_rights_operation(_body jsonb)
+CREATE OR REPLACE FUNCTION hafbe_app.process_decline_voting_rights_op(op RECORD, decline hive.decline_voting_rights_operation)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
-WITH decline_voting_rights_operation AS (
-  SELECT
-    (SELECT id FROM hive.hafbe_app_accounts_view WHERE name = _body->'value'->>'account') AS _account,
-    (CASE WHEN (_body->'value'->>'decline')::BOOLEAN = TRUE THEN FALSE ELSE TRUE END) AS _can_vote
-)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
     can_vote
-  ) 
+  )
   SELECT
-    _account,
-    _can_vote
-  FROM decline_voting_rights_operation
-
+    id AS _account,
+    (CASE WHEN (decline.decline)::BOOLEAN = TRUE THEN FALSE ELSE TRUE END) AS _can_vote
+  FROM hive.hafbe_app_accounts_view
+  WHERE name = decline.account
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO UPDATE SET
     can_vote = EXCLUDED.can_vote;
-
 END
 $$;
 
