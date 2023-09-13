@@ -185,7 +185,7 @@ LOOP
     PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_recover_account_op');
 
     WHEN __balance_change.op_type = 36 THEN
-    PERFORM hafbe_app.process_decline_voting_rights_operation(__balance_change.body);
+    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_decline_voting_rights_op');
 
     ELSE
   END CASE;
