@@ -89,44 +89,20 @@ SET jit = OFF
 SET enable_bitmapscan = OFF
 SET cursor_tuple_fraction = '0.9';
 
--- TODO: temporary type
-DROP type IF EXISTS tt;
-CREATE type tt AS (
-  body JSONB,
-  source_op BIGINT,
-  source_block_op INT,
-  _timestamp TIMESTAMP,
-  op_type SMALLINT,
-  body_binary hive.operation,
-  "timestamp" TIMESTAMP,
-  op_type_id SMALLINT
-);
-
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
 RETURNS VOID
 AS
 $function$
-DECLARE
-  __balance_change tt;
 BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
 SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
 
-FOR __balance_change IN
-  WITH comment_operation AS (
-
-SELECT 
-    cao.body AS body,
-    cao.id AS source_op,
-    cao.block_num AS source_op_block,
-    cao.timestamp AS _timestamp,
-    cao.op_type_id AS op_type,
-    cao.body_binary,
-    cao.timestamp,
-    cao.op_type_id
-FROM hive.hafbe_app_operations_view cao
+PERFORM hive.process_operation(op::hive.hafbe_app_operations_view, 'hafbe_app', 'process_op_c')
+FROM (
+SELECT cao.*
+FROM hive.hafbe_app_operations_view AS cao
 LEFT JOIN (
   WITH pow AS MATERIALIZED (
   SELECT 
@@ -159,39 +135,13 @@ LEFT JOIN (
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
-WHERE 
+WHERE
   (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
   OR (cao.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
   OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND cao.block_num BETWEEN _from AND _to
-)
-SELECT * FROM comment_operation
-ORDER BY source_op_block, source_op
-
-LOOP
-
-  CASE 
-
-    WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
-    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_create_account_op');
-
-    WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
-    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_pow_op');
-
-    WHEN __balance_change.op_type = 76 THEN
-    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_changed_recovery_account_op');
-
-    WHEN __balance_change.op_type = 25 THEN
-    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_recover_account_op');
-
-    WHEN __balance_change.op_type = 36 THEN
-    PERFORM hive.process_operation(__balance_change, 'hafbe_app', 'process_decline_voting_rights_op');
-
-    ELSE
-  END CASE;
-
-END LOOP;
-
+) AS op
+ORDER BY block_num, id;
 
 END
 $function$
