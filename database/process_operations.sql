@@ -1,6 +1,6 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_create_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.account_create_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -25,7 +25,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.create_claimed_account_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.create_claimed_account_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -50,7 +50,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_created_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.account_created_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -73,7 +73,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_op(op RECORD, account hive.account_create_with_delegation_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.account_create_with_delegation_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -98,7 +98,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_pow_op(op RECORD, pow hive.pow_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, pow hive.pow_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -122,7 +122,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_pow_op(op RECORD, pow hive.pow2_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, pow hive.pow2_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -146,7 +146,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_changed_recovery_account_op(op RECORD, account hive.changed_recovery_account_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.changed_recovery_account_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -169,7 +169,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_recover_account_op(op RECORD, account hive.recover_account_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, account hive.recover_account_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -192,7 +192,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_decline_voting_rights_op(op RECORD, decline hive.decline_voting_rights_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, decline hive.decline_voting_rights_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -215,7 +215,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_comment_op(op RECORD, _comment hive.comment_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, _comment hive.comment_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
@@ -269,7 +269,7 @@ $$
 ;
 
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_vote_operation(op RECORD, vote hive.effective_comment_vote_operation)
+CREATE OR REPLACE FUNCTION hafbe_app.process_op_c(op RECORD, vote hive.effective_comment_vote_operation)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS
