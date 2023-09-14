@@ -36,28 +36,9 @@ BEGIN
   WHERE op.op_type_id IN (12,42,11,7) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.id ASC;
 
-  -- parse witness url
-  PERFORM op.operation_id, hive.process_operation(op, 'hafbe_app', 'parse_witness_url')
+  PERFORM op.operation_id, hive.process_operation(op, 'hafbe_app', 'update_current_witness')
   FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
-  ORDER BY op.operation_id;
-
-  -- parse witness exchange_rate
-  PERFORM op.operation_id, hive.process_operation(op, 'hafbe_app', 'parse_witness_exchange_rate')
-  FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,7) AND op.block_num BETWEEN _from AND _to
-  ORDER BY op.operation_id;
-
-  -- parse witness block_size
-  PERFORM op.operation_id, hive.process_operation(op, 'hafbe_app', 'parse_witness_block_size')
-  FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11,30,14) AND op.block_num BETWEEN _from AND _to
-  ORDER BY op.operation_id;
-
-  -- parse witness signing_key
-  PERFORM op.operation_id, hive.process_operation(op, 'hafbe_app', 'parse_witness_signing_key')
-  FROM hafbe_views.witness_prop_op_view AS op
-  WHERE op.op_type_id IN (42,11) AND op.block_num BETWEEN _from AND _to
+  WHERE op.op_type_id IN (7,11,14,30,42) AND op.block_num BETWEEN _from AND _to
   ORDER BY op.operation_id;
 
   -- insert witness node version
