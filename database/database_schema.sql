@@ -191,6 +191,14 @@ BEGIN
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.sync_time_logs (
+    block_num INT NOT NULL,
+    time_json JSONB NOT NULL,
+
+    CONSTRAINT pk_massive_sync_time_logs PRIMARY KEY (block_num)
+  );
+
+
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
 
 GRANT ALL ON SCHEMA btracker_endpoints TO hafbe_owner;

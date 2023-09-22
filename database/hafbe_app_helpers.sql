@@ -60,18 +60,37 @@ CREATE OR REPLACE PROCEDURE hafbe_app.processBlock(_block INT, _appContext VARCH
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+_time JSONB = '{}'::JSONB;
 BEGIN
   RAISE NOTICE 'Starting single block processing: %', _block;
-  PERFORM btracker_app.process_block_range_data_c(_block, _block);
-  RAISE NOTICE 'btracker_app processed block: %.', _block;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+  PERFORM btracker_app.process_block_range_data_a(_block, _block);
+  SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+  PERFORM btracker_app.process_block_range_data_b(_block, _block);
+  SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hafbe_app.process_block_range_data_a(_block, _block);
-  RAISE NOTICE 'hafbe_app processed block a: %.', _block;
+  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_a') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hafbe_app.process_block_range_data_b(_block, _block);
-  RAISE NOTICE 'hafbe_app processed block b: %.', _block;
+  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_b') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hafbe_app.process_block_range_data_c(_block, _block);
-  RAISE NOTICE 'hafbe_app processed block c: %.', _block;
+  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_c') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hive.app_state_providers_update(_block, _block, _appContext);
-  RAISE NOTICE 'app_state_providers_update processed block: %.', _block;
+  SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
+
+  INSERT INTO hafbe_app.sync_time_logs VALUES (_block, _time);
+
   PERFORM hafbe_app.storeLastProcessedBlock(_block);
 
   COMMIT; -- For single block processing we want to commit all changes for each one.

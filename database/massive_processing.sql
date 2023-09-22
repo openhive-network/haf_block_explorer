@@ -2,6 +2,8 @@ CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCH
 LANGUAGE 'plpgsql'
 AS
 $$
+DECLARE
+_time JSONB = '{}'::JSONB;
 BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
@@ -17,35 +19,46 @@ BEGIN
 
     RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
 
-    PERFORM btracker_app.process_block_range_data_c(b, _last_block);
-    RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', b, _last_block;
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM btracker_app.process_block_range_data_a(b, _last_block);
+    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM btracker_app.process_block_range_data_b(b, _last_block);
+    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM hafbe_app.process_block_range_data_a(b, _last_block);
-    RAISE NOTICE 'hafbe_app Block range a: <%, %> processed successfully.', b, _last_block;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_a') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM hafbe_app.process_block_range_data_b(b, _last_block);
-    RAISE NOTICE 'hafbe_app Block range b: <%, %> processed successfully.', b, _last_block;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_b') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
-    RAISE NOTICE 'hafbe_app Block range c: <%, %> processed successfully.', b, _last_block;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_c') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM hive.app_state_providers_update(b, _last_block, _appContext);
-    RAISE NOTICE 'app_state_provider Block range: <%, %> processed successfully.', b, _last_block;
+    SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
 
     PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
 
+    INSERT INTO hafbe_app.sync_time_logs VALUES (b, _time);
+
     COMMIT;
 
-    --RAISE NOTICE 'Block range: <%, %> processed successfully.', b, _last_block;
+    RAISE NOTICE 'Processed % blocks in % seconds',
+    _step ,ROUND(EXTRACT(epoch FROM (SELECT NOW() - last_reported_at FROM hafbe_app.app_status LIMIT 1)), 3);
+    UPDATE hafbe_app.app_status SET last_reported_at = NOW();
+    
+    RAISE NOTICE 'Block processing running for % minutes
+    ',
+    ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
 
-    IF (NOW() - (SELECT last_reported_at FROM hafbe_app.app_status LIMIT 1)) >= '5 second'::INTERVAL THEN
+    UPDATE hafbe_app.app_status SET last_reported_block = _last_block;
 
-      RAISE NOTICE 'Last processed block %', _last_block;
-      RAISE NOTICE 'Processed % blocks in 5 seconds', (SELECT _last_block - last_reported_block FROM hafbe_app.app_status LIMIT 1);
-      RAISE NOTICE 'Block processing running for % minutes
-      ', ROUND((EXTRACT(epoch FROM (
-          SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1
-        )) / 60)::NUMERIC, 2);
-      
-      UPDATE hafbe_app.app_status SET last_reported_at = NOW();
-      UPDATE hafbe_app.app_status SET last_reported_block = _last_block;
-    END IF;
 
     EXIT WHEN NOT hafbe_app.continueProcessing();
 
@@ -54,16 +67,18 @@ BEGIN
   IF hafbe_app.continueProcessing() AND _last_block < _to THEN
     RAISE NOTICE 'Attempting to process a block range (rest): <%, %>', b, _last_block;
     --- Supplement last part of range if anything left.
-    PERFORM btracker_app.process_block_range_data_c(_last_block, _to);
-    RAISE NOTICE 'btracker_app Block range: <%, %> processed successfully.', _last_block, _to;
+    PERFORM btracker_app.process_block_range_data_a(_last_block, _to);
+    RAISE NOTICE 'btracker_app Block range a (hive, hbd, vests balances): <%, %> processed successfully.', _last_block, _to;
+    PERFORM btracker_app.process_block_range_data_b(_last_block, _to);
+    RAISE NOTICE 'btracker_app Block range b (delegations, rewards, savings, withdraws): <%, %> processed successfully.', _last_block, _to;
     PERFORM hafbe_app.process_block_range_data_a(_last_block, _to);
-    RAISE NOTICE 'hafbe_app Block range a: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'hafbe_app Block range a (witness proxy, votes): <%, %> processed successfully.', _last_block, _to;
     PERFORM hafbe_app.process_block_range_data_b(_last_block, _to);
-    RAISE NOTICE 'hafbe_app Block range b: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'hafbe_app Block range b (witness parameters): <%, %> processed successfully.', _last_block, _to;
     PERFORM hafbe_app.process_block_range_data_c(_last_block, _to);
-    RAISE NOTICE 'hafbe_app Block range c: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'hafbe_app Block range c (account parameters): <%, %> processed successfully.', _last_block, _to;
     PERFORM hive.app_state_providers_update(_last_block, _to, _appContext);
-    RAISE NOTICE 'app_state_provider Block range: <%, %> processed successfully.', _last_block, _to;
+    RAISE NOTICE 'app_state_provider Block range (metadata): <%, %> processed successfully.', _last_block, _to;
 
     _last_block := _to;
 

@@ -117,6 +117,7 @@ setup_api() {
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/time_tracking.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/account_stats_hafbe.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/compare_accounts.sql
 
