@@ -58,12 +58,12 @@ POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
 
     echo "Installing dependecies..."
-    pip install psycopg2
+    pip install psycopg2-binary
 
     gunzip "${SCRIPTDIR}/accounts_dump.json.gz"
 
     echo "Starting data_insertion_stript.py..."
-    python3 ../../account_dump/data_insertion_script.py $SCRIPTDIR
+    python3 ../../account_dump/data_insertion_script.py $SCRIPTDIR --host $POSTGRES_HOST --port $POSTGRES_PORT --user $POSTGRES_USER
 
     echo "Looking for diffrences between hived node and hafbe stats..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT hafbe_backend.compare_accounts();"

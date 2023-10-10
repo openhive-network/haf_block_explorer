@@ -72,8 +72,8 @@ if [ -f "$SCRIPTDIR/../account_dump/accounts_dump.json" ]; then
 
     echo "Starting data_insertion_stript.py..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
-    pip install psycopg2
-    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts
+    pip install psycopg2-binary
+    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts --host $POSTGRES_HOST --port $POSTGRES_PORT --user $POSTGRES_USER
 
     echo "Looking for diffrences between hived node and hafbe stats..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
@@ -87,7 +87,7 @@ else
     echo "Starting data_insertion_stript.py..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
     pip install psycopg2
-    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts
+    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts --host $POSTGRES_HOST --port $POSTGRES_PORT --user $POSTGRES_USER
 
     echo "Looking for diffrences between hived node and hafbe stats..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
