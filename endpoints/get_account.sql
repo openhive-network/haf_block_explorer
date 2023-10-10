@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT) 
 RETURNS JSON
 LANGUAGE 'plpgsql'
 STABLE
@@ -56,7 +56,8 @@ BEGIN
   COALESCE(_result_votes.witnesses_voted_for, 0) AS witnesses_voted_for,
   COALESCE(_result_votes.proxied_vsf_votes, '[]') AS proxied_vsf_votes,
   COALESCE(_result_proxy.get_account_proxy, '') AS proxy_name,
-  COALESCE(_result_count.get_account_ops_count, 0) AS ops_count
+  COALESCE(_result_count.get_account_ops_count, 0) AS ops_count,
+  EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = __account_id) AS is_witness
   FROM
   (SELECT * FROM btracker_endpoints.get_account_balances(__account_id)) AS _result_balance,
   (SELECT * FROM btracker_endpoints.get_account_withdraws(__account_id)) AS _result_withdraws,
@@ -124,7 +125,9 @@ BEGIN
     'vesting_balance', vesting_balance_hive, --OK
   --  'reputation', __response_data->>'reputation', --work in progress
     'witness_votes', witness_votes, -- hafbe_app.current_witness_votes
-    'ops_count', ops_count
+    'ops_count', ops_count,
+    'is_witness', is_witness
+
   ) INTO __response_data
    FROM btracker_balance;
 
