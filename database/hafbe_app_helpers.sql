@@ -121,10 +121,26 @@ BEGIN
   TRUNCATE TABLE hafbe_app.witness_voters_stats_cache;
 
   INSERT INTO hafbe_app.witness_voters_stats_cache (witness_id, voter_id, vests, account_vests, proxied_vests, timestamp)
-  SELECT witness_id, voter_id, vests, account_vests, proxied_vests, timestamp
+  SELECT witness_id, voter_id, (vests/1000000)::BIGINT, (account_vests/1000000)::BIGINT, (proxied_vests/1000000)::BIGINT, timestamp
   FROM hafbe_views.voters_stats_view;
 
   RAISE NOTICE 'Updated witness voters cache';
+
+  TRUNCATE TABLE hafbe_app.witness_votes_history_cache;
+
+  INSERT INTO hafbe_app.witness_votes_history_cache (witness_id, voter_id, approve, timestamp, proxied_vests, account_vests)
+    SELECT
+      wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0))/1000000)::BIGINT AS proxied_vests,
+      ((COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0))/1000000)::BIGINT AS account_vests
+    FROM hafbe_app.witness_votes_history wvh
+    LEFT JOIN btracker_app.current_account_balances av
+      ON av.account = wvh.voter_id AND av.nai = 37
+    LEFT JOIN btracker_app.account_withdraws dv
+      ON dv.account = wvh.voter_id
+    LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
+    ON rpav.proxy_id = wvh.voter_id;
+
+  RAISE NOTICE 'Updated witness voters history cache';
 
   TRUNCATE TABLE hafbe_app.witness_votes_cache;
 
@@ -133,32 +149,23 @@ BEGIN
   FROM (
     SELECT
       witness_id,
-      SUM(vests) AS votes,
+      (SUM(vests))::BIGINT AS votes,
       COUNT(1) AS voters_num,
       MAX(timestamp) AS feed_updated_at
-    FROM hafbe_views.voters_stats_view
+    FROM hafbe_app.witness_voters_stats_cache
     GROUP BY witness_id
   ) vsv;
 
   RAISE NOTICE 'Updated witnesses cache';
-
-  TRUNCATE TABLE hafbe_app.witness_voters_stats_change_cache;
-
-  INSERT INTO hafbe_app.witness_voters_stats_change_cache (witness_id, voter_id, vests, account_vests, proxied_vests, approve, timestamp)
-  SELECT witness_id, voter_id, vests, account_vests, proxied_vests, approve, timestamp
-  FROM hafbe_views.voters_stats_change_view  
-  WHERE timestamp >= 'today'::DATE;
-
-  RAISE NOTICE 'Updated witness voters change cache';
 
   TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
 
   INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
   SELECT
     witness_id,
-    SUM(CASE WHEN approve THEN vests ELSE -1 * vests END)::BIGINT,
+    SUM(CASE WHEN approve THEN account_vests + proxied_vests ELSE -1 * (account_vests + proxied_vests) END)::BIGINT,
     SUM(CASE WHEN approve THEN 1 ELSE -1 END)::INT
-  FROM hafbe_views.voters_stats_change_view
+  FROM hafbe_app.witness_votes_history_cache
   WHERE timestamp >= 'today'::DATE
   GROUP BY witness_id;
 

@@ -156,9 +156,9 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
-    vests NUMERIC NOT NULL,
-    account_vests NUMERIC NOT NULL,
-    proxied_vests NUMERIC NOT NULL,
+    vests BIGINT NOT NULL,
+    account_vests BIGINT NOT NULL,
+    proxied_vests BIGINT NOT NULL,
     timestamp TIMESTAMP NOT NULL,
 
     CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness_id, voter_id)
@@ -167,19 +167,18 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
     witness_id INT NOT NULL,
     rank INT NOT NULL,
-    votes NUMERIC NOT NULL,
+    votes BIGINT NOT NULL,
     voters_num INT NOT NULL,
 
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_change_cache (
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history_cache (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
-    vests NUMERIC NOT NULL,
-    account_vests NUMERIC NOT NULL,
-    proxied_vests NUMERIC NOT NULL,
     approve BOOLEAN NOT NULL,
+    account_vests BIGINT NOT NULL,
+    proxied_vests BIGINT NOT NULL,
     timestamp TIMESTAMP NOT NULL
   );
 

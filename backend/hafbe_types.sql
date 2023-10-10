@@ -34,8 +34,8 @@ CREATE TYPE hafbe_types.block AS (
 
 DROP TYPE IF EXISTS hafbe_types.witness_voters CASCADE;
 CREATE TYPE hafbe_types.witness_voters AS (
-  account TEXT,
-  votes_vests BIGINT,
+  voter TEXT,
+  vests BIGINT,
   votes_hive_power BIGINT,
   account_vests BIGINT,
   account_hive_power BIGINT,
@@ -62,9 +62,9 @@ CREATE TYPE hafbe_types.witness_setof AS (
   witness TEXT,
   rank INT,
   url TEXT,
-  votes_vests BIGINT,
+  vests BIGINT,
   votes_hive_power BIGINT,
-  votes_daily_change_vests BIGINT,
+  votes_daily_change BIGINT,
   votes_daily_change_hive_power BIGINT,
   voters_num INT,
   voters_num_daily_change INT,
