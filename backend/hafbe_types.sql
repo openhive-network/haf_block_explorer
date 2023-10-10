@@ -44,12 +44,12 @@ CREATE TYPE hafbe_types.witness_voters AS (
   timestamp TIMESTAMP
 );
 
-DROP TYPE IF EXISTS hafbe_types.witness_voters_daily_change CASCADE;
-CREATE TYPE hafbe_types.witness_voters_daily_change AS (
-  account TEXT,
+DROP TYPE IF EXISTS hafbe_types.witness_votes_history CASCADE;
+CREATE TYPE hafbe_types.witness_votes_history AS (
+  voter TEXT,
   approve BOOLEAN,
   vests BIGINT,
-  hive_power BIGINT,
+  vests_hive_power BIGINT,
   account_vests BIGINT,
   account_hive_power BIGINT,
   proxied_vests BIGINT,
