@@ -127,7 +127,7 @@ CREATE OR REPLACE VIEW hafbe_views.voters_stats_view AS
 SELECT
   wvvv.witness_id, wvvv.voter_id,
   wvvv.account_vests - COALESCE(dv.delayed_vests,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
-  wvvv.account_vests AS account_vests,
+  wvvv.account_vests - COALESCE(dv.delayed_vests,0) AS account_vests,
   COALESCE(vpvv.proxied_vests, 0) AS proxied_vests,
   wvvv.timestamp
 FROM hafbe_views.witness_voters_vests_view wvvv
@@ -139,7 +139,7 @@ LEFT JOIN btracker_app.account_withdraws dv ON dv.account = wvvv.voter_id;
 CREATE OR REPLACE VIEW hafbe_views.voters_approve_vests_change_view AS
 SELECT
   wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-  CASE WHEN wvh.approve THEN av.balance ELSE -1 * av.balance END AS account_vests,
+  CASE WHEN wvh.approve THEN COALESCE(av.balance,0) ELSE -1 * COALESCE(av.balance,0) END AS account_vests,
   CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxied_vests
 FROM hafbe_app.witness_votes_history wvh
 
@@ -261,7 +261,7 @@ LEFT JOIN LATERAL (
 
 ------
 
-CREATE OR REPLACE VIEW hafbe_views.massive_sync_time_logs_view AS
+CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
   SELECT
     block_num,
     (time_json->>'btracker_app_a')::NUMERIC AS btracker_app_a,
@@ -274,6 +274,32 @@ CREATE OR REPLACE VIEW hafbe_views.massive_sync_time_logs_view AS
     hafbe_app.sync_time_logs;
     
 ------
+
+CREATE OR REPLACE VIEW hafbe_views.votes_history_view AS
+WITH select_range AS (
+  SELECT
+    wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
+    COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0) AS balance,
+    COALESCE(rpav.proxied_vests, 0) AS proxied_vests
+  FROM hafbe_app.witness_votes_history wvh
+  LEFT JOIN btracker_app.current_account_balances av
+    ON av.account = wvh.voter_id AND av.nai = 37
+  LEFT JOIN btracker_app.account_withdraws dv
+  	ON dv.account = wvh.voter_id
+  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
+  ON rpav.proxy_id = wvh.voter_id
+)
+
+SELECT
+  wvh.witness_id, a.name, wvh.approve, wvh.timestamp, 
+  (wvh.balance + COALESCE(wvh.proxied_vests, 0))::BIGINT  AS vests, 
+  (wvh.balance)::BIGINT  AS account_vests, 
+  (COALESCE(wvh.proxied_vests, 0))::BIGINT AS proxied_vests
+FROM select_range wvh
+JOIN hive.accounts_view a ON a.id = wvh.voter_id
+ORDER BY wvh.timestamp desc
+;
+
 
 
 RESET ROLE;
