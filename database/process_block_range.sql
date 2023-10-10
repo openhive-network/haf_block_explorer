@@ -364,28 +364,36 @@ LEFT JOIN (
   ORDER BY worker_account, pto.block_num, pto.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
 LEFT JOIN (
- SELECT source_op FROM (
- SELECT
-    up.id AS source_op, 
-	coalesce((SELECT 1
+  WITH selected_range AS MATERIALIZED (
+  	SELECT up.id, up.author, up.permlink
+    FROM hafbe_views.comments_view up
+  	WHERE up.block_num BETWEEN _from AND _to
+  ),
+filtered_range AS MATERIALIZED (
+ SELECT up.id AS up_id, up.author, up.permlink,
+	(SELECT prd.id
     FROM 
       hafbe_views.comments_view prd
     WHERE 
       prd.author = up.author 
       AND prd.permlink = up.permlink AND prd.id < up.id 
-	  AND NOT EXISTS (
-        SELECT 1 
+	 ORDER BY prd.id DESC LIMIT 1) AS prd_id
+  FROM selected_range up 
+)
+SELECT source_op FROM (
+SELECT prd.up_id AS source_op, prd.author, prd.permlink, prd.prd_id,
+COALESCE(
+       (SELECT 1 
         FROM 
           hafbe_views.deleted_comments_view dp
         WHERE 
-          dp.author = up.author 
-          and dp.permlink = up.permlink 
-          and dp.id between prd.id and up.id)
-	 ORDER BY prd.id DESC LIMIT 1), 0) AS filtered
-  FROM hafbe_views.comments_view up
-  WHERE up.block_num BETWEEN _from AND _to 
-  ORDER BY up.permlink, up.block_num, up.id DESC) as filtered2
-  WHERE filtered = 0
+          dp.author = prd.author 
+          and dp.permlink = prd.permlink 
+		  AND prd.prd_id IS NOT NULL
+          and dp.id between prd.prd_id and prd.up_id
+	   LIMIT 1),0
+) as filtered FROM filtered_range prd ) as filtered2
+WHERE (filtered = 0 and prd_id IS NULL) or (filtered =1 and prd_id IS NOT NULL)
 ) up_subquery ON cao.id = up_subquery.source_op
 WHERE 
   (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
