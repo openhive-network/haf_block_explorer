@@ -340,28 +340,36 @@ LEFT JOIN (
   ORDER BY voter, lvt.id DESC
 ) lvt_subquery ON cao.id = lvt_subquery.source_op
 LEFT JOIN (
-  SELECT 
-      DISTINCT ON (po.worker_account) 
-      worker_account,
-      po.id AS source_op
-  FROM hafbe_views.pow_view po
-  LEFT JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
-  WHERE po.block_num BETWEEN _from AND _to
-  AND ap.account IS NULL
-  ORDER BY worker_account, po.block_num, po.id DESC
-) po_subquery ON cao.id = po_subquery.source_op
-LEFT JOIN (
+  WITH pow AS MATERIALIZED (
   SELECT 
       DISTINCT ON (pto.worker_account) 
       worker_account,
-      pto.id AS source_op
-  FROM hafbe_views.pow_two_view pto
-  LEFT JOIN hive.hafbe_app_accounts_view a ON a.name = pto.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
+      pto.id,
+      pto.block_num
+  FROM hafbe_views.pow_view pto
   WHERE pto.block_num BETWEEN _from AND _to
-  AND ap.account IS NULL
-  ORDER BY worker_account, pto.block_num, pto.id DESC
+  )
+  SELECT po.id FROM pow po
+  JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
+  LEFT JOIN hafbe_app.acocunt_parameters ap ON a.id = ap.account
+  WHERE ap.account IS NULL
+  ORDER BY po.worker_account, po.block_num, po.id DESC
+) po_subquery ON cao.id = po_subquery.source_op
+LEFT JOIN (
+  WITH pow_two AS MATERIALIZED (
+  SELECT 
+      DISTINCT ON (pto.worker_account) 
+      worker_account,
+      pto.id,
+      pto.block_num
+  FROM hafbe_views.pow_two_view pto
+  WHERE pto.block_num BETWEEN _from AND _to
+  )
+  SELECT po.id FROM pow_two po
+  JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
+  LEFT JOIN hafbe_app.acocunt_parameters ap ON a.id = ap.account
+  WHERE ap.account IS NULL
+  ORDER BY po.worker_account, po.block_num, po.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
 LEFT JOIN (
   WITH selected_range AS MATERIALIZED (
@@ -376,7 +384,7 @@ filtered_range AS MATERIALIZED (
       hafbe_views.comments_view prd
     WHERE 
       prd.author = up.author 
-      AND prd.permlink = up.permlink AND prd.id < up.id 
+      AND prd.permlink = up.permlink AND prd.id < up.id
 	 ORDER BY prd.id DESC LIMIT 1) AS prd_id
   FROM selected_range up 
 )
