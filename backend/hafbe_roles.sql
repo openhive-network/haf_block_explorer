@@ -37,5 +37,5 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
 
 GRANT INSERT, UPDATE ON hafbe_app.hived_account_cache, hafbe_app.hived_account_resource_credits_cache TO hafbe_user;
 
--- plpython3u must be GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;trusted language
---GRANT USAGE ON LANGUAGE plpython3u TO hafbe_owner;
+GRANT hafbe_user TO hafbe_owner;
+
