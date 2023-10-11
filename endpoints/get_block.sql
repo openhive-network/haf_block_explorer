@@ -38,3 +38,18 @@ BEGIN
 END
 $$
 ;
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(_limit INT = 10)
+RETURNS JSON
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_latest_blocks(_limit)
+    ) arr
+  ) result;
+END
+$$
+;

@@ -92,3 +92,35 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_latest_blocks(_limit INT)
+RETURNS SETOF hafbe_types.get_latest_blocks
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+AS
+$$
+BEGIN
+RETURN QUERY
+WITH selected AS MATERIALIZED (
+SELECT o.num as block_num,
+ a.name::TEXT as witness
+FROM hive.blocks_view o
+JOIN hive.accounts_view a ON a.id = o.producer_account_id
+ORDER BY o.num DESC LIMIT _limit
+)
+SELECT o.block_num, o.witness, (
+SELECT json_agg(json_build_object(
+    'count', count,
+    'op_type_id', op_type_id
+)) as result
+FROM (
+    SELECT COUNT(b.op_type_id) as count, b.op_type_id
+    FROM hive.operations_view b
+    WHERE b.block_num = o.block_num
+    GROUP BY b.op_type_id
+) subquery)
+FROM selected o;
+END
+$$                            
+;

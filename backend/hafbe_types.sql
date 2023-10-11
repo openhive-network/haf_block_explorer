@@ -76,4 +76,11 @@ CREATE TYPE hafbe_types.witness_setof AS (
   version TEXT
 );
 
+DROP TYPE IF EXISTS hafbe_types.get_latest_blocks CASCADE;
+CREATE TYPE hafbe_types.get_latest_blocks AS (
+  block_num INT,
+  witness TEXT,
+  ops_count JSON
+);
+
 RESET ROLE;
