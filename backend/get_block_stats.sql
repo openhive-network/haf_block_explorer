@@ -108,19 +108,19 @@ SELECT o.num as block_num,
 FROM hive.blocks_view o
 JOIN hive.accounts_view a ON a.id = o.producer_account_id
 ORDER BY o.num DESC LIMIT _limit
+),
+selected2 AS MATERIALIZED (
+Select s.block_num, s.witness, COUNT(b.op_type_id) as count, b.op_type_id 
+FROM hive.operations_view b
+JOIN selected s ON s.block_num = b.block_num
+GROUP BY b.op_type_id,s.block_num,s.witness
 )
-SELECT o.block_num, o.witness, (
-SELECT json_agg(json_build_object(
+SELECT block_num, witness, json_agg(json_build_object(
     'count', count,
     'op_type_id', op_type_id
-)) as result
-FROM (
-    SELECT COUNT(b.op_type_id) as count, b.op_type_id
-    FROM hive.operations_view b
-    WHERE b.block_num = o.block_num
-    GROUP BY b.op_type_id
-) subquery)
-FROM selected o;
+)) FROM selected2
+GROUP BY block_num, witness
+ORDER BY block_num DESC;
 END
 $$                            
 ;
