@@ -349,9 +349,9 @@ LEFT JOIN (
   FROM hafbe_views.pow_view pto
   WHERE pto.block_num BETWEEN _from AND _to
   )
-  SELECT po.id FROM pow po
+  SELECT po.id AS source_op FROM pow po
   JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
-  LEFT JOIN hafbe_app.acocunt_parameters ap ON a.id = ap.account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
 ) po_subquery ON cao.id = po_subquery.source_op
@@ -365,9 +365,9 @@ LEFT JOIN (
   FROM hafbe_views.pow_two_view pto
   WHERE pto.block_num BETWEEN _from AND _to
   )
-  SELECT po.id FROM pow_two po
+  SELECT po.id AS source_op FROM pow_two po
   JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
-  LEFT JOIN hafbe_app.acocunt_parameters ap ON a.id = ap.account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
