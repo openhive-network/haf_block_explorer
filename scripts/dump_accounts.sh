@@ -55,7 +55,7 @@ POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT
 
 prepare_data() {
 
-    curl -s -o $SCRIPTDIR/../account_dump/accounts_dump.json --data "{\"jsonrpc\":\"2.0\", \"method\":\"database_api.list_accounts\", \"params\": {\"start\":\"\", \"limit\":10000000, \"order\":\"by_name\"}, \"id\":1}" http://$POSTGRES_HOST:8090
+    curl -s -o $SCRIPTDIR/../account_dump/accounts_dump.json --data "{\"jsonrpc\":\"2.0\", \"method\":\"database_api.list_accounts\", \"params\": {\"start\":\"\", \"limit\":10000000, \"order\":\"by_name\"}, \"id\":1}" http://$POSTGRES_HOST:8091
 
     echo "Start splitting..."
     split -b 1G $SCRIPTDIR/../account_dump/accounts_dump.json chunk
@@ -73,7 +73,7 @@ if [ -f "$SCRIPTDIR/../account_dump/accounts_dump.json" ]; then
     echo "Starting data_insertion_stript.py..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
     pip install psycopg2
-    python3 ../account_dump/data_insertion_script.py
+    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts
 
     echo "Looking for diffrences between hived node and hafbe stats..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
@@ -87,7 +87,7 @@ else
     echo "Starting data_insertion_stript.py..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
     pip install psycopg2
-    python3 ../account_dump/data_insertion_script.py
+    python3 ../account_dump/data_insertion_script.py $SCRIPTDIR/../dump_accounts
 
     echo "Looking for diffrences between hived node and hafbe stats..."
     psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"

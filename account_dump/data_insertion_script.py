@@ -1,9 +1,14 @@
 import json
 import os
 import psycopg2
+import sys  
 
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
+if len(sys.argv) != 2:
+    print("Usage: python script.py <argument1>")
+    sys.exit(1)
+
+script_dir = sys.argv[1]
 json_file_path = os.path.join(script_dir, "accounts_dump.json")
 
 

@@ -8,21 +8,12 @@ BEGIN
 WITH account_balances AS (
   SELECT 
     name,
-    balance,
-    hbd_balance,
-    vesting_shares,
-    savings_balance,
-    savings_hbd_balance,
-    savings_withdraw_requests,
-    reward_hbd_balance,
-    reward_hive_balance,
-    reward_vesting_balance,
-    reward_vesting_hive,
-    delegated_vesting_shares,
-    received_vesting_shares,
-    withdraw_routes,
-    post_voting_power,
-    posting_rewards,
+    witnesses_voted_for,
+    can_vote,
+    mined,
+    last_account_recovery,
+    created,
+    proxy,
     last_post,
     last_root_post,
     last_vote_time,
@@ -34,21 +25,16 @@ SELECT account_balances.name
 FROM account_balances
 JOIN hafbe_backend.get_account_setof(account_balances.name) AS _current_account_stats
 ON _current_account_stats.name = account_balances.name
-WHERE account_balances.balance <> _current_account_stats.balance 
-  OR account_balances.hbd_balance <> _current_account_stats.hbd_balance
-  OR account_balances.vesting_shares <> _current_account_stats.vesting_shares
-  OR account_balances.savings_balance <> _current_account_stats.savings_balance
-  OR account_balances.savings_hbd_balance <> _current_account_stats.savings_hbd_balance
-  OR account_balances.savings_withdraw_requests <> _current_account_stats.savings_withdraw_requests
-  OR account_balances.reward_hbd_balance <> _current_account_stats.reward_hbd_balance
-  OR account_balances.reward_hive_balance <> _current_account_stats.reward_hive_balance
-  OR account_balances.reward_vesting_balance <> _current_account_stats.reward_vesting_balance
-  OR account_balances.reward_vesting_hive <> _current_account_stats.reward_vesting_hive
-  OR account_balances.delegated_vesting_shares <> _current_account_stats.delegated_vesting_shares
-  OR account_balances.received_vesting_shares <> _current_account_stats.received_vesting_shares
-  OR account_balances.withdraw_routes <> _current_account_stats.withdraw_routes
-  OR account_balances.post_voting_power <> _current_account_stats.post_voting_power
-  OR account_balances.posting_rewards <> _current_account_stats.posting_rewards
+WHERE 
+  account_balances.witnesses_voted_for <> _current_account_stats.witnesses_voted_for
+
+  OR account_balances.can_vote != _current_account_stats.can_vote
+  OR account_balances.mined != _current_account_stats.mined
+  OR account_balances.last_account_recovery != _current_account_stats.last_account_recovery
+  OR account_balances.created != _current_account_stats.created
+
+  OR account_balances.proxy != _current_account_stats.proxy
+
   OR account_balances.last_post != _current_account_stats.last_post
   OR account_balances.last_root_post != _current_account_stats.last_root_post
   OR account_balances.last_vote_time != _current_account_stats.last_vote_time
@@ -65,21 +51,12 @@ $$
 BEGIN
   RETURN QUERY SELECT 
     name,
-    balance,
-    hbd_balance,
-    vesting_shares,
-    savings_balance,
-    savings_hbd_balance,
-    savings_withdraw_requests,
-    reward_hbd_balance,
-    reward_hive_balance,
-    reward_vesting_balance,
-    reward_vesting_hive,
-    delegated_vesting_shares,
-    received_vesting_shares,
-    withdraw_routes,
-    post_voting_power,
-    posting_rewards,
+    witnesses_voted_for,
+    can_vote,
+    mined,
+    last_account_recovery,
+    created,
+    proxy,
     last_post,
     last_root_post,
     last_vote_time,
