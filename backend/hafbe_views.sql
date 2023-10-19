@@ -300,6 +300,4 @@ JOIN hive.accounts_view a ON a.id = wvh.voter_id
 ORDER BY wvh.timestamp desc
 ;
 
-
-
 RESET ROLE;

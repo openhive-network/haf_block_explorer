@@ -34,3 +34,45 @@ CREATE TYPE hafbe_types.order_by_witness AS ENUM(
   'version'
 );
 
+DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE;
+CREATE TYPE hafbe_backend.last_post_vote_time AS
+(
+  last_post TIMESTAMP,
+  last_root_post TIMESTAMP,
+  last_vote_time TIMESTAMP,
+  post_count INT
+);
+
+DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE;
+CREATE TYPE hafbe_backend.account_parameters AS
+(
+  can_vote BOOLEAN,
+  mined BOOLEAN,
+  recovery_account TEXT,
+  last_account_recovery TIMESTAMP,
+  created TIMESTAMP
+);
+
+DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE;
+CREATE TYPE hafbe_backend.account_votes AS
+(
+  proxied_vsf_votes JSON,
+  witnesses_voted_for INT,
+  witness_votes JSON
+);
+
+DROP TYPE IF EXISTS hafbe_backend.json_metadata CASCADE;
+CREATE TYPE hafbe_backend.json_metadata AS
+(
+  json_metadata TEXT,
+  posting_json_metadata TEXT
+);
+
+DROP TYPE IF EXISTS hafbe_backend.account_keyauth CASCADE;
+CREATE TYPE hafbe_backend.account_keyauth AS
+(
+  key_auth TEXT,
+  authority_kind hive.authority_type
+);
+
+RESET ROLE;
