@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
@@ -53,3 +55,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

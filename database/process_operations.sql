@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_operation(_body jsonb, _timestamp TIMESTAMP, _op_type INT)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
@@ -363,3 +365,5 @@ WHERE cap.voter_id = spoo.account_id;
 END
 $$
 ;
+
+RESET ROLE;

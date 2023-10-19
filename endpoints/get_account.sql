@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT) 
 RETURNS JSON
 LANGUAGE 'plpgsql'
@@ -136,33 +138,4 @@ END
 $$
 ;
 
-
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_resource_credits(_account TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
-AS
-$$
-DECLARE
-  __response_data JSON;
-BEGIN
-  SELECT INTO __response_data
-    data
-  FROM hafbe_app.hived_account_resource_credits_cache
-  WHERE account = _account AND (NOW() - last_updated_at)::INTERVAL >= '1 hour'::INTERVAL;
-
-  IF __response_data IS NULL THEN
-    SELECT hafbe_backend.get_account_resource_credits(_account) INTO __response_data;
-
-    INSERT INTO hafbe_app.hived_account_resource_credits_cache (account, data, last_updated_at)
-    SELECT _account, __response_data, NOW()
-    ON CONFLICT ON CONSTRAINT pk_hived_account_resource_credits_cache DO
-    UPDATE SET
-      data = EXCLUDED.data,
-      last_updated_at = EXCLUDED.last_updated_at
-    ;
-  END IF;
-
-  RETURN __response_data;
-END
-$$
-;
+RESET ROLE;

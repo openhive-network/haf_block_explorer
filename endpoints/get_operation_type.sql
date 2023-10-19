@@ -1,13 +1,4 @@
-CREATE OR REPLACE FUNCTION hafbe_endpoints.format_op_types(op_type_id INT, _operation_name TEXT, _is_virtual BOOLEAN)
-RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
-AS
-$$
-BEGIN
-  RETURN ('[' || op_type_id || ', "' || split_part(_operation_name, '::', 3) || '", ' || _is_virtual || ']');
-END
-$$
-;
+SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_matching_operation_types(_operation_type_pattern TEXT)
 RETURNS JSON
@@ -68,3 +59,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

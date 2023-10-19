@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(IN _appContext VARCHAR, IN _appContext_btracker VARCHAR, IN _from INT, IN _to INT, IN _step INT, INOUT _last_block INT)
 LANGUAGE 'plpgsql'
 AS
@@ -98,3 +100,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

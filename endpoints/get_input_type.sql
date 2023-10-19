@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 /*
 determines the input type as one of 'account_name', 'block_num', 'transaction_hash', 'block_hash'
 returns 'account_name_array' when incomplete account name is provided
@@ -80,3 +82,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

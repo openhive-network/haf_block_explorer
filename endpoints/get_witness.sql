@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters_num(_witness TEXT)
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
@@ -100,3 +102,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

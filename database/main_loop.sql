@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 /** Application entry point, which:
   - defines its data schema,
   - creates HAF application context,
@@ -86,3 +88,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

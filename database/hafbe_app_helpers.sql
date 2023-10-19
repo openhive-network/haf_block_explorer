@@ -1,4 +1,6 @@
 
+SET ROLE hafbe_owner;
+
 --- Helper function telling application main-loop to continue execution.
 CREATE OR REPLACE FUNCTION hafbe_app.continueProcessing()
 RETURNS BOOLEAN
@@ -179,3 +181,5 @@ SET JIT=OFF
 SET join_collapse_limit=16
 SET from_collapse_limit=16
 ;
+
+RESET ROLE;

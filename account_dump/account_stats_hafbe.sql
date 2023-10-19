@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.dump_current_account_stats(account_data jsonb)
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -78,3 +80,4 @@ END
 $$
 ;
 
+RESET ROLE;

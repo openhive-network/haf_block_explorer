@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.compare_accounts()
 RETURNS VOID
 LANGUAGE 'plpgsql'
@@ -68,3 +70,5 @@ SELECT * FROM hafbe_backend.get_account_setof(_account);
 END
 $$
 ;
+
+RESET ROLE;

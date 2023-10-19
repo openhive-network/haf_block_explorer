@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_id(_account TEXT)
 RETURNS INT STABLE
 LANGUAGE 'plpgsql'
@@ -223,3 +225,4 @@ END
 $$
 ;
 
+RESET ROLE;

@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_a(_from INT, _to INT)
 RETURNS VOID
 AS
@@ -455,3 +457,5 @@ SET enable_bitmapscan = OFF
 set enable_hashjoin= OFF
 SET cursor_tuple_fraction='0.9'
 ;
+
+RESET ROLE;

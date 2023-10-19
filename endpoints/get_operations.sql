@@ -70,3 +70,5 @@ BEGIN
 END
 $$
 ;
+
+RESET ROLE;

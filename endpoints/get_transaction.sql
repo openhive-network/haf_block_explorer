@@ -1,3 +1,5 @@
+SET ROLE hafbe_owner;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql' STABLE
@@ -8,3 +10,4 @@ BEGIN
 END
 $$
 ;
+RESET ROLE;
