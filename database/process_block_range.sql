@@ -64,6 +64,7 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
+SET enable_hashjoin = OFF
 SET cursor_tuple_fraction='0.9'
 ;
 
