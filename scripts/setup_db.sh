@@ -109,20 +109,15 @@ setup_api() {
   # setup backend schema
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_exceptions.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_types.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_backend_types.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_endpoint_types.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_views.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_account_data.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_block_stats.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operation_types.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_operations.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_transactions.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_witness_data.sql
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/time_tracking.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/get_sync_time.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/account_stats_hafbe.sql
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $account_dump/compare_accounts.sql
 
   # setup endpoints schema
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/endpoints_schema.sql 
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_account.sql 
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_block.sql 
   psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $endpoints/get_input_type.sql 
