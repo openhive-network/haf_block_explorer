@@ -1,5 +1,45 @@
 SET ROLE hafbe_owner;
 
+CREATE OR REPLACE PROCEDURE hafbe_app.massive_processing_step(IN _appContext VARCHAR, IN _from INT, IN _to INT)
+LANGUAGE 'plpgsql'
+SET jit = OFF
+AS
+$$
+DECLARE
+  _time JSONB = '{}'::JSONB;
+BEGIN
+    RAISE NOTICE 'Attempting to process a block range: <%, %>', _from, _to;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM btracker_app.process_block_range_data_a(_from, _to);
+    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM btracker_app.process_block_range_data_b(_from, _to);
+    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM hafbe_app.process_block_range_data_a(_from, _to);
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_a') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM hafbe_app.process_block_range_data_b(_from, _to);
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_b') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM hafbe_app.process_block_range_data_c(_from, _to);
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_c') INTO _time;
+
+    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+    PERFORM hive.app_state_providers_update(_from, _to, _appContext);
+    SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
+
+    PERFORM hafbe_app.storeLastProcessedBlock(_to);
+
+    INSERT INTO hafbe_app.sync_time_logs(block_num, time_json) VALUES (_from, _time);
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(
     IN _appContext VARCHAR,
     IN _appContext_btracker VARCHAR,
@@ -11,8 +51,6 @@ CREATE OR REPLACE PROCEDURE hafbe_app.do_massive_processing(
 LANGUAGE 'plpgsql'
 AS
 $$
-DECLARE
-_time JSONB = '{}'::JSONB;
 BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
@@ -26,35 +64,7 @@ BEGIN
       _last_block := _to;
     END IF;
 
-    RAISE NOTICE 'Attempting to process a block range: <%, %>', b, _last_block;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM btracker_app.process_block_range_data_a(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM btracker_app.process_block_range_data_b(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM hafbe_app.process_block_range_data_a(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_a') INTO _time;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM hafbe_app.process_block_range_data_b(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_b') INTO _time;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM hafbe_app.process_block_range_data_c(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_c') INTO _time;
-
-    SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-    PERFORM hive.app_state_providers_update(b, _last_block, _appContext);
-    SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
-
-    PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
-
-    INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (b, _time);
+    CALL hafbe_app.massive_processing_step(_appContext, b, _last_block);
 
     COMMIT;
 
