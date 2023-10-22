@@ -136,6 +136,22 @@ docker-psql-client-build:
     NAME: "psql"
     TARGET: "psql"
 
+build_setup_docker_image:
+  stage: build
+  image: docker:24.0.6
+  services:
+    - docker:24.0.6-dind
+  tags:
+    - public-runner-docker
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+    GIT_DEPTH: 1
+  script:
+    - "echo \"TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$CI_COMMIT_SHA');\" > set_version_in_sql.pgsql"
+    - "docker build --tag=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA --tag=$CI_REGISTRY_IMAGE:latest -f docker/Dockerfile ."
+    - "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+    - "docker push --all-tags $CI_REGISTRY_IMAGE"
+
 .test-template:
   extends: .docker_image_builder_job_template
   stage: test

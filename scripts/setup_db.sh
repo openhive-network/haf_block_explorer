@@ -14,9 +14,11 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
-    --user=VALUE             PostgreSQL user (defaults to haf_admin)
+    --only-hafbe             Don't do setup for hafah, btracker, just the block explorer
 EOF
 }
+
+ONLY_HAFBE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +31,9 @@ while [ $# -gt 0 ]; do
     --help|-h|-?)
         print_help
         exit 0
+        ;;
+    --only-hafbe)
+        ONLY_HAFBE=1
         ;;
     -*)
         echo "ERROR: '$1' is not a valid option"
@@ -72,10 +77,10 @@ EOF
 }
 
 setup_apps() {
-  pushd "$hafah_dir" 
+  pushd "$hafah_dir"
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   # Modern Git does not place submodule's .git directory inside the submodule, so
-  # HAfAH's generate_version_sql.bash script does not work 
+  # HAfAH's generate_version_sql.bash script does not work
   # when the proper path is provided
   local path_to_sql_version_file="$hafah_dir/set_version_in_sql.pgsql"
   local hafah_git_dir="$hafbe_dir/.git/modules/submodules/hafah"
@@ -126,12 +131,12 @@ setup_api() {
 
   # setup endpoints schema
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_account.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_block.sql" 
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_block.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_input_type.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_operation_type.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_operations.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_transaction.sql" 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_witness.sql" 
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_transaction.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/get_witness.sql"
 
   # must be done by admin
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_roles.sql"
@@ -155,6 +160,9 @@ hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
 hafbe_dir="$SCRIPT_DIR/.."
 
-setup_apps
+if [ "$ONLY_HAFBE" -eq 0 ]; then
+  setup_apps
+fi
+
 setup_api
 create_haf_indexes

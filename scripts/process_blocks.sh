@@ -67,10 +67,19 @@ process_blocks() {
     local n_blocks="${1:-null}"
     local log_file="${2:-}"
     echo "Log file: $log_file"
+
+    if command -v ts > /dev/null 2>&1; then
+      timestamper="ts '%Y-%m-%d %H:%M:%.S'"
+    elif command -v tai64nlocal > /dev/null 2>&1; then
+      timestamper="tai64n | tai64nlocal"
+    else
+      timestamper="cat"
+    fi
+
     if [[ "$log_file" == "STDOUT" ]]; then
         psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);"
     else
-        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);" 2>&1 | ts '%Y-%m-%d %H:%M:%.S' | tee -i "$log_file"
+        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" > "$log_file")
     fi
 }
 
