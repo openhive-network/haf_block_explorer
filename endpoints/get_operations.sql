@@ -156,4 +156,44 @@ END
 $$
 ;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(_operation_id INT)
+RETURNS SETOF TEXT[]
+LANGUAGE 'plpgsql' STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
+SET enable_bitmapscan = OFF
+--enable_bitmapscan = OFF helps with perfomance on database with smaller number of blocks (tested od 12m blocks, planner choses wrong plan and the query is slow)
+AS
+$$
+DECLARE
+	_example_key JSON := (SELECT o.body FROM hive.operations_view o WHERE o.op_type_id = _operation_id LIMIT 1);
+BEGIN
+RETURN QUERY
+WITH RECURSIVE extract_keys AS (
+  SELECT 
+    ARRAY['value']::TEXT[] as key_path, 
+    (json_each(_example_key -> 'value')).*
+  UNION ALL
+  SELECT 
+    key_path || key,
+    (json_each(value)).*
+  FROM 
+    extract_keys
+  WHERE 
+    json_typeof(value) = 'object'
+)
+SELECT 
+  key_path || key as full_key_path
+FROM 
+  extract_keys
+WHERE 
+  json_typeof(value) != 'object'
+;
+
+END
+$$
+;
+
+
 RESET ROLE;
