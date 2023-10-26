@@ -1,5 +1,8 @@
 SET ROLE hafbe_owner;
 
+COMMENT ON SCHEMA mammals IS
+  'A warm-blooded vertebrate animal of a class that is distinguished by the secretion of milk by females for the nourishment of the young';
+
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT) 

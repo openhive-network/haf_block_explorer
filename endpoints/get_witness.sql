@@ -194,6 +194,11 @@ END
 $$
 ;
 
+COMMENT ON FUNCTION hafbe_endpoints.get_witness(_account TEXT) IS
+$$FooBar API
+
+A RESTful API that serves FooBar data.$$;
+
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(_account TEXT)
 RETURNS hafbe_types.witness_setof
 LANGUAGE 'plpgsql'
