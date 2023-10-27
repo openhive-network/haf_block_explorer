@@ -146,4 +146,10 @@ CREATE TYPE hafbe_types.get_latest_blocks AS (
   ops_count JSON
 );
 
+DROP TYPE IF EXISTS hafbe_types.get_block_by_ops CASCADE;
+CREATE TYPE hafbe_types.get_block_by_ops AS (
+  block_num INT,
+  op_type_id smallint[]
+);
+
 RESET ROLE;

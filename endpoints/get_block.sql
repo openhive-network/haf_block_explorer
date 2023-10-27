@@ -105,142 +105,77 @@ END
 $$                            
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc', _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
-RETURNS SETOF INT
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations int[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc', _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
+RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
-SET enable_sort = OFF
-SET enable_hashagg = OFF
 AS
 $$
+DECLARE 
+	__operations int[] := (SELECT array_agg(elem+1) FROM unnest(_operations) AS elem);
 BEGIN
 IF _account IS NULL THEN
-
-RETURN QUERY (
-
-  WITH selected_range AS (
-  SELECT o.block_num FROM hive.operations_view o
-  WHERE 
-    o.op_type_id = ANY(_operations) AND 
-    o.block_num BETWEEN _from AND _to AND 
-  (CASE WHEN _key_content IS NOT NULL THEN
-    jsonb_extract_path_text(o.body, variadic _set_key) = _key_content
-  ELSE
-    TRUE
-  END)
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN o.block_num ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN o.block_num ELSE NULL END) ASC
-  LIMIT 1000)
-
-  SELECT DISTINCT ON (o.block_num) o.block_num 
-  FROM selected_range o
-  LIMIT _limit
-  );
-  
+  RETURN QUERY EXECUTE format(
+	$query$
+    WITH source_ops AS MATERIALIZED (
+    SELECT o.block_num, array_agg(o.op_type_id) as op_type_id FROM hive.operations_view o
+    WHERE 
+      o.op_type_id + 1 = ANY(%L) AND 
+      o.block_num BETWEEN %L AND %L AND 
+    (CASE WHEN %L IS NOT NULL THEN
+      jsonb_extract_path_text(o.body, variadic %L) = %L
+    ELSE
+      TRUE
+    END)
+    GROUP BY o.block_num
+    ORDER BY o.block_num %s
+    LIMIT %L)
+    SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
+    FROM source_ops;
+  	$query$, 
+	__operations, _from, _to, _key_content, _set_key, _key_content, _order_is, _limit) res
+;
 ELSE
+RETURN QUERY EXECUTE format(
+  $query$
+  WITH source_account_id AS MATERIALIZED (
+  SELECT a.id from hive.accounts_view a where a.name = %L),
 
-RETURN QUERY (
-
-  WITH source_account_id as MATERIALIZED (
-  SELECT a.id from hive.accounts_view a where a.name = _account),
-
-  source_ops as MATERIALIZED (
-  SELECT ao.operation_id
+  source_ops AS MATERIALIZED (
+  SELECT array_agg(ao.operation_id) AS operation_id, ao.block_num
   FROM hive.account_operations_view ao
   WHERE 
-    ao.op_type_id = ANY(_operations) AND 
+    ao.op_type_id = ANY(%L) AND 
     ao.account_id = (SELECT id FROM source_account_id) AND 
-    ao.block_num BETWEEN _from AND _to
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN ao.account_op_seq_no ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN ao.account_op_seq_no ELSE NULL END) ASC
-  LIMIT _limit)
-
-  SELECT o.block_num
+    ao.block_num BETWEEN %L AND %L
+  GROUP BY ao.block_num
+  ORDER BY ao.block_num %s
+  LIMIT %L
+  ),
+  source_ops_agg AS (
+  SELECT o.block_num, array_agg(o.op_type_id) as op_type_id
   FROM hive.operations_view o
-  JOIN source_ops s on s.operation_id = o.id
-  WHERE (CASE WHEN _key_content IS NOT NULL THEN
-    jsonb_extract_path_text(o.body, variadic _set_key) = _key_content
+  JOIN (
+  SELECT unnest(operation_id) AS operation_id
+  FROM source_ops
+  ) s on s.operation_id = o.id
+  WHERE (CASE WHEN %L IS NOT NULL THEN
+    jsonb_extract_path_text(o.body, variadic %L) = %L
   ELSE
     TRUE
   END)
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN o.block_num ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN o.block_num ELSE NULL END) ASC
-  );
-  
-END IF;
-END
-$$
+  GROUP BY o.block_num)
+  SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
+  FROM source_ops_agg
+  ORDER BY block_num %s
+  ;
+  $query$, 
+  _account, _operations, _from, _to, _order_is, _limit, _key_content, _set_key, _key_content, _order_is)
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc', _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
-RETURNS SETOF INT[]
-LANGUAGE 'plpgsql' STABLE
-SET from_collapse_limit = 16
-SET join_collapse_limit = 16
-SET jit = OFF
-SET enable_sort = OFF
-SET enable_hashagg = OFF
-AS
-$$
-BEGIN
-IF _account IS NULL THEN
-
-RETURN QUERY (
-
-  SELECT array_agg(o.block_num) FROM hive.operations_view o
-  WHERE 
-    o.op_type_id = ANY(_operations) AND 
-    o.block_num BETWEEN _from AND _to AND 
-  (CASE WHEN _key_content IS NOT NULL THEN
-    jsonb_extract_path_text(o.body, variadic _set_key) = _key_content
-  ELSE
-    TRUE
-  END)
-  GROUP BY o.block_num
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN o.block_num ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN o.block_num ELSE NULL END) ASC
-  LIMIT _limit
-
-  );
-  
-ELSE
-
-RETURN QUERY (
-
-  WITH source_account_id as MATERIALIZED (
-  SELECT a.id from hive.accounts_view a where a.name = _account),
-
-  source_ops as MATERIALIZED (
-  SELECT ao.operation_id
-  FROM hive.account_operations_view ao
-  WHERE 
-    ao.op_type_id = ANY(_operations) AND 
-    ao.account_id = (SELECT id FROM source_account_id) AND 
-    ao.block_num BETWEEN _from AND _to
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN ao.account_op_seq_no ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN ao.account_op_seq_no ELSE NULL END) ASC
-  LIMIT _limit)
-
-  SELECT array_agg(o.block_num)
-  FROM hive.operations_view o
-  JOIN source_ops s on s.operation_id = o.id
-  WHERE (CASE WHEN _key_content IS NOT NULL THEN
-    jsonb_extract_path_text(o.body, variadic _set_key) = _key_content
-  ELSE
-    TRUE
-  END)
-  GROUP BY o.block_num
-  ORDER BY
-    (CASE WHEN _order_is = 'desc' THEN o.block_num ELSE NULL END) DESC,
-    (CASE WHEN _order_is = 'asc' THEN o.block_num ELSE NULL END) ASC
-  );
+END IF;
 END
 $$
 ;

@@ -156,7 +156,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(_operation_id INT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(_op_type_id INT)
 RETURNS SETOF TEXT[]
 LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
