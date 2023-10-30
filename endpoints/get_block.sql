@@ -209,7 +209,7 @@ ELSE
     GROUP BY ao.block_num
     ORDER BY ao.block_num %s),  
 
-    source_ops_agg AS MATERIALIZED (
+    source_ops_agg AS (
     SELECT o.block_num, array_agg(o.op_type_id) as op_type_id
     FROM hive.operations_view o
     JOIN (
@@ -219,15 +219,15 @@ ELSE
     WHERE 
       jsonb_extract_path_text(o.body, variadic %L) = %L AND
       o.op_type_id = ANY(%L)
-    GROUP BY o.block_num
-    LIMIT %L)
+    GROUP BY o.block_num)
 
     SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
     FROM source_ops_agg
     ORDER BY block_num %s
+    LIMIT %L
     $query$, 
 
-  _account, _operations, _from, _to, _order_is, _set_key, _key_content, _operations, _limit, _order_is)
+  _account, _operations, _from, _to, _order_is, _set_key, _key_content, _operations, _order_is, _limit)
   ;
 
   END IF;
