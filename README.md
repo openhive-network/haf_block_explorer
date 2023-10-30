@@ -1,73 +1,76 @@
+# HAF Block Explorer
+
+1. [About](#about)
+1. [Setup](#setup)
+1. [Block processing](#block-processing)
+1. [Startup](#startup)
+1. [Performance tests](#performance-tests)
+
 ## About
 
-haf block explorer is a web app for viewing information in transactions and operations of accounts and blocks, as well as block witness (creator) information.<br>Search can be performed by `_account`, `_block_num`, `_block_hash`, `_trx_hash`.
-
-## Requirements
-
-Node: `latest`<br>
-npm: `latest`
+haf block explorer is a web app for viewing information in transactions and operations of accounts and blocks, as well as block witness (creator) information.  
+Search can be performed by `_account`, `_block_num`, `_block_hash`, `_trx_hash`.
 
 ## Setup
-To start using haf block explorer, on first setup use:
-```
-./scripts/setup_dependancies.sh
-./scripts/setup_db.sh
 
+HAF Block Explorer requires an instance of HAF.
+
+First set up its dependencies:
+
+```bash
+./scripts/setup_dependencies.sh --install-all
 ```
-If u want setup db only in case dependancies are already set up, use only:
-```
+
+Next, set up the database:
+
+```bash
 ./scripts/setup_db.sh
 ```
-Then install gui dependancies
-```
-cd gui ; npm install ; cd ..
-```
+
+You can use `./scripts/setup_db.sh --help` to see available options.
 
 ## Block processing
 
-hafbe will process blocks from haf db to own tables
-```
+Before it can be used, HAF Block Explorer needs to process blocks available in HAF database.
+
+```bash
 ./scripts/process_blocks.sh
 ```
-Until hafbe catches up to head block on haf db, it will do massive processing
 
+Again, you can use `./scripts/process_blocks.sh --help` to see available options.
 
-If you want to destroy hafbe db:
+If you want to destroy HAF Block Explorer database use:
+
+```bash
+./scripts/drop_db.sh
 ```
-./scripts/drop-db.sh
-```
 
-## Starting
+As before, use `./scripts/drop_db.sh --help` to see available options.
 
+## Startup
 
 After setup start postgREST server with:
-```
-sudo su - hafbe_owner
-cd <hafbe_dir>
-./scripts/start_postgrest.sh --port <PORT>
-```
-`PORT` is optional, default is 3000.
 
-Run web app with:
-```
-cd gui ; npm start
+```bash
+./scripts/start_postgrest.sh
 ```
 
-## Testing performance
+One more, use `./scripts/start_postgrest.sh --help` to see available options.
 
-Install JMeter if not yet installed
-```
-./scripts/setup_dependancies.sh
-```
-then run tests with:
-```
-./tests/run_performance_tests.sh <PORT> <THREAD_NUM> <LOOP_NUM> <DB_SIZE>
+## Dockerized setup
+
+The steps above can also be performed using Docker. The details are in a separate [README](docker/README.md).
+
+## Performance tests
+
+Run tests by running the following commands (requires installing depencencies):
+
+```bash
+source .tests/bin/activate
+./tests/run_performance_tests.sh
+deactivate
 ```
 
-E.g. this will run 30 threads (THREAD_NUM * SUITE_NUM) with 200 loops and with unique params for each request:
-```
-./tests/run_performance_tests.sh <PORT> 2 200 6000
-```
-Server port must be specified as first arg.
+You can see all test options using command `./tests/run_performance_tests.sh --help`
 
-Read test result in Apache JMeter Dashboard, generated at `tests/performance/result/result_report/index.html`
+After the tests are completed, a report will be generated at `tests/performance/result/result_report/index.html`

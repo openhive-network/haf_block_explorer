@@ -1,0 +1,159 @@
+version: '3.9'
+services:
+  haf:
+    image: ${HAF_REGISTRY:-hiveio/haf}:${HAF_VERSION:-v1.27.4.0}
+    entrypoint: /home/haf_admin/docker_entrypoint.sh
+    command: $${HAF_COMMAND}
+    environment:
+      HIVED_UID:
+      HAF_COMMAND:
+      DATADIR: /home/hived/datadir
+      SHM_DIR: /home/hived/shm_dir
+      PG_ACCESS: "
+        host    haf_block_log    haf_app_admin    all    trust\n
+        host    haf_block_log    haf_admin        all    trust\n
+        host    postgres         haf_admin        all    trust\n
+        host    haf_block_log    pghero           all    trust\n
+        host    postgres         pghero           all    trust\n
+        host    haf_block_log    hafbe_owner      all    trust\n
+        "
+    volumes:
+      - haf_datadir:/home/hived/datadir
+      - haf_shmdir:/home/hived/shm_dir
+      - ./blockchain:/home/hived/datadir/blockchain
+      - ./scripts/haf-healthcheck.sh:/home/hived/healthcheck.sh
+    networks:
+      haf-network:
+    healthcheck:
+      test: ["CMD-SHELL","/home/hived/healthcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 48h #time for replay to finish
+  backend-setup:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
+    working_dir: /app
+    command: 
+      - "./scripts/setup_db.sh"
+    user: $SETUP_UID
+    environment:
+      POSTGRES_HOST: haf
+    volumes:
+      - ../account_dump:/app/account_dump
+      - ../endpoints:/app/endpoints
+      - ../backend:/app/backend
+      - ../database:/app/database
+      - ../submodules/hafah:/app/submodules/hafah
+      - ../submodules/btracker:/app/submodules/btracker
+      - ../scripts:/app/scripts
+      - ../.git:/app/.git
+    networks:
+      haf-network:
+    depends_on:
+      haf:
+        condition: service_healthy
+  backend-block-processing:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
+    working_dir: /app
+    command:
+      - "./scripts/process_blocks.sh"
+    environment:
+      PROCESS_BLOCK_LIMIT: 0
+      POSTGRES_HOST: haf
+      POSTGRES_USER: hafbe_owner
+      LOG_FILE: STDOUT
+    volumes:
+      - ../scripts:/app/scripts
+      - ./scripts/block-processing-healthcheck.sh:/app/healthcheck.sh
+    networks:
+      haf-network:
+    healthcheck:
+      test: ["CMD-SHELL","/app/healthcheck.sh"]
+      interval: 60s
+      timeout: 5s
+      retries: 20
+      start_period: 72h #time for sync to finish
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+  backend-postgrest:
+    image: ${POSTGREST_REGISTRY:-postgrest/postgrest}:${POSTGREST_VERSION:-latest}
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_DB_URI: postgresql://hafbe_owner@haf:5432/haf_block_log
+      PGRST_DB_SCHEMA: hafbe_endpoints
+      PGRST_DB_ANON_ROLE: hafbe_user
+      PGRST_DB_POOL: 20
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3000
+    networks:
+      haf-network:
+    depends_on:
+      haf:
+        condition: service_healthy
+      backend-block-processing:
+        condition: service_healthy
+  swagger:
+    image: ${SWAGGER_REGISTRY:-swaggerapi/swagger-ui}:${SWAGGER_VERSION:-latest}
+    ports:
+      - "8080:8080"
+    profiles:
+      - swagger
+    environment:
+      API_URL: http://localhost:3000/
+    healthcheck:
+      test: ["CMD-SHELL","curl -f localhost:8080"]
+    depends_on:
+      backend-postgrest:
+        condition: service_started
+  pghero:
+    image: ${PGHERO_REGISTRY:-ankane/pghero}:${PGHERO_VERSION:-latest}
+    ports:
+      - "2080:8080"
+    profiles:
+      - db-tools
+    environment:
+      DATABASE_URL: postgresql://pghero@haf:5432/haf_block_log
+      PGHERO_USERNAME:
+      PGHERO_PASSWORD:
+    networks:
+      haf-network:
+    healthcheck:
+      test: ["CMD-SHELL","wget --no-verbose --tries=1 --spider --spider http://$PGHERO_USERNAME:$PGHERO_PASSWORD@localhost:8080/ || exit 1"]
+    depends_on:
+      haf:
+        condition: service_healthy
+  pgadmin:
+    image: ${PGADMIN_REGISTRY:-dpage/pgadmin4}:${PGADMIN_VERSION:-latest}
+    ports:
+      - "1080:80"
+    profiles:
+      - db-tools
+    environment:
+      PGADMIN_DEFAULT_EMAIL:
+      PGADMIN_DEFAULT_PASSWORD:
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      haf-network:
+    healthcheck:
+      test: ["CMD-SHELL","wget --no-verbose --tries=1 --spider --spider http://localhost/ || exit 1"]
+    depends_on:
+      haf:
+        condition: service_healthy
+
+networks:
+  haf-network:
+    name: haf-network
+
+volumes:
+  haf_datadir:
+    driver: local
+  haf_shmdir:
+    driver: local
+  pgadmin_data:
+    driver: local

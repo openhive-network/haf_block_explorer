@@ -1,5 +1,12 @@
+.tests/
 tests/performance/result
 build/
 block_processing.log
 set_version_in_sql.pgsql
 hafbe_sync.log
+*.tar.xz*
+
+# Docker
+docker/blockchain/block_log*
+docker/.env.*
+docker/srv
