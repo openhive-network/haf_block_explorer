@@ -105,76 +105,132 @@ END
 $$                            
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations int[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc', _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
+ _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
 RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
+SET enable_hashagg = OFF
 AS
 $$
 DECLARE 
-	__operations int[] := (SELECT array_agg(elem+1) FROM unnest(_operations) AS elem);
+	__operations INT[] := (SELECT array_agg(elem+1) FROM unnest(_operations) AS elem);
 BEGIN
+
+IF _key_content IS NOT NULL THEN
+  IF NOT _set_key = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operations)))) THEN
+      RAISE EXCEPTION 'Invalid key: %. ', _set_key;
+  END IF;
+END IF;
+
 IF _account IS NULL THEN
+
+  IF _key_content IS NULL THEN
   RETURN QUERY EXECUTE format(
-	$query$
+	  $query$
     WITH source_ops AS MATERIALIZED (
     SELECT o.block_num, array_agg(o.op_type_id) as op_type_id FROM hive.operations_view o
     WHERE 
       o.op_type_id + 1 = ANY(%L) AND 
-      o.block_num BETWEEN %L AND %L AND 
-    (CASE WHEN %L IS NOT NULL THEN
-      jsonb_extract_path_text(o.body, variadic %L) = %L
-    ELSE
-      TRUE
-    END)
+      o.block_num BETWEEN %L AND %L 
     GROUP BY o.block_num
     ORDER BY o.block_num %s
     LIMIT %L)
     SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
     FROM source_ops;
   	$query$, 
-	__operations, _from, _to, _key_content, _set_key, _key_content, _order_is, _limit) res
-;
-ELSE
-RETURN QUERY EXECUTE format(
-  $query$
-  WITH source_account_id AS MATERIALIZED (
-  SELECT a.id from hive.accounts_view a where a.name = %L),
 
-  source_ops AS MATERIALIZED (
-  SELECT array_agg(ao.operation_id) AS operation_id, ao.block_num
-  FROM hive.account_operations_view ao
-  WHERE 
-    ao.op_type_id = ANY(%L) AND 
-    ao.account_id = (SELECT id FROM source_account_id) AND 
-    ao.block_num BETWEEN %L AND %L
-  GROUP BY ao.block_num
-  ORDER BY ao.block_num %s
-  LIMIT %L
-  ),
-  source_ops_agg AS (
-  SELECT o.block_num, array_agg(o.op_type_id) as op_type_id
-  FROM hive.operations_view o
-  JOIN (
-  SELECT unnest(operation_id) AS operation_id
-  FROM source_ops
-  ) s on s.operation_id = o.id
-  WHERE (CASE WHEN %L IS NOT NULL THEN
-    jsonb_extract_path_text(o.body, variadic %L) = %L
-  ELSE
-    TRUE
-  END)
-  GROUP BY o.block_num)
-  SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
-  FROM source_ops_agg
-  ORDER BY block_num %s
+	__operations, _from, _to, _order_is, _limit) res
   ;
-  $query$, 
-  _account, _operations, _from, _to, _order_is, _limit, _key_content, _set_key, _key_content, _order_is)
-;
 
+  ELSE 
+  RETURN QUERY EXECUTE format(
+	  $query$
+    WITH source_ops AS MATERIALIZED (
+    SELECT o.block_num, array_agg(o.op_type_id) as op_type_id FROM hive.operations_view o
+    WHERE 
+      o.op_type_id = ANY(%L) AND 
+      o.block_num BETWEEN %L AND %L AND 
+      jsonb_extract_path_text(o.body, variadic %L) = %L
+    GROUP BY o.block_num
+    ORDER BY o.block_num %s
+    LIMIT %L)
+    SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
+    FROM source_ops;
+  	$query$, 
+
+	_operations, _from, _to, _set_key, _key_content, _order_is, _limit) res
+  ;
+  
+  END IF;
+ELSE
+
+  IF _key_content IS NULL THEN
+  RETURN QUERY EXECUTE format(
+    $query$
+    WITH source_account_id AS MATERIALIZED (
+    SELECT a.id from hive.accounts_view a where a.name = %L),
+
+    source_ops AS MATERIALIZED (
+    SELECT array_agg(ao.op_type_id) AS op_type_id, ao.block_num
+    FROM hive.account_operations_view ao
+    WHERE 
+      ao.op_type_id = ANY(%L) AND 
+      ao.account_id = (SELECT id FROM source_account_id) AND 
+      ao.block_num BETWEEN %L AND %L
+    GROUP BY ao.block_num
+    ORDER BY ao.block_num %s
+    LIMIT %L)
+
+    SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
+    FROM source_ops
+    ORDER BY block_num %s
+    ;
+    $query$, 
+
+  _account, _operations, _from, _to, _order_is, _limit, _order_is)
+  ;
+
+  ELSE
+  RETURN QUERY EXECUTE format(
+    $query$
+    WITH source_account_id AS MATERIALIZED (
+    SELECT a.id from hive.accounts_view a where a.name = %L),
+
+    source_ops AS (
+    SELECT array_agg(ao.operation_id) AS operation_id, ao.block_num
+    FROM hive.account_operations_view ao
+    WHERE 
+      ao.op_type_id = ANY(%L) AND 
+      ao.account_id = (SELECT id FROM source_account_id) AND 
+      ao.block_num BETWEEN %L AND %L
+    GROUP BY ao.block_num
+    ORDER BY ao.block_num %s),  
+
+    source_ops_agg AS MATERIALIZED (
+    SELECT o.block_num, array_agg(o.op_type_id) as op_type_id
+    FROM hive.operations_view o
+    JOIN (
+    SELECT unnest(operation_id) AS operation_id
+    FROM source_ops
+    ) s on s.operation_id = o.id
+    WHERE 
+      jsonb_extract_path_text(o.body, variadic %L) = %L AND
+      o.op_type_id = ANY(%L)
+    GROUP BY o.block_num
+    LIMIT %L)
+
+    SELECT block_num, ARRAY(SELECT DISTINCT unnest(op_type_id)) as op_type_id
+    FROM source_ops_agg
+    ORDER BY block_num %s
+    $query$, 
+
+  _account, _operations, _from, _to, _order_is, _set_key, _key_content, _operations, _limit, _order_is)
+  ;
+
+  END IF;
 END IF;
 END
 $$
