@@ -135,7 +135,7 @@ setup_api() {
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
   psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
-  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/backend_schema.sql
+  psql $POSTGRES_ACCESS_OWNER -v "ON_ERROR_STOP=on" -f $backend/hafbe_blocksearch_indexes.sql
 }
 
 context="no"
