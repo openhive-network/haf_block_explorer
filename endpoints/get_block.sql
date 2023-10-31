@@ -105,8 +105,39 @@ END
 $$                            
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, _set_key TEXT[] = ARRAY[NULL])
+/*
+
+EXAMPLE USAGES
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], NULL, 'desc', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], NULL, 'desc', 0, 2147483647, 1000)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], NULL, 'asc', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,1,2,3,4,5,6,7,8,9,10,11,12,13,15], NULL, 'desc', 0, 2147483647, 100)
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,72,28,18,34,11], 'blocktrades', 'desc', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[28,18,34,11], 'blocktrades', 'desc', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,1,2,3,4,5,6,7,8,9,10,11,12,13,15], 'blocktrades', 'asc', 0, 2147483647, 100)
+
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc', 0, 2147483647, 100, ARRAY['blocktrades'], '[["value", "aut23131hor"]]') --exception for bad keys
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc', 0, 2147483647, 100, ARRAY['blocktrades'], '[["value", "author"]]')
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], NULL , 'desc', 0, 2147483647, 100, ARRAY['wsteem','gtg'], '[["value","author"], ["value","permlink"]]')
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'wsteem' , 'desc', 0, 2147483647, 100, ARRAY['wsteem','gtg'], '[["value","author"], ["value","permlink"]]')
+*/
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
+ _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
 RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
@@ -120,13 +151,16 @@ DECLARE
 BEGIN
 
 IF _key_content IS NOT NULL THEN
+RAISE NOTICE '%', _key_content;
   IF array_length(_operations, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
-  IF NOT _set_key = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operations)))) THEN
-    RAISE EXCEPTION 'Invalid key: %. ', _set_key;
-  END IF;
+  FOR i IN 0 .. json_array_length(_setof_keys)-1 LOOP
+	IF NOT ARRAY(SELECT json_array_elements_text(_setof_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operations)))) THEN
+	  RAISE EXCEPTION 'Invalid key %', _setof_keys->i;
+    END IF;
+  END LOOP;
 END IF;
 
 IF _account IS NULL THEN
@@ -159,7 +193,15 @@ IF _account IS NULL THEN
     WHERE 
       o.op_type_id = ANY(%L) AND 
       o.block_num BETWEEN %L AND %L AND 
-      jsonb_extract_path_text(o.body, variadic %L) = %L
+      jsonb_extract_path_text(o.body, variadic %L) = %L AND
+      (CASE WHEN %L IS NOT NULL THEN
+      jsonb_extract_path_text(o.body, variadic %L) = %L ELSE
+      TRUE
+      END) AND
+      (CASE WHEN %L IS NOT NULL THEN
+      jsonb_extract_path_text(o.body, variadic %L) = %L ELSE
+      TRUE
+      END)
     GROUP BY o.block_num
     ORDER BY o.block_num %s
     LIMIT %L)
@@ -167,7 +209,15 @@ IF _account IS NULL THEN
     FROM source_ops;
   	$query$, 
 
-	_operations, _from, _to, _set_key, _key_content, _order_is, _limit) res
+	_operations,
+  _from, _to, 
+  ARRAY(SELECT json_array_elements_text(_setof_keys->0)), _key_content[1], 
+  _key_content[2],
+  ARRAY(SELECT json_array_elements_text(_setof_keys->1)), _key_content[2], 
+  _key_content[3],
+  ARRAY(SELECT json_array_elements_text(_setof_keys->2)), _key_content[3], 
+  _order_is, 
+  _limit) res
   ;
   
   END IF;
@@ -224,6 +274,14 @@ ELSE
     ) s on s.operation_id = o.id
     WHERE 
       jsonb_extract_path_text(o.body, variadic %L) = %L AND
+      (CASE WHEN %L IS NOT NULL THEN
+      jsonb_extract_path_text(o.body, variadic %L) = %L ELSE
+      TRUE
+      END) AND
+      (CASE WHEN %L IS NOT NULL THEN
+      jsonb_extract_path_text(o.body, variadic %L) = %L ELSE
+      TRUE
+      END) AND
       o.op_type_id = ANY(%L)
     GROUP BY o.block_num)
 
@@ -233,7 +291,18 @@ ELSE
     LIMIT %L
     $query$, 
 
-  _account, _operations, _from, _to, _order_is, _set_key, _key_content, _operations, _order_is, _limit)
+  _account, 
+  _operations, 
+  _from, _to, 
+  _order_is, 
+  ARRAY(SELECT json_array_elements_text(_setof_keys->0)), _key_content[1],
+  _key_content[2],
+  ARRAY(SELECT json_array_elements_text(_setof_keys->1)), _key_content[2],
+  _key_content[3],
+  ARRAY(SELECT json_array_elements_text(_setof_keys->2)), _key_content[3],
+  _operations, 
+  _order_is, 
+  _limit)
   ;
 
   END IF;
