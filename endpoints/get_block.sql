@@ -106,7 +106,7 @@ $$
 ;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, VARIADIC _set_key TEXT[] = ARRAY[NULL])
+ _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT = NULL, _set_key TEXT[] = ARRAY[NULL])
 RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
@@ -120,8 +120,12 @@ DECLARE
 BEGIN
 
 IF _key_content IS NOT NULL THEN
+  IF array_length(_operations, 1) != 1 THEN 
+    RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
+  END IF;
+  
   IF NOT _set_key = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operations)))) THEN
-      RAISE EXCEPTION 'Invalid key: %. ', _set_key;
+    RAISE EXCEPTION 'Invalid key: %. ', _set_key;
   END IF;
 END IF;
 
@@ -134,6 +138,8 @@ IF _account IS NULL THEN
     SELECT o.block_num, array_agg(o.op_type_id) as op_type_id FROM hive.operations_view o
     WHERE 
       o.op_type_id + 1 = ANY(%L) AND 
+-- o.op_type_id + 1 is required so the postgresql planner changes index from hive_operations_op_type_id_block_num to 
+-- hive_operations_block_num_trx_in_block_idx because of perfomance improvement, when using more than one operation.
       o.block_num BETWEEN %L AND %L 
     GROUP BY o.block_num
     ORDER BY o.block_num %s
@@ -235,6 +241,7 @@ END IF;
 END
 $$
 ;
+
 
 
 
