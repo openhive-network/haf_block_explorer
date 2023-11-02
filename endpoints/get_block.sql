@@ -151,8 +151,7 @@ DECLARE
 BEGIN
 
 IF _key_content IS NOT NULL THEN
-RAISE NOTICE '%', _key_content;
-  IF array_length(_operations, 1) != 1 THEN 
+ IF array_length(_operations, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
@@ -265,13 +264,14 @@ ELSE
     GROUP BY ao.block_num
     ORDER BY ao.block_num %s),  
 
+    unnest_ops AS MATERIALIZED (
+    SELECT unnest(operation_id) AS operation_id
+    FROM source_ops),
+
     source_ops_agg AS (
     SELECT o.block_num, array_agg(o.op_type_id) as op_type_id
     FROM hive.operations_view o
-    JOIN (
-    SELECT unnest(operation_id) AS operation_id
-    FROM source_ops
-    ) s on s.operation_id = o.id
+    JOIN unnest_ops s on s.operation_id = o.id
     WHERE 
       jsonb_extract_path_text(o.body, variadic %L) = %L AND
       (CASE WHEN %L IS NOT NULL THEN

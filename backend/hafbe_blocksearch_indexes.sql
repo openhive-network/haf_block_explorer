@@ -8,7 +8,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_parent_author_permlink ON hive.operat
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author') gin_trgm_ops,
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink') gin_trgm_ops
 )
-WHERE op_type_id = 1;
+WHERE op_type_id + 1 = 2;
 
 CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hive.operations USING gin
 (
@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_author_permlink ON hive.operations US
 73	"hive::protocol::ineffective_delete_comment_operation"
 */
 
-WHERE op_type_id IN (0,1,17,19,51,53,61,63,72,73);
+WHERE op_type_id + 1 IN (1,2,18,20,52,54,62,64,73,74);
 
 
 
