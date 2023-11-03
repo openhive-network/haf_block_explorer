@@ -2,21 +2,20 @@
 
 set -euo pipefail
 
-SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SRCDIR="${SCRIPTDIR}/../"
-
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 
 print_help () {
-    echo "Usage: $0 [OPTION[=VALUE]]..."
-    echo
-    echo "Allows to setup a database already filled by HAF instance, to work with haf_be application."
-    echo "OPTIONS:"
-    echo "  --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)"
-    echo "  --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)"
+cat <<EOF
+  Usage: $0 [OPTION[=VALUE]]...
+
+  Allows to setup a database already filled by HAF instance, to work with haf_be application.
+  OPTIONS:
+    --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)
+    --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)
+    --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)
+EOF
 }
 
 while [ $# -gt 0 ]; do
@@ -52,8 +51,9 @@ POSTGRES_ACCESS_ADMIN="postgresql://haf_admin@$POSTGRES_HOST:$POSTGRES_PORT/haf_
 POSTGRES_ACCESS_OWNER="postgresql://$owner_role@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
 find_function() {
-  schema=$1
-  function=$2
+  local schema=$1
+  local function=$2
+  local _result
 
   _result=$(psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f - <<-EOF
     DO \$$
@@ -74,7 +74,14 @@ EOF
 setup_apps() {
   pushd "$hafah_dir" 
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  ./scripts/generate_version_sql.bash "$PWD"
+  # Modern Git does not place submodule's .git directory inside the submodule, so
+  # HAfAH's generate_version_sql.bash script does not work 
+  # when the proper path is provided
+  local path_to_sql_version_file="$hafah_dir/set_version_in_sql.pgsql"
+  local hafah_git_dir="$hafbe_dir/.git/modules/submodules/hafah"
+  local git_hash
+  git_hash=$(git --git-dir="$hafah_git_dir" --work-tree="$hafah_dir" rev-parse HEAD)
+  echo "TRUNCATE TABLE hafah_python.version; INSERT INTO hafah_python.version(git_hash) VALUES ('$git_hash');" > "$path_to_sql_version_file"
   ./scripts/setup_db.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
@@ -83,7 +90,7 @@ setup_apps() {
   popd
 
   pushd "$hafbe_dir"
-  ./scripts/generate_version_sql.sh "$PWD"
+  ./scripts/generate_version_sql.sh "$hafbe_dir"
   popd
 }
 
@@ -112,6 +119,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_views.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_operation.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/account_stats_hafbe.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/compare_accounts.sql"
 
@@ -126,17 +134,17 @@ setup_api() {
 
   # must be done by admin
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_roles.sql"
-  psql "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -f "${SRCDIR}/set_version_in_sql.pgsql"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$hafbe_dir/scripts/set_version_in_sql.pgsql"
 
 }
 
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f $backend/hafbe_blocksearch_indexes.sql
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
 }
 
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 account_dump="$SCRIPT_DIR/../account_dump"
 endpoints="$SCRIPT_DIR/../endpoints"

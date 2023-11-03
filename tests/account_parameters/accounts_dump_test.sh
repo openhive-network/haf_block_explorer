@@ -53,26 +53,38 @@ done
 
 POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
-    echo "Clearing tables..."
-    psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
-    psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
+echo "Clearing tables..."
+psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.account_balances;"
+psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "TRUNCATE hafbe_backend.differing_accounts;"
 
+# CI comes with psycopg2 preinstalled
+if [[ -z "${CI:-}" ]]; then
     echo "Installing dependecies..."
     pip install psycopg2-binary
+fi
 
-    gunzip "${SCRIPTDIR}/accounts_dump.json.gz"
+rm -f "${SCRIPTDIR}/accounts_dump.json"
+# The line below is somewhat problematic. Gunzip by default deletes gz file after decompression,
+# but the '-k' parameter, which prevents that from happening is not supported on some of its versions.
+# 
+# Thus, depending on the OS, the line below may need to be replaced with one of the following:
+# gunzip -c "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
+# gzcat "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
+# zcat "${SCRIPTDIR}/accounts_dump.json.gz" > "${SCRIPTDIR}/accounts_dump.json"
+gunzip -k "${SCRIPTDIR}/accounts_dump.json.gz"
 
-    echo "Starting data_insertion_stript.py..."
-    python3 ../../account_dump/data_insertion_script.py $SCRIPTDIR --host $POSTGRES_HOST --port $POSTGRES_PORT --user $POSTGRES_USER
+echo "Starting data_insertion_script.py..."
+python3 ../../account_dump/data_insertion_script.py "$SCRIPTDIR" --host "$POSTGRES_HOST" --port "$POSTGRES_PORT" --user "$POSTGRES_USER" #--debug
 
-    echo "Looking for diffrences between hived node and hafbe stats..."
-    psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -c "SELECT hafbe_backend.compare_accounts();"
+echo "Looking for diffrences between hived node and hafbe stats..."
+psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hafbe_backend.compare_accounts();"
 
-    DIFFERING_ACCOUNTS=$(psql $POSTGRES_ACCESS_ADMIN -v "ON_ERROR_STOP=on" -t -A  -c "SELECT * FROM hafbe_backend.differing_accounts;")
+DIFFERING_ACCOUNTS=$(psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -t -A  -c "SELECT * FROM hafbe_backend.differing_accounts;")
 
-    if [ -z "$DIFFERING_ACCOUNTS" ]; then
-        echo "Account balances are correct!"
-
-    else
-        echo "Account balances are incorrect..."
-    fi
+if [ -z "$DIFFERING_ACCOUNTS" ]; then
+    echo "Account balances are correct!"
+    exit 0
+else
+    echo "Account balances are incorrect..."
+    exit 3
+fi

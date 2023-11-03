@@ -5,6 +5,7 @@ block_processing.log
 set_version_in_sql.pgsql
 hafbe_sync.log
 *.tar.xz*
+accounts_dump.json
 
 # Docker
 docker/blockchain/block_log*

@@ -23,6 +23,8 @@ docker compose up -d
 
 You can stop the app with `docker compose stop` or `docker compose down` (the latter removes the containers) and remove all application data with `docker compose down -v`.
 
+Note: If `docker compose up -d` exits with HAF error on Linux, try `HIVED_UID="$(id -u)" docker compose up -d` instead to fix HAF's permissions.
+
 ## Images
 
 ### Overview
@@ -37,8 +39,11 @@ No custom PostgREST image is neeed for the API. The application has been tested 
 
 There are several targets defined in the Bakefile
 
-- *default* - alias for *psql-client*
-- *psql-client* - builds psql client image
+- *default* - alias for *psql*
+- *psql* - builds psql client image
+- *ci-runner* - builds CI runner
+
+There are also some other targets meant to be used by CI only: *ci-runner-ci*
 
 To build a given target run `docker buildx bake [target-name]`. If no target name is provided the *default* target will be built.
 

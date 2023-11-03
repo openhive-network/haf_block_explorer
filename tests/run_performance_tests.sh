@@ -88,7 +88,7 @@ cleanup() {
   local result_dir="$TEST_ROOT_DIRECTORY/performance/result"
   local result_report_dir="$result_dir/result_report"
 
-  if [[ -z "$CI" ]]; then
+  if [[ -z "${CI:-}" ]]; then
     echo "This will delete previous test result!"
     echo "Press ENTER to continue, ^C to cancel."
     read -r _
@@ -112,7 +112,7 @@ generate_db() {
     --user "$user" \
     --password "$password" \
     --database "$database" \
-    --database-size "$database_size" --debug
+    --database-size "$database_size" #--debug
 }
 
 run_jmeter() {
