@@ -1,6 +1,6 @@
 -- TODO Run these tests on a freshly created database
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_witness_set_properties_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_update_current_witness_for_witness_set_properties_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -13,7 +13,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_witness_update_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_update_current_witness_for_witness_update_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -26,7 +26,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_feed_publish_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_update_current_witness_for_feed_publish_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -39,7 +39,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_pow_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_update_current_witness_for_pow_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -52,7 +52,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_pow2_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_update_current_witness_for_pow2_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -71,7 +71,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_account_witness_vote_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_a_for_account_witness_vote_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -84,7 +84,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_account_witness_proxy_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_a_for_account_witness_proxy_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -97,7 +97,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_proxy_cleared_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_a_for_proxy_cleared_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -110,7 +110,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_expired_account_notification_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_a_for_expired_account_notification_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -123,7 +123,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_declined_voting_rights_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_a_for_declined_voting_rights_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -136,7 +136,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_account_create_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_account_create_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -149,7 +149,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_create_claimed_account_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_create_claimed_account_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -162,7 +162,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_account_created_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_account_created_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -175,7 +175,7 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_account_create_with_delegation_operation()
+CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_account_create_with_delegation_operation()
 LANGUAGE 'plpgsql'
 AS
 $BODY$
@@ -189,17 +189,17 @@ $BODY$
 ;
 
 CALL hive.appproc_context_detach(ARRAY['hafbe_app', 'btracker_app']);
-CALL hafbe_app.test_process_witness_set_properties_operation();
-CALL hafbe_app.test_process_witness_update_operation();
-CALL hafbe_app.test_process_pow_operation();
-CALL hafbe_app.test_process_pow2_operation();
-CALL hafbe_app.test_process_account_witness_vote_operation();
-CALL hafbe_app.test_process_account_witness_proxy_operation();
-CALL hafbe_app.test_process_proxy_cleared_operation();
-CALL hafbe_app.test_process_expired_account_notification_operation();
-CALL hafbe_app.test_process_declined_voting_rights_operation();
-CALL hafbe_app.test_process_account_create_operation();
-CALL hafbe_app.test_process_create_claimed_account_operation();
-CALL hafbe_app.test_process_account_created_operation();
-CALL hafbe_app.test_process_account_create_with_delegation_operation();
+CALL hafbe_app.test_update_current_witness_for_witness_set_properties_operation();
+CALL hafbe_app.test_update_current_witness_for_witness_update_operation();
+CALL hafbe_app.test_update_current_witness_for_pow_operation();
+CALL hafbe_app.test_update_current_witness_for_pow2_operation();
+CALL hafbe_app.test_process_op_a_for_account_witness_vote_operation();
+CALL hafbe_app.test_process_op_a_for_account_witness_proxy_operation();
+CALL hafbe_app.test_process_op_a_for_proxy_cleared_operation();
+CALL hafbe_app.test_process_op_a_for_expired_account_notification_operation();
+CALL hafbe_app.test_process_op_a_for_declined_voting_rights_operation();
+CALL hafbe_app.test_process_op_c_for_account_create_operation();
+CALL hafbe_app.test_process_op_c_for_create_claimed_account_operation();
+CALL hafbe_app.test_process_op_c_for_account_created_operation();
+CALL hafbe_app.test_process_op_c_for_account_create_with_delegation_operation();
 CALL hive.appproc_context_attach(ARRAY['hafbe_app', 'btracker_app'], 0);
