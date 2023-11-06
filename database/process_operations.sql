@@ -447,12 +447,12 @@ BEGIN
     FROM (
       SELECT
         trim(both '"' FROM prop_value::TEXT) AS url, op.witness
-      FROM hive.extract_set_witness_properties(op.props)
-      WHERE prop_name = 'url' AND url IS NOT NULL
+      FROM hive.extract_set_witness_properties(array_to_json(props.props)::TEXT)
+      WHERE prop_name = 'url'
     ) p
     JOIN hive.accounts_view hav ON hav.name = p.witness
   ) ops
-  WHERE cw.witness_id = ops.witness_id;
+  WHERE cw.witness_id = ops.witness_id AND ops.url IS NOT NULL;
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE;
@@ -488,18 +488,22 @@ BEGIN
       hav.id AS witness_id,
       base / quote AS price_feed,
       (quote - 1000)::NUMERIC AS bias,
-      props.timestamp AS feed_updated_at
+      op.timestamp AS feed_updated_at
     FROM (
       SELECT
         (exchange_rate->'base'->>'amount')::NUMERIC AS base,
         (exchange_rate->'quote'->>'amount')::NUMERIC AS quote
       FROM (
-        SELECT trim(both '"' FROM prop_value::TEXT)::JSON AS exchange_rate
-        FROM hive.extract_set_witness_properties(props.props)
-        WHERE prop_name = 'hbd_exchange_rate' AND exchange_rate IS NOT NULL
+        SELECT exchange_rate
+        FROM (
+          SELECT trim(both '"' FROM prop_value::TEXT)::JSON AS exchange_rate
+          FROM hive.extract_set_witness_properties(array_to_json(props.props)::TEXT)
+          WHERE prop_name = 'hbd_exchange_rate'
+        ) AS ex
+        WHERE exchange_rate IS NOT NULL
       ) sp
     ) p
-    JOIN hive.accounts_view hav ON hav.name = props.witness
+    JOIN hive.accounts_view hav ON hav.name = op.witness
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 END
@@ -548,7 +552,7 @@ BEGIN
         block_size::INT
       FROM (
         SELECT trim(both '"' FROM prop_value::TEXT) AS block_size
-        FROM hive.extract_set_witness_properties(props.props)
+        FROM hive.extract_set_witness_properties(array_to_json(props.props)::TEXT)
         WHERE prop_name = 'maximum_block_size'
       ) sp
       WHERE block_size IS NOT NULL
@@ -620,7 +624,8 @@ RETURNS VOID
 AS
 $function$
 BEGIN
-  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
+  UPDATE hafbe_app.current_witnesses cw
+  SET signing_key = o.signing_key FROM (
     SELECT hav.id AS witness_id, signing_key
     FROM (
       SELECT
@@ -628,10 +633,10 @@ BEGIN
       FROM (
         SELECT COALESCE(
           (SELECT trim(both '"' FROM prop_value::TEXT)
-            FROM hive.extract_set_witness_properties(props.props)
+            FROM hive.extract_set_witness_properties(array_to_json(props.props)::TEXT)
             WHERE prop_name = 'new_signing_key'),
           (SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
-            FROM hive.extract_set_witness_properties(props.props)
+            FROM hive.extract_set_witness_properties(array_to_json(props.props)::TEXT)
             WHERE prop_name = 'key')) AS signing_key
       ) sp
       WHERE signing_key IS NOT NULL
