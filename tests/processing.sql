@@ -409,6 +409,7 @@ CALL hafbe_app.test_add_new_witness_for_witness_update_operation();
 CALL hafbe_app.test_add_new_witness_for_feed_publish_operation();
 CALL hafbe_app.test_update_current_witness_for_witness_set_properties_operation();
 CALL hafbe_app.test_update_current_witness_for_witness_update_operation();
+CALL hafbe_app.test_update_current_witness_for_feed_publish_operation();
 CALL hafbe_app.test_update_current_witness_for_pow_operation();
 CALL hafbe_app.test_update_current_witness_for_pow2_operation();
 CALL hafbe_app.test_process_op_a_for_account_witness_vote_operation();
