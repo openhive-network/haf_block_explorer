@@ -6,6 +6,9 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
 RETURNS hafbe_types.account
 LANGUAGE 'plpgsql'
 STABLE
+SET JIT=OFF
+SET join_collapse_limit=16
+SET from_collapse_limit=16
 AS
 $$
 DECLARE

@@ -51,14 +51,11 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE
-  __result hafbe_backend.last_post_vote_time;
 BEGIN
-SELECT last_post, last_root_post, last_vote_time, post_count 
-INTO __result
-FROM hafbe_app.account_posts WHERE account= _account;
-RETURN __result
-;
+RETURN (SELECT ROW( last_post, last_root_post, last_vote_time, post_count)
+FROM hafbe_app.account_posts 
+WHERE account= _account
+);
 
 END
 $$
@@ -71,10 +68,10 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE 
-_result INT := (SELECT (account_op_seq_no + 1) FROM hive.account_operations_view where account_id = _account  order by account_op_seq_no DESC limit 1);
 BEGIN
-RETURN _result
+RETURN account_op_seq_no + 1
+FROM hive.account_operations_view 
+WHERE account_id = _account ORDER BY account_op_seq_no DESC LIMIT 1
 ;
 
 END
@@ -88,10 +85,11 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE 
-  _result TEXT := (SELECT a.name FROM hafbe_app.current_account_proxies o JOIN hive.accounts_view a on a.id = o.proxy_id WHERE o.account_id = _account);
 BEGIN
-RETURN _result
+RETURN a.name 
+FROM hafbe_app.current_account_proxies o 
+JOIN hive.accounts_view a on a.id = o.proxy_id 
+WHERE o.account_id = _account
 ;
 
 END
@@ -105,14 +103,10 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE
-  __result hafbe_backend.account_parameters;
 BEGIN
-SELECT can_vote, mined, recovery_account, last_account_recovery, created
-INTO __result
-FROM hafbe_app.account_parameters WHERE account= _account;
-RETURN __result
-;
+RETURN (SELECT ROW (can_vote, mined, recovery_account, last_account_recovery, created)
+FROM hafbe_app.account_parameters WHERE account= _account
+);
 
 END
 $$
@@ -125,24 +119,13 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE
-  __result hafbe_backend.account_votes;
 BEGIN
-SELECT json_agg(vote), COUNT(*)
-INTO __result.witness_votes, __result.witnesses_voted_for
-FROM hafbe_views.current_witness_votes_view WHERE account= _account;
-
-With selected_poxied_vests AS (
-  SELECT proxied_vests, which_proxy FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account
-)
-
-SELECT json_agg(
-  proxied_vests
-) INTO __result.proxied_vsf_votes
-FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account;
-
-RETURN __result
-;
+RETURN (SELECT ROW(
+  (SELECT json_agg(proxied_vests) FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account), 
+  COUNT(1)::INT, 
+  json_agg(vote))
+FROM hafbe_views.current_witness_votes_view WHERE account= _account
+);
 
 END
 $$
@@ -155,14 +138,13 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE
-  __result hafbe_backend.json_metadata;
 BEGIN
-SELECT json_metadata, posting_json_metadata 
-INTO __result
-FROM hive.hafbe_app_metadata WHERE account_id= _account;
-RETURN __result
-;
+RETURN (SELECT ROW (
+  json_metadata, 
+  posting_json_metadata)
+FROM hive.hafbe_app_metadata 
+WHERE account_id= _account
+);
 
 END
 $$
@@ -175,7 +157,6 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
-DECLARE
 BEGIN
 RETURN QUERY SELECT key_auth, authority_kind 
 FROM hive.hafbe_app_keyauth 
