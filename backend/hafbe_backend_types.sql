@@ -8,6 +8,12 @@ CREATE TYPE hafbe_types.order_is AS ENUM(
   'desc'
 );
 
+DROP TYPE IF EXISTS hafbe_types.group_by CASCADE;
+CREATE TYPE hafbe_types.group_by AS ENUM(
+  'op_type_id', 
+  'block_num'
+);
+
 DROP TYPE IF EXISTS hafbe_types.order_by_votes CASCADE;
 CREATE TYPE hafbe_types.order_by_votes AS ENUM(
   'voter', 

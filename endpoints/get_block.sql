@@ -105,4 +105,89 @@ END
 $$                            
 ;
 
+/*
+
+EXAMPLE USAGES
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], NULL, 'desc', 'op_type_id', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], 'gtg', 'desc', 'op_type_id', 0, 2147483647, 100)
+
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], NULL, 'desc', 'block_num', 0, 2147483647, 100)
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], 'gtg', 'desc', 'block_num', 0, 2147483647, 100)
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc', 'op_type_id', 0, 2147483647, 100, ARRAY['blocktrades'], '[["value", "author"]]')
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[51], NULL, 'desc', 'op_type_id', 0, 2147483647, 100, ARRAY['gtg'], '[["value", "author"]]')
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[68], NULL, 'desc', 'op_type_id', 0, 2147483647, 100)
+
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc', 'block_num',0, 2147483647, 100, ARRAY['blocktrades'], '[["value", "author"]]')
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[51], NULL, 'desc', 'block_num', 0, 2147483647, 100, ARRAY['gtg'], '[["value", "author"]]')
+
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[68], NULL, 'desc', 'block_num', 0, 2147483647, 100)
+*/
+
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc', _group_by hafbe_types.group_by = 'op_type_id',
+ _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
+RETURNS JSON
+--returns json because of diffrent return types of get_block_by_single_op, get_block_by_ops_group_by_op_type_id and get_block_by_ops_group_by_block_num
+--returns setof of (INT), (INT, SMALLINT[]), (SMALLINT, INT[])
+LANGUAGE 'plpgsql' STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+AS
+$$
+BEGIN
+IF _key_content IS NOT NULL THEN
+  IF array_length(_operations, 1) != 1 THEN 
+    RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
+  END IF;
+  
+  FOR i IN 0 .. json_array_length(_setof_keys)-1 LOOP
+	IF NOT ARRAY(SELECT json_array_elements_text(_setof_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operations)))) THEN
+	  RAISE EXCEPTION 'Invalid key %', _setof_keys->i;
+    END IF;
+  END LOOP;
+END IF;
+
+IF array_length(_operations, 1) = 1 THEN
+
+  RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_block_by_single_op(_operations[1], _account, _order_is, _from, _to, _limit, _key_content, _setof_keys)
+    ) arr
+  ) result;
+
+ELSE
+  IF _group_by = 'op_type_id' THEN
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations, _account, _order_is, _from, _to, _limit, _key_content, _setof_keys)
+      ) arr
+    ) result;
+
+  ELSE
+
+    RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
+      SELECT ARRAY(
+        SELECT hafbe_backend.get_block_by_ops_group_by_block_num(_operations, _account, _order_is, _from, _to, _limit, _key_content, _setof_keys)
+      ) arr
+    ) result;
+
+  END IF;
+END IF;
+END
+$$
+;
+
 RESET ROLE;
