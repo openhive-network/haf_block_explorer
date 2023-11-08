@@ -196,12 +196,16 @@ IF _account IS NULL THEN
     SELECT array_agg(block_num) as block_nums FROM disc_num) AS block_nums
     FROM UNNEST(%L::smallint[]) AS u(op_type_id)),
 
-    unnest_block_nums AS MATERIALIZED (
-    SELECT op_type_id, unnest(block_nums) AS block_num FROM block_num_array)
+    unnest_block_nums AS (
+    SELECT op_type_id, unnest(block_nums) AS block_num FROM block_num_array),
 
-    SELECT block_num, array_agg(op_type_id) FROM unnest_block_nums
+    array_op_type_id AS MATERIALIZED (
+    SELECT block_num, array_agg(op_type_id) as op_type_id FROM unnest_block_nums
     GROUP BY block_num
-    ORDER BY block_num %s
+    ORDER BY block_num %s)
+
+    SELECT block_num, array(SELECT DISTINCT unnest(op_type_id)) FROM array_op_type_id
+
     $query$, 
 
   _from, _to, 
@@ -233,12 +237,15 @@ ELSE
     SELECT array_agg(block_num) as block_nums FROM disc_num) AS block_nums
     FROM UNNEST(%L::smallint[]) AS u(op_type_id)),
 
-    unnest_block_nums AS MATERIALIZED (
-    SELECT op_type_id, unnest(block_nums) AS block_num FROM block_num_array)
+    unnest_block_nums AS (
+    SELECT op_type_id, unnest(block_nums) AS block_num FROM block_num_array),
 
-    SELECT block_num, array_agg(op_type_id) FROM unnest_block_nums
+    array_op_type_id AS MATERIALIZED (
+    SELECT block_num, array_agg(op_type_id) as op_type_id FROM unnest_block_nums
     GROUP BY block_num
-    ORDER BY block_num %s
+    ORDER BY block_num %s)
+
+    SELECT block_num, array(SELECT DISTINCT unnest(op_type_id)) FROM array_op_type_id
     
     $query$, 
 
