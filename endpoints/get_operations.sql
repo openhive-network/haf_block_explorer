@@ -1,6 +1,6 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _page_num INT = 1, _limit INT = 100, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _page_num INT = 1, _limit INT = 100, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL, _body_limit INT = 2147483647)
 RETURNS SETOF hafbe_types.operation
 LANGUAGE 'plpgsql' STABLE
 COST 10000
@@ -43,17 +43,18 @@ END IF;
 RETURN QUERY EXECUTE format(
   $query$
 
+  WITH operation_range AS MATERIALIZED (
   SELECT
-    ls.operation_id,
+    ls.operation_id AS id,
     ls.block_num,
     hov.trx_in_block,
-    encode(htv.trx_hash, 'hex'),
+    encode(htv.trx_hash, 'hex') AS trx_hash,
     hov.op_pos,
     ls.op_type_id,
     hov.body,
     hot.is_virtual,
     hov.timestamp,
-    NOW() - hov.timestamp
+    NOW() - hov.timestamp AS age
   FROM (
     SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
     FROM hive.account_operations_view haov
@@ -70,7 +71,16 @@ RETURN QUERY EXECUTE format(
   JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
-  ORDER BY ls.operation_id DESC;
+  ORDER BY ls.operation_id DESC),
+
+filter_ops AS MATERIALIZED (
+  SELECT o.id, f.body, f.is_modified
+  FROM operation_range o, hafbe_backend.operation_body_filter(o.body, o.id, %L) AS f
+)
+SELECT o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o_filter.body, o.is_virtual, o.timestamp, o.age, o_filter.is_modified 
+FROM operation_range o
+JOIN filter_ops o_filter ON o_filter.id = o.id
+ORDER BY o.id;
 
   $query$,
   __account_id,
@@ -79,7 +89,8 @@ RETURN QUERY EXECUTE format(
   __no_ops_filter, _filter,
   __no_start_date, __block_start,
   __no_end_date, __block_end,
-  __subq_limit
+  __subq_limit,
+  _body_limit
 ) res
 ;
 
@@ -87,7 +98,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[])
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _body_limit INT = 2147483647)
 RETURNS SETOF hafbe_types.operation
 LANGUAGE 'plpgsql' STABLE
 SET JIT=OFF
@@ -98,31 +109,40 @@ $$
 DECLARE
   __no_ops_filter BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
-RETURN QUERY SELECT
-  ls.id,
-  ls.block_num,
-  ls.trx_in_block,
-  encode(htv.trx_hash, 'hex'),
-  ls.op_pos,
-  ls.op_type_id,
-  ls.body,
-  hot.is_virtual,
-  ls.timestamp,
-  NOW() - ls.timestamp
-FROM (
-  SELECT hov.id, hov.trx_in_block, hov.op_pos, hov.timestamp, hov.body, hov.op_type_id, hov.block_num
-  FROM hive.operations_view hov
-  WHERE
-    hov.block_num = _block_num AND
-    hov.id <= _top_op_id AND 
-    (__no_ops_filter OR hov.op_type_id = ANY(_filter))
-  ORDER BY hov.id DESC
-  LIMIT _limit
-) ls
-JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
-ORDER BY ls.id DESC
-;
+RETURN QUERY 
+WITH operation_range AS MATERIALIZED (
+  SELECT
+    ls.id,
+    ls.block_num,
+    ls.trx_in_block,
+    encode(htv.trx_hash, 'hex') AS trx_hash,
+    ls.op_pos,
+    ls.op_type_id,
+    ls.body,
+    hot.is_virtual,
+    ls.timestamp,
+    NOW() - ls.timestamp AS age
+  FROM (
+    SELECT hov.id, hov.trx_in_block, hov.op_pos, hov.timestamp, hov.body, hov.op_type_id, hov.block_num
+    FROM hive.operations_view hov
+    WHERE
+      hov.block_num = _block_num AND
+      hov.id <= _top_op_id AND 
+      (__no_ops_filter OR hov.op_type_id = ANY(_filter))
+    ORDER BY hov.id DESC
+    LIMIT _limit
+  ) ls
+  JOIN hive.operation_types hot ON hot.id = ls.op_type_id
+  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
+  ORDER BY ls.id DESC),
+filter_ops AS MATERIALIZED (
+  SELECT o.id, f.body, f.is_modified
+  FROM operation_range o, hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) AS f
+)
+SELECT o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o_filter.body, o.is_virtual, o.timestamp, o.age, o_filter.is_modified 
+FROM operation_range o
+JOIN filter_ops o_filter ON o_filter.id = o.id
+ORDER BY o.id;
 
 END
 $$
@@ -145,7 +165,8 @@ RETURN (
       o.body,
       hot.is_virtual,
       o.timestamp,
-      NOW() - o.timestamp)
+      NOW() - o.timestamp,
+  	  FALSE)
     FROM hive.operations_view o 
     JOIN hive.operation_types hot ON hot.id = o.op_type_id
     LEFT JOIN hive.transactions_view htv ON htv.block_num = o.block_num AND htv.trx_in_block = o.trx_in_block

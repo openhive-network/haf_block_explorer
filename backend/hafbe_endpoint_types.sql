@@ -63,7 +63,8 @@ CREATE TYPE hafbe_types.operation AS (
   operation JSONB,
   virtual_op BOOLEAN,
   timestamp TIMESTAMP,
-  age INTERVAL
+  age INTERVAL,
+  is_modified BOOLEAN
 );
 
 DROP TYPE IF EXISTS hafbe_types.block CASCADE;

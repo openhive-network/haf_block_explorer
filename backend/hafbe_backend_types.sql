@@ -75,4 +75,11 @@ CREATE TYPE hafbe_backend.account_keyauth AS
   authority_kind hive.authority_type
 );
 
+DROP TYPE IF EXISTS hafbe_backend.operation_body_filter_result CASCADE;
+CREATE TYPE hafbe_backend.operation_body_filter_result AS (
+    body JSONB,
+    id BIGINT,
+    is_modified BOOLEAN
+);
+
 RESET ROLE;
