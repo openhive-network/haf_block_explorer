@@ -1,7 +1,6 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(_operations INT, _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(_operations INT, _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT, _key_content TEXT[], _setof_keys JSON)
 RETURNS SETOF INT
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -105,8 +104,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations INT[], _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT)
 RETURNS SETOF hafbe_types.get_block_by_ops_group_by_op_type_id
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -171,8 +169,7 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(_operations INT[], _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT)
 RETURNS SETOF hafbe_types.get_block_by_ops_group_by_block_num
 LANGUAGE 'plpgsql' STABLE
 AS

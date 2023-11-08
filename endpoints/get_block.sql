@@ -172,7 +172,7 @@ ELSE
 
     RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
       SELECT ARRAY(
-        SELECT hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations, _account, _order_is, _from, _to, _limit, _key_content, _setof_keys)
+        SELECT hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations, _account, _order_is, _from, _to, _limit)
       ) arr
     ) result;
 
@@ -180,7 +180,7 @@ ELSE
 
     RETURN CASE WHEN arr IS NOT NULL THEN to_json(arr) ELSE '[]'::JSON END FROM (
       SELECT ARRAY(
-        SELECT hafbe_backend.get_block_by_ops_group_by_block_num(_operations, _account, _order_is, _from, _to, _limit, _key_content, _setof_keys)
+        SELECT hafbe_backend.get_block_by_ops_group_by_block_num(_operations, _account, _order_is, _from, _to, _limit)
       ) arr
     ) result;
 
