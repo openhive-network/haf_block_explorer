@@ -446,12 +446,11 @@ BEGIN
     SELECT hav.id AS witness_id, url
     FROM (
       SELECT
-        trim(both '"' FROM prop.prop_value::TEXT) AS url, op.witness
+        trim(both '"' FROM prop.value::TEXT) AS url, op.witness
       FROM (
-        SELECT (hive.extract_set_witness_properties(REPLACE(json_agg(jsonb_build_array(name, value))::TEXT, '\\x', ''))).*
-        FROM unnest(props.props) AS props
+        SELECT name,value FROM unnest(props.props) AS props
+        WHERE name = 'url'
       ) prop
-      WHERE prop_name = 'url'
     ) p
     JOIN hive.accounts_view hav ON hav.name = p.witness
   ) ops
@@ -499,12 +498,11 @@ BEGIN
       FROM (
         SELECT exchange_rate
         FROM (
-          SELECT trim(both '"' FROM prop_value::TEXT)::JSON AS exchange_rate
+          SELECT trim(both '"' FROM value::TEXT)::JSON AS exchange_rate
           FROM (
-            SELECT (hive.extract_set_witness_properties(REPLACE(json_agg(jsonb_build_array(name, value))::TEXT, '\\x', ''))).*
-            FROM unnest(props.props) AS props
+            SELECT name,value FROM unnest(props.props) AS props
+            WHERE name = 'hbd_exchange_rate'
           ) prop
-          WHERE prop_name = 'hbd_exchange_rate'
         ) AS ex
         WHERE exchange_rate IS NOT NULL
       ) sp
@@ -557,12 +555,11 @@ BEGIN
       SELECT
         block_size::INT
       FROM (
-        SELECT trim(both '"' FROM prop_value::TEXT) AS block_size
+        SELECT trim(both '"' FROM prop.value::TEXT) AS block_size
         FROM (
-          SELECT (hive.extract_set_witness_properties(REPLACE(json_agg(jsonb_build_array(name, value))::TEXT, '\\x', ''))).*
-          FROM unnest(props.props) AS props
+          SELECT name,value FROM unnest(props.props) AS props
+          WHERE name = 'maximum_block_size'
         ) prop
-        WHERE prop_name = 'maximum_block_size'
       ) sp
       WHERE block_size IS NOT NULL
     ) p
@@ -641,18 +638,17 @@ BEGIN
         signing_key, op.witness
       FROM (
         SELECT COALESCE(
-          (SELECT trim(both '"' FROM prop_value::TEXT)
+          (SELECT trim(both '"' FROM prop.value::TEXT)
           FROM (
-            SELECT (hive.extract_set_witness_properties(REPLACE(json_agg(jsonb_build_array(name, value))::TEXT, '\\x', ''))).*
-            FROM unnest(props.props) AS props
-          ) prop
-            WHERE prop_name = 'new_signing_key'),
-          (SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
+            SELECT name,value FROM unnest(props.props) AS props
+            WHERE name = 'new_signing_key'
+          ) AS prop),
+          (SELECT trim(both '"' FROM prop.value::TEXT) AS signing_key
           FROM (
-            SELECT (hive.extract_set_witness_properties(REPLACE(json_agg(jsonb_build_array(name, value))::TEXT, '\\x', ''))).*
-            FROM unnest(props.props) AS props
-          ) prop
-            WHERE prop_name = 'key')) AS signing_key
+            SELECT name,value FROM unnest(props.props) AS props
+            WHERE name = 'key'
+          ) AS prop)
+        ) signing_key
       ) sp
       WHERE signing_key IS NOT NULL
     ) p
