@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(_operations INT, _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT, _key_content TEXT[], _setof_keys JSON)
-RETURNS SETOF INT
+RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -10,6 +10,7 @@ IF _account IS NULL THEN
   RETURN QUERY EXECUTE format(
 
     $query$
+    WITH operation_range AS (
     SELECT DISTINCT o.block_num FROM hive.operations_view o
     WHERE 
       o.op_type_id = %L
@@ -27,7 +28,10 @@ IF _account IS NULL THEN
       TRUE
       END)
     ORDER BY o.block_num %s
-    LIMIT %L
+    LIMIT %L)
+    
+    SELECT block_num, ARRAY(SELECT %L::smallint) FROM operation_range
+    ORDER BY block_num %s
     $query$, 
 
   _operations,
@@ -39,7 +43,9 @@ IF _account IS NULL THEN
   _key_content[3],
   ARRAY(SELECT json_array_elements_text(_setof_keys->2)), _key_content[3], 
   _order_is, 
-  _limit) res
+  _limit,
+  _operations,
+  _order_is) res
   ;
 
 ELSE
@@ -61,8 +67,9 @@ ELSE
 
       unnest_ops AS MATERIALIZED (
       SELECT unnest(operation_id) AS operation_id
-      FROM source_ops)
+      FROM source_ops),
 
+      operation_range AS (
       SELECT DISTINCT o.block_num
       FROM hive.operations_view o
       JOIN unnest_ops s on s.operation_id = o.id
@@ -81,7 +88,10 @@ ELSE
         END) AND
         o.op_type_id = %L
       ORDER BY o.block_num %s
-      LIMIT %L
+      LIMIT %L)
+
+      SELECT block_num, ARRAY(SELECT %L::smallint) FROM operation_range
+      ORDER BY block_num %s
       $query$, 
 
     _account, 
@@ -96,7 +106,9 @@ ELSE
     ARRAY(SELECT json_array_elements_text(_setof_keys->2)), _key_content[3],
     _operations, 
     _order_is, 
-    _limit)
+    _limit,
+    _operations,
+    _order_is)
     ;
 
 END IF;
@@ -104,73 +116,9 @@ END
 $$
 ;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_op_type_id(_operations INT[], _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT)
-RETURNS SETOF hafbe_types.get_block_by_ops_group_by_op_type_id
-LANGUAGE 'plpgsql' STABLE
-AS
-$$
-BEGIN
-IF _account IS NULL THEN
-
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    SELECT 
-      u.op_type_id, 
-      (WITH disc_num AS (
-      SELECT DISTINCT block_num FROM hive.operations_view 
-      WHERE op_type_id = u.op_type_id
-      AND block_num BETWEEN %L AND %L
-      GROUP BY block_num
-      ORDER BY block_num %s
-      LIMIT %L)
-
-    SELECT array_agg(block_num) as block_nums FROM disc_num) AS block_nums
-    FROM UNNEST(%L::smallint[]) AS u(op_type_id)
-    $query$, 
-
-  _from, _to, 
-  _order_is, 
-  _limit, 
-  _operations) res
-  ;
-
-ELSE
-
-  RETURN QUERY EXECUTE format(
-    $query$
-    WITH source_account_id AS MATERIALIZED (
-    SELECT a.id from hive.accounts_view a where a.name = %L)
-
-    SELECT 
-      u.op_type_id, 
-      (WITH disc_num AS (
-        SELECT DISTINCT block_num 
-        FROM hive.account_operations_view 
-        WHERE op_type_id = u.op_type_id
-        AND block_num BETWEEN %L AND %L 
-        AND account_id = (SELECT id FROM source_account_id)
-        GROUP BY block_num
-        ORDER BY block_num %s
-        LIMIT %L)
-    SELECT array_agg(block_num) as block_nums FROM disc_num) AS block_nums
-    FROM UNNEST(%L::smallint[]) AS u(op_type_id)
-    $query$, 
-
-  _account,  
-  _from, _to, 
-  _order_is,  
-  _limit,
-  _operations)
-  ;
-
-END IF;
-END
-$$
-;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(_operations INT[], _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT)
-RETURNS SETOF hafbe_types.get_block_by_ops_group_by_block_num
+RETURNS SETOF hafbe_types.get_block_by_ops
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
