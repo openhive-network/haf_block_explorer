@@ -71,16 +71,14 @@ RETURN QUERY EXECUTE format(
   JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
-  ORDER BY ls.operation_id DESC),
+  ORDER BY ls.operation_id DESC)
 
-filter_ops AS MATERIALIZED (
-  SELECT o.id, f.body, f.is_modified
-  FROM operation_range o, hafbe_backend.operation_body_filter(o.body, o.id, %L) AS f
-)
-SELECT o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o_filter.body, o.is_virtual, o.timestamp, o.age, o_filter.is_modified 
-FROM operation_range o
-JOIN filter_ops o_filter ON o_filter.id = o.id
-ORDER BY o.id;
+  SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
+  FROM (
+  SELECT hafbe_backend.operation_body_filter(o.body, o.id,%L) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
+  FROM operation_range o 
+  ) s
+  ORDER BY s.id;
 
   $query$,
   __account_id,
@@ -134,15 +132,14 @@ WITH operation_range AS MATERIALIZED (
   ) ls
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
-  ORDER BY ls.id DESC),
-filter_ops AS MATERIALIZED (
-  SELECT o.id, f.body, f.is_modified
-  FROM operation_range o, hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) AS f
-)
-SELECT o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o_filter.body, o.is_virtual, o.timestamp, o.age, o_filter.is_modified 
-FROM operation_range o
-JOIN filter_ops o_filter ON o_filter.id = o.id
-ORDER BY o.id;
+  ORDER BY ls.id DESC)
+
+  SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
+  FROM (
+  SELECT hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
+  FROM operation_range o 
+  ) s
+  ORDER BY s.id;
 
 END
 $$
