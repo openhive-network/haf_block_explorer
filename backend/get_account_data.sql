@@ -150,22 +150,5 @@ END
 $$
 ;
 
--- ACCOUNT KEYAUTHS
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_keyauth(_account TEXT)
-RETURNS SETOF hafbe_backend.account_keyauth
-LANGUAGE 'plpgsql'
-STABLE
-AS
-$$
-BEGIN
-RETURN QUERY SELECT key_auth, authority_kind 
-FROM hive.hafbe_app_keyauth 
-WHERE account_name= _account 
-ORDER BY authority_kind ASC
-;
-
-END
-$$
-;
 
 RESET ROLE;

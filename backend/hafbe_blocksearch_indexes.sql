@@ -1,7 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-SET ROLE hafbe_owner;
-
 CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hive.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author') gin_trgm_ops,
@@ -91,6 +89,3 @@ WHERE op_type_id + 1 IN (1,2,18,20,52,54,62,64,73,74);
 --SELECT * FROM hafbe_endpoints.get_operation_keys(44) creator permlink??
 --SELECT * FROM hafbe_endpoints.get_operation_keys(47) creator permlink??
 --SELECT * FROM hafbe_endpoints.get_operation_keys(52) comment_author, comment_permlink
-
-
-RESET ROLE;

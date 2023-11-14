@@ -74,13 +74,6 @@ CREATE TYPE hafbe_backend.json_metadata AS
   posting_json_metadata TEXT
 );
 
-DROP TYPE IF EXISTS hafbe_backend.account_keyauth CASCADE;
-CREATE TYPE hafbe_backend.account_keyauth AS
-(
-  key_auth TEXT,
-  authority_kind hive.authority_type
-);
-
 DROP TYPE IF EXISTS hafbe_backend.operation_body_filter_result CASCADE;
 CREATE TYPE hafbe_backend.operation_body_filter_result AS (
     body JSONB,
