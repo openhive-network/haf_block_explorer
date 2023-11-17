@@ -6,15 +6,15 @@ set -o pipefail
 
 print_help () {
 cat <<EOF
-    Usage: $0 [OPTION[=VALUE]]...
+  Usage: $0 [OPTION[=VALUE]]...
 
-    Processes blocks using Haf Block Explorer
-    OPTIONS:
-      --host=HOST             PostgreSQL host (defaults to localhost)
-      --port=PORT             PostgreSQL operating port (defaults to 5432)
-      --user=USER             PostgreSQL username (defaults to hafbe_owner)
-      --limit=LIMIT           Max number of blocks to process (0 for infinite, defaults to 0)
-      --log-file              Log file location (defaults to hafbe_sync.log, set to 'STDOUT' to log to STDOUT only)
+  Processes blocks using Haf Block Explorer
+  OPTIONS:
+    --host=HOST             PostgreSQL host (defaults to localhost)
+    --port=PORT             PostgreSQL operating port (defaults to 5432)
+    --user=USER             PostgreSQL username (defaults to hafbe_owner)
+    --limit=LIMIT           Max number of blocks to process (0 for infinite, defaults to 0)
+    --log-file              Log file location (defaults to hafbe_sync.log, set to 'STDOUT' to log to STDOUT only)
 EOF
 }
 
@@ -41,7 +41,7 @@ while [ $# -gt 0 ]; do
     --log-file=*)
         LOG_FILE="${1#*=}"
         ;;
-    --help)
+    --help|-h|-?)
         print_help
         exit 0
         ;;

@@ -1,7 +1,15 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(_operations INT, _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT, _key_content TEXT[], _setof_keys JSON)
-RETURNS SETOF hafbe_types.get_block_by_ops
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(
+    _operations INT,
+    _account TEXT,
+    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _from INT, _to INT,
+    _limit INT,
+    _key_content TEXT [],
+    _setof_keys JSON
+)
+RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -113,12 +121,18 @@ ELSE
 
 END IF;
 END
-$$
-;
+$$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(_operations INT[], _account TEXT, _order_is hafbe_types.order_is, _from INT, _to INT, _limit INT)
-RETURNS SETOF hafbe_types.get_block_by_ops
+CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(
+    _operations INT [],
+    _account TEXT,
+    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _from INT,
+    _to INT,
+    _limit INT
+)
+RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -204,7 +218,6 @@ ELSE
 
 END IF;
 END
-$$
-;
+$$;
 
 RESET ROLE;

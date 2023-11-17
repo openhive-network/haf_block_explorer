@@ -44,8 +44,7 @@ LANGUAGE 'plpgsql' VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
-SET cursor_tuple_fraction='0.9'
-;
+SET cursor_tuple_fraction = '0.9';
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_b(_from INT, _to INT)
 RETURNS VOID
@@ -310,8 +309,7 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
-SET cursor_tuple_fraction='0.9'
-;
+SET cursor_tuple_fraction = '0.9';
 
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_c(_from INT, _to INT)
@@ -454,8 +452,7 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
-set enable_hashjoin= OFF
-SET cursor_tuple_fraction='0.9'
-;
+SET enable_hashjoin = OFF
+SET cursor_tuple_fraction = '0.9';
 
 RESET ROLE;

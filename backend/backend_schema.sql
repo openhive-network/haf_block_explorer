@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS hafbe_backend.differing_accounts (
 EXCEPTION WHEN duplicate_schema THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

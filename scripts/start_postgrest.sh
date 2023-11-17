@@ -7,16 +7,20 @@ POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="hafbe_owner"
 WEBSERVER_PORT=3000
+ADMIN_PORT=3001
 
 print_help () {
-    echo "Usage: $0 [OPTION[=VALUE]]..."
-    echo
-    echo "Allows to setup a database already filled by HAF instance, to work with haf_be application."
-    echo "OPTIONS:"
-    echo "  --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)"
-    echo "  --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)"
-    echo "  --webserver_port=VALUE   Allows to specify a postgrest port (defaults to 3000)"
+cat <<EOF
+  Usage: $0 [OPTION[=VALUE]]...
+
+  Starts up a PostgREST server.
+  OPTIONS:
+    --host=VALUE             PostgreSQL host location (defaults to localhost)
+    --port=NUMBER            PostgreSQL operating port (defaults to 5432)
+    --user=VALUE             PostgreSQL user (defaults to haf_admin)
+    --webserver-port=VALUE   PostgREST port (defaults to 3000)
+    --admin-port=VALUE       PostgREST admin port (defaults to 3001)
+EOF
 }
 
 while [ $# -gt 0 ]; do
@@ -30,10 +34,13 @@ while [ $# -gt 0 ]; do
     --user=*)
         POSTGRES_USER="${1#*=}"
         ;;
-    --webserver_port=*)
+    --webserver_port|--webserver-port=*)
         WEBSERVER_PORT="${1#*=}"
         ;;
-    --help)
+    --admin_port|--admin-port=*)
+        ADMIN_PORT="${1#*=}"
+        ;;
+    --help|-h|-?)
         print_help
         exit 0
         ;;
@@ -53,15 +60,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
-
 start_webserver() { 
     export PGRST_DB_URI="postgres://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
-    export PGRST_DB_SCHEMA="hafbe_endpoints"
-    export PGRST_DB_ANON_ROLE="hafbe_user"
     export PGRST_SERVER_PORT=$WEBSERVER_PORT
+    export PGRST_ADMIN_SERVER_PORT=$ADMIN_PORT
 
-    postgrest
+    postgrest postgrest.conf
 }
 
 start_webserver

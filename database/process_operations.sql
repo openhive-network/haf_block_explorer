@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_operation(_body jsonb, _timestamp TIMESTAMP, _op_type INT)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_create_account_operation(_body jsonb, _timestamp timestamp, _op_type int)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -46,11 +46,10 @@ insert_created_accounts AS (
 
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_pow_operation(_body jsonb, _timestamp TIMESTAMP, _op_type INT)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_pow_operation(_body jsonb, _timestamp timestamp, _op_type int)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -80,11 +79,10 @@ WITH pow_operation AS (
   DO NOTHING
 ;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_changed_recovery_account_operation(_body jsonb)
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -109,11 +107,10 @@ WITH changed_recovery_account_operation AS (
     recovery_account = EXCLUDED.recovery_account;
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_recover_account_operation(_body jsonb, _timestamp TIMESTAMP)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_recover_account_operation(_body jsonb, _timestamp timestamp)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -138,11 +135,10 @@ WITH recover_account_operation AS (
     last_account_recovery = EXCLUDED.last_account_recovery;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_decline_voting_rights_operation(_body jsonb)
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -167,11 +163,10 @@ WITH decline_voting_rights_operation AS (
     can_vote = EXCLUDED.can_vote;
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_comment_operation(_body jsonb, _timestamp TIMESTAMP)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_comment_operation(_body jsonb, _timestamp timestamp)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -220,12 +215,11 @@ ELSE
 END IF;
 
 END
-$$
-;
+$$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_vote_operation(_body jsonb, _timestamp TIMESTAMP)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_vote_operation(_body jsonb, _timestamp timestamp)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -245,12 +239,11 @@ BEGIN
       last_vote_time = EXCLUDED.last_vote_time;
 
 END
-$$
-;
+$$;
 
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_vote_op(_body jsonb, _timestamp timestamp)
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -284,11 +277,10 @@ DELETE FROM hafbe_app.current_witness_votes cwv USING (
 WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.process_proxy_ops(_body jsonb, _timestamp timestamp, _op_type INT)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION hafbe_app.process_proxy_ops(_body jsonb, _timestamp timestamp, _op_type int)
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -336,11 +328,10 @@ WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_expired_accounts(_body jsonb)
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
@@ -363,7 +354,6 @@ DELETE FROM hafbe_app.current_witness_votes cap USING (
 WHERE cap.voter_id = spoo.account_id;
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

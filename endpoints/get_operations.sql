@@ -1,12 +1,20 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(_account TEXT, _page_num INT = 1, _limit INT = 100, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _date_start TIMESTAMP = NULL, _date_end TIMESTAMP = NULL, _body_limit INT = 2147483647)
-RETURNS SETOF hafbe_types.operation
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
+    _account TEXT,
+    _page_num INT = 1,
+    _limit INT = 100,
+    _filter SMALLINT [] = ARRAY[]::SMALLINT [],
+    _date_start TIMESTAMP = NULL,
+    _date_end TIMESTAMP = NULL,
+    _body_limit INT = 2147483647
+)
+RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 COST 10000
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 DECLARE
@@ -93,15 +101,20 @@ RETURN QUERY EXECUTE format(
 ;
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(_block_num INT, _top_op_id BIGINT = 9223372036854775807, _limit INT = 1000, _filter SMALLINT[] = ARRAY[]::SMALLINT[], _body_limit INT = 2147483647)
-RETURNS SETOF hafbe_types.operation
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(
+    _block_num INT,
+    _top_op_id BIGINT = 9223372036854775807,
+    _limit INT = 1000,
+    _filter SMALLINT [] = ARRAY[]::SMALLINT [],
+    _body_limit INT = 2147483647
+)
+RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 DECLARE
@@ -142,11 +155,10 @@ WITH operation_range AS MATERIALIZED (
   ORDER BY s.id;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation(_operation_id INT)
-RETURNS hafbe_types.operation
+RETURNS hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -171,17 +183,17 @@ RETURN (
 );
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(_op_type_id INT)
-RETURNS SETOF TEXT[]
+RETURNS SETOF TEXT []
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 SET enable_bitmapscan = OFF
---enable_bitmapscan = OFF helps with perfomance on database with smaller number of blocks (tested od 12m blocks, planner choses wrong plan and the query is slow)
+-- enable_bitmapscan = OFF helps with perfomance on database with smaller number of blocks 
+-- (tested od 12m blocks, planner choses wrong plan and the query is slow)
 AS
 $$
 DECLARE
@@ -210,8 +222,7 @@ WHERE
 ;
 
 END
-$$
-;
+$$;
 
 
 RESET ROLE;

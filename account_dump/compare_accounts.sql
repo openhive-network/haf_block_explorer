@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.compare_accounts()
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql'
 VOLATILE
 AS
@@ -42,11 +42,10 @@ WHERE
   OR account_balances.last_vote_time != _current_account_stats.last_vote_time
   OR account_balances.post_count <> _current_account_stats.post_count;
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.compare_differing_account(_account TEXT)
-RETURNS SETOF hafbe_backend.account_type
+CREATE OR REPLACE FUNCTION hafbe_backend.compare_differing_account(_account text)
+RETURNS SETOF hafbe_backend.account_type -- noqa: LT01
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -68,7 +67,6 @@ BEGIN
 SELECT * FROM hafbe_backend.get_account_setof(_account);
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

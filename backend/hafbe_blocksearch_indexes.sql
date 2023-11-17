@@ -16,14 +16,14 @@ CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hive.operatio
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'voter') gin_trgm_ops,
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'weight') gin_trgm_ops
 )
-WHERE op_type_id = ANY(ARRAY[0,72]);
+WHERE op_type_id = any(ARRAY[0, 72]);
 
 CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hive.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author') gin_trgm_ops,
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink') gin_trgm_ops
 )
-WHERE op_type_id = ANY(ARRAY[17,73]);
+WHERE op_type_id = any(ARRAY[17, 73]);
 
 
 CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hive.operations USING gin

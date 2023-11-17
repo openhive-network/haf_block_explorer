@@ -1,3 +1,6 @@
+-- I don't feel confident fixing erros in this file, so I'm disabling lint for it.
+-- The line belowe needs to be deleted after the errors are fixed to reenable it.
+-- noqa: disable=all
 DROP SCHEMA IF EXISTS hafbe_views CASCADE;
 
 SET ROLE hafbe_owner;

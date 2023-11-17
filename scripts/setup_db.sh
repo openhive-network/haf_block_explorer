@@ -10,11 +10,11 @@ print_help () {
 cat <<EOF
   Usage: $0 [OPTION[=VALUE]]...
 
-  Allows to setup a database already filled by HAF instance, to work with haf_be application.
+  Sets up a database, already filled by HAF instance, to work with haf_be application.
   OPTIONS:
-    --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)
-    --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)
-    --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)
+    --host=VALUE             PostgreSQL host location (defaults to localhost)
+    --port=NUMBER            PostgreSQL operating port (defaults to 5432)
+    --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
 }
 
@@ -26,7 +26,7 @@ while [ $# -gt 0 ]; do
     --port=*)
         POSTGRES_PORT="${1#*=}"
         ;;
-    --help)
+    --help|-h|-?)
         print_help
         exit 0
         ;;

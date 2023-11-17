@@ -80,7 +80,6 @@ BEGIN
     RETURN hafbe_exceptions.raise_unknown_input_exception(_input);
   END IF;
 END
-$$
-;
+$$;
 
 RESET ROLE;

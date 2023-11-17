@@ -11,8 +11,7 @@ RETURN id FROM hive.accounts_view WHERE name = _account
 ;
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT PROFILE PICTURE
 CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(json_metadata TEXT, posting_json_metadata TEXT)
@@ -41,12 +40,11 @@ RETURN __profile_image_url
 ;
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT POST DATES
 CREATE OR REPLACE FUNCTION hafbe_backend.get_last_post_vote_time(_account INT)
-RETURNS hafbe_backend.last_post_vote_time
+RETURNS hafbe_backend.last_post_vote_time -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -58,8 +56,7 @@ WHERE account= _account
 );
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT POST COUNT
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
@@ -75,8 +72,7 @@ WHERE account_id = _account ORDER BY account_op_seq_no DESC LIMIT 1
 ;
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT PROXY
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
@@ -93,12 +89,11 @@ WHERE o.account_id = _account
 ;
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT PARAMETERS
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_parameters(_account INT)
-RETURNS hafbe_backend.account_parameters
+RETURNS hafbe_backend.account_parameters -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -109,12 +104,11 @@ FROM hafbe_app.account_parameters WHERE account= _account
 );
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT VOTES
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_votes(_account INT)
-RETURNS hafbe_backend.account_votes
+RETURNS hafbe_backend.account_votes -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -128,12 +122,11 @@ FROM hafbe_views.current_witness_votes_view WHERE account= _account
 );
 
 END
-$$
-;
+$$;
 
 -- ACCOUNT METADATA
 CREATE OR REPLACE FUNCTION hafbe_backend.get_json_metadata(_account INT)
-RETURNS hafbe_backend.json_metadata
+RETURNS hafbe_backend.json_metadata -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -147,8 +140,7 @@ WHERE account_id= _account
 );
 
 END
-$$
-;
+$$;
 
 
 RESET ROLE;

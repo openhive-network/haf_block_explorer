@@ -13,7 +13,7 @@ install_postgrest() {
   sudo apt-get install -y wget curl jq xz-utils
 
   local postgrest_url
-  postgrest_url="$(curl https://api.github.com/repos/PostgREST/postgrest/releases/$postgrest_v | jq -r '.assets[] | select (.name | contains("linux-static-x64")) | .browser_download_url')"
+  postgrest_url="$(curl "https://api.github.com/repos/PostgREST/postgrest/releases/$postgrest_v" | jq -r '.assets[] | select (.name | contains("linux-static-x64")) | .browser_download_url')"
   local postgrest_archive="postgrest-linux-static-x64.tar.xz"
   wget "$postgrest_url" -O "$postgrest_archive"
 
@@ -58,15 +58,15 @@ EOF
 
 print_help () {
 cat <<EOF 
-Usage: $0 [OPTION[=VALUE]]...
+  Usage: $0 [OPTION[=VALUE]]...
 
-Allows to setup a database already filled by HAF instance, to work with haf_be application.
-OPTIONS:
-  --install-all       Install all dependencies
-  --install-utilities Install utilities
-  --install-postgrest Install PostgREST
-  --install-python    Install Python
-  --install-jmeter    Install Jmeter
+  Installs dependencies
+  OPTIONS:
+    --install-all       Install all dependencies
+    --install-utilities Install utilities
+    --install-postgrest Install PostgREST
+    --install-python    Install Python
+    --install-jmeter    Install Jmeter
 EOF
 }
 
@@ -98,7 +98,7 @@ while [ $# -gt 0 ]; do
         sudo apt-get update
         install_jmeter $jmeter_v
         ;;
-    --help)
+    --help|-h|-?)
         print_help
         exit 0
         ;;

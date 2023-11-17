@@ -10,15 +10,14 @@ RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block(_block_num INT)
-RETURNS hafbe_types.block
+RETURNS hafbe_types.block -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 BEGIN
@@ -48,8 +47,7 @@ WHERE num = _block_num
 );
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_time(_timestamp TIMESTAMP)
 RETURNS INT
@@ -62,15 +60,14 @@ FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '2 seco
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(_limit INT = 10)
-RETURNS SETOF hafbe_types.get_latest_blocks
+RETURNS SETOF hafbe_types.get_latest_blocks -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 BEGIN
@@ -102,31 +99,41 @@ RETURN QUERY
 ;
 
 END
-$$                            
-;
+$$;
 
 /*
-
 EXAMPLE USAGES
 
 SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], NULL, 'desc', 0, 2147483647, 100)
 
-SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], 'gtg', 'desc', 0, 2147483647, 100)
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[0,2,8,32,84,27,83,23,43,65,29,68], 'gtg',
+    'desc', 0, 2147483647, 100)
 
 
-SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc',0, 2147483647, 100, ARRAY['abit'], '[["value", "author"]]')
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc',0, 2147483647, 100, ARRAY['abit'],
+    '[["value", "author"]]')
 
-SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc',0, 2147483647, 100, ARRAY['blocktrades'], '[["value", "author"]]')
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[1], 'gtg', 'desc',0, 2147483647, 100, ARRAY['blocktrades'],
+    '[["value", "author"]]')
 
-SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[51], NULL, 'desc', 0, 2147483647, 100, ARRAY['gtg'], '[["value", "author"]]')
+SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[51], NULL, 'desc', 0, 2147483647, 100, ARRAY['gtg'],
+    '[["value", "author"]]')
 
 SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[68], NULL, 'desc', 0, 2147483647, 100)
 */
 
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(_operations INT[], _account TEXT = NULL, _order_is hafbe_types.order_is = 'desc',
- _from INT = 0, _to INT = 2147483647, _limit INT = 100, _key_content TEXT[] = NULL, _setof_keys JSON = NULL)
-RETURNS SETOF hafbe_types.get_block_by_ops
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
+    _operations INT [],
+    _account TEXT = NULL,
+    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
+    _from INT = 0,
+    _to INT = 2147483647,
+    _limit INT = 100,
+    _key_content TEXT [] = NULL,
+    _setof_keys JSON = NULL
+)
+RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -158,7 +165,6 @@ ELSE
 
 END IF;
 END
-$$
-;
+$$;
 
 RESET ROLE;

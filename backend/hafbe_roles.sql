@@ -38,4 +38,3 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
 GRANT INSERT, UPDATE ON hafbe_app.hived_account_cache, hafbe_app.hived_account_resource_credits_cache TO hafbe_user;
 
 GRANT hafbe_user TO hafbe_owner;
-

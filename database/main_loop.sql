@@ -3,7 +3,8 @@ SET ROLE hafbe_owner;
 /** Application entry point, which:
   - defines its data schema,
   - creates HAF application context,
-  - starts application main-loop (which iterates infinitely). To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
+  - starts application main-loop (which iterates infinitely).
+    To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
 CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _appContext_btracker VARCHAR, _maxBlockLimit INT = NULL)
 LANGUAGE 'plpgsql'
@@ -86,7 +87,6 @@ BEGIN
 
   COMMIT;
 END
-$$
-;
+$$;
 
 RESET ROLE;

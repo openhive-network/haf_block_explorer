@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
-RETURNS hafbe_types.get_transaction
+RETURNS hafbe_types.get_transaction -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -18,7 +18,6 @@ JOIN hive.blocks_view hbv ON hbv.num = (transaction_json->>'block_num')::INT
 );
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.dump_current_account_stats(account_data jsonb)
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql'
 VOLATILE
 AS
@@ -23,27 +23,26 @@ SELECT
     (account_data->>'last_vote_time')::TIMESTAMP AS last_vote_time,
     (account_data->>'post_count')::BIGINT AS post_count; 
 END
-$$
-;
+$$;
 
-DROP TYPE IF EXISTS hafbe_backend.account_type CASCADE;
+DROP TYPE IF EXISTS hafbe_backend.account_type CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_type AS
 (
-  name TEXT,
-  witnesses_voted_for INT,
-  can_vote BOOLEAN,
-  mined BOOLEAN,
-  last_account_recovery TIMESTAMP,
-  created TIMESTAMP,
-  proxy TEXT,
-  last_post TIMESTAMP,
-  last_root_post TIMESTAMP,
-  last_vote_time TIMESTAMP,
-  post_count INT
+    name TEXT,
+    witnesses_voted_for INT,
+    can_vote BOOLEAN,
+    mined BOOLEAN,
+    last_account_recovery TIMESTAMP,
+    created TIMESTAMP,
+    proxy TEXT,
+    last_post TIMESTAMP,
+    last_root_post TIMESTAMP,
+    last_vote_time TIMESTAMP,
+    post_count INT
 );
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_setof(_account TEXT)
-RETURNS hafbe_backend.account_type
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_setof(_account text)
+RETURNS hafbe_backend.account_type -- noqa: LT01
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -77,7 +76,6 @@ BEGIN
 
   RETURN __result;
 END
-$$
-;
+$$;
 
 RESET ROLE;

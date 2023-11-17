@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.operation_body_filter(_body JSONB, _op_id BIGINT, _body_limit INT = 2147483647) 
-RETURNS hafbe_backend.operation_body_filter_result
+CREATE OR REPLACE FUNCTION hafbe_backend.operation_body_filter(_body JSONB, _op_id BIGINT, _body_limit INT = 2147483647)
+RETURNS hafbe_backend.operation_body_filter_result -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS

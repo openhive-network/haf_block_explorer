@@ -1,4 +1,3 @@
-
 SET ROLE hafbe_owner;
 
 --- Helper function telling application main-loop to continue execution.
@@ -10,8 +9,7 @@ $$
 BEGIN
   RETURN continue_processing FROM hafbe_app.app_status LIMIT 1;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.allowProcessing()
 RETURNS VOID
@@ -21,10 +19,10 @@ $$
 BEGIN
   UPDATE hafbe_app.app_status SET continue_processing = True;
 END
-$$
-;
+$$;
 
---- Helper function to be called from separate transaction (must be committed) to safely stop execution of the application.
+--- Helper function to be called from separate transaction (must be committed) 
+--- to safely stop execution of the application.
 CREATE OR REPLACE FUNCTION hafbe_app.stopProcessing()
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
@@ -33,8 +31,7 @@ $$
 BEGIN
   UPDATE hafbe_app.app_status SET continue_processing = False;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.storeLastProcessedBlock(_lastBlock INT)
 RETURNS VOID
@@ -44,8 +41,7 @@ $$
 BEGIN
   UPDATE hafbe_app.app_status SET last_processed_block = _lastBlock;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.lastProcessedBlock()
 RETURNS INT
@@ -55,8 +51,7 @@ $$
 BEGIN
   RETURN last_processed_block FROM hafbe_app.app_status LIMIT 1;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE PROCEDURE hafbe_app.processBlock(_block INT, _appContext VARCHAR)
 LANGUAGE 'plpgsql'
@@ -97,8 +92,7 @@ BEGIN
 
   COMMIT; -- For single block processing we want to commit all changes for each one.
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE PROCEDURE hafbe_app.create_context_if_not_exists(_appContext VARCHAR)
 LANGUAGE 'plpgsql'
@@ -111,8 +105,7 @@ BEGIN
     COMMIT;
   END IF;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE PROCEDURE hafbe_app.update_witnesses_cache()
 AS
@@ -177,9 +170,8 @@ BEGIN
 END
 $function$
 LANGUAGE 'plpgsql'
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-;
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16;
 
 RESET ROLE;

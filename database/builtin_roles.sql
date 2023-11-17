@@ -11,5 +11,5 @@ $$;
 
 GRANT btracker_owner TO hafbe_owner;
 GRANT btracker_user TO hafbe_owner;
-GRANT hafbe_user to hafbe_owner;
+GRANT hafbe_user TO hafbe_owner;
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;

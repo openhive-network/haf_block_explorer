@@ -10,12 +10,16 @@ DECLARE
 BEGIN
   RETURN COUNT(1) FROM hafbe_app.current_witness_votes WHERE witness_id = _witness_id;
 END
-$$
-;
+$$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(_witness TEXT, _order_by hafbe_types.order_by_votes = 'vests', _order_is hafbe_types.order_is = 'desc', _limit INT = 2147483647)
-RETURNS SETOF hafbe_types.witness_voters
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
+    _witness TEXT,
+    _order_by hafbe_types.order_by_votes = 'vests', -- noqa: LT01, CP05
+    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
+    _limit INT = 2147483647
+)
+RETURNS SETOF hafbe_types.witness_voters -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET from_collapse_limit = 16
@@ -65,12 +69,17 @@ RETURN QUERY EXECUTE format(
 ) res;
 
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(_witness TEXT, _order_by hafbe_types.order_by_votes = 'timestamp', _order_is hafbe_types.order_is = 'desc', 
-  _limit INT = 100, _from_time TIMESTAMP='1970-01-01T00:00:00'::TIMESTAMP, _to_time TIMESTAMP=NOW())
-RETURNS SETOF hafbe_types.witness_votes_history
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
+    _witness TEXT,
+    _order_by hafbe_types.order_by_votes = 'timestamp', -- noqa: LT01, CP05
+    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
+    _limit INT = 100,
+    _from_time TIMESTAMP = '1970-01-01T00:00:00'::TIMESTAMP,
+    _to_time TIMESTAMP = NOW()
+)
+RETURNS SETOF hafbe_types.witness_votes_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET from_collapse_limit = 16
@@ -115,11 +124,15 @@ RETURN QUERY EXECUTE format(
   _witness_id,_from_time, _to_time, _limit, _order_is, _order_by, _order_is, _order_by
 ) res;
 END
-$$
-;
+$$;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(_limit INT = 100, _offset INT = 0, _order_by hafbe_types.order_by_witness = 'votes', _order_is hafbe_types.order_is = 'desc')
-RETURNS SETOF hafbe_types.witness_setof
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
+    _limit INT = 100,
+    _offset INT = 0,
+    _order_by hafbe_types.order_by_witness = 'votes', -- noqa: LT01, CP05
+    _order_is hafbe_types.order_is = 'desc' -- noqa: LT01, CP05
+)
+RETURNS SETOF hafbe_types.witness_setof -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET from_collapse_limit = 16
@@ -191,11 +204,10 @@ get_block_num AS MATERIALIZED
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(_account TEXT)
-RETURNS hafbe_types.witness_setof
+RETURNS hafbe_types.witness_setof -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET from_collapse_limit = 16
@@ -241,7 +253,6 @@ LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witn
 );
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

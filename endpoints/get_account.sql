@@ -2,13 +2,13 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT) 
-RETURNS hafbe_types.account
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account text)
+RETURNS hafbe_types.account -- noqa: LT01
 LANGUAGE 'plpgsql'
 STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 DECLARE
@@ -130,7 +130,6 @@ FROM select_parameters_from_backend
 );
 
 END
-$$
-;
+$$;
 
 RESET ROLE;

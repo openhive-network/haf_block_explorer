@@ -16,8 +16,7 @@ BEGIN
 
   ANALYZE VERBOSE;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_btracker_indexes()
 RETURNS VOID
@@ -30,8 +29,7 @@ BEGIN
   
   ANALYZE VERBOSE;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_indexes.create_haf_indexes()
 RETURNS VOID
@@ -114,7 +112,6 @@ BEGIN
 
   ANALYZE VERBOSE;
 END
-$$
-;
+$$;
 
 RESET ROLE;

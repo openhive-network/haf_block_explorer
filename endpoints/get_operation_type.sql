@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_matching_operation_types(_operation_type_pattern TEXT)
-RETURNS SETOF hafbe_types.op_types
+RETURNS SETOF hafbe_types.op_types -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -16,11 +16,10 @@ ORDER BY id ASC
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_types()
-RETURNS SETOF hafbe_types.op_types
+RETURNS SETOF hafbe_types.op_types -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -32,15 +31,14 @@ ORDER BY id ASC
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_acc_op_types(_account TEXT)
-RETURNS SETOF hafbe_types.op_types
+RETURNS SETOF hafbe_types.op_types -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 DECLARE
@@ -59,15 +57,14 @@ JOIN hive.operation_types hot ON hot.id = cte.id
 ;
 
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_op_types(_block_num INT)
-RETURNS SETOF hafbe_types.op_types
+RETURNS SETOF hafbe_types.op_types -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
-SET JIT=OFF
-SET join_collapse_limit=16
-SET from_collapse_limit=16
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
 AS
 $$
 BEGIN
@@ -80,7 +77,6 @@ ORDER BY hov.op_type_id ASC
 ;
 
 END
-$$
-;
+$$;
 
 RESET ROLE;
