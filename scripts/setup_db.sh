@@ -5,6 +5,7 @@ set -euo pipefail
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
+BLOCKSEARCH_INDEXES=false
 
 print_help () {
 cat <<EOF
@@ -15,6 +16,8 @@ cat <<EOF
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
     --only-hafbe             Don't do setup for hafah, btracker, just the block explorer
+    --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
+
 EOF
 }
 
@@ -27,6 +30,9 @@ while [ $# -gt 0 ]; do
         ;;
     --port=*)
         POSTGRES_PORT="${1#*=}"
+        ;;
+    --blocksearch-indexes=*)
+        BLOCKSEARCH_INDEXES="${1#*=}"
         ;;
     --help|-h|-?)
         print_help
@@ -147,7 +153,6 @@ setup_api() {
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
@@ -166,3 +171,8 @@ fi
 
 setup_api
 create_haf_indexes
+
+if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
+  echo 'Creating blockseach indexes...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
+fi

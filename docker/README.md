@@ -86,6 +86,7 @@ The variables below are can be used to configure the Compose files.
 | PGHERO_PASSWORD                   | PgHero password (*db-tools* profile only)                                                                           | hyrule                                                                              |
 | PGADMIN_DEFAULT_EMAIL             | PgAdmin default email address (*db-tools* profile only)                                                             | [admin@hafblockexplorer.internal](admin@hafblockexplorer.internal)                  |
 | PGADMIN_DEFAULT_PASSWORD          | PgAdmin default password (*db-tools* profile only)                                                                  | admin                                                                               |
+| SETUP_OPTIONS=--blocksearch-indexes=true/false     | If true db sets up with block-search indexes (approx. 11h)     | false                                                                             |
 
 You can override them by editing the [.env](.env) file or by creating your own env file and instructing Docker Compose to use it instead of the default, eg.
 

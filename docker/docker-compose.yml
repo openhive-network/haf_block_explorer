@@ -34,10 +34,11 @@ services:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
     working_dir: /app
     command: 
-      - "./scripts/setup_db.sh"
+      - "./scripts/setup_db.sh $${SETUP_OPTIONS}"
     user: $SETUP_UID
     environment:
       POSTGRES_HOST: haf
+      SETUP_OPTIONS:
     volumes:
       - ../account_dump:/app/account_dump
       - ../endpoints:/app/endpoints
