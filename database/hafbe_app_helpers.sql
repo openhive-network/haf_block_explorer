@@ -86,7 +86,7 @@ BEGIN
   PERFORM hive.app_state_providers_update(_block, _block, _appContext);
   SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
 
-  INSERT INTO hafbe_app.sync_time_logs VALUES (_block, _time);
+  INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (_block, _time);
 
   PERFORM hafbe_app.storeLastProcessedBlock(_block);
 

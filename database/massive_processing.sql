@@ -54,7 +54,7 @@ BEGIN
 
     PERFORM hafbe_app.storeLastProcessedBlock(_last_block);
 
-    INSERT INTO hafbe_app.sync_time_logs VALUES (b, _time);
+    INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (b, _time);
 
     COMMIT;
 
