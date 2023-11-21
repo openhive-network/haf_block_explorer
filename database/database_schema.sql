@@ -195,7 +195,7 @@ BEGIN
     time_json JSONB NOT NULL,
 
     CONSTRAINT pk_massive_sync_time_logs PRIMARY KEY (block_num)
-  );
+  ) INHERITS (hive.hafbe_app);
 
 
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
