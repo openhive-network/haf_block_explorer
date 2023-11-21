@@ -197,7 +197,7 @@ SET enable_bitmapscan = OFF
 AS
 $$
 DECLARE
-	_example_key JSON := (SELECT o.body FROM hive.operations_view o WHERE o.op_type_id = _operation_id LIMIT 1);
+	_example_key JSON := (SELECT o.body FROM hive.operations_view o WHERE o.op_type_id = _op_type_id LIMIT 1);
 BEGIN
 RETURN QUERY
 WITH RECURSIVE extract_keys AS (

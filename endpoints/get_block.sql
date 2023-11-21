@@ -137,7 +137,7 @@ RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
-SET jit = OFF
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 BEGIN
