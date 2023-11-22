@@ -129,6 +129,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
     _from INT = 0,
     _to INT = 2147483647,
+    _start_date TIMESTAMP = NULL,
+    _end_date TIMESTAMP = NULL,
     _limit INT = 100,
     _key_content TEXT [] = NULL,
     _setof_keys JSON = NULL
@@ -151,6 +153,13 @@ IF _key_content IS NOT NULL THEN
 	  RAISE EXCEPTION 'Invalid key %', _setof_keys->i;
     END IF;
   END LOOP;
+END IF;
+
+IF _start_date IS NOT NULL THEN
+  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+END IF;
+IF _end_date IS NOT NULL THEN  
+  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 IF array_length(_operations, 1) = 1 THEN
