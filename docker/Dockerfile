@@ -20,7 +20,7 @@ COPY scripts/setup_db.sh /haf_block_explorer/scripts/setup_db.sh
 COPY scripts/process_blocks.sh /haf_block_explorer/scripts/process_blocks.sh
 COPY scripts/drop_db.sh /haf_block_explorer/scripts/drop_db.sh 
 COPY docker/docker_entrypoint.sh /haf_block_explorer/scripts/docker_entrypoint.sh 
-COPY set_version_in_sql.pgsql /haf_block_explorer/set_version_in_sql.pgsql
+COPY set_version_in_sql.pgsql /haf_block_explorer/scripts/set_version_in_sql.pgsql
 
 WORKDIR /haf_block_explorer/scripts
 
