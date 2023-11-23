@@ -93,11 +93,11 @@ setup_apps() {
   local git_hash
   git_hash=$(git --git-dir="$hafah_git_dir" --work-tree="$hafah_dir" rev-parse HEAD)
   echo "TRUNCATE TABLE hafah_python.version; INSERT INTO hafah_python.version(git_hash) VALUES ('$git_hash');" > "$path_to_sql_version_file"
-  ./scripts/setup_db.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
+  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
   pushd "$btracker_dir"
-  ./scripts/setup_db.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
+  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
   pushd "$hafbe_dir"
@@ -119,7 +119,7 @@ setup_api() {
 
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
-  #psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
+  # psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
   # setup backend schema

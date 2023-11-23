@@ -24,10 +24,10 @@ First set up its dependencies:
 Next, set up the database:
 
 ```bash
-./scripts/setup_db.sh
+./scripts/install_app.sh
 ```
 
-You can use `./scripts/setup_db.sh --help` to see available options.
+You can use `./scripts/install_app.sh --help` to see available options.
 
 ## Block processing
 
@@ -42,10 +42,10 @@ Again, you can use `./scripts/process_blocks.sh --help` to see available options
 If you want to destroy HAF Block Explorer database use:
 
 ```bash
-./scripts/drop_db.sh
+./scripts/uninstall_app.sh
 ```
 
-As before, use `./scripts/drop_db.sh --help` to see available options.
+As before, use `./scripts/uninstall_app.sh --help` to see available options.
 
 ## Startup
 

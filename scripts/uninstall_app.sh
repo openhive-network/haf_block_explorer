@@ -52,7 +52,7 @@ done
 
 POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
-drop_db() {
+uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('hafbe_app') THEN perform hive.app_remove_context('hafbe_app'); end if; END \$\$"
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
@@ -106,4 +106,4 @@ drop_db() {
 
 }
 
-drop_db
+uninstall_app
