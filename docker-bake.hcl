@@ -3,7 +3,7 @@ variable "CI_REGISTRY_IMAGE" {
     default = "registry.gitlab.syncad.com/hive/haf_block_explorer"
 }
 variable "TAG_CI" {
-  default = "docker-24.0.1-2"
+  default = "docker-24.0.1-3"
 }
 variable "PSQL_CLIENT_VERSION" {
   default = "14"

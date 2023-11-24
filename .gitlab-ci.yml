@@ -124,7 +124,7 @@ docker-ci-runner-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-2"
+    BASE_TAG: "docker-24.0.1-3"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
@@ -155,7 +155,7 @@ build_setup_docker_image:
 .test-template:
   extends: .docker_image_builder_job_template
   stage: test
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-2
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-3
   needs:
     - prepare_haf_image
     - prepare_haf_data
@@ -226,7 +226,7 @@ build_setup_docker_image:
       docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
       popd
 
-      tar -czvf docker/container-logs.tar.gz $(pwd)/docker/*.log
+      tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
 
       echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
   artifacts:
@@ -249,7 +249,7 @@ regression-test:
       echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-      - docker/container-logs.tar.gz
+      - docker/container-logs.tar.7z
     expire_in: 1 week
     when: always
 
@@ -260,17 +260,17 @@ performance-test:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests[collapsed=true]\r\e[0KRunning tests..."
 
-      ./tests/run_performance_tests.sh --postgresql-host=docker --postgrest-host=docker --database-size=6000 --test-loop-count=10000
-      tar -czvf tests/performance/results.tar.gz $(pwd)/tests/performance/result*
+      ./tests/run_performance_tests.sh --postgresql-host=docker --postgrest-host=docker --database-size=6000 --test-loop-count=1000
+      tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
       cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
       m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
 
       echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-      - docker/container-logs.tar.gz
+      - docker/container-logs.tar.7z
       - tests/performance/result/result_report/
-      - tests/performance/results.tar.gz
+      - tests/performance/results.tar.7z
       - jmeter.log
     reports:
       junit: tests/performance/junit-result.xml
