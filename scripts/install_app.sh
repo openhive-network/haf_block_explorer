@@ -85,14 +85,7 @@ EOF
 setup_apps() {
   pushd "$hafah_dir"
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  # Modern Git does not place submodule's .git directory inside the submodule, so
-  # HAfAH's generate_version_sql.bash script does not work
-  # when the proper path is provided
-  local path_to_sql_version_file="$hafah_dir/set_version_in_sql.pgsql"
-  local hafah_git_dir="$hafbe_dir/.git/modules/submodules/hafah"
-  local git_hash
-  git_hash=$(git --git-dir="$hafah_git_dir" --work-tree="$hafah_dir" rev-parse HEAD)
-  echo "TRUNCATE TABLE hafah_python.version; INSERT INTO hafah_python.version(git_hash) VALUES ('$git_hash');" > "$path_to_sql_version_file"
+  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"  
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 

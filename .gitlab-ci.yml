@@ -238,6 +238,7 @@ build_setup_docker_image:
 
 regression-test:
   extends: .test-template
+  timeout: 3 hours
   script:
     - !reference [.test-template, script]
     - |
