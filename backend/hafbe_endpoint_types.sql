@@ -153,4 +153,14 @@ CREATE TYPE hafbe_types.get_block_by_ops AS (
     op_type_id smallint []
 );
 
+DROP TYPE IF EXISTS hafbe_types.comment_history CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_types.comment_history AS (
+    permlink TEXT,
+    block_num INT,
+    operation_id BIGINT,
+    body JSONB,
+    is_modified BOOLEAN
+);
+
+
 RESET ROLE;
