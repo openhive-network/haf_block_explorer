@@ -11,11 +11,11 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
 )
 RETURNS JSON
 LANGUAGE 'plpgsql' STABLE
-SET join_collapse_limit=16
-SET from_collapse_limit=16
-SET JIT=OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+SET JIT = OFF
 SET enable_hashjoin = OFF
-SET plan_cache_mode=force_custom_plan
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 BEGIN
@@ -34,8 +34,7 @@ RETURN (
   ));
 
 END
-$$
-;
+$$;
 
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(

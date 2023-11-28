@@ -36,7 +36,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _filter INT [],
     _date_start TIMESTAMP,
     _date_end TIMESTAMP,
-    _body_limit INT 
+    _body_limit INT
 )
 RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -142,7 +142,7 @@ LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET enable_hashjoin = OFF
-SET JIT=OFF
+SET JIT = OFF
 AS
 $$
 BEGIN
