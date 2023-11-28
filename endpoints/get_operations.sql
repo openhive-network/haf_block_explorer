@@ -158,5 +158,56 @@ WHERE
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
+    _author TEXT,
+    _permlink TEXT = NULL,
+    _page_num INT = 1,
+    _operations INT [] = ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73],
+    _from INT = 0,
+    _to INT = 2147483647,
+    _start_date TIMESTAMP = NULL,
+    _end_date TIMESTAMP = NULL,
+    _body_limit INT = 2147483647
+)
+RETURNS JSON
+LANGUAGE 'plpgsql' STABLE
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+SET JIT = OFF
+SET enable_hashjoin = OFF
+SET plan_cache_mode = force_custom_plan
+AS
+$$
+DECLARE
+  allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73];
+BEGIN
+IF NOT _operations <@ allowed_ids THEN
+    RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
+END IF;
+
+IF _start_date IS NOT NULL THEN
+  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+END IF;
+IF _end_date IS NOT NULL THEN  
+  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+END IF;
+
+RETURN (
+  WITH ops_count AS MATERIALIZED (
+    SELECT * FROM hafbe_backend.get_comment_operations_count(_author, _permlink, _operations, _from, _to)
+  )
+
+  SELECT json_build_object(
+    'total_operations', (SELECT * FROM ops_count),
+    'total_pages', (SELECT * FROM ops_count)/100,
+    'operations_result', 
+    (SELECT to_json(array_agg(row)) FROM (
+      SELECT * FROM hafbe_backend.get_comment_operations(_author, _permlink, _page_num, _operations, _from, _to, _body_limit)
+    ) row)
+  ));
+
+END
+$$;
+
 
 RESET ROLE;
