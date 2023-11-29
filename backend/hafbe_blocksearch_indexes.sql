@@ -69,7 +69,7 @@ WHERE op_type_id = 72;
 ------------------------------------------
 
 
-CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hive.operations USING btree
 (
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
