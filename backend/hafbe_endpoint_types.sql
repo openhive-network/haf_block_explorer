@@ -158,6 +158,7 @@ CREATE TYPE hafbe_types.comment_history AS (
     permlink TEXT,
     block_num INT,
     operation_id BIGINT,
+    created_at TIMESTAMP,
     body JSONB,
     is_modified BOOLEAN
 );

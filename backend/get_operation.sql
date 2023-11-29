@@ -36,6 +36,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations(
 )
 RETURNS SETOF hafbe_types.comment_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
+SET enable_hashjoin = OFF
 AS
 $$
 DECLARE
@@ -45,7 +46,7 @@ BEGIN
   WITH operation_range AS MATERIALIZED (
   SELECT o.body_binary::jsonb->'value'->>'permlink' as permlink,
    o.body_binary::jsonb->'value'->>'author' as author,
-   o.block_num, o.id, o.body_binary::jsonb
+   o.block_num, o.id, o.body_binary::jsonb, o.timestamp
   FROM hive.operations_view o
   WHERE 
     o.block_num BETWEEN _from AND _to AND
@@ -58,9 +59,9 @@ BEGIN
   LIMIT 100
   OFFSET _offset)
 
-  SELECT s.permlink, s.block_num, s.id, (s.composite).body, (s.composite).is_modified
+  SELECT s.permlink, s.block_num, s.id, s.timestamp, (s.composite).body, (s.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(o.body_binary::jsonb, o.id, _body_limit) as composite, o.id, o.block_num, o.permlink, o.author
+  SELECT hafbe_backend.operation_body_filter(o.body_binary::jsonb, o.id, _body_limit) as composite, o.id, o.block_num, o.permlink, o.author, o.timestamp
   FROM operation_range o 
   ) s
   ORDER BY s.author, s.permlink, s.id;
