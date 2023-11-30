@@ -85,7 +85,7 @@ EOF
 setup_apps() {
   pushd "$hafah_dir"
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"  
+  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
@@ -145,7 +145,7 @@ setup_api() {
 
 create_haf_indexes() {
   echo "Creating indexes, this might take a while."
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_indexes.create_haf_indexes();"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$db_dir/create_haf_indexes.sql"
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
