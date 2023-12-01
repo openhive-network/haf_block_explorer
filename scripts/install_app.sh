@@ -144,8 +144,12 @@ setup_api() {
 }
 
 create_haf_indexes() {
-  echo "Creating indexes, this might take a while."
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$db_dir/create_haf_indexes.sql"
+  if [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_haf_indexes_exist();")" = f ]; then
+    echo "Creating indexes, this might take a while."
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$db_dir/create_haf_indexes.sql"
+  else
+    echo "HAF indexes already exist, skipping creation"
+  fi
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
