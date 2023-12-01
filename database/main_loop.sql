@@ -76,7 +76,9 @@ BEGIN
       UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
         PERFORM hafbe_indexes.create_hafbe_indexes();
         PERFORM hafbe_indexes.create_btracker_indexes();
-        ANALYZE VERBOSE;
+        -- we used to analyze the entire database here, but I'm not sure there's any reason to do so.
+        -- the autovacuum daemon does this for us whenever the table changes enough to warrant it.
+        -- ANALYZE VERBOSE;
       END IF;
 
   END IF;

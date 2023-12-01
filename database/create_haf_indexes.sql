@@ -1,3 +1,12 @@
+--  \ \    / /_\ | _ \ \| |_ _| \| |/ __|
+--   \ \/\/ / _ \|   / .` || || .` | (_ |
+--    \_/\_/_/ \_\_|_\_|\_|___|_|\_|\___|
+--
+-- this file is only executed at startup if the function hafbe_indexes.do_haf_indexes_exist()
+-- returns true.  This function has a list of the indexes created in this file, and returns
+-- true if they all exist.  If you add, remove, or rename an index created in this file, you
+-- must make a corresponding change in that function
+
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_hash ON hive.blocks_reversible USING btree (hash, fork_id);
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_hash ON hive.blocks USING btree (hash);
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
@@ -71,4 +80,5 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_pow2_operatio
 )
 WHERE op_type_id = 30;
 
-ANALYZE VERBOSE;
+-- When you create expression indexes, you need to call ANALYZE to force postgresql to generate statistics on those expressions
+ANALYZE VERBOSE hive.operations, hive.operations_reversible;

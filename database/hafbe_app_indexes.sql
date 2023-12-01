@@ -27,5 +27,34 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_indexes.do_haf_indexes_exist()
+RETURNS BOOLEAN
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+DECLARE __result BOOLEAN;
+BEGIN
+  select count(1) = 0 
+  into __result
+  from (values ('uq_hive_blocks_reversible_hash'),
+               ('uq_hive_blocks_hash'),
+               ('uq_hive_blocks_reversible_created_at'),
+               ('hive_operations_permlink_author'),
+               ('hive_operations_reversible_permlink_author'),
+               ('hive_operations_voter'),
+               ('hive_operations_reversible_voter'),
+               ('hive_operations_delete_permlink_author'),
+               ('hive_operations_reversible_delete_permlink_author'),
+               ('hive_operations_pow_operation'),
+               ('hive_operations_reversible_pow_operation'),
+               ('hive_operations_pow2_operation'),
+               ('hive_operations_reversible_pow2_operation'))
+       desired_indexes(indexname)
+  left join pg_indexes using (indexname)
+  where pg_indexes.indexname is null;
+  return __result;
+END
+$$;
+
 
 RESET ROLE;
