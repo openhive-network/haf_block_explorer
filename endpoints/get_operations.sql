@@ -3,7 +3,7 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,
     _page_num INT = 1,
-    _limit INT = 100,
+    _page_size INT = 100,
     _filter SMALLINT [] = NULL,
     _date_start TIMESTAMP = NULL,
     _date_end TIMESTAMP = NULL,
@@ -29,7 +29,7 @@ RETURN (
     'total_pages', (SELECT * FROM ops_count)/100,
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
-      SELECT * FROM hafbe_backend.get_ops_by_account(_account, _page_num, _limit, _filter, _date_start, _date_end, _body_limit)
+      SELECT * FROM hafbe_backend.get_ops_by_account(_account, _page_num, _page_size, _filter, _date_start, _date_end, _body_limit)
     ) row)
   ));
 
