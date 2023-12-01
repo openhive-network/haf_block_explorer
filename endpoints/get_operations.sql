@@ -162,7 +162,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     _author TEXT,
     _permlink TEXT = NULL,
     _page_num INT = 1,
-    _operations INT [] = ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73],
+    _page_size INT = 100,
+    _operation_types INT [] = ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73],
     _from INT = 0,
     _to INT = 2147483647,
     _start_date TIMESTAMP = NULL,
@@ -181,7 +182,7 @@ $$
 DECLARE
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73];
 BEGIN
-IF NOT _operations <@ allowed_ids THEN
+IF NOT _operation_types <@ allowed_ids THEN
     RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
 END IF;
 
@@ -194,7 +195,7 @@ END IF;
 
 RETURN (
   WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_comment_operations_count(_author, _permlink, _operations, _from, _to)
+    SELECT * FROM hafbe_backend.get_comment_operations_count(_author, _permlink, _operation_types, _from, _to)
   )
 
   SELECT json_build_object(
@@ -202,7 +203,7 @@ RETURN (
     'total_pages', (SELECT * FROM ops_count)/100,
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
-      SELECT * FROM hafbe_backend.get_comment_operations(_author, _permlink, _page_num, _operations, _from, _to, _body_limit)
+      SELECT * FROM hafbe_backend.get_comment_operations(_author, _permlink, _page_num, _page_size, _operation_types, _from, _to, _body_limit)
     ) row)
   ));
 

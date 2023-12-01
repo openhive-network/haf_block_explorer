@@ -29,7 +29,8 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations(
     _author TEXT,
     _permlink TEXT,
     _page_num INT,
-    _operations INT [],
+    _page_size INT,
+    _operation_types INT [],
     _from INT,
     _to INT,
     _body_limit INT
@@ -50,13 +51,13 @@ BEGIN
   FROM hive.operations_view o
   WHERE 
     o.block_num BETWEEN _from AND _to AND
-    o.op_type_id = ANY(_operations) AND 
+    o.op_type_id = ANY(_operation_types) AND 
     o.body_binary::jsonb->'value'->>'author' = _author AND
     (CASE WHEN _permlink IS NOT NULL THEN
     o.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
     TRUE END)
   ORDER BY author, permlink, o.id
-  LIMIT 100
+  LIMIT _page_size
   OFFSET _offset)
 
   SELECT s.permlink, s.block_num, s.id, s.timestamp, (s.composite).body, (s.composite).is_modified
@@ -72,7 +73,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations_count(
     _author TEXT,
     _permlink TEXT,
-    _operations INT [],
+    _operation_types INT [],
     _from INT,
     _to INT
 )
@@ -87,7 +88,7 @@ BEGIN
   FROM hive.operations_view o
   WHERE 
     o.block_num BETWEEN _from AND _to AND 
-    o.op_type_id = ANY(_operations) AND 
+    o.op_type_id = ANY(_operation_types) AND 
     o.body_binary::jsonb->'value'->>'author' = _author AND
     (CASE WHEN _permlink IS NOT NULL THEN
     o.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
