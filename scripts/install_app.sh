@@ -145,7 +145,15 @@ setup_api() {
 
 create_haf_indexes() {
   if [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_haf_indexes_exist();")" = f ]; then
+    # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
+    # want to add our own indexes, which would slow down massive sync, so we just wait.
+    echo "Waiting for HAF to be out of massive sync"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(interval '3 days');"
+
     echo "Creating indexes, this might take a while."
+    # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time
+    # HAF is entering/leaving massive sync.  We need to prevent this, probably by having hafbe set a flag
+    # that prevents haf from re-entering massive sync during the time hafbe is creating indexes
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$db_dir/create_haf_indexes.sql"
   else
     echo "HAF indexes already exist, skipping creation"
