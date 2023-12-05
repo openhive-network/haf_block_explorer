@@ -98,10 +98,6 @@ BEGIN
 END
 $$;
 
-
-RESET ROLE;
-
-
 CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
@@ -241,3 +237,5 @@ ELSE
 END IF;
 END
 $$;
+
+RESET ROLE;

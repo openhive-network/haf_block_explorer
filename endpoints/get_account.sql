@@ -2,8 +2,8 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account text)
-RETURNS hafbe_types.account -- noqa: LT01
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
+RETURNS hafbe_types.account -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -129,6 +129,29 @@ WITH select_parameters_from_backend AS MATERIALIZED (
 FROM select_parameters_from_backend
 );
 
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_page_num(
+    _account TEXT,
+    _block_num INT,
+    _op_type_id INT[],
+    _page_size INT = 100
+)
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+RETURN (
+WITH selected_account AS MATERIALIZED (
+SELECT id FROM hive.accounts_view WHERE name = _account
+)
+SELECT account_op_seq_no/_page_size 
+FROM hive.account_operations_view 
+WHERE account_id = (SELECT id FROM selected_account) AND block_num =_block_num and op_type_id = ANY(_op_type_id)
+);
 END
 $$;
 
