@@ -150,7 +150,7 @@ SELECT id FROM hive.accounts_view WHERE name = _account
 )
 SELECT account_op_seq_no/_page_size 
 FROM hive.account_operations_view 
-WHERE account_id = (SELECT id FROM selected_account) AND block_num =_block_num and op_type_id = ANY(_op_type_id)
+WHERE account_id = (SELECT id FROM selected_account) AND block_num =_block_num and op_type_id = ANY(_op_type_id) ORDER BY account_op_seq_no LIMIT 1
 );
 END
 $$;
