@@ -82,4 +82,18 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_version()
+RETURNS TEXT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+RETURN (
+	SELECT git_hash
+	FROM hafbe_app.version
+);
+
+END
+$$;
+
 RESET ROLE;
