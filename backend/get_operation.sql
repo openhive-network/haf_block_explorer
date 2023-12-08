@@ -103,18 +103,14 @@ BEGIN
 END
 $$;
 
-
-RESET ROLE;
-
--- used in account page endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
     _limit INT,
-    _order_is hafbe_types.order_is,
+    _order_is hafbe_types.order_is, -- noqa: CP05
     _filter INT [],
-    _date_start TIMESTAMP,
-    _date_end TIMESTAMP,
+    _from INT,
+    _to INT,
     _body_limit INT,
     _ops_count INT
 )
@@ -129,34 +125,15 @@ $$
 DECLARE
   __account_id INT = hafbe_backend.get_account_id(_account);
   __no_ops_filter BOOLEAN = (CASE WHEN _filter IS NULL THEN TRUE ELSE FALSE END);
-  __no_start_date BOOLEAN = (_date_start IS NULL);
-  __no_end_date BOOLEAN = (_date_end IS NULL);
-  __no_filters BOOLEAN;
-  __subq_limit INT;
+  __no_start_date BOOLEAN = (_from IS NULL);
+  __no_end_date BOOLEAN = (_to IS NULL);
   __lastest_account_op_seq_no INT;
-  __block_start INT;
-  __block_end INT;
   __offset INT := (((_page_num - 2) * _limit) + (_ops_count));
 BEGIN
-IF __no_ops_filter AND __no_start_date AND __no_end_date THEN
-  SELECT TRUE INTO __no_filters;
-  SELECT NULL INTO __subq_limit;
-ELSE
-  SELECT FALSE INTO __no_filters;
-  SELECT _limit INTO __subq_limit;
-END IF;
-
 SELECT INTO __lastest_account_op_seq_no
   account_op_seq_no FROM hive.account_operations_view WHERE account_id = __account_id 
   AND (CASE WHEN __no_ops_filter = FALSE THEN op_type_id = ANY(_filter) ELSE TRUE END)
   ORDER BY account_op_seq_no  LIMIT 1;
-
-IF __no_start_date IS FALSE THEN
-  SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1 INTO __block_start;
-END IF;
-IF __no_end_date IS FALSE THEN  
-  SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _date_end ORDER BY created_at DESC LIMIT 1 INTO __block_end;
-END IF;
 
 RETURN QUERY EXECUTE format(
   $query$
@@ -202,10 +179,9 @@ RETURN QUERY EXECUTE format(
   $query$,
   __account_id,
   __lastest_account_op_seq_no,
---  __no_filters, __lastest_account_op_seq_no, _limit,
   __no_ops_filter, _filter,
-  __no_start_date, __block_start,
-  __no_end_date, __block_end,
+  __no_start_date, _from,
+  __no_end_date, _to,
   _order_is,
   (CASE WHEN _page_num = 1 AND (_ops_count) != 0 THEN _ops_count % _limit ELSE _limit END),
   (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END),
@@ -219,7 +195,9 @@ $$;
 -- used in account page endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_operations_count(
     _operations INT [],
-    _account TEXT
+    _account TEXT,
+    _from INT,
+    _to INT
 )
 RETURNS BIGINT -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -229,6 +207,9 @@ SET enable_hashjoin = OFF
 SET JIT = OFF
 AS
 $$
+DECLARE
+  __no_start_date BOOLEAN = (_from IS NULL);
+  __no_end_date BOOLEAN = (_to IS NULL);
 BEGIN
 IF _operations IS NULL THEN
 
@@ -238,7 +219,10 @@ IF _operations IS NULL THEN
 
         SELECT account_op_seq_no + 1
         FROM hive.account_operations_view 
-        WHERE account_id = (SELECT id FROM account_id) ORDER BY account_op_seq_no DESC LIMIT 1);
+        WHERE account_id = (SELECT id FROM account_id) 
+        AND (__no_start_date OR block_num >= _from)
+        AND (__no_end_date OR block_num < _to)
+        ORDER BY account_op_seq_no DESC LIMIT 1);
 ELSE
 
     RETURN (
@@ -247,8 +231,13 @@ ELSE
 
         SELECT COUNT(*)
         FROM hive.account_operations_view
-        WHERE account_id = (SELECT id FROM account_id ) and op_type_id = ANY(_operations));
+        WHERE account_id = (SELECT id FROM account_id ) AND op_type_id = ANY(_operations)
+        AND (__no_start_date OR block_num >= _from)
+        AND (__no_end_date OR block_num < _to));
   
 END IF;
 END
 $$;
+
+
+RESET ROLE;

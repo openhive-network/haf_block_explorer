@@ -5,8 +5,10 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,
     _page_num INT = NULL,
     _page_size INT = 100,
-    _order_is hafbe_types.order_is = 'desc',
+    _order_is hafbe_types.order_is = 'desc', -- noqa: CP05
     _filter INT [] = NULL,
+    _from INT = NULL,
+    _to INT = NULL,
     _date_start TIMESTAMP = NULL,
     _date_end TIMESTAMP = NULL,
     _body_limit INT = 2147483647
@@ -21,9 +23,16 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 BEGIN
+IF _date_start IS NOT NULL THEN
+  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+END IF;
+IF _date_end IS NOT NULL THEN  
+  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+END IF;
+
 RETURN (
   WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_account_operations_count(_filter, _account)
+    SELECT * FROM hafbe_backend.get_account_operations_count(_filter, _account, _from, _to)
   )
 
   SELECT json_build_object(
@@ -36,8 +45,8 @@ RETURN (
       _page_size,
       _order_is,
       _filter,
-      _date_start,
-      _date_end,
+      _from,
+      _to,
       _body_limit,
        ((SELECT * FROM ops_count) % _page_size)::INT)
     ) row)
