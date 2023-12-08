@@ -3,9 +3,10 @@ SET ROLE hafbe_owner;
 -- Account page and account history endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,
-    _page_num INT = 1,
+    _page_num INT = NULL,
     _page_size INT = 100,
-    _filter SMALLINT [] = NULL,
+    _order_is hafbe_types.order_is = 'desc',
+    _filter INT [] = NULL,
     _date_start TIMESTAMP = NULL,
     _date_end TIMESTAMP = NULL,
     _body_limit INT = 2147483647
@@ -27,10 +28,18 @@ RETURN (
 
   SELECT json_build_object(
     'total_operations', (SELECT * FROM ops_count),
-    'total_pages', (SELECT * FROM ops_count)/100,
+    'total_pages', (CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END),
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
-      SELECT * FROM hafbe_backend.get_ops_by_account(_account, _page_num, _page_size, _filter, _date_start, _date_end, _body_limit)
+      SELECT * FROM hafbe_backend.get_ops_by_account(_account, 
+      (CASE WHEN _page_num IS NULL THEN 1 ELSE (((CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END) - _page_num) + 1) END)::INT,
+      _page_size,
+      _order_is,
+      _filter,
+      _date_start,
+      _date_end,
+      _body_limit,
+       ((SELECT * FROM ops_count) % _page_size)::INT)
     ) row)
   ));
 

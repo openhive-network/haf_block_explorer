@@ -111,10 +111,12 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
     _limit INT,
+    _order_is hafbe_types.order_is,
     _filter INT [],
     _date_start TIMESTAMP,
     _date_end TIMESTAMP,
-    _body_limit INT
+    _body_limit INT,
+    _ops_count INT
 )
 RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -134,7 +136,7 @@ DECLARE
   __lastest_account_op_seq_no INT;
   __block_start INT;
   __block_end INT;
-  _top_op_id INT ;
+  __offset INT := (((_page_num - 2) * _limit) + (_ops_count));
 BEGIN
 IF __no_ops_filter AND __no_start_date AND __no_end_date THEN
   SELECT TRUE INTO __no_filters;
@@ -145,8 +147,9 @@ ELSE
 END IF;
 
 SELECT INTO __lastest_account_op_seq_no
-  account_op_seq_no FROM hive.account_operations_view WHERE account_id = __account_id ORDER BY account_op_seq_no DESC LIMIT 1;
-SELECT GREATEST(__lastest_account_op_seq_no - ((_page_num - 1) * 100), 0) INTO _top_op_id;
+  account_op_seq_no FROM hive.account_operations_view WHERE account_id = __account_id 
+  AND (CASE WHEN __no_ops_filter = FALSE THEN op_type_id = ANY(_filter) ELSE TRUE END)
+  ORDER BY account_op_seq_no  LIMIT 1;
 
 IF __no_start_date IS FALSE THEN
   SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1 INTO __block_start;
@@ -175,18 +178,18 @@ RETURN QUERY EXECUTE format(
     FROM hive.account_operations_view haov
     WHERE
       haov.account_id = %L::INT AND 
-      haov.account_op_seq_no <= %L::INT AND
-      (NOT %L OR haov.account_op_seq_no > %L::INT - %L::INT) AND
+      haov.account_op_seq_no >= %L::INT AND
       (%L OR haov.op_type_id = ANY(%L)) AND
       (%L OR haov.block_num >= %L::INT) AND
       (%L OR haov.block_num < %L::INT)
-    ORDER BY haov.operation_id DESC
+    ORDER BY haov.operation_id %s
     LIMIT %L
+    OFFSET %L
   ) ls
   JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
-  ORDER BY ls.operation_id DESC)
+  )
 
 -- filter too long operation bodies 
   SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
@@ -198,12 +201,14 @@ RETURN QUERY EXECUTE format(
 
   $query$,
   __account_id,
-  _top_op_id,
-  __no_filters, _top_op_id, _limit,
+  __lastest_account_op_seq_no,
+--  __no_filters, __lastest_account_op_seq_no, _limit,
   __no_ops_filter, _filter,
   __no_start_date, __block_start,
   __no_end_date, __block_end,
-  __subq_limit,
+  _order_is,
+  (CASE WHEN _page_num = 1 AND (_ops_count) != 0 THEN _ops_count % _limit ELSE _limit END),
+  (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END),
   _body_limit
 ) res
 ;
