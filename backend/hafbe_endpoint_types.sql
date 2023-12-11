@@ -1,5 +1,10 @@
 SET ROLE hafbe_owner;
 
+-- Used in 
+-- hafbe_endpoints.get_matching_operation_types
+-- hafbe_endpoints.get_op_types
+-- hafbe_endpoints.get_acc_op_types
+-- hafbe_endpoints.get_block_op_types
 DROP TYPE IF EXISTS hafbe_types.op_types CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.op_types AS (
     op_type_id SMALLINT,
@@ -7,6 +12,8 @@ CREATE TYPE hafbe_types.op_types AS (
     is_virtual BOOLEAN
 );
 
+-- Used in 
+-- hafbe_endpoints.get_account
 DROP TYPE IF EXISTS hafbe_types.account CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.account AS (
     id INT,
@@ -52,6 +59,10 @@ CREATE TYPE hafbe_types.account AS (
     is_witness BOOLEAN
 );
 
+-- Used in 
+-- hafbe_backend.get_ops_by_account
+-- hafbe_endpoints.get_ops_by_block
+-- hafbe_endpoints.get_operation
 DROP TYPE IF EXISTS hafbe_types.operation CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.operation AS (
     operation_id BIGINT,
@@ -67,6 +78,8 @@ CREATE TYPE hafbe_types.operation AS (
     is_modified BOOLEAN
 );
 
+-- Used in
+-- hafbe_endpoints.get_block
 DROP TYPE IF EXISTS hafbe_types.block CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.block AS (
     block_num INT,
@@ -89,6 +102,8 @@ CREATE TYPE hafbe_types.block AS (
     age INTERVAL
 );
 
+-- Used in
+-- hafbe_endpoints.get_witness_voters
 DROP TYPE IF EXISTS hafbe_types.witness_voters CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.witness_voters AS (
     voter TEXT,
@@ -101,6 +116,8 @@ CREATE TYPE hafbe_types.witness_voters AS (
     timestamp TIMESTAMP
 );
 
+-- Used in
+-- hafbe_endpoints.get_witness_votes_history
 DROP TYPE IF EXISTS hafbe_types.witness_votes_history CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.witness_votes_history AS (
     voter TEXT,
@@ -114,6 +131,9 @@ CREATE TYPE hafbe_types.witness_votes_history AS (
     timestamp TIMESTAMP
 );
 
+-- Used in
+-- hafbe_endpoints.get_witnesses
+-- hafbe_endpoints.get_witness
 DROP TYPE IF EXISTS hafbe_types.witness_setof CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.witness_setof AS (
     witness TEXT,
@@ -133,6 +153,8 @@ CREATE TYPE hafbe_types.witness_setof AS (
     version TEXT
 );
 
+-- Used in
+-- hafbe_endpoints.get_transaction
 DROP TYPE IF EXISTS hafbe_types.get_transaction CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_transaction AS (
     transaction_json JSON,
@@ -140,6 +162,8 @@ CREATE TYPE hafbe_types.get_transaction AS (
     age INTERVAL
 );
 
+-- Used in
+-- hafbe_endpoints.get_latest_blocks
 DROP TYPE IF EXISTS hafbe_types.get_latest_blocks CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_latest_blocks AS (
     block_num INT,
@@ -147,12 +171,18 @@ CREATE TYPE hafbe_types.get_latest_blocks AS (
     ops_count JSON
 );
 
+-- Used in 
+-- hafbe_backend.get_block_by_single_op
+-- hafbe_backend.get_block_by_ops_group_by_block_num
+-- hafbe_endpoints.get_block_by_op
 DROP TYPE IF EXISTS hafbe_types.get_block_by_ops CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_block_by_ops AS (
     block_num INT,
     op_type_id smallint []
 );
 
+-- Used in 
+-- hafbe_backend.get_comment_operations
 DROP TYPE IF EXISTS hafbe_types.comment_history CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.comment_history AS (
     permlink TEXT,

@@ -52,6 +52,9 @@ BEGIN
 
   INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
 
+------------------------------------------
+
+-- Updated by hafbe_app.process_block_range_data_c
   CREATE TABLE IF NOT EXISTS hafbe_app.account_posts
   (
     account INT NOT NULL, 
@@ -75,6 +78,9 @@ BEGIN
     CONSTRAINT pk_account_parameters PRIMARY KEY (account)
   ) INHERITS (hive.hafbe_app);
 
+------------------------------------------
+
+-- Updated by hafbe_app.process_block_range_data_a
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
@@ -88,19 +94,6 @@ BEGIN
     timestamp TIMESTAMP NOT NULL,
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
-  ) INHERITS (hive.hafbe_app);
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
-    witness_id INT NOT NULL,
-    url TEXT,
-    price_feed FLOAT,
-    bias NUMERIC,
-    feed_updated_at TIMESTAMP,
-    block_size INT,
-    signing_key TEXT,
-    version TEXT,
-
-    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
@@ -117,26 +110,30 @@ BEGIN
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   ) INHERITS (hive.hafbe_app);
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_cache (
-    account TEXT NOT NULL,
-    data JSON NOT NULL,
-    last_updated_at TIMESTAMP,
+------------------------------------------
 
-    CONSTRAINT pk_hived_account_cache PRIMARY KEY (account)
-  );
+-- Updated by hafbe_app.process_block_range_data_b
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
+    witness_id INT NOT NULL,
+    url TEXT,
+    price_feed FLOAT,
+    bias NUMERIC,
+    feed_updated_at TIMESTAMP,
+    block_size INT,
+    signing_key TEXT,
+    version TEXT,
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.hived_account_resource_credits_cache (
-    account TEXT NOT NULL,
-    data JSON NOT NULL,
-    last_updated_at TIMESTAMP,
-
-    CONSTRAINT pk_hived_account_resource_credits_cache PRIMARY KEY (account)
-  );
+    CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
+  ) INHERITS (hive.hafbe_app);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
     op_type_ids_arr SMALLINT[] NOT NULL
   );
 
+------------------------------------------
+
+-- Used in witness endpoints
+-- Updated by hafbe_app.update_witnesses_cache
   INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_ids_arr)
   SELECT array_agg(hot.id)
   FROM hive.operation_types hot
@@ -197,6 +194,7 @@ BEGIN
     CONSTRAINT pk_massive_sync_time_logs PRIMARY KEY (block_num)
   ) INHERITS (hive.hafbe_app);
 
+------------------------------------------
 
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
 

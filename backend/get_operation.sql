@@ -1,5 +1,7 @@
 SET ROLE hafbe_owner;
 
+-- Function used in body returning functions that allows to limit too long operation_body (small.minion), allows FE to set desired length of operation
+-- Too long operations are being replaced by placeholder with possibility of opening it in another page
 CREATE OR REPLACE FUNCTION hafbe_backend.operation_body_filter(_body JSONB, _op_id BIGINT, _body_limit INT = 2147483647)
 RETURNS hafbe_backend.operation_body_filter_result -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
@@ -25,6 +27,7 @@ BEGIN
 END
 $$;
 
+-- used in comment history endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations(
     _author TEXT,
     _permlink TEXT,
@@ -60,6 +63,7 @@ BEGIN
   LIMIT _page_size
   OFFSET _offset)
 
+-- filter too long operation bodies 
   SELECT s.permlink, s.block_num, s.id, s.timestamp, (s.composite).body, (s.composite).is_modified
   FROM (
   SELECT hafbe_backend.operation_body_filter(o.body_binary::jsonb, o.id, _body_limit) as composite, o.id, o.block_num, o.permlink, o.author, o.timestamp
@@ -70,6 +74,7 @@ BEGIN
 END
 $$;
 
+-- used in comment history endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations_count(
     _author TEXT,
     _permlink TEXT,
@@ -101,7 +106,7 @@ $$;
 
 RESET ROLE;
 
-
+-- used in account page endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
@@ -183,6 +188,7 @@ RETURN QUERY EXECUTE format(
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
   ORDER BY ls.operation_id DESC)
 
+-- filter too long operation bodies 
   SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
   FROM (
   SELECT hafbe_backend.operation_body_filter(o.body, o.id,%L) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
@@ -205,7 +211,7 @@ RETURN QUERY EXECUTE format(
 END
 $$;
 
-
+-- used in account page endpoint
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_operations_count(
     _operations INT [],
     _account TEXT

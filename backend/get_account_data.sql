@@ -1,3 +1,5 @@
+-- Functions used in hafbe_endpoints.get_account
+
 SET ROLE hafbe_owner;
 
 -- ACCOUNT ID

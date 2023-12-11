@@ -12,6 +12,7 @@ RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1
 END
 $$;
 
+-- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block(_block_num INT)
 RETURNS hafbe_types.block -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -49,6 +50,7 @@ WHERE num = _block_num
 END
 $$;
 
+-- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_time(_timestamp TIMESTAMP)
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
@@ -62,6 +64,7 @@ FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '2 seco
 END
 $$;
 
+-- Home page endpoint used in 'last blocks' section
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(_limit INT = 10)
 RETURNS SETOF hafbe_types.get_latest_blocks -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -122,7 +125,7 @@ SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[51], NULL, 'desc', 0, 214748
 SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[68], NULL, 'desc', 0, 2147483647, 100)
 */
 
-
+-- Block search endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     _operations INT [],
     _account TEXT = NULL,

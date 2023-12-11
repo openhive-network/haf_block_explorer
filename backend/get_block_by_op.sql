@@ -1,3 +1,5 @@
+-- Functions used in hafbe_endpoints.get_block_by_op
+
 SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(

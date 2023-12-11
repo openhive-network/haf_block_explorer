@@ -1,5 +1,6 @@
 SET ROLE hafbe_owner;
 
+-- Account page and account history endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,
     _page_num INT = 1,
@@ -9,7 +10,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _date_end TIMESTAMP = NULL,
     _body_limit INT = 2147483647
 )
-RETURNS JSON
+RETURNS JSON -- 'total_operations, total_pages, operations_result'
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -36,7 +37,7 @@ RETURN (
 END
 $$;
 
-
+-- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(
     _block_num INT,
     _top_op_id BIGINT = 9223372036854775807,
@@ -81,6 +82,7 @@ WITH operation_range AS MATERIALIZED (
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
   ORDER BY ls.id DESC)
 
+-- filter too long operation bodies 
   SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
   FROM (
   SELECT hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
@@ -119,6 +121,7 @@ RETURN (
 END
 $$;
 
+-- Block search endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(_op_type_id INT)
 RETURNS SETOF TEXT []
 LANGUAGE 'plpgsql' STABLE
@@ -158,6 +161,7 @@ WHERE
 END
 $$;
 
+-- Comment history endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     _author TEXT,
     _permlink TEXT = NULL,
@@ -170,7 +174,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     _end_date TIMESTAMP = NULL,
     _body_limit INT = 2147483647
 )
-RETURNS JSON
+RETURNS JSON -- 'total_operations, total_pages, operations_result'
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16

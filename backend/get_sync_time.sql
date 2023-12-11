@@ -1,5 +1,6 @@
 SET ROLE hafbe_owner;
 
+-- Used in sync
 CREATE OR REPLACE FUNCTION hafbe_backend.get_sync_time(INOUT _time JSONB, _column_name TEXT)
 RETURNS JSONB
 LANGUAGE 'plpgsql'

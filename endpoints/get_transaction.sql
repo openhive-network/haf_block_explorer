@@ -1,5 +1,6 @@
 SET ROLE hafbe_owner;
 
+-- Transaction page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction(_trx_hash TEXT)
 RETURNS hafbe_types.get_transaction -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE

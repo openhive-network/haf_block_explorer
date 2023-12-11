@@ -12,7 +12,7 @@ BEGIN
 END
 $$;
 
-
+-- Witness page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     _witness TEXT,
     _order_by hafbe_types.order_by_votes = 'vests', -- noqa: LT01, CP05
@@ -71,6 +71,7 @@ RETURN QUERY EXECUTE format(
 END
 $$;
 
+-- Witness page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     _witness TEXT,
     _order_by hafbe_types.order_by_votes = 'timestamp', -- noqa: LT01, CP05
@@ -126,6 +127,7 @@ RETURN QUERY EXECUTE format(
 END
 $$;
 
+-- Witness page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
     _limit INT = 100,
     _offset INT = 0,
@@ -206,6 +208,7 @@ get_block_num AS MATERIALIZED
 END
 $$;
 
+-- Witness page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(_account TEXT)
 RETURNS hafbe_types.witness_setof -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'

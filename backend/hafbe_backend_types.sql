@@ -1,6 +1,9 @@
+-- Types used in backend format fuctions
+
 SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
+
 
 DROP TYPE IF EXISTS hafbe_types.order_is CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.order_is AS ENUM (

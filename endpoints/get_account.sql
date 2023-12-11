@@ -2,6 +2,7 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
+-- Account page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account text)
 RETURNS hafbe_types.account -- noqa: LT01
 LANGUAGE 'plpgsql'
@@ -92,9 +93,6 @@ WITH select_parameters_from_backend AS MATERIALIZED (
   recovery_account, 
   last_account_recovery,
   can_vote,
--- 'voting_manabar', __response_data->'voting_manabar', --can't be track it without consensus_state_provider
--- 'downvote_manabar', __response_data->'downvote_manabar', --can't be track it without consensus_state_provider
--- 'voting_power', __response_data->>'voting_power', --can't be track it without consensus_state_provider
   hive_balance,
   hive_savings::BIGINT,
   hbd_balance,

@@ -47,6 +47,7 @@ $$;
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
 
 --Indexes for comment_operation
+--Used in hafbe_app.process_block_range_data_c (counting posts)
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_permlink_author')) THEN
@@ -78,6 +79,8 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_permlink_auth
 WHERE op_type_id=1;
 
 --Indexes for vote_operation
+--Used in hafbe_app.process_block_range_data_c (counting votes)
+
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_voter')) THEN
@@ -107,6 +110,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_voter ON hive
 WHERE op_type_id = 72;
 
 --Indexes for delete_comment_operation
+--Used in hafbe_app.process_block_range_data_c (counting posts)
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_delete_permlink_author')) THEN
@@ -138,6 +142,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_delete_permli
 WHERE op_type_id = 17;
 
 --Indexes for pow_operation
+--Used in hafbe_app.process_block_range_data_c (tracking mined parameter, account creation date)
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_pow_operation')) THEN
@@ -167,6 +172,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_reversible_pow_operation
 WHERE op_type_id = 14;
 
 --Indexes for pow2_operation
+--Used in hafbe_app.process_block_range_data_c (tracking mined parameter, account creation date)
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_pow2_operation')) THEN

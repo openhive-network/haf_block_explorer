@@ -7,6 +7,7 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA hafbe_views AUTHORIZATION hafbe_owner;
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.witness_prop_op_view AS
 SELECT
   bia.name AS witness,
@@ -22,6 +23,7 @@ JOIN LATERAL (
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_view AS
 WITH proxies1 AS (
   SELECT
@@ -67,6 +69,7 @@ FROM (
 ) rap;
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
 SELECT
   rapv.proxy_id,
@@ -80,6 +83,7 @@ JOIN hive.accounts_view avv ON avv.id = rapv.account_id;
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.witness_voters_vests_view AS
 SELECT
   cwv_cap.witness_id, cwv_cap.voter_id,
@@ -94,6 +98,7 @@ LEFT JOIN btracker_app.current_account_balances av ON av.account = cwv_cap.voter
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
   SELECT
     ov.voter_id AS account,
@@ -105,6 +110,7 @@ CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.voters_proxied_vests_view AS
 SELECT
   rapv.proxy_id,
@@ -117,6 +123,7 @@ GROUP BY rapv.proxy_id, rapv.which_proxy;
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.voters_proxied_vests_sum_view AS
 SELECT
   rapv.proxy_id,
@@ -126,6 +133,7 @@ GROUP BY rapv.proxy_id;
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.voters_stats_view AS
 SELECT
   wvvv.witness_id, wvvv.voter_id,
@@ -139,6 +147,7 @@ LEFT JOIN btracker_app.account_withdraws dv ON dv.account = wvvv.voter_id;
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.voters_approve_vests_change_view AS
 SELECT
   wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
@@ -159,6 +168,7 @@ LEFT JOIN LATERAL (
 
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.voters_proxy_vests_change_view AS
 SELECT
   aph.account_id AS voter_id,
@@ -180,6 +190,7 @@ GROUP BY aph.account_id;
 
 ------
 
+-- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.comments_view
 AS
   SELECT
@@ -194,6 +205,7 @@ AS
 
 ------
 
+-- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.votes_view
 AS
   SELECT
@@ -207,6 +219,7 @@ AS
 
 ------
 
+-- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.pow_view
 AS
   SELECT
@@ -220,6 +233,7 @@ AS
 
 ------
 
+-- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.pow_two_view
 AS
   SELECT
@@ -233,6 +247,7 @@ AS
 
 ------
 
+-- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.deleted_comments_view
 AS
   SELECT
@@ -264,6 +279,7 @@ LEFT JOIN LATERAL (
 
 ------
 
+-- Allows to easly search though timmings of each section of hafbe sync
 CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
   SELECT
     block_num,
@@ -278,6 +294,7 @@ CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
     
 ------
 
+-- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.votes_history_view AS
 WITH select_range AS (
   SELECT

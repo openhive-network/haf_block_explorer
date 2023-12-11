@@ -8,6 +8,8 @@ DECLARE
   __balance_change RECORD;
 BEGIN
 
+-- function used to calculate witness votes and proxies
+-- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
 FOR __balance_change IN
   SELECT 
     ov.body AS body,
@@ -53,7 +55,9 @@ $function$
 DECLARE
   __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
-  
+-- function used for calculating witnesses
+-- updates table hafbe_app.current_witnesses
+
   WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
   (
   SELECT body_binary, (body)->'value' AS value, op_type_id
@@ -319,6 +323,8 @@ $function$
 DECLARE
   __balance_change RECORD;
 BEGIN
+-- function used for calculating witnesses
+-- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
 FOR __balance_change IN
   WITH comment_operation AS (
