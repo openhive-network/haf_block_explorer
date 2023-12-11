@@ -378,9 +378,15 @@ LEFT JOIN (
   ORDER BY po.worker_account, po.block_num, po.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
 LEFT JOIN (
+-- This query is used to count how many posts were made by each account
+-- We need to take into consideration that post can be made first time, updated or deleted and reposted
+-- indexes used in this query:
+-- hive_operations_permlink_author on comment_operation (op_type_id = 1) used in hafbe_views.comments_view
+-- hive_operations_delete_permlink_author on delete_comment_operation (op_type_id = 17) used in hafbe_views.deleted_comments_view
   WITH selected_range AS MATERIALIZED (
   	SELECT up.id, up.author, up.permlink
     FROM hafbe_views.comments_view up
+-- First we found every comment that happened in the block_range, but we need to check if either of them are updates or original comments
   	WHERE up.block_num BETWEEN _from AND _to
   ),
 filtered_range AS MATERIALIZED (
@@ -391,23 +397,35 @@ filtered_range AS MATERIALIZED (
     WHERE 
       prd.author = up.author 
       AND prd.permlink = up.permlink AND prd.id < up.id
+-- To do that we look in the subquery for each comment if there was a comment with the same author and permlink
+-- If prd.id was found that means there is possibility that this comment is and update and we don't count it
+-- But there is possibility too that between this two comments there was delete_comment_operation and it means that this comment counts as an original
 	 ORDER BY prd.id DESC LIMIT 1) AS prd_id
   FROM selected_range up 
 )
 SELECT source_op FROM (
 SELECT prd.up_id AS source_op, prd.author, prd.permlink, prd.prd_id,
+-- We are looking for delete_comment_operation between prd.prd_id and prd.up_id with the same permlink and author
 COALESCE(
        (SELECT 1 
         FROM 
           hafbe_views.deleted_comments_view dp
         WHERE 
           dp.author = prd.author 
-          and dp.permlink = prd.permlink 
-		  AND prd.prd_id IS NOT NULL
-          and dp.id between prd.prd_id and prd.up_id
+          AND dp.permlink = prd.permlink 
+		      AND prd.prd_id IS NOT NULL
+-- If prd.prd_id is null that means that the comment is original (and subquery returns 0 and prd.prd_id IS NULL)
+          AND dp.id between prd.prd_id AND prd.up_id
+-- If there was delete_comment_operation between this operations it means that the post was reposted and it counts 
+-- (and subquery returns 1 and prd.prd_id IS NOT NULL)
 	   LIMIT 1),0
 ) as filtered FROM filtered_range prd ) as filtered2
-WHERE (filtered = 0 and prd_id IS NULL) or (filtered =1 and prd_id IS NOT NULL)
+WHERE (filtered = 0 AND prd_id IS NULL) or (filtered =1 AND prd_id IS NOT NULL)
+-- So there is two possibilities that we count found posts:
+-- (filtered = 0 and prd_id IS NULL) -original comment 
+-- (filtered = 1 prd_id IS NOT NULL) -reposted post
+
+-- The third possibility is (filtered = 0 AND prd_id IS NOT NULL) means that: prd.up_id is and update of prd.prd_id (we dont count it)
 ) up_subquery ON cao.id = up_subquery.source_op
 WHERE 
   (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
