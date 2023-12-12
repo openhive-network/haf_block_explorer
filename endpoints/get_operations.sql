@@ -1,5 +1,21 @@
 SET ROLE hafbe_owner;
 
+/*
+
+SELECT * FROM hafbe_endpoints.get_ops_by_account('anyx') 
+-- main page 0,4s
+
+SELECT * FROM hafbe_endpoints.get_ops_by_account('abit', NULL, 100, 'desc', ARRAY[0,1,2,52,76,53,23]) 
+--  with filtered ops 1,06s
+
+SELECT * FROM hafbe_endpoints.get_ops_by_account('blocktrades', NULL, 100, 'desc', ARRAY[0,1,2,52,76,53,23], 70000000, 71000000) 
+--  with filtered ops and blocks 1,08s
+
+SELECT * FROM hafbe_endpoints.get_ops_by_account('blocktrades', NULL, 100, 'desc', NULL, 70000000, 71000000) 
+--  with only filtered blocks 1,4s
+
+*/
+
 -- Account page and account history endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,

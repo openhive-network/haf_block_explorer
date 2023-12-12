@@ -150,14 +150,31 @@ RETURN QUERY EXECUTE format(
     hov.timestamp,
     NOW() - hov.timestamp AS age
   FROM (
-    SELECT haov.operation_id, haov.op_type_id, haov.block_num, haov.account_op_seq_no
+	WITH ops_from_start_block as MATERIALIZED
+	(
+		select o.id 
+		from hive.operations_view o
+		where o.block_num >= %L
+		order by o.block_num, o.id
+		limit 1
+	),
+	ops_from_end_block as MATERIALIZED
+	(
+		select o.id
+		from hive.operations_view o
+		where o.block_num < %L
+		order by o.block_num desc, o.id desc
+		limit 1
+	)
+  -- using hive_account_operations_uq2
+    SELECT haov.operation_id, haov.op_type_id, haov.block_num
     FROM hive.account_operations_view haov
     WHERE
-      haov.account_id = %L::INT AND 
-      haov.op_type_id = ANY(%L) AND
-      (%L OR haov.block_num >= %L::INT) AND
-      (%L OR haov.block_num < %L::INT)
-    ORDER BY haov.block_num %s
+      haov.account_id = %L AND 
+      haov.op_type_id = ANY(%L)
+      AND (%L OR haov.operation_id >= (SELECT * FROM ops_from_start_block))
+	  AND (%L OR haov.operation_id < (SELECT * FROM ops_from_end_block))
+    ORDER BY haov.operation_id %s
     LIMIT %L
     OFFSET %L
   ) ls
@@ -175,10 +192,12 @@ RETURN QUERY EXECUTE format(
   ORDER BY s.id;
 
   $query$,
+  _from,
+  _to,
   __account_id,
   __filter,
-  __no_start_date, _from,
-  __no_end_date, _to,
+  __no_start_date,
+  __no_end_date,
   _order_is,
   (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END),
   (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END),
@@ -213,7 +232,7 @@ BEGIN
 IF _operations IS NULL AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
   RETURN (
       WITH account_id AS MATERIALIZED (
-      SELECT a.id FROM hive.accounts_view a WHERE a.name = _account)
+        SELECT a.id FROM hive.accounts_view a WHERE a.name = _account)
 
       SELECT ao.account_op_seq_no + 1
       FROM hive.account_operations_view ao
@@ -222,12 +241,15 @@ IF _operations IS NULL AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
 
 ELSE
   RETURN (
-    WITH op_filter as MATERIALIZED (
-    SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _operations IS NOT NULL THEN ot.id = ANY(_operations) ELSE TRUE END)
+    WITH op_filter AS MATERIALIZED (
+      SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _operations IS NOT NULL THEN ot.id = ANY(_operations) ELSE TRUE END)
+    ),
+    account_id AS MATERIALIZED (
+      SELECT a.id FROM hive.accounts_view a WHERE a.name = _account
     )
     SELECT COUNT(*)
     FROM hive.account_operations ao
-    WHERE ao.account_id = 14007
+    WHERE ao.account_id = (SELECT ai.id FROM account_id ai)
     AND ao.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)])
     AND (__no_start_date OR ao.block_num >= _from)
     AND (__no_end_date OR ao.block_num < _to));
