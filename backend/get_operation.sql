@@ -112,7 +112,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _from INT,
     _to INT,
     _body_limit INT,
-    _ops_count INT
+    _rest_of_division INT
 )
 RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -127,13 +127,12 @@ DECLARE
   __no_ops_filter BOOLEAN = (CASE WHEN _filter IS NULL THEN TRUE ELSE FALSE END);
   __no_start_date BOOLEAN = (_from IS NULL);
   __no_end_date BOOLEAN = (_to IS NULL);
-  __lastest_account_op_seq_no INT;
-  __offset INT := (((_page_num - 2) * _limit) + (_ops_count));
+  __offset INT := (((_page_num - 2) * _limit) + (_rest_of_division));
+-- offset is calculated only from _page_num = 2, then the offset = _rest_of_division
+-- on _page_num = 3, offset = _limit + _rest_of_division etc.
+  __filter INT[] := (SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END));
 BEGIN
-SELECT INTO __lastest_account_op_seq_no
-  account_op_seq_no FROM hive.account_operations_view WHERE account_id = __account_id 
-  AND (CASE WHEN __no_ops_filter = FALSE THEN op_type_id = ANY(_filter) ELSE TRUE END)
-  ORDER BY account_op_seq_no  LIMIT 1;
+
 
 RETURN QUERY EXECUTE format(
   $query$
@@ -155,11 +154,10 @@ RETURN QUERY EXECUTE format(
     FROM hive.account_operations_view haov
     WHERE
       haov.account_id = %L::INT AND 
-      haov.account_op_seq_no >= %L::INT AND
-      (%L OR haov.op_type_id = ANY(%L)) AND
+      haov.op_type_id = ANY(%L) AND
       (%L OR haov.block_num >= %L::INT) AND
       (%L OR haov.block_num < %L::INT)
-    ORDER BY haov.operation_id %s
+    ORDER BY haov.block_num %s
     LIMIT %L
     OFFSET %L
   ) ls
@@ -178,13 +176,14 @@ RETURN QUERY EXECUTE format(
 
   $query$,
   __account_id,
-  __lastest_account_op_seq_no,
-  __no_ops_filter, _filter,
+  __filter,
   __no_start_date, _from,
   __no_end_date, _to,
   _order_is,
-  (CASE WHEN _page_num = 1 AND (_ops_count) != 0 THEN _ops_count % _limit ELSE _limit END),
+  (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END),
   (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END),
+-- When we show first page the limit is _rest_of_division and offset is 0 (when the _rest_of_division = 0 then first page limit = _limit of rows with offset = 0)
+-- When _page_num = 2 + then limit = _limit and offset = __offset
   _body_limit
 ) res
 ;
@@ -211,30 +210,28 @@ DECLARE
   __no_start_date BOOLEAN = (_from IS NULL);
   __no_end_date BOOLEAN = (_to IS NULL);
 BEGIN
-IF _operations IS NULL THEN
+IF _operations IS NULL AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
+  RETURN (
+      WITH account_id AS MATERIALIZED (
+      SELECT a.id FROM hive.accounts_view a WHERE a.name = _account)
 
-    RETURN (
-        WITH account_id AS MATERIALIZED (
-        SELECT id FROM hive.accounts_view WHERE name = _account)
+      SELECT ao.account_op_seq_no + 1
+      FROM hive.account_operations_view ao
+      WHERE ao.account_id = (SELECT ai.id FROM account_id ai) 
+      ORDER BY ao.account_op_seq_no DESC LIMIT 1);
 
-        SELECT account_op_seq_no + 1
-        FROM hive.account_operations_view 
-        WHERE account_id = (SELECT id FROM account_id) 
-        AND (__no_start_date OR block_num >= _from)
-        AND (__no_end_date OR block_num < _to)
-        ORDER BY account_op_seq_no DESC LIMIT 1);
 ELSE
+  RETURN (
+    WITH op_filter as MATERIALIZED (
+    SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _operations IS NOT NULL THEN ot.id = ANY(_operations) ELSE TRUE END)
+    )
+    SELECT COUNT(*)
+    FROM hive.account_operations ao
+    WHERE ao.account_id = 14007
+    AND ao.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)])
+    AND (__no_start_date OR ao.block_num >= _from)
+    AND (__no_end_date OR ao.block_num < _to));
 
-    RETURN (
-        WITH account_id AS MATERIALIZED (
-        SELECT id FROM hive.accounts_view WHERE name =_account)
-
-        SELECT COUNT(*)
-        FROM hive.account_operations_view
-        WHERE account_id = (SELECT id FROM account_id ) AND op_type_id = ANY(_operations)
-        AND (__no_start_date OR block_num >= _from)
-        AND (__no_end_date OR block_num < _to));
-  
 END IF;
 END
 $$;

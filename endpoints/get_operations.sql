@@ -20,28 +20,43 @@ SET from_collapse_limit = 16
 SET JIT = OFF
 SET enable_hashjoin = OFF
 SET plan_cache_mode = force_custom_plan
+-- force_custom_plan added to every function that uses OFFSET
 AS
 $$
 BEGIN
 IF _date_start IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _date_end IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 RETURN (
   WITH ops_count AS MATERIALIZED (
     SELECT * FROM hafbe_backend.get_account_operations_count(_filter, _account, _from, _to)
+  ),
+  calculate_total_pages AS MATERIALIZED (
+    SELECT (CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN 
+    (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END)
   )
 
   SELECT json_build_object(
+-- ops_count returns number of operations found with current filter
     'total_operations', (SELECT * FROM ops_count),
-    'total_pages', (CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END),
+-- to count total_pages we need to check if there was a rest from division by _page_size, if there was the page count is +1 
+    'total_pages', (SELECT * FROM calculate_total_pages),
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
       SELECT * FROM hafbe_backend.get_ops_by_account(_account, 
-      (CASE WHEN _page_num IS NULL THEN 1 ELSE (((CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END) - _page_num) + 1) END)::INT,
+-- there is two diffrent page_nums, internal and external, internal page_num is ascending (first page with the newest operation is number 1)
+-- external page_num is descending, its given by FE and recalculated by this query to internal 
+
+-- to show the first page on account_page on FE we take page_num as NULL, because FE on the first use of the endpoint doesn't know the ops_count
+-- For example query returns 15 pages and FE asks for:
+-- page 15 (external first page) 15 - 15 + 1 = 1 (internal first page)
+-- page 14 (external second page) 15 - 14 + 1 = 2 (internal second page)
+-- ... page 7, 15 - 7 + 1 =  9 (internal 9th page)
+      (CASE WHEN _page_num IS NULL THEN 1 ELSE (((SELECT * FROM calculate_total_pages) - _page_num) + 1) END)::INT,
       _page_size,
       _order_is,
       _filter,
@@ -49,6 +64,7 @@ RETURN (
       _to,
       _body_limit,
        ((SELECT * FROM ops_count) % _page_size)::INT)
+-- to return the first page with the rest of the division of ops count the number is handed over to backend function
     ) row)
   ));
 
