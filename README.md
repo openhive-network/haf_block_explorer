@@ -8,20 +8,25 @@
 
 ## About
 
-haf block explorer is a web app for viewing information in transactions and operations of accounts and blocks, as well as block witness (creator) information.  
-Search can be performed by `_account`, `_block_num`, `_block_hash`, `_trx_hash`.
+HAF block explorer is an API for querying information about transactions/operations included in Hive blocks, as well as block producer (i.e. witness) information.
+
+Searches can be performed by `_account`, `_block_num`, `_block_hash`, `_trx_hash`.
 
 ## Setup
 
-HAF Block Explorer requires an instance of HAF.
+NOTE: haf_block_explorer uses balance_tracker as a sub-app and provides all the functionality of balance_tracker, so there is no need to install balance_tracker as a separate app if you have installed haf_block_explorer. In fact, trying to install both will cause a problem because both apps use the same schema name to store balance_tracker data. If you are running balance_tracker on your haf server and decide to later upgrade to running haf_block_explorer, be sure you uninstall balance_tracker first.
 
-First set up its dependencies:
+Like all HAF apps, HAF Block Explorer must be installed on a HAF server. The easiest and recommended way to setup and maintain a HAF server and apps like haf_block_explorer is using the scripts in this repo: https://gitlab.syncad.com/hive/haf_api_node/
+
+However, for completeness, below are instructions for manually installing haf_block_explorer on a HAF server (again, this is NOT the recommended approach to maintaining a node that runs haf_block_explorer).
+
+First, set up its dependencies:
 
 ```bash
 ./scripts/setup_dependencies.sh --install-all
 ```
 
-Next, set up the database:
+Next, install haf_block_explorer on the database:
 
 ```bash
 ./scripts/install_app.sh
@@ -39,7 +44,7 @@ Before it can be used, HAF Block Explorer needs to process blocks available in H
 
 Again, you can use `./scripts/process_blocks.sh --help` to see available options.
 
-If you want to destroy HAF Block Explorer database use:
+If you want to uninstall HAF Block Explorer and remove its data from the database:
 
 ```bash
 ./scripts/uninstall_app.sh
@@ -49,13 +54,13 @@ As before, use `./scripts/uninstall_app.sh --help` to see available options.
 
 ## Startup
 
-After setup start postgREST server with:
+After setup, start the postgREST server with:
 
 ```bash
 ./scripts/start_postgrest.sh
 ```
 
-One more, use `./scripts/start_postgrest.sh --help` to see available options.
+You can type `./scripts/start_postgrest.sh --help` to see available options.
 
 ## Dockerized setup
 
