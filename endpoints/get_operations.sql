@@ -21,7 +21,6 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     _account TEXT,
     _page_num INT = NULL,
     _page_size INT = 100,
-    _order_is hafbe_types.order_is = 'desc', -- noqa: CP05
     _filter INT [] = NULL,
     _from INT = NULL,
     _to INT = NULL,
@@ -74,7 +73,6 @@ RETURN (
 -- ... page 7, 15 - 7 + 1 =  9 (internal 9th page)
       (CASE WHEN _page_num IS NULL THEN 1 ELSE (((SELECT * FROM calculate_total_pages) - _page_num) + 1) END)::INT,
       _page_size,
-      _order_is,
       _filter,
       _from,
       _to,

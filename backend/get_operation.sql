@@ -107,7 +107,6 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
     _limit INT,
-    _order_is hafbe_types.order_is, -- noqa: CP05
     _filter INT [],
     _from INT,
     _to INT,
@@ -124,20 +123,16 @@ AS
 $$
 DECLARE
   __account_id INT = hafbe_backend.get_account_id(_account);
-  __no_ops_filter BOOLEAN = (CASE WHEN _filter IS NULL THEN TRUE ELSE FALSE END);
   __no_start_date BOOLEAN = (_from IS NULL);
   __no_end_date BOOLEAN = (_to IS NULL);
+  __no_ops_filter BOOLEAN = (_filter IS NULL);
   __offset INT := (((_page_num - 2) * _limit) + (_rest_of_division));
 -- offset is calculated only from _page_num = 2, then the offset = _rest_of_division
 -- on _page_num = 3, offset = _limit + _rest_of_division etc.
-  __filter INT[] := (SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END));
 BEGIN
 
-
-RETURN QUERY EXECUTE format(
-  $query$
-
-  WITH operation_range AS MATERIALIZED (
+RETURN QUERY   
+WITH operation_range AS MATERIALIZED (
   SELECT
     ls.operation_id AS id,
     ls.block_num,
@@ -150,33 +145,37 @@ RETURN QUERY EXECUTE format(
     hov.timestamp,
     NOW() - hov.timestamp AS age
   FROM (
-	WITH ops_from_start_block as MATERIALIZED
+  WITH op_filter AS MATERIALIZED (
+      SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
+  ),
+-- changing filtering method from block_num to operation_id
+	ops_from_start_block as MATERIALIZED
 	(
-		select o.id 
-		from hive.operations_view o
-		where o.block_num >= %L
-		order by o.block_num, o.id
-		limit 1
+		SELECT o.id 
+		FROM hive.operations_view o
+		WHERE o.block_num >= _from
+		ORDER BY o.block_num, o.id
+		LIMIT 1
 	),
 	ops_from_end_block as MATERIALIZED
 	(
-		select o.id
-		from hive.operations_view o
-		where o.block_num < %L
-		order by o.block_num desc, o.id desc
-		limit 1
+		SELECT o.id
+		FROM hive.operations_view o
+		WHERE o.block_num < _to
+		ORDER BY o.block_num DESC, o.id DESC
+		LIMIT 1
 	)
-  -- using hive_account_operations_uq2
+-- using hive_account_operations_uq2, we are forcing planner to use this index on (account_id,operation_id), it achives better performance results
     SELECT haov.operation_id, haov.op_type_id, haov.block_num
     FROM hive.account_operations_view haov
-    WHERE
-      haov.account_id = %L AND 
-      haov.op_type_id = ANY(%L)
-      AND (%L OR haov.operation_id >= (SELECT * FROM ops_from_start_block))
-	  AND (%L OR haov.operation_id < (SELECT * FROM ops_from_end_block))
-    ORDER BY haov.operation_id %s
-    LIMIT %L
-    OFFSET %L
+    WHERE haov.account_id = __account_id
+    AND (__no_ops_filter OR haov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
+-- filtering by op_type_id adds another filtering level without changing index to (op_type_id, account_id)
+    AND (__no_start_date OR haov.operation_id >= (SELECT * FROM ops_from_start_block))
+	  AND (__no_end_date OR haov.operation_id < (SELECT * FROM ops_from_end_block))
+    ORDER BY haov.operation_id DESC
+    LIMIT (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END)
+    OFFSET (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END)
   ) ls
   JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
@@ -186,26 +185,10 @@ RETURN QUERY EXECUTE format(
 -- filter too long operation bodies 
   SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(o.body, o.id,%L) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
+  SELECT hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
   FROM operation_range o 
   ) s
   ORDER BY s.id;
-
-  $query$,
-  _from,
-  _to,
-  __account_id,
-  __filter,
-  __no_start_date,
-  __no_end_date,
-  _order_is,
-  (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END),
-  (CASE WHEN _page_num = 1 THEN 0 ELSE __offset END),
--- When we show first page the limit is _rest_of_division and offset is 0 (when the _rest_of_division = 0 then first page limit = _limit of rows with offset = 0)
--- When _page_num = 2 + then limit = _limit and offset = __offset
-  _body_limit
-) res
-;
 
 END
 $$;
@@ -228,8 +211,9 @@ $$
 DECLARE
   __no_start_date BOOLEAN = (_from IS NULL);
   __no_end_date BOOLEAN = (_to IS NULL);
+  __no_ops_filter BOOLEAN = (_operations IS NULL);
 BEGIN
-IF _operations IS NULL AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
+IF __no_ops_filter = TRUE AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
   RETURN (
       WITH account_id AS MATERIALIZED (
         SELECT a.id FROM hive.accounts_view a WHERE a.name = _account)
@@ -246,13 +230,32 @@ ELSE
     ),
     account_id AS MATERIALIZED (
       SELECT a.id FROM hive.accounts_view a WHERE a.name = _account
+    ),
+-- changing filtering method from block_num to operation_id
+    	ops_from_start_block as MATERIALIZED
+    (
+      SELECT o.id 
+      FROM hive.operations o
+      WHERE o.block_num >= _from
+      ORDER BY o.block_num, o.id
+      LIMIT 1
+    ),
+    ops_from_end_block as MATERIALIZED
+    (
+      SELECT o.id
+      FROM hive.operations o
+      WHERE o.block_num < _to
+      ORDER BY o.block_num DESC, o.id DESC
+      LIMIT 1
     )
+-- using hive_account_operations_uq2, we are forcing planner to use this index on (account_id,operation_id), it achives better performance results
     SELECT COUNT(*)
     FROM hive.account_operations ao
     WHERE ao.account_id = (SELECT ai.id FROM account_id ai)
-    AND ao.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)])
-    AND (__no_start_date OR ao.block_num >= _from)
-    AND (__no_end_date OR ao.block_num < _to));
+    AND (__no_ops_filter OR ao.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
+    AND (__no_start_date OR ao.operation_id >= (SELECT * FROM ops_from_start_block))
+    AND (__no_end_date OR ao.operation_id < (SELECT * FROM ops_from_end_block))
+    );
 
 END IF;
 END
