@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.5
 ARG PAAS_PSQL_VERSION=11251948d5dd4867552f9b9836a9e02110304df5
-FROM ghcr.io/alphagov/paas/psql:${PAAS_PSQL_VERSION}
+FROM ghcr.io/alphagov/paas/psql:${PAAS_PSQL_VERSION} AS psql
 
 RUN <<EOF
     set -e
@@ -13,3 +13,41 @@ USER haf_admin
 WORKDIR /home/haf_admin
 
 ENTRYPOINT [ "/bin/bash", "-c" ]
+
+FROM psql as daemontools
+USER root
+RUN <<EOF
+    set -e
+    echo http://dl-cdn.alpinelinux.org/alpine/edge/community > /etc/apk/repositories
+    apk --no-cache add daemontools-encore
+EOF
+
+FROM psql as version-calculcation
+
+COPY --chown=haf_admin:users . /home/haf_admin/src
+WORKDIR /home/haf_admin/src
+RUN scripts/generate_version_sql.sh $(pwd)
+
+FROM psql as full
+COPY --from=daemontools /usr/bin/tai64n /usr/bin/tai64nlocal /usr/bin/
+
+RUN mkdir -p /home/haf_admin/haf_block_explorer/scripts
+RUN mkdir -p /home/haf_admin/haf_block_explorer/queries
+RUN mkdir -p /home/haf_admin/haf_block_explorer/postgrest
+RUN mkdir -p /home/haf_admin/haf_block_explorer/haf/scripts
+
+COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh
+COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend 
+COPY --chown=haf_admin:users endpoints /home/haf_admin/haf_block_explorer/endpoints 
+COPY --chown=haf_admin:users database /home/haf_admin/haf_block_explorer/database 
+COPY --chown=haf_admin:users account_dump /home/haf_admin/haf_block_explorer/account_dump 
+
+COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh 
+COPY --chown=haf_admin:users scripts/process_blocks.sh /home/haf_admin/haf_block_explorer/scripts/process_blocks.sh
+COPY --chown=haf_admin:users scripts/uninstall_app.sh /home/haf_admin/haf_block_explorer/scripts/uninstall_app.sh 
+COPY --chown=haf_admin:users docker/scripts/docker_entrypoint.sh /home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh 
+COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/scripts/set_version_in_sql.pgsql /home/haf_admin/haf_block_explorer/scripts/set_version_in_sql.pgsql
+
+WORKDIR /home/haf_admin/haf_block_explorer/scripts
+
+ENTRYPOINT ["/home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh"]
