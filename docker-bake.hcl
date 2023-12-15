@@ -2,6 +2,15 @@
 variable "CI_REGISTRY_IMAGE" {
     default = "registry.gitlab.syncad.com/hive/haf_block_explorer"
 }
+variable "CI_COMMIT_SHORT_SHA" {
+  default = ""
+}
+variable "CI_COMMIT_BRANCH" {
+  default = "develop"
+}
+variable "CI_DEFAULT_BRANCH" {
+  default = "develop"
+}
 variable "TAG_CI" {
   default = "docker-24.0.1-3"
 }
@@ -28,11 +37,40 @@ group "default" {
 # Targets
 target "psql" {
   dockerfile = "Dockerfile"
+  target = "psql"
   tags = [
     "${registry-name("psql", "")}:${PSQL_CLIENT_VERSION}"
   ]
   platforms = [
     "linux/amd64"
+  ]
+}
+
+## Locally tag image with "latest"
+target "full" {
+  inherits = ["psql"]
+  target = "full"
+  tags = [
+    "${CI_REGISTRY_IMAGE}:latest"
+  ]
+}
+
+## On default branch, tag image with "latest" and commit hash,
+## on any other branch tag image with just commit hash
+target "full-ci" {
+  inherits = ["full"]
+  contexts = {
+    psql = "docker-image://${registry-name("psql", "")}:${PSQL_CLIENT_VERSION}"
+  }
+  cache-from = [
+    "type=registry,ref=${registry-name("cache", "")}:${PSQL_CLIENT_VERSION}"
+  ]
+  cache-to = [
+    "type=registry,mode=max,ref=${registry-name("cache", "")}:${PSQL_CLIENT_VERSION}"
+  ]
+  tags = [
+    equal(CI_COMMIT_BRANCH, CI_DEFAULT_BRANCH) ? "${CI_REGISTRY_IMAGE}:latest": "",
+    notempty(CI_COMMIT_SHORT_SHA) ? "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" : ""
   ]
 }
 
