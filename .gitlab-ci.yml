@@ -22,7 +22,7 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: hive/haf
-    ref: 3600c535a4df2704c32d49a4190258007d209cdc # develop
+    ref: a48266963fe1b4151e845702e4580fc2242814f4 # develop
     file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
 
 .lint_job:
@@ -95,7 +95,7 @@ prepare_haf_data:
   stage: build
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: ""
+    TAG: ""
     NAME: ""
     TARGET: "$NAME"
   before_script:
@@ -113,12 +113,12 @@ prepare_haf_data:
         docker manifest inspect "$1" > /dev/null
         return $?
       }
-      if image-exists "$CI_REGISTRY_IMAGE/$NAME${BASE_REPO_NAME:+/$BASE_REPO_NAME}:$BASE_TAG"; then
-        echo "Image $CI_REGISTRY_IMAGE/$NAME${BASE_REPO_NAME:+/$BASE_REPO_NAME}:$BASE_TAG already exists. Skipping..."
+      if image-exists "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG}"; then
+        echo "Image $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG} already exists. Skipping..."
       else
-        echo "Baking $CI_REGISTRY_IMAGE/$NAME${BASE_REPO_NAME:+/$BASE_REPO_NAME} base image..."
+        echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG} image..."
         git config --global --add safe.directory $(pwd)
-        docker buildx bake --progress=plain --provenance=false --push "$TARGET"
+        docker buildx bake --progress=plain --provenance=false "$TARGET"
       fi
       echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
@@ -128,7 +128,7 @@ docker-ci-runner-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-3"
+    TAG: "docker-24.0.1-3"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
@@ -136,26 +136,19 @@ docker-psql-client-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "14"
+    TAG: "14"
     NAME: "psql"
-    TARGET: "psql"
+    TARGET: "psql-ci"
 
-build_setup_docker_image:
-  extends: .job-defaults
-  stage: build
-  image: docker:24.0.6
-  services:
-    - docker:24.0.6-dind
-  tags:
-    - public-runner-docker
+docker-setup-docker-image-build:
+  extends: .docker-base-build-template
   variables:
     GIT_SUBMODULE_STRATEGY: none
     GIT_DEPTH: 1
-  script:
-    - "echo \"TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$CI_COMMIT_SHA');\" > set_version_in_sql.pgsql"
-    - "docker build --tag=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA --tag=$CI_REGISTRY_IMAGE:latest -f docker/Dockerfile ."
-    - "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
-    - "docker push --all-tags $CI_REGISTRY_IMAGE"
+    BASE_REPO_NAME: ""
+    TAG: "$CI_COMMIT_SHORT_SHA"
+    NAME: ""
+    TARGET: "full-ci"
 
 .test-template:
   extends: .docker_image_builder_job_template
