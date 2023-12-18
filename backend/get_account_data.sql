@@ -44,22 +44,6 @@ RETURN __profile_image_url
 END
 $$;
 
--- ACCOUNT POST DATES
-CREATE OR REPLACE FUNCTION hafbe_backend.get_last_post_vote_time(_account INT)
-RETURNS hafbe_backend.last_post_vote_time -- noqa: LT01, CP05
-LANGUAGE 'plpgsql'
-STABLE
-AS
-$$
-BEGIN
-RETURN (SELECT ROW( last_post, last_root_post, last_vote_time, post_count)
-FROM hafbe_app.account_posts 
-WHERE account= _account
-);
-
-END
-$$;
-
 -- ACCOUNT POST COUNT
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
 RETURNS INT
@@ -109,7 +93,7 @@ END
 $$;
 
 -- ACCOUNT VOTES
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_votes(_account INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_votes(_account INT)
 RETURNS hafbe_backend.account_votes -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
@@ -122,6 +106,19 @@ RETURN (SELECT ROW(
   json_agg(vote))
 FROM hafbe_views.current_witness_votes_view WHERE account= _account
 );
+
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_last_vote(_account INT)
+RETURNS timestamp -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+RETURN vv.timestamp FROM hafbe_views.votes_view vv 
+WHERE vv.voter = (SELECT a.name FROM hive.accounts_view a WHERE a.id = _account) order by vv.block_num DESC LIMIT 1;
 
 END
 $$;
