@@ -54,18 +54,6 @@ BEGIN
 
 ------------------------------------------
 
--- Updated by hafbe_app.process_block_range_data_c
-  CREATE TABLE IF NOT EXISTS hafbe_app.account_posts
-  (
-    account INT NOT NULL, 
-    last_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-    last_root_post TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-    last_vote_time TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-    post_count INT DEFAULT 0,
-
-    CONSTRAINT pk_account_posts PRIMARY KEY (account)
-  ) INHERITS (hive.hafbe_app);
-
   CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters
   (
     account INT NOT NULL, 

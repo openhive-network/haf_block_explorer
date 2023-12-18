@@ -191,27 +191,13 @@ GROUP BY aph.account_id;
 ------
 
 -- used in hafbe_app.process_block_range_data_c
-CREATE OR REPLACE VIEW hafbe_views.comments_view
-AS
-  SELECT
-    (ov.body)->'value'->>'author' AS author,
-    (ov.body)->'value'->>'permlink' AS permlink,
-    ov.block_num,
-    ov.id
-  FROM
-    hive.hafbe_app_operations_view ov
-  WHERE 
-    ov.op_type_id = 1;
-
-------
-
--- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.votes_view
 AS
   SELECT
     (ov.body)->'value'->>'voter' AS voter,
     ov.block_num,
-    ov.id
+    ov.id,
+    ov.timestamp
   FROM
     hive.hafbe_app_operations_view ov
   WHERE 
@@ -244,21 +230,6 @@ AS
     hive.hafbe_app_operations_view ov
   WHERE 
     ov.op_type_id = 30;
-
-------
-
--- used in hafbe_app.process_block_range_data_c
-CREATE OR REPLACE VIEW hafbe_views.deleted_comments_view
-AS
-  SELECT
-    o.body-> 'value'->> 'author' AS author,
-    o.body-> 'value'->> 'permlink' AS permlink,
-    o.block_num,
-    o.id
-  FROM 
-    hive.hafbe_app_operations_view o
-  WHERE 
-    o.op_type_id =17;
 
 ------
 

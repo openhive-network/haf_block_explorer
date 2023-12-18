@@ -16,10 +16,7 @@ WITH account_balances AS (
     last_account_recovery,
     created,
     proxy,
-    last_post,
-    last_root_post,
-    last_vote_time,
-    post_count
+    last_vote_time
   FROM hafbe_backend.account_balances
 )
 INSERT INTO hafbe_backend.differing_accounts
@@ -37,10 +34,8 @@ WHERE
 
   OR account_balances.proxy != _current_account_stats.proxy
 
-  OR account_balances.last_post != _current_account_stats.last_post
-  OR account_balances.last_root_post != _current_account_stats.last_root_post
-  OR account_balances.last_vote_time != _current_account_stats.last_vote_time
-  OR account_balances.post_count <> _current_account_stats.post_count;
+  OR account_balances.last_vote_time != _current_account_stats.last_vote_time;
+
 END
 $$;
 
@@ -58,10 +53,8 @@ BEGIN
     last_account_recovery,
     created,
     proxy,
-    last_post,
-    last_root_post,
-    last_vote_time,
-    post_count
+    last_vote_time
+
   FROM hafbe_backend.account_balances WHERE name = _account
   UNION ALL
 SELECT * FROM hafbe_backend.get_account_setof(_account);

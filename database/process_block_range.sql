@@ -339,15 +339,6 @@ SELECT
     cao.op_type_id AS op_type
 FROM hive.hafbe_app_operations_view cao
 LEFT JOIN (
-  SELECT 
-      DISTINCT ON (lvt.voter) 
-      voter,
-      lvt.id AS source_op
-  FROM hafbe_views.votes_view lvt
-  WHERE lvt.block_num BETWEEN _from AND _to
-  ORDER BY voter, lvt.id DESC
-) lvt_subquery ON cao.id = lvt_subquery.source_op
-LEFT JOIN (
   WITH pow AS MATERIALIZED (
   SELECT 
       DISTINCT ON (pto.worker_account) 
@@ -379,7 +370,52 @@ LEFT JOIN (
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
 ) pto_subquery ON cao.id = pto_subquery.source_op
-LEFT JOIN (
+WHERE 
+  (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
+  OR (cao.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
+  AND cao.block_num BETWEEN _from AND _to
+)
+  SELECT * FROM comment_operation 
+  ORDER BY source_op_block, source_op
+
+LOOP
+
+  CASE 
+
+    WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
+    PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+
+    WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
+    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+    
+    WHEN __balance_change.op_type = 76 THEN
+    PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
+
+    WHEN __balance_change.op_type = 25 THEN
+    PERFORM hafbe_app.process_recover_account_operation(__balance_change.body, __balance_change._timestamp);
+
+    WHEN __balance_change.op_type = 36 THEN
+    PERFORM hafbe_app.process_decline_voting_rights_operation(__balance_change.body);
+
+    ELSE
+  END CASE;
+
+END LOOP;
+
+
+END
+$function$
+LANGUAGE 'plpgsql' VOLATILE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+SET enable_bitmapscan = OFF
+SET enable_hashjoin = OFF
+SET cursor_tuple_fraction = '0.9';
+
+/*
+
 -- This query is used to count how many posts were made by each account
 -- We need to take into consideration that post can be made first time, updated or deleted and reposted
 -- indexes used in this query:
@@ -428,57 +464,32 @@ WHERE (filtered = 0 AND prd_id IS NULL) or (filtered =1 AND prd_id IS NOT NULL)
 -- (filtered = 1 prd_id IS NOT NULL) -reposted post
 
 -- The third possibility is (filtered = 0 AND prd_id IS NOT NULL) means that: prd.up_id is and update of prd.prd_id (we dont count it)
-) up_subquery ON cao.id = up_subquery.source_op
-WHERE 
-  (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
-  OR (cao.op_type_id = 72 AND lvt_subquery.source_op IS NOT NULL)
-  OR (cao.op_type_id = 1  AND up_subquery.source_op IS NOT NULL)
-  OR (cao.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
-  OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
-  AND cao.block_num BETWEEN _from AND _to
-)
-  SELECT * FROM comment_operation 
-  ORDER BY source_op_block, source_op
 
-LOOP
+CREATE OR REPLACE VIEW hafbe_views.deleted_comments_view
+AS
+  SELECT
+    o.body-> 'value'->> 'author' AS author,
+    o.body-> 'value'->> 'permlink' AS permlink,
+    o.block_num,
+    o.id
+  FROM 
+    hive.hafbe_app_operations_view o
+  WHERE 
+    o.op_type_id =17;
 
-  CASE 
+CREATE OR REPLACE VIEW hafbe_views.comments_view
+AS
+  SELECT
+    (ov.body)->'value'->>'author' AS author,
+    (ov.body)->'value'->>'permlink' AS permlink,
+    ov.block_num,
+    ov.id
+  FROM
+    hive.hafbe_app_operations_view ov
+  WHERE 
+    ov.op_type_id = 1;
 
-    WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
-    PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+*/
 
-    WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
-    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
-    
-    WHEN __balance_change.op_type = 76 THEN
-    PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
-
-    WHEN __balance_change.op_type = 25 THEN
-    PERFORM hafbe_app.process_recover_account_operation(__balance_change.body, __balance_change._timestamp);
-
-    WHEN __balance_change.op_type = 36 THEN
-    PERFORM hafbe_app.process_decline_voting_rights_operation(__balance_change.body);
-
-    WHEN __balance_change.op_type = 1 THEN
-    PERFORM hafbe_app.process_comment_operation(__balance_change.body, __balance_change._timestamp);
-
-    WHEN __balance_change.op_type = 72 THEN
-    PERFORM hafbe_app.process_vote_operation(__balance_change.body, __balance_change._timestamp);
-
-    ELSE
-  END CASE;
-
-END LOOP;
-
-
-END
-$function$
-LANGUAGE 'plpgsql' VOLATILE
-SET from_collapse_limit = 16
-SET join_collapse_limit = 16
-SET jit = OFF
-SET enable_bitmapscan = OFF
-SET enable_hashjoin = OFF
-SET cursor_tuple_fraction = '0.9';
 
 RESET ROLE;
