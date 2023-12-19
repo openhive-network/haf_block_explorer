@@ -116,7 +116,7 @@ BEGIN
   TRUNCATE TABLE hafbe_app.witness_voters_stats_cache;
 
   INSERT INTO hafbe_app.witness_voters_stats_cache (witness_id, voter_id, vests, account_vests, proxied_vests, timestamp)
-  SELECT witness_id, voter_id, (vests/1000000)::BIGINT, (account_vests/1000000)::BIGINT, (proxied_vests/1000000)::BIGINT, timestamp
+  SELECT witness_id, voter_id, (vests)::BIGINT, (account_vests)::BIGINT, (proxied_vests)::BIGINT, timestamp
   FROM hafbe_views.voters_stats_view;
 
   RAISE NOTICE 'Updated witness voters cache';
@@ -125,8 +125,8 @@ BEGIN
 
   INSERT INTO hafbe_app.witness_votes_history_cache (witness_id, voter_id, approve, timestamp, proxied_vests, account_vests)
     SELECT
-      wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0))/1000000)::BIGINT AS proxied_vests,
-      ((COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0))/1000000)::BIGINT AS account_vests
+      wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
+      ((COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0)))::BIGINT AS account_vests
     FROM hafbe_app.witness_votes_history wvh
     LEFT JOIN btracker_app.current_account_balances av
       ON av.account = wvh.voter_id AND av.nai = 37
