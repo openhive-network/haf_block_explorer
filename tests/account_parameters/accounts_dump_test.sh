@@ -8,7 +8,7 @@ SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
-POSTGRES_USER="haf_admin"
+POSTGRES_USER="hafbe_owner"
 
 print_help () {
     echo "Usage: $0 [OPTION[=VALUE]]..."
@@ -17,7 +17,7 @@ print_help () {
     echo "OPTIONS:"
     echo "  --host=VALUE             Allows to specify a PostgreSQL host location (defaults to localhost)"
     echo "  --port=NUMBER            Allows to specify a PostgreSQL operating port (defaults to 5432)"
-    echo "  --user=VALUE             Allows to specify a PostgreSQL user (defaults to haf_admin)"
+    echo "  --user=VALUE             Allows to specify a PostgreSQL user (defaults to hafbe_owner)"
 }
 
 while [ $# -gt 0 ]; do
