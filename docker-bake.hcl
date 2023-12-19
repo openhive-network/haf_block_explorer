@@ -11,6 +11,9 @@ variable "CI_COMMIT_BRANCH" {
 variable "CI_DEFAULT_BRANCH" {
   default = "develop"
 }
+variable "TAG" {
+  default = "latest"
+}
 variable "TAG_CI" {
   default = "docker-24.0.1-3"
 }
@@ -51,7 +54,10 @@ target "full" {
   inherits = ["psql"]
   target = "full"
   tags = [
-    "${CI_REGISTRY_IMAGE}:latest"
+    "${CI_REGISTRY_IMAGE}:${TAG}"
+  ]
+  output = [
+    "type=docker"
   ]
 }
 
@@ -72,6 +78,9 @@ target "full-ci" {
     equal(CI_COMMIT_BRANCH, CI_DEFAULT_BRANCH) ? "${CI_REGISTRY_IMAGE}:latest": "",
     notempty(CI_COMMIT_SHORT_SHA) ? "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" : ""
   ]
+  output = [
+    "type=registry"
+  ]
 }
 
 target "ci-runner" {
@@ -79,6 +88,9 @@ target "ci-runner" {
   context = "docker/ci"
   tags = [
     "${registry-name("ci-runner", "")}:${TAG_CI}"
+  ]
+  output = [
+    "type=docker"
   ]
 }
 
@@ -92,5 +104,8 @@ target "ci-runner-ci" {
   ]
   tags = [
     "${registry-name("ci-runner", "")}:${TAG_CI}"
+  ]
+  output = [
+    "type=registry"
   ]
 }
