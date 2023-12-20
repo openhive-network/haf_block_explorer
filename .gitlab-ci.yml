@@ -145,8 +145,6 @@ docker-setup-docker-image-build:
     TAG: "$CI_COMMIT_SHORT_SHA"
     NAME: ""
     TARGET: "full-ci"
-  script:
-    - !reference [.docker-base-build-template, script]
 
 .test-template:
   extends: .docker_image_builder_job_template
