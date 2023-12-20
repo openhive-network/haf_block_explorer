@@ -146,7 +146,6 @@ docker-setup-docker-image-build:
     NAME: ""
     TARGET: "full-ci"
   script:
-    - echo "TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$CI_COMMIT_SHA');" > set_version_in_sql.pgsql
     - !reference [.docker-base-build-template, script]
 
 .test-template:
