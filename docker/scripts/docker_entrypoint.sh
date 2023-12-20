@@ -1,6 +1,6 @@
 #! /bin/sh
 set -e
-cd /haf_block_explorer/scripts
+cd /home/haf_admin/haf_block_explorer/scripts
 
 if [ "$1" = "install_app" ]; then
   shift
