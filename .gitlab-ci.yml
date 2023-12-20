@@ -134,7 +134,7 @@ docker-psql-client-build:
     BASE_REPO_NAME: ""
     TAG: "14"
     NAME: "psql"
-    TARGET: "psql"
+    TARGET: "psql-ci"
 
 docker-setup-docker-image-build:
   extends: .docker-base-build-template

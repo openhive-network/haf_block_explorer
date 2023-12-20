@@ -47,6 +47,16 @@ target "psql" {
   platforms = [
     "linux/amd64"
   ]
+  output = [
+    "type=docker"
+  ]
+}
+
+target "psql-ci" {
+  inherits = ["psql"]
+  output = [
+    "type=registry"
+  ]
 }
 
 ## Locally tag image with "latest"
