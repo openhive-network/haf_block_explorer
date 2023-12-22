@@ -1,4 +1,5 @@
 .tests/
+.vscode/
 tests/performance/result
 build/
 block_processing.log
@@ -10,5 +11,6 @@ account_dump_test.log
 
 # Docker
 docker/blockchain/block_log*
+docker/ci/.env
 docker/.env.*
 docker/srv
