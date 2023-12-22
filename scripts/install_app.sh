@@ -15,12 +15,14 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
-    --only-hafbe             Don't do setup for hafah, btracker, just the block explorer
+    --only-apps              Set up only HAfAH and Balance Tracker, without HAF Block Explorer
+    --only-hafbe             Don't set up HAfAH and Balance Tracker, just HAF Block Explorer
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
 
 EOF
 }
 
+ONLY_APPS=0
 ONLY_HAFBE=0
 
 while [ $# -gt 0 ]; do
@@ -37,6 +39,9 @@ while [ $# -gt 0 ]; do
     --help|-h|-?)
         print_help
         exit 0
+        ;;
+    --only-apps)
+        ONLY_APPS=1
         ;;
     --only-hafbe)
         ONLY_HAFBE=1
@@ -174,8 +179,10 @@ if [ "$ONLY_HAFBE" -eq 0 ]; then
   setup_apps
 fi
 
-setup_api
-create_haf_indexes
+if [ "$ONLY_APPS" -eq 0 ]; then
+  setup_api
+  create_haf_indexes
+fi
 
 if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
   echo 'Creating blockseach indexes...'

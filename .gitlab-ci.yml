@@ -150,22 +150,13 @@ docker-setup-docker-image-build:
   extends: .docker_image_builder_job_template
   stage: test
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-3
-  needs:
-    - prepare_haf_image
-    - prepare_haf_data
-    - docker-psql-client-build
-    - docker-ci-runner-build
   variables:
     HAF_COMMAND: --shared-file-size=1G --plugin database_api --replay --stop-replay-at-block=5000000
-    HAF_REGISTRY: registry.gitlab.syncad.com/hive/haf/instance
     HAF_DATA_DIRECTORY: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir
     HAF_SHM_DIRECTORY: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/shm_dir
-    PGHERO_USERNAME: unused
-    PGHERO_PASSWORD: unused
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMMAND: SELECT CASE WHEN irreversible_block = 5000000 THEN 0 ELSE 1 END FROM hive.contexts WHERE name = 'hafbe_app';
     MESSAGE: Waiting for HAF Block Explorer to finish processing blocks...
-    COMPOSE_OPTIONS_STRING: --project-name haf_be --env-file .env.local --file docker-compose.yml --file ci/docker-compose.yml --ansi never
   timeout: 2 hours
   before_script:
     - |
@@ -187,7 +178,8 @@ docker-setup-docker-image-build:
       # Put all the variables that can be predefined in the "variables"
       # block and all the variables that have to be dynamically set by the script below
       {
-        echo "HAF_VERSION=instance-$HAF_COMMIT"
+        echo "HAF_REGISTRY=$HAF_REGISTRY_PATH"
+        echo "HAF_VERSION=$HAF_REGISTRY_TAG"
         echo "HIVED_UID=$HIVED_UID"
         echo "SETUP_UID=$(id -u)"
       } > .env.local
@@ -230,7 +222,30 @@ docker-setup-docker-image-build:
   tags:
     - data-cache-storage
 
-regression-test:
+.psql-client-test-template:
+  extends: .test-template
+  needs:
+    - prepare_haf_image
+    - prepare_haf_data
+    - docker-psql-client-build
+    - docker-ci-runner-build
+  variables:
+    PGHERO_USERNAME: unused
+    PGHERO_PASSWORD: unused
+    COMPOSE_OPTIONS_STRING: --project-name btracker --env-file .env.local --file docker-compose.yml --file ci/docker-compose.yml --ansi never
+
+.full-image-test-template:
+  extends: .test-template
+  needs:
+    - prepare_haf_image
+    - prepare_haf_data
+    - docker-setup-docker-image-build
+    - docker-ci-runner-build
+  variables:
+    BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
+    COMPOSE_OPTIONS_STRING: --project-name btracker --env-file .env.local --file ci/docker-compose.full.yml --ansi never
+
+psql-client-regression-test:
   extends: .test-template
   timeout: 3 hours
   script:
@@ -248,7 +263,7 @@ regression-test:
     expire_in: 1 week
     when: always
 
-performance-test:
+psql-client-performance-test:
   extends: .test-template
   script:
     - !reference [.test-template, script]
@@ -269,6 +284,24 @@ performance-test:
       - jmeter.log
     reports:
       junit: tests/performance/junit-result.xml
+
+full-image-regression-test:
+  extends: .full-image-test-template
+  script:
+    - !reference [psql-client-regression-test, script]
+  artifacts:
+    paths:
+      !reference [psql-client-regression-test, artifacts, paths]
+
+full-image-performance-test:
+  extends: .full-image-test-template
+  script:
+    - !reference [psql-client-performance-test, script]
+  artifacts:
+    paths:
+      !reference [psql-client-performance-test, artifacts, paths]
+    reports:
+      junit: !reference [psql-client-performance-test, artifacts, reports, junit]
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual
