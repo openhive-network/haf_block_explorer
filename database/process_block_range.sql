@@ -326,6 +326,8 @@ BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
+SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
+
 FOR __balance_change IN
   WITH comment_operation AS (
 
