@@ -10,7 +10,7 @@ elif [ "$1" = "process_blocks" ]; then
   exec ./process_blocks.sh --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT:-5432}" --user="${POSTGRES_USER:-hafbe_owner}" "$@"
 elif [ "$1" = "uninstall_app" ]; then
   shift
-  exec ./uninstall_app.sh --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT:-5432}" --user="${POSTGRES_USER:-haf_app_admin}" "$@"
+  exec ./uninstall_app.sh --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT:-5432}" --user="${POSTGRES_USER:-haf_admin}" "$@"
 else
   echo "usage: $0 install_app|process_blocks|uninstall_app"
   exit 1
