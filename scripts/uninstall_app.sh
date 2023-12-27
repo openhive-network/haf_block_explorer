@@ -11,6 +11,7 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
+    --only-hafbe             Don't do cleanup for hafah, btracker, just the block explorer
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
 }
@@ -18,6 +19,7 @@ EOF
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
+ONLY_HAFBE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +31,9 @@ while [ $# -gt 0 ]; do
         ;;
     --user=*)
         POSTGRES_USER="${1#*=}"
+        ;;
+    --only-hafbe)
+        ONLY_HAFBE=1
         ;;
     --help|-h|-?)
         print_help
