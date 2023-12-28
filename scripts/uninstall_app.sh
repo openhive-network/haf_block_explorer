@@ -12,7 +12,6 @@ cat <<EOF
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
     --only-hafbe             Don't do cleanup for hafah, btracker, just the block explorer
-    --skip-hafah             Allows to skip cleanup of HAfAH application
     --skip-btracker          Allows to skip cleanup of Balance Tracker application
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
@@ -22,7 +21,6 @@ POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
 ONLY_HAFBE=0
-CLEAN_HAFAH=1
 CLEAN_BTRACKER=1
 
 while [ $# -gt 0 ]; do
@@ -38,9 +36,6 @@ while [ $# -gt 0 ]; do
         ;;
     --only-hafbe)
         ONLY_HAFBE=1
-        ;;
-    --skip-hafah)
-        CLEAN_HAFAH=0
         ;;
     --skip-btracker)
         CLEAN_BTRACKER=0
@@ -92,21 +87,6 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE hafbe_user"
 
     if [ "${ONLY_HAFBE}" -eq 0 ]; then
-
-      if [ "${CLEAN_HAFAH}" -eq 1 ]; then
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafah_backend CASCADE;"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafah_endpoints CASCADE;"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafah_python CASCADE;"
-
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY hafah_owner TO postgres; "
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY hafah_owner"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE hafah_owner"
-
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY hafah_user TO postgres; "
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY hafah_user"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE hafah_user"
-      fi
-
       if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
         psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
         psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_app CASCADE;"
