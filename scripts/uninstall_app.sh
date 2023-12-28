@@ -11,7 +11,6 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
-    --only-hafbe             Don't do cleanup for hafah, btracker, just the block explorer
     --skip-btracker          Allows to skip cleanup of Balance Tracker application
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
@@ -20,7 +19,6 @@ EOF
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
-ONLY_HAFBE=0
 CLEAN_BTRACKER=1
 
 while [ $# -gt 0 ]; do
@@ -33,9 +31,6 @@ while [ $# -gt 0 ]; do
         ;;
     --user=*)
         POSTGRES_USER="${1#*=}"
-        ;;
-    --only-hafbe)
-        ONLY_HAFBE=1
         ;;
     --skip-btracker)
         CLEAN_BTRACKER=0
@@ -86,21 +81,19 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY hafbe_user"
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE hafbe_user"
 
-    if [ "${ONLY_HAFBE}" -eq 0 ]; then
-      if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_app CASCADE;"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_account_dump CASCADE;"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_endpoints CASCADE;"
+    if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_app CASCADE;"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_account_dump CASCADE;"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_endpoints CASCADE;"
 
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_owner TO postgres; "
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_owner"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE btracker_owner"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_owner TO postgres; "
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_owner"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE btracker_owner"
 
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_user TO postgres; "
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_user"
-        psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE btracker_user"
-      fi
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_user TO postgres; "
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_user"
+      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE btracker_user"
     fi
 }
 
