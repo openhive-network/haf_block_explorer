@@ -46,7 +46,10 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     COALESCE(_result_savings.savings_withdraw_requests, 0) AS savings_withdraw_requests,
     COALESCE(_result_curation_posting.posting_rewards, 0) AS posting_rewards,
     COALESCE(_result_curation_posting.curation_rewards, 0) AS curation_rewards,
+    COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
+    COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
     COALESCE(_result_post.get_account_last_vote, '1970-01-01T00:00:00') AS last_vote_time,
+    COALESCE(NULL::INT, 0) AS post_count, --- FIXME to be supplemented by new data collection algorithm or removed soon
     COALESCE(_result_parameters.can_vote, TRUE) AS can_vote,
     COALESCE(_result_parameters.mined, TRUE) AS mined,
     COALESCE(_result_parameters.recovery_account, 'steem') AS recovery_account,
@@ -111,6 +114,9 @@ WITH select_parameters_from_backend AS MATERIALIZED (
   curation_rewards,
   proxied_vsf_votes,
   witnesses_voted_for,
+  post_count,
+  last_post,
+  last_root_post,
   last_vote_time,
   delayed_vests,
   vesting_balance_hive, 
