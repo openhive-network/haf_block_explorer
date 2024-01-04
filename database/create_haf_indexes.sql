@@ -20,7 +20,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'uq_hive_blocks_reversible_hash')) THEN
       RAISE NOTICE 'Dropping invalid index uq_hive_blocks_reversible_hash, it will be recreated';
-      DROP INDEX uq_hive_blocks_reversible_hash;
+      DROP INDEX hive.uq_hive_blocks_reversible_hash;
     END IF;
   END
 $$;
@@ -30,7 +30,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'uq_hive_blocks_hash')) THEN
       RAISE NOTICE 'Dropping invalid index uq_hive_blocks_hash, it will be recreated';
-      DROP INDEX uq_hive_blocks_hash;
+      DROP INDEX hive.uq_hive_blocks_hash;
     END IF;
   END
 $$;
@@ -40,7 +40,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'uq_hive_blocks_reversible_created_at')) THEN
       RAISE NOTICE 'Dropping invalid index uq_hive_blocks_reversible_created_at, it will be recreated';
-      DROP INDEX uq_hive_blocks_reversible_created_at;
+      DROP INDEX hive.uq_hive_blocks_reversible_created_at;
     END IF;
   END
 $$;
@@ -53,7 +53,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_voter')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_voter, it will be recreated';
-      DROP INDEX hive_operations_voter;
+      DROP INDEX hive.hive_operations_voter;
     END IF;
   END
 $$;
@@ -67,7 +67,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_reversible_voter')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_reversible_voter, it will be recreated';
-      DROP INDEX hive_operations_reversible_voter;
+      DROP INDEX hive.hive_operations_reversible_voter;
     END IF;
   END
 $$;
@@ -83,7 +83,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_pow_operation')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_pow_operation, it will be recreated';
-      DROP INDEX hive_operations_pow_operation;
+      DROP INDEX hive.hive_operations_pow_operation;
     END IF;
   END
 $$;
@@ -97,7 +97,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_reversible_pow_operation')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_reversible_pow_operation, it will be recreated';
-      DROP INDEX hive_operations_reversible_pow_operation;
+      DROP INDEX hive.hive_operations_reversible_pow_operation;
     END IF;
   END
 $$;
@@ -113,7 +113,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_pow2_operation')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_pow2_operation, it will be recreated';
-      DROP INDEX hive_operations_pow2_operation;
+      DROP INDEX hive.hive_operations_pow2_operation;
     END IF;
   END
 $$;
@@ -127,7 +127,7 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_reversible_pow2_operation')) THEN
       RAISE NOTICE 'Dropping invalid index hive_operations_reversible_pow2_operation, it will be recreated';
-      DROP INDEX hive_operations_pow2_operation;
+      DROP INDEX hive.hive_operations_reversible_pow2_operation;
     END IF;
   END
 $$;
