@@ -60,6 +60,17 @@ CREATE TYPE hafbe_types.account AS (
 );
 
 -- Used in 
+-- hafbe_endpoints.get_account_authorizations
+DROP TYPE IF EXISTS hafbe_types.account_authorizations CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_types.account_authorizations AS (
+    owner JSON,
+    active JSON,
+    posting JSON,
+    memo TEXT,
+    witness_signing TEXT
+);
+
+-- Used in 
 -- hafbe_backend.get_ops_by_account
 -- hafbe_endpoints.get_ops_by_block
 -- hafbe_endpoints.get_operation
