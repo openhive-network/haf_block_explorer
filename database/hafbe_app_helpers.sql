@@ -60,8 +60,6 @@ $$
 DECLARE
 _time JSONB = '{}'::JSONB;
 BEGIN
-  RAISE NOTICE 'Starting single block processing: %', _block;
-
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM btracker_app.process_block_range_data_a(_block, _block);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
@@ -89,6 +87,10 @@ BEGIN
   INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (_block, _time);
 
   PERFORM hafbe_app.storeLastProcessedBlock(_block);
+
+  RAISE NOTICE 'Block processing running for % minutes
+  ',
+  ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
 
   COMMIT; -- For single block processing we want to commit all changes for each one.
 END
