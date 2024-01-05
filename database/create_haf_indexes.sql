@@ -46,6 +46,42 @@ DO $$
 $$;
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_hive_blocks_reversible_created_at ON hive.blocks_reversible USING btree (created_at, fork_id);
 
+--Indexes for comment_operation
+--Used in hafbe_app.process_block_range_data_c (counting posts)
+DO $$
+  BEGIN
+    IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_permlink_author')) THEN
+      RAISE NOTICE 'Dropping invalid index hive_operations_permlink_author, it will be recreated';
+      DROP INDEX hive_operations_permlink_author;
+    END IF;
+  END
+$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_permlink_author ON hive.operations USING btree
+(
+    (body_binary::jsonb->'value'->>'author'),
+    (body_binary::jsonb->'value'->>'permlink'),
+    id
+)
+WHERE op_type_id = 1;
+
+--Indexes for delete_comment_operation
+--Used in hafbe_app.process_block_range_data_c (counting posts)
+DO $$
+  BEGIN
+    IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_delete_permlink_author')) THEN
+      RAISE NOTICE 'Dropping invalid index hive_operations_delete_permlink_author, it will be recreated';
+      DROP INDEX hive_operations_delete_permlink_author;
+    END IF;
+  END
+$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_delete_permlink_author ON hive.operations USING btree
+(
+    (body_binary::jsonb->'value'->>'author'),
+    (body_binary::jsonb->'value'->>'permlink'),
+    id
+)
+WHERE op_type_id = 17;
+
 --Indexes for vote_operation
 --Used in hafbe_app.process_block_range_data_c (counting votes)
 
