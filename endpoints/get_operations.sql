@@ -40,10 +40,10 @@ AS
 $$
 BEGIN
 IF _date_start IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _date_end IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 RETURN (
@@ -119,13 +119,13 @@ WITH operation_range AS MATERIALIZED (
     ls.timestamp,
     NOW() - ls.timestamp AS age
   FROM (
-    SELECT hov.id, hov.trx_in_block, hov.op_pos, hov.timestamp, hov.body, hov.op_type_id, hov.block_num
-    FROM hive.operations_view hov
+    SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
+    FROM hive.operations_view ov
     WHERE
-      hov.block_num = _block_num AND
-      hov.id <= _top_op_id AND 
-      (__no_ops_filter OR hov.op_type_id = ANY(_filter))
-    ORDER BY hov.id DESC
+      ov.block_num = _block_num AND
+      ov.id <= _top_op_id AND 
+      (__no_ops_filter OR ov.op_type_id = ANY(_filter))
+    ORDER BY ov.id DESC
     LIMIT _limit
   ) ls
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
@@ -133,12 +133,13 @@ WITH operation_range AS MATERIALIZED (
   ORDER BY ls.id DESC)
 
 -- filter too long operation bodies 
-  SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
+  SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
+  (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
-  FROM operation_range o 
-  ) s
-  ORDER BY s.id;
+  SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
+  FROM operation_range opr
+  ) filtered_operations
+  ORDER BY filtered_operations.id;
 
 END
 $$;
@@ -151,21 +152,21 @@ $$
 BEGIN
 RETURN (
   SELECT ROW (
-      o.id,
-      o.block_num,
-      o.trx_in_block,
+      ov.id,
+      ov.block_num,
+      ov.trx_in_block,
       encode(htv.trx_hash, 'hex'),
-      o.op_pos,
-      o.op_type_id,
-      o.body,
+      ov.op_pos,
+      ov.op_type_id,
+      ov.body,
       hot.is_virtual,
-      o.timestamp,
-      NOW() - o.timestamp,
+      ov.timestamp,
+      NOW() - ov.timestamp,
   	  FALSE)
-    FROM hive.operations_view o 
-    JOIN hive.operation_types hot ON hot.id = o.op_type_id
-    LEFT JOIN hive.transactions_view htv ON htv.block_num = o.block_num AND htv.trx_in_block = o.trx_in_block
-	  WHERE o.id = _operation_id
+    FROM hive.operations_view ov 
+    JOIN hive.operation_types hot ON hot.id = ov.op_type_id
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = ov.block_num AND htv.trx_in_block = ov.trx_in_block
+	  WHERE ov.id = _operation_id
 );
 
 END
@@ -184,7 +185,7 @@ SET enable_bitmapscan = OFF
 AS
 $$
 DECLARE
-	_example_key JSON := (SELECT o.body FROM hive.operations_view o WHERE o.op_type_id = _op_type_id LIMIT 1);
+	_example_key JSON := (SELECT ov.body FROM hive.operations_view ov WHERE ov.op_type_id = _op_type_id LIMIT 1);
 BEGIN
 RETURN QUERY
 WITH RECURSIVE extract_keys AS (
@@ -241,10 +242,10 @@ IF NOT _operation_types <@ allowed_ids THEN
 END IF;
 
 IF _start_date IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _end_date IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 RETURN (

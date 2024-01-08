@@ -14,11 +14,11 @@ SELECT
   (body)->'value' AS value,
   body_binary,
   block_num, op_type_id, timestamp, id AS operation_id
-FROM hive.hafbe_app_operations_view hov
+FROM hive.hafbe_app_operations_view ov
 
 JOIN LATERAL (
   SELECT get_impacted_accounts AS name
-  FROM hive.get_impacted_accounts(hov.body_binary)
+  FROM hive.get_impacted_accounts(ov.body_binary)
 ) bia ON TRUE;
 
 ------
@@ -73,13 +73,13 @@ FROM (
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
 SELECT
   rapv.proxy_id,
-  avv.name,
-  (av.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
+  av.name,
+  (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
   rapv.which_proxy
 FROM hafbe_views.recursive_account_proxies_view rapv
-JOIN btracker_app.current_account_balances av ON av.account = rapv.account_id AND av.nai = 37
+JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
 LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id
-JOIN hive.accounts_view avv ON avv.id = rapv.account_id;
+JOIN hive.accounts_view av ON av.id = rapv.account_id;
 
 ------
 
@@ -87,14 +87,14 @@ JOIN hive.accounts_view avv ON avv.id = rapv.account_id;
 CREATE OR REPLACE VIEW hafbe_views.witness_voters_vests_view AS
 SELECT
   cwv_cap.witness_id, cwv_cap.voter_id,
-  CASE WHEN cwv_cap.proxy_id IS NULL THEN COALESCE(av.balance, 0) ELSE 0 END AS account_vests,
+  CASE WHEN cwv_cap.proxy_id IS NULL THEN COALESCE(cab.balance, 0) ELSE 0 END AS account_vests,
   cwv_cap.timestamp
 FROM (
   SELECT cwv.witness_id, cwv.voter_id, cwv.timestamp, cap.proxy_id
   FROM hafbe_app.current_witness_votes cwv
   LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = cwv.voter_id
 ) cwv_cap
-LEFT JOIN btracker_app.current_account_balances av ON av.account = cwv_cap.voter_id AND av.nai = 37;
+LEFT JOIN btracker_app.current_account_balances cab ON cab.account = cwv_cap.voter_id AND cab.nai = 37;
 
 ------
 
@@ -102,11 +102,11 @@ LEFT JOIN btracker_app.current_account_balances av ON av.account = cwv_cap.voter
 CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
   SELECT
     ov.voter_id AS account,
-    vv.name AS vote
+    av.name AS vote
   FROM
     hafbe_app.current_witness_votes ov
   JOIN 
-    hive.accounts_view vv ON vv.id = ov.witness_id;
+    hive.accounts_view av ON av.id = ov.witness_id;
 
 ------
 
@@ -114,10 +114,10 @@ CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
 CREATE OR REPLACE VIEW hafbe_views.voters_proxied_vests_view AS
 SELECT
   rapv.proxy_id,
-  SUM(av.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
+  SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
   rapv.which_proxy
 FROM hafbe_views.recursive_account_proxies_view rapv
-JOIN btracker_app.current_account_balances av ON av.account = rapv.account_id AND av.nai = 37
+JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
 LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id, rapv.which_proxy;
 
@@ -151,14 +151,14 @@ LEFT JOIN btracker_app.account_withdraws dv ON dv.account = wvvv.voter_id;
 CREATE OR REPLACE VIEW hafbe_views.voters_approve_vests_change_view AS
 SELECT
   wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-  CASE WHEN wvh.approve THEN COALESCE(av.balance,0) ELSE -1 * COALESCE(av.balance,0) END AS account_vests,
+  CASE WHEN wvh.approve THEN COALESCE(cab.balance,0) ELSE -1 * COALESCE(cab.balance,0) END AS account_vests,
   CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxied_vests
 FROM hafbe_app.witness_votes_history wvh
 
 JOIN (
   SELECT balance, account, nai
   FROM btracker_app.current_account_balances
-) av ON av.account = wvh.voter_id AND av.nai = 37
+) cab ON cab.account = wvh.voter_id AND cab.nai = 37
 
 LEFT JOIN LATERAL (
   SELECT proxy_id, proxied_vests
@@ -172,14 +172,14 @@ LEFT JOIN LATERAL (
 CREATE OR REPLACE VIEW hafbe_views.voters_proxy_vests_change_view AS
 SELECT
   aph.account_id AS voter_id,
-  SUM(CASE WHEN aph.proxy THEN -1 * av.balance ELSE av.balance END) AS account_vests,
+  SUM(CASE WHEN aph.proxy THEN -1 * cab.balance ELSE cab.balance END) AS account_vests,
   SUM(CASE WHEN aph.proxy THEN -1 * COALESCE(rpav.proxied_vests, 0) ELSE COALESCE(rpav.proxied_vests, 0) END) AS proxied_vests
 FROM hafbe_app.account_proxies_history aph
 
 JOIN (
   SELECT balance, account, nai
   FROM btracker_app.current_account_balances 
-) av ON av.account = aph.account_id AND av.nai = 37
+) cab ON cab.account = aph.account_id AND cab.nai = 37
 
 LEFT JOIN LATERAL (
   SELECT proxy_id, proxied_vests
@@ -270,11 +270,11 @@ CREATE OR REPLACE VIEW hafbe_views.votes_history_view AS
 WITH select_range AS (
   SELECT
     wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-    COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0) AS balance,
+    COALESCE(cab.balance, 0) - COALESCE(dv.delayed_vests, 0) AS balance,
     COALESCE(rpav.proxied_vests, 0) AS proxied_vests
   FROM hafbe_app.witness_votes_history wvh
-  LEFT JOIN btracker_app.current_account_balances av
-    ON av.account = wvh.voter_id AND av.nai = 37
+  LEFT JOIN btracker_app.current_account_balances cab
+    ON cab.account = wvh.voter_id AND cab.nai = 37
   LEFT JOIN btracker_app.account_withdraws dv
   	ON dv.account = wvh.voter_id
   LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
@@ -282,12 +282,12 @@ WITH select_range AS (
 )
 
 SELECT
-  wvh.witness_id, a.name, wvh.approve, wvh.timestamp, 
+  wvh.witness_id, av.name, wvh.approve, wvh.timestamp, 
   (wvh.balance + COALESCE(wvh.proxied_vests, 0))::BIGINT  AS vests, 
   (wvh.balance)::BIGINT  AS account_vests, 
   (COALESCE(wvh.proxied_vests, 0))::BIGINT AS proxied_vests
 FROM select_range wvh
-JOIN hive.accounts_view a ON a.id = wvh.voter_id
+JOIN hive.accounts_view av ON av.id = wvh.voter_id
 ORDER BY wvh.timestamp desc
 ;
 
