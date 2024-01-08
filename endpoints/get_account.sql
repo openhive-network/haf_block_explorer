@@ -62,18 +62,41 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     COALESCE(_result_count.get_account_ops_count, 0) AS ops_count,
     EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id) AS is_witness
   FROM
-    (SELECT * FROM btracker_endpoints.get_account_balances(_account_id)) AS _result_balance,
-    (SELECT * FROM btracker_endpoints.get_account_withdraws(_account_id)) AS _result_withdraws,
-    (SELECT * FROM btracker_endpoints.get_account_delegations(_account_id)) AS _result_vest_balance,
-    (SELECT * FROM hafbe_backend.get_json_metadata(_account_id)) AS _result_json_metadata,
-    (SELECT * FROM btracker_endpoints.get_account_rewards(_account_id)) AS _result_rewards,
-    (SELECT * FROM btracker_endpoints.get_account_savings(_account_id)) AS _result_savings,
-    (SELECT * FROM btracker_endpoints.get_account_info_rewards(_account_id)) AS _result_curation_posting,
-    (SELECT * FROM hafbe_backend.get_account_last_vote(_account_id)) AS _result_post,
-    (SELECT * FROM hafbe_backend.get_account_parameters(_account_id)) AS _result_parameters,
-    (SELECT * FROM hafbe_backend.get_account_witness_votes(_account_id)) AS _result_votes,
-    (SELECT * FROM hafbe_backend.get_account_proxy(_account_id)) AS _result_proxy,
-    (SELECT * FROM hafbe_backend.get_account_ops_count(_account_id)) AS _result_count
+    (SELECT hbd_balance, hive_balance, vesting_shares, vesting_balance_hive, post_voting_power_vests 
+     FROM btracker_endpoints.get_account_balances(_account_id)) AS _result_balance,
+
+    (SELECT vesting_withdraw_rate, to_withdraw, withdrawn, withdraw_routes, delayed_vests 
+     FROM btracker_endpoints.get_account_withdraws(_account_id)) AS _result_withdraws,
+
+    (SELECT delegated_vests, received_vests 
+     FROM btracker_endpoints.get_account_delegations(_account_id)) AS _result_vest_balance,
+
+    (SELECT json_metadata, posting_json_metadata 
+     FROM hafbe_backend.get_json_metadata(_account_id)) AS _result_json_metadata,
+
+    (SELECT hbd_rewards, hive_rewards, vests_rewards, hive_vesting_rewards 
+     FROM btracker_endpoints.get_account_rewards(_account_id)) AS _result_rewards,
+
+    (SELECT hbd_savings, hive_savings, savings_withdraw_requests 
+     FROM btracker_endpoints.get_account_savings(_account_id)) AS _result_savings,
+
+    (SELECT posting_rewards, curation_rewards
+     FROM btracker_endpoints.get_account_info_rewards(_account_id)) AS _result_curation_posting,
+
+    (SELECT get_account_last_vote
+     FROM hafbe_backend.get_account_last_vote(_account_id)) AS _result_post,
+
+    (SELECT can_vote, mined, recovery_account, last_account_recovery, created
+     FROM hafbe_backend.get_account_parameters(_account_id)) AS _result_parameters,
+
+    (SELECT witness_votes, witnesses_voted_for, proxied_vsf_votes
+     FROM hafbe_backend.get_account_witness_votes(_account_id)) AS _result_votes,
+
+    (SELECT get_account_proxy
+     FROM hafbe_backend.get_account_proxy(_account_id)) AS _result_proxy,
+
+    (SELECT get_account_ops_count
+     FROM hafbe_backend.get_account_ops_count(_account_id)) AS _result_count
   )
   SELECT ROW(
   _account_id,
