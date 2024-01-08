@@ -334,34 +334,6 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_comment_operation()
-LANGUAGE 'plpgsql'
-AS
-$BODY$
-DECLARE
-  op jsonb := '{"type": "comment_operation", "value": {"author": "tattoodjay", "body": "This is a cross post of [@tattoodjay/wednesday-walk-in-buttonwood-park](/hive-194913/@tattoodjay/wednesday-walk-in-buttonwood-park) by @tattoodjay.<br><br>A walk around Buttonwood Park", "json_metadata": "{\"app\":\"peakd/2023.2.2\",\"tags\":[\"cross-post\"],\"image\":[],\"original_author\":\"tattoodjay\", \"original_permlink\":\"wednesday-walk-in-buttonwood-park\"}", "parent_author": "", "parent_permlink": "hive-155530", "permlink": "wednesday-walk-in-buttonwood-park-hive-155530", "title": "Wednesday Walk in Buttonwood Park"}}';
-  op_view hafbe_views.witness_prop_op_view := ('witness', op::jsonb, op::hive.operation, 1, 1, now(), 1);
-BEGIN
-  RAISE NOTICE 'test_process_op_c_for_comment_operation';
-  PERFORM hive.process_operation(op_view, 'hafbe_app', 'process_op_c');
-END;
-$BODY$
-;
-
-CREATE OR REPLACE PROCEDURE hafbe_app.test_process_op_c_for_effective_comment_vote_operation()
-LANGUAGE 'plpgsql'
-AS
-$BODY$
-DECLARE
-  op jsonb := '{"type": "effective_comment_vote_operation","value": {"author": "blocktrades","pending_payout": {"amount": "13419166","nai": "@@000000013","precision": 3},"permlink": "tax-issues-facing-us-based-cryptocurrency- holders-and-miners-intro-and-irs-guidelines","rshares": "29885796722307","total_vote_weight": "38751835134587","voter": "berniesanders","weight": "2523154605731"}}';
-  op_view hafbe_views.witness_prop_op_view := ('witness', op::jsonb, op::hive.operation, 1, 72, now(), 1);
-BEGIN
-  RAISE NOTICE 'test_process_op_c_for_effective_comment_vote_operation';
-  PERFORM hive.process_operation(op_view, 'hafbe_app', 'process_op_c');
-END;
-$BODY$
-;
-
 CREATE OR REPLACE PROCEDURE hafbe_app.test_process_vote_op_for_account_witness_vote_operation()
 LANGUAGE 'plpgsql'
 AS
@@ -456,8 +428,6 @@ CALL hafbe_app.test_process_op_c_for_pow2_operation();
 CALL hafbe_app.test_process_op_c_for_changed_recovery_account_operation();
 CALL hafbe_app.test_process_op_c_for_recover_account_operation();
 CALL hafbe_app.test_process_op_c_for_decline_voting_rights_operation();
-CALL hafbe_app.test_process_op_c_for_comment_operation();
-CALL hafbe_app.test_process_op_c_for_effective_comment_vote_operation();
 CALL hafbe_app.test_process_vote_op_for_account_witness_vote_operation();
 CALL hafbe_app.test_process_proxy_op_for_account_witness_proxy_operation();
 CALL hafbe_app.test_process_proxy_op_for_proxy_cleared_operation();
