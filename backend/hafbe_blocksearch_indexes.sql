@@ -82,15 +82,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hiv
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
 )
-WHERE op_type_id IN (0, 1, 17, 19, 51, 53, 61, 63, 72, 73);
-
--- Used in hafbe_backend.get_block_by_single_op and hafbe_backend.get_block_by_ops_group_by_block_num (endpoint hafbe_endpoints.get_block_by_op)
-CREATE INDEX IF NOT EXISTS hive_operations_comment_search_curation_author_permlink ON hive.operations USING gin
-(
-    jsonb_extract_path_text(body_binary::jsonb, 'value', 'comment_author'),
-    jsonb_extract_path_text(body_binary::jsonb, 'value', 'comment_permlink')
-)
-WHERE op_type_id = 52;
+WHERE op_type_id IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73);
 
 /*
 

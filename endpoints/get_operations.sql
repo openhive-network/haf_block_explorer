@@ -217,7 +217,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     _permlink TEXT = NULL,
     _page_num INT = 1,
     _page_size INT = 100,
-    _operation_types INT [] = ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73],
+    _operation_types INT [] = ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73],
     _from INT = 0,
     _to INT = 2147483647,
     _start_date TIMESTAMP = NULL,
@@ -234,7 +234,7 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 53, 61, 63, 72, 73];
+  allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
 BEGIN
 IF NOT _operation_types <@ allowed_ids THEN
     RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
