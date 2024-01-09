@@ -103,7 +103,10 @@ $$
 BEGIN
   IF NOT hive.app_context_exists(_appContext) THEN
     RAISE NOTICE 'Attempting to create a HAF application context...';
-    PERFORM hive.app_create_context(_appContext);
+    PERFORM hive.app_create_context(_appContext,
+      TRUE, -- _if_forking
+      FALSE -- _is_attached
+    );
     COMMIT;
   END IF;
 END

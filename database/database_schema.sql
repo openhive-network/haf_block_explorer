@@ -28,7 +28,10 @@ BEGIN
 
   IF NOT hive.app_context_exists('hafbe_app') THEN 
 
-  PERFORM hive.app_create_context('hafbe_app');
+  PERFORM hive.app_create_context('hafbe_app',
+    TRUE, -- _if_forking
+    FALSE -- _is_attached
+    );
 
   END IF;
 
