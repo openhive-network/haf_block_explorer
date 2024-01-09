@@ -207,11 +207,20 @@ build_setup_docker_image:
       echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
       echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0K$MESSAGE"
 
-      until psql "$POSTGRES_ACCESS" --quiet --tuples-only --command="$COMMAND" | grep 0 &>/dev/null
-      do 
-        echo "$MESSAGE"
-        sleep 3
-      done
+      function wait-for-haf-be-startup() {
+        until psql "$POSTGRES_ACCESS" --quiet --tuples-only --command="$COMMAND" | grep 0 &>/dev/null
+        do 
+          echo "$MESSAGE"
+          sleep 3
+        done
+      }
+      export -f wait-for-haf-be-startup
+      export POSTGRES_ACCESS
+      export COMMAND
+      export MESSAGE
+
+      timeout -k 60 3540 bash -c wait-for-haf-be-startup
+      
       echo "Block processing is finished."
 
       echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
