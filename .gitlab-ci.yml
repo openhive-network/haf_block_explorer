@@ -20,10 +20,11 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: hive/haf
-    ref: f28da7101e47f767b19fcf6cc16544773f83c802 # develop
-    file: /scripts/ci-helpers/prepare_data_image_job.yml
+    ref: 83760c43789c05fe5b1734c4a27b145c9136a441 # develop
+    file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
 
 .lint_job:
+  extends: .job-defaults
   stage: lint
   variables:
     GIT_SUBMODULE_STRATEGY: none
@@ -137,6 +138,7 @@ docker-psql-client-build:
     TARGET: "psql"
 
 build_setup_docker_image:
+  extends: .job-defaults
   stage: build
   image: docker:24.0.6
   services:
