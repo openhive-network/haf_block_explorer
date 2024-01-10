@@ -102,7 +102,8 @@ setup_api() {
   # setup db schema
 
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/builtin_roles.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/database_schema.sql" -c "SELECT hive.app_state_provider_import('METADATA','hafbe_app');"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/database_schema.sql"
+  #-c "SELECT hive.app_state_provider_import('METADATA','hafbe_app');"
   # -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/hafbe_app_helpers.sql"
