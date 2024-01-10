@@ -77,7 +77,16 @@ echo "Starting data_insertion_script.py..."
 python3 ../../account_dump/data_insertion_script.py "$SCRIPTDIR" --host "$POSTGRES_HOST" --port "$POSTGRES_PORT" --user "$POSTGRES_USER" #--debug
 
 echo "Looking for diffrences between hived node and hafbe stats..."
-psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hafbe_backend.compare_accounts();"
+
+if command -v ts > /dev/null 2>&1; then
+    timestamper="ts '%Y-%m-%d %H:%M:%.S'"
+elif command -v tai64nlocal > /dev/null 2>&1; then
+    timestamper="tai64n | tai64nlocal"
+else
+    timestamper="cat"
+fi
+
+psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hafbe_backend.compare_accounts();" 2>&1 | tee -i >(eval "$timestamper" > "account_dump_test.log")
 
 DIFFERING_ACCOUNTS=$(psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -t -A  -c "SELECT * FROM hafbe_backend.differing_accounts;")
 
