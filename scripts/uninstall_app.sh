@@ -3,6 +3,8 @@
 set -e
 set -o pipefail
 
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+
 print_help () {
 cat <<EOF
   Usage: $0 [OPTION[=VALUE]]...
@@ -58,42 +60,31 @@ done
 POSTGRES_ACCESS_ADMIN="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
 
 uninstall_app() {
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('hafbe_app') THEN perform hive.app_remove_context('hafbe_app'); end if; END \$\$"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "do \$\$ BEGIN if hive.app_context_exists('hafbe_app') THEN perform hive.app_remove_context('hafbe_app'); end if; END \$\$"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
 
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_types CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_exceptions CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_backend CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_types CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_exceptions CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_backend CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;"
 
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_delete(bigint);"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_insert(bigint);"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_update(bigint, bigint);"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_delete(bigint);"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_insert(bigint);"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_update(bigint, bigint);"
 
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY hafbe_owner TO postgres; "
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY hafbe_owner"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE IF EXISTS hafbe_owner"
+    psql "$POSTGRES_ACCESS_ADMIN"  -c "REASSIGN OWNED BY hafbe_owner TO postgres; " || true;
+    psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP OWNED BY hafbe_owner" || true
+    psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP ROLE IF EXISTS hafbe_owner" || true
 
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY hafbe_user TO postgres; "
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY hafbe_user"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE IF EXISTS hafbe_user"
+    psql "$POSTGRES_ACCESS_ADMIN" -c "REASSIGN OWNED BY hafbe_user TO postgres; " || true
+    psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user" || true
+    psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
 
     if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "do \$\$ BEGIN if hive.app_context_exists('btracker_app') THEN perform hive.app_remove_context('btracker_app'); end if; END \$\$"
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_app CASCADE;"
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_account_dump CASCADE;"
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP SCHEMA IF EXISTS btracker_endpoints CASCADE;"
-
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_owner TO postgres; "
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_owner"
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE IF EXISTS btracker_owner"
-
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "REASSIGN OWNED BY btracker_user TO postgres; "
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP OWNED BY btracker_user"
-      psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "DROP ROLE IF EXISTS btracker_user"
+      "${SCRIPT_DIR}/../submodules/btracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}"
     fi
 }
 
