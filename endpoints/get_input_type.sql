@@ -55,10 +55,7 @@ BEGIN
         'input_value', _input
       );
     ELSE
-      SELECT bv.num 
-      FROM hive.blocks_view bv 
-      WHERE bv.hash = __hash LIMIT 1 
-      INTO __block_num;
+      SELECT num FROM hive.blocks_view WHERE hash = __hash LIMIT 1 INTO __block_num;
     END IF;
 
     IF __block_num IS NOT NULL THEN

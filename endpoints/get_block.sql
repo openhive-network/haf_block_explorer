@@ -6,7 +6,7 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-RETURN bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
+RETURN num FROM hive.blocks_view ORDER BY num DESC LIMIT 1
 ;
 
 END
@@ -24,27 +24,27 @@ $$
 BEGIN
 RETURN (
 SELECT ROW(
-  bv.num,   
-  bv.hash,
-  bv.prev,
-  av.name::TEXT,
-  bv.transaction_merkle_root,
-  bv.extensions,
-  bv.witness_signature,
-  bv.signing_key,
-  bv.hbd_interest_rate::numeric,
-  bv.total_vesting_fund_hive::numeric,
-  bv.total_vesting_shares::numeric,
-  bv.total_reward_fund_hive::numeric,
-  bv.virtual_supply::numeric,
-  bv.current_supply::numeric,
-  bv.current_hbd_supply::numeric,
-  bv.dhf_interval_ledger::numeric,
-  bv.created_at,
-  NOW() - bv.created_at)
-FROM hive.blocks_view bv
-JOIN hive.accounts_view av ON av.id = bv.producer_account_id
-WHERE bv.num = _block_num
+  b.num,   
+  b.hash,
+  b.prev,
+  a.name::TEXT,
+  b.transaction_merkle_root,
+  b.extensions,
+  b.witness_signature,
+  b.signing_key,
+  b.hbd_interest_rate::numeric,
+  b.total_vesting_fund_hive::numeric,
+  b.total_vesting_shares::numeric,
+  b.total_reward_fund_hive::numeric,
+  b.virtual_supply::numeric,
+  b.current_supply::numeric,
+  b.current_hbd_supply::numeric,
+  b.dhf_interval_ledger::numeric,
+  b.created_at,
+  NOW() - b.created_at)
+FROM hive.blocks_view b
+JOIN hive.accounts_view a ON a.id = b.producer_account_id
+WHERE num = _block_num
 );
 
 END
@@ -57,10 +57,8 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-RETURN bv.num
-FROM hive.blocks_view bv 
-WHERE bv.created_at BETWEEN _timestamp - interval '2 seconds' 
-AND _timestamp ORDER BY bv.created_at LIMIT 1
+RETURN o.num
+FROM hive.blocks_view o WHERE o.created_at BETWEEN _timestamp - interval '2 seconds' AND _timestamp ORDER BY o.created_at LIMIT 1
 ;
 
 END
@@ -79,34 +77,28 @@ BEGIN
 RETURN QUERY
   WITH select_block_range AS MATERIALIZED (
     SELECT 
-      bv.num as block_num,
-      av.name::TEXT as witness
-    FROM hive.blocks_view bv
-    JOIN hive.accounts_view av ON av.id = bv.producer_account_id
-    ORDER BY bv.num DESC LIMIT _limit
+      o.num as block_num,
+      a.name::TEXT as witness
+    FROM hive.blocks_view o
+    JOIN hive.accounts_view a ON a.id = o.producer_account_id
+    ORDER BY o.num DESC LIMIT _limit
   ),
   join_operations AS MATERIALIZED (
     SELECT 
-      sbr.block_num, 
-      sbr.witness, 
-      COUNT(ov.op_type_id) as count, 
-      ov.op_type_id 
-    FROM hive.operations_view ov
-    JOIN select_block_range sbr ON sbr.block_num = ov.block_num
-    GROUP BY ov.op_type_id,sbr.block_num,sbr.witness
+      s.block_num, 
+      s.witness, 
+      COUNT(b.op_type_id) as count, 
+      b.op_type_id 
+    FROM hive.operations_view b
+    JOIN select_block_range s ON s.block_num = b.block_num
+    GROUP BY b.op_type_id,s.block_num,s.witness
   )
-  SELECT 
-    jo.block_num,
-    jo.witness,
-    json_agg(
-      json_build_object(
-        'count', jo.count,
-        'op_type_id', jo.op_type_id
-      ) 
-    ) 
-  FROM join_operations jo
-  GROUP BY jo.block_num, jo.witness
-  ORDER BY jo.block_num DESC
+    SELECT block_num, witness, json_agg(json_build_object(
+      'count', count,
+      'op_type_id', op_type_id
+    )) FROM join_operations
+    GROUP BY block_num, witness
+    ORDER BY block_num DESC
 ;
 
 END
@@ -167,10 +159,10 @@ IF _key_content IS NOT NULL THEN
 END IF;
 
 IF _start_date IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _end_date IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hive.blocks_view hbv WHERE hbv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 IF array_length(_operations, 1) = 1 THEN

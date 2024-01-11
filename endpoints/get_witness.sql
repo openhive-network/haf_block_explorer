@@ -34,9 +34,9 @@ RETURN QUERY EXECUTE format(
   $query$
 
   WITH limited_set AS (
-    SELECT av.name::TEXT AS voter, voter_id, vests, account_vests, proxied_vests, timestamp
+    SELECT a.name::TEXT AS voter, voter_id, vests, account_vests, proxied_vests, timestamp
     FROM hafbe_app.witness_voters_stats_cache
-    JOIN hive.accounts_view av ON av.id = voter_id
+    JOIN hive.accounts_view a ON a.id = voter_id
     WHERE witness_id = %L   
   ),
   limited_set_order AS MATERIALIZED (
@@ -47,15 +47,15 @@ RETURN QUERY EXECUTE format(
     LIMIT %L
   ),
   get_block_num AS MATERIALIZED
-  (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+  (SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1)
 
   SELECT ls.voter, 
   ls.vests,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.vests))::BIGINT,
+  (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), ls.vests))::BIGINT,
   ls.account_vests,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.account_vests))::BIGINT,
+  (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), ls.account_vests))::BIGINT,
   ls.proxied_vests,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.proxied_vests))::BIGINT,
+  (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), ls.proxied_vests))::BIGINT,
   ls.timestamp
   FROM limited_set_order ls
   ORDER BY
@@ -95,24 +95,24 @@ RETURN QUERY EXECUTE format(
   $query$
 
   WITH select_range AS MATERIALIZED (
-    SELECT av.name::TEXT AS voter, * FROM hafbe_app.witness_votes_history_cache wvh
-    JOIN hive.accounts_view av ON av.id = wvh.voter_id
+    SELECT a.name::TEXT AS voter, * FROM hafbe_app.witness_votes_history_cache wvh
+    JOIN hive.accounts_view a ON a.id = wvh.voter_id
     WHERE wvh.witness_id = %L
     AND wvh.timestamp BETWEEN  %L AND  %L
     ORDER BY wvh.timestamp DESC
     LIMIT %L
   ),
   get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1),
+    (SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1),
   select_votes_history AS (
   SELECT
     wvh.voter, wvh.approve, 
     (wvh.account_vests + wvh.proxied_vests ) AS vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), (wvh.account_vests + wvh.proxied_vests) ))::BIGINT AS vests_hive_power,
+    (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), (wvh.account_vests + wvh.proxied_vests) ))::BIGINT AS vests_hive_power,
     wvh.account_vests AS account_vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.account_vests))::BIGINT AS account_hive_power,
+    (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), wvh.account_vests))::BIGINT AS account_hive_power,
     wvh.proxied_vests AS proxied_vests,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.proxied_vests))::BIGINT AS proxied_hive_power,
+    (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), wvh.proxied_vests))::BIGINT AS proxied_hive_power,
     wvh.timestamp AS timestamp
   FROM select_range wvh
   )
@@ -149,7 +149,7 @@ RETURN QUERY EXECUTE format(
   WITH limited_set AS (
     SELECT
       cw.witness_id, 
-      av.name::TEXT AS witness,
+      a.name::TEXT AS witness,
       cw.url,
       cw.price_feed,
       cw.bias,
@@ -165,7 +165,7 @@ RETURN QUERY EXECUTE format(
     FROM hafbe_app.current_witnesses cw
     LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-    JOIN hive.accounts_view av ON av.id = cw.witness_id
+    JOIN hive.accounts_view a ON a.id = cw.witness_id
   ),
   limited_set_order AS MATERIALIZED (
     SELECT * FROM limited_set
@@ -176,16 +176,16 @@ RETURN QUERY EXECUTE format(
     LIMIT %L
   ),
 get_block_num AS MATERIALIZED
-(SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+(SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1)
 
   SELECT
     ls.witness, 
     ls.rank, 
     ls.url,
     ls.votes,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes))::BIGINT, 
+    (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), ls.votes))::BIGINT, 
     ls.votes_daily_change,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes_daily_change))::BIGINT, 
+    (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), ls.votes_daily_change))::BIGINT, 
     ls.voters_num,
     ls.voters_num_daily_change,
     ls.price_feed, 
@@ -222,25 +222,25 @@ BEGIN
 RETURN (
 WITH limited_set AS (
   SELECT
-    cw.witness_id, av.name::TEXT AS witness,
+    cw.witness_id, hav.name::TEXT AS witness,
     cw.url, cw.price_feed, cw.bias,
     (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
     cw.block_size, cw.signing_key, cw.version
-  FROM hive.accounts_view av
-  JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
-  WHERE av.name = _account
+  FROM hive.accounts_view hav
+  JOIN hafbe_app.current_witnesses cw ON hav.id = cw.witness_id
+  WHERE hav.name = _account
 ),
 get_block_num AS MATERIALIZED
-(SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+(SELECT num AS block_num FROM hive.blocks_view ORDER BY num DESC LIMIT 1)
 
 SELECT ROW(
   ls.witness, 
   all_votes.rank, 
   ls.url,
   COALESCE(all_votes.votes, 0),
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(all_votes.votes, 0)))::BIGINT, 
+  (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), COALESCE(all_votes.votes, 0)))::BIGINT, 
   COALESCE(wvcc.votes_daily_change, 0),
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(wvcc.votes_daily_change, 0)))::BIGINT, 
+  (SELECT hive.get_vesting_balance((SELECT * FROM get_block_num), COALESCE(wvcc.votes_daily_change, 0)))::BIGINT, 
   COALESCE(all_votes.voters_num, 0),
   COALESCE(wvcc.voters_num_daily_change, 0),
   ls.price_feed, 

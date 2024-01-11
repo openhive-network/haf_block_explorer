@@ -9,7 +9,7 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-RETURN av.id FROM hive.accounts_view av WHERE av.name = _account
+RETURN id FROM hive.accounts_view WHERE name = _account
 ;
 
 END
@@ -52,10 +52,9 @@ STABLE
 AS
 $$
 BEGIN
-RETURN aov.account_op_seq_no + 1
-FROM hive.account_operations_view aov
-WHERE aov.account_id = _account 
-ORDER BY aov.account_op_seq_no DESC LIMIT 1
+RETURN account_op_seq_no + 1
+FROM hive.account_operations_view 
+WHERE account_id = _account ORDER BY account_op_seq_no DESC LIMIT 1
 ;
 
 END
@@ -69,10 +68,10 @@ STABLE
 AS
 $$
 BEGIN
-RETURN av.name 
-FROM hafbe_app.current_account_proxies cap
-JOIN hive.accounts_view av on av.id = cap.proxy_id 
-WHERE cap.account_id = _account
+RETURN a.name 
+FROM hafbe_app.current_account_proxies o 
+JOIN hive.accounts_view a on a.id = o.proxy_id 
+WHERE o.account_id = _account
 ;
 
 END
@@ -86,10 +85,8 @@ STABLE
 AS
 $$
 BEGIN
-RETURN (
-  SELECT ROW (ap.can_vote, ap.mined, ap.recovery_account, ap.last_account_recovery, ap.created)
-  FROM hafbe_app.account_parameters ap
-  WHERE ap.account = _account
+RETURN (SELECT ROW (can_vote, mined, recovery_account, last_account_recovery, created)
+FROM hafbe_app.account_parameters WHERE account= _account
 );
 
 END
@@ -103,12 +100,11 @@ STABLE
 AS
 $$
 BEGIN
-RETURN (
-  SELECT ROW(
-    (SELECT json_agg(vpvv.proxied_vests) FROM hafbe_views.voters_proxied_vests_view vpvv WHERE vpvv.proxy_id= _account), 
-    COUNT(*)::INT, 
-    json_agg(cwvv.vote))
-  FROM hafbe_views.current_witness_votes_view cwvv WHERE cwvv.account = _account
+RETURN (SELECT ROW(
+  (SELECT json_agg(proxied_vests) FROM hafbe_views.voters_proxied_vests_view WHERE proxy_id= _account), 
+  COUNT(1)::INT, 
+  json_agg(vote))
+FROM hafbe_views.current_witness_votes_view WHERE account= _account
 );
 
 END
@@ -121,11 +117,8 @@ STABLE
 AS
 $$
 BEGIN
-RETURN vv.timestamp 
-FROM hafbe_views.votes_view vv 
-WHERE vv.voter = (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account) 
-ORDER BY vv.block_num DESC 
-LIMIT 1;
+RETURN vv.timestamp FROM hafbe_views.votes_view vv 
+WHERE vv.voter = (SELECT a.name FROM hive.accounts_view a WHERE a.id = _account) order by vv.block_num DESC LIMIT 1;
 
 END
 $$;
@@ -139,10 +132,10 @@ AS
 $$
 BEGIN
 RETURN (SELECT ROW (
-  m.json_metadata, 
-  m.posting_json_metadata)
-FROM hive.hafbe_app_metadata m
-WHERE m.account_id = _account
+  json_metadata, 
+  posting_json_metadata)
+FROM hive.hafbe_app_metadata 
+WHERE account_id= _account
 );
 
 END

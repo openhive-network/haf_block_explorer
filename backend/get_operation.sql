@@ -48,29 +48,28 @@ DECLARE
 BEGIN
   RETURN QUERY
   WITH operation_range AS MATERIALIZED (
-  SELECT 
-    ov.body_binary::jsonb->'value'->>'permlink' as permlink,
-    ov.body_binary::jsonb->'value'->>'author' as author,
-    ov.block_num, ov.id, ov.body_binary::jsonb, ov.timestamp
-  FROM hive.operations_view ov
+  SELECT o.body_binary::jsonb->'value'->>'permlink' as permlink,
+   o.body_binary::jsonb->'value'->>'author' as author,
+   o.block_num, o.id, o.body_binary::jsonb, o.timestamp
+  FROM hive.operations_view o
   WHERE 
-    ov.block_num BETWEEN _from AND _to AND
-    ov.op_type_id = ANY(_operation_types) AND 
-    ov.body_binary::jsonb->'value'->>'author' = _author AND
+    o.block_num BETWEEN _from AND _to AND
+    o.op_type_id = ANY(_operation_types) AND 
+    o.body_binary::jsonb->'value'->>'author' = _author AND
     (CASE WHEN _permlink IS NOT NULL THEN
-    ov.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
+    o.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
     TRUE END)
-  ORDER BY author, permlink, ov.id
+  ORDER BY author, permlink, o.id
   LIMIT _page_size
   OFFSET _offset)
 
 -- filter too long operation bodies 
-  SELECT filtered_operations.permlink, filtered_operations.block_num, filtered_operations.id, filtered_operations.timestamp, (filtered_operations.composite).body, (filtered_operations.composite).is_modified
+  SELECT s.permlink, s.block_num, s.id, s.timestamp, (s.composite).body, (s.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(opr.body_binary::jsonb, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, opr.timestamp
-  FROM operation_range opr
-  ) filtered_operations
-  ORDER BY filtered_operations.author, filtered_operations.permlink, filtered_operations.id;
+  SELECT hafbe_backend.operation_body_filter(o.body_binary::jsonb, o.id, _body_limit) as composite, o.id, o.block_num, o.permlink, o.author, o.timestamp
+  FROM operation_range o 
+  ) s
+  ORDER BY s.author, s.permlink, s.id;
 
 END
 $$;
@@ -91,13 +90,13 @@ $$
 BEGIN
   RETURN (
   SELECT COUNT(*) as count
-  FROM hive.operations_view ov
+  FROM hive.operations_view o
   WHERE 
-    ov.block_num BETWEEN _from AND _to AND 
-    ov.op_type_id = ANY(_operation_types) AND 
-    ov.body_binary::jsonb->'value'->>'author' = _author AND
+    o.block_num BETWEEN _from AND _to AND 
+    o.op_type_id = ANY(_operation_types) AND 
+    o.body_binary::jsonb->'value'->>'author' = _author AND
     (CASE WHEN _permlink IS NOT NULL THEN
-    ov.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
+    o.body_binary::jsonb->'value'->>'permlink' = _permlink ELSE
     TRUE
     END));
 
@@ -150,14 +149,14 @@ WITH operation_range AS MATERIALIZED (
   SELECT
     ls.operation_id AS id,
     ls.block_num,
-    ov.trx_in_block,
+    hov.trx_in_block,
     encode(htv.trx_hash, 'hex') AS trx_hash,
-    ov.op_pos,
+    hov.op_pos,
     ls.op_type_id,
-    ov.body,
+    hov.body,
     hot.is_virtual,
-    ov.timestamp,
-    NOW() - ov.timestamp AS age
+    hov.timestamp,
+    NOW() - hov.timestamp AS age
   FROM (
   WITH op_filter AS MATERIALIZED (
       SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
@@ -165,18 +164,18 @@ WITH operation_range AS MATERIALIZED (
 -- changing filtering method from block_num to operation_id
 	ops_from_start_block as MATERIALIZED
 	(
-		SELECT ov.id 
-		FROM hive.operations_view ov
-		WHERE ov.block_num >= _from
-		ORDER BY ov.block_num, ov.id
+		SELECT o.id 
+		FROM hive.operations_view o
+		WHERE o.block_num >= _from
+		ORDER BY o.block_num, o.id
 		LIMIT 1
 	),
 	ops_from_end_block as MATERIALIZED
 	(
-		SELECT ov.id
-		FROM hive.operations_view ov
-		WHERE ov.block_num < _to
-		ORDER BY ov.block_num DESC, ov.id DESC
+		SELECT o.id
+		FROM hive.operations_view o
+		WHERE o.block_num < _to
+		ORDER BY o.block_num DESC, o.id DESC
 		LIMIT 1
 	)
 
@@ -193,30 +192,30 @@ WITH operation_range AS MATERIALIZED (
     - when we filter operations by op_type_id AND block_num (converted to operation_id)
   */ 
 
-    SELECT aov.operation_id, aov.op_type_id, aov.block_num
-    FROM hive.account_operations_view aov
-    WHERE aov.account_id = __account_id
+    SELECT haov.operation_id, haov.op_type_id, haov.block_num
+    FROM hive.account_operations_view haov
+    WHERE haov.account_id = __account_id
     AND (__no_filters OR account_op_seq_no >= __op_seq)
 	  AND (__no_filters OR account_op_seq_no < (__op_seq + _limit))
-    AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
-    AND (__no_start_date OR aov.operation_id >= (SELECT * FROM ops_from_start_block))
-	  AND (__no_end_date OR aov.operation_id < (SELECT * FROM ops_from_end_block))
-    ORDER BY (CASE WHEN NOT __no_start_date OR NOT __no_end_date THEN aov.operation_id WHEN NOT __no_filters THEN aov.account_op_seq_no END) DESC
+    AND (__no_ops_filter OR haov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
+    AND (__no_start_date OR haov.operation_id >= (SELECT * FROM ops_from_start_block))
+	  AND (__no_end_date OR haov.operation_id < (SELECT * FROM ops_from_end_block))
+    ORDER BY (CASE WHEN NOT __no_start_date OR NOT __no_end_date THEN haov.operation_id WHEN NOT __no_filters THEN haov.account_op_seq_no END) DESC
     LIMIT (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END)
     OFFSET (CASE WHEN _page_num = 1 OR NOT __no_filters THEN 0 ELSE __offset END)
   ) ls
-  JOIN hive.operations_view ov ON ov.id = ls.operation_id
+  JOIN hive.operations_view hov ON hov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
+  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = hov.trx_in_block
   )
 
 -- filter too long operation bodies 
-  SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id, (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
+  SELECT s.id, s.block_num, s.trx_in_block, s.trx_hash, s.op_pos, s.op_type_id, (s.composite).body, s.is_virtual, s.timestamp, s.age, (s.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(ov.body, ov.id, _body_limit) as composite, ov.id, ov.block_num, ov.trx_in_block, ov.trx_hash, ov.op_pos, ov.op_type_id, ov.is_virtual, ov.timestamp, ov.age
-  FROM operation_range ov 
-  ) filtered_operations
-  ORDER BY filtered_operations.id DESC;
+  SELECT hafbe_backend.operation_body_filter(o.body, o.id, _body_limit) as composite, o.id, o.block_num, o.trx_in_block, o.trx_hash, o.op_pos, o.op_type_id, o.is_virtual, o.timestamp, o.age
+  FROM operation_range o 
+  ) s
+  ORDER BY s.id DESC;
 
 END
 $$;
@@ -244,12 +243,12 @@ BEGIN
 IF __no_ops_filter = TRUE AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
   RETURN (
       WITH account_id AS MATERIALIZED (
-        SELECT av.id FROM hive.accounts_view av WHERE av.name = _account)
+        SELECT a.id FROM hive.accounts_view a WHERE a.name = _account)
 
-      SELECT aov.account_op_seq_no + 1
-      FROM hive.account_operations_view aov
-      WHERE aov.account_id = (SELECT ai.id FROM account_id ai) 
-      ORDER BY aov.account_op_seq_no DESC LIMIT 1);
+      SELECT ao.account_op_seq_no + 1
+      FROM hive.account_operations_view ao
+      WHERE ao.account_id = (SELECT ai.id FROM account_id ai) 
+      ORDER BY ao.account_op_seq_no DESC LIMIT 1);
 
 ELSE
   RETURN (
@@ -257,32 +256,32 @@ ELSE
       SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _operations IS NOT NULL THEN ot.id = ANY(_operations) ELSE TRUE END)
     ),
     account_id AS MATERIALIZED (
-      SELECT av.id FROM hive.accounts_view av WHERE av.name = _account
+      SELECT a.id FROM hive.accounts_view a WHERE a.name = _account
     ),
 -- changing filtering method from block_num to operation_id
     	ops_from_start_block as MATERIALIZED
     (
-      SELECT ov.id 
-      FROM hive.operations_view ov
-      WHERE ov.block_num >= _from
-      ORDER BY ov.block_num, ov.id
+      SELECT o.id 
+      FROM hive.operations o
+      WHERE o.block_num >= _from
+      ORDER BY o.block_num, o.id
       LIMIT 1
     ),
     ops_from_end_block as MATERIALIZED
     (
-      SELECT ov.id
-      FROM hive.operations_view ov
-      WHERE ov.block_num < _to
-      ORDER BY ov.block_num DESC, ov.id DESC
+      SELECT o.id
+      FROM hive.operations o
+      WHERE o.block_num < _to
+      ORDER BY o.block_num DESC, o.id DESC
       LIMIT 1
     )
 -- using hive_account_operations_uq2, we are forcing planner to use this index on (account_id,operation_id), it achives better performance results
     SELECT COUNT(*)
-    FROM hive.account_operations_view aov
-    WHERE aov.account_id = (SELECT ai.id FROM account_id ai)
-    AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
-    AND (__no_start_date OR aov.operation_id >= (SELECT * FROM ops_from_start_block))
-    AND (__no_end_date OR aov.operation_id < (SELECT * FROM ops_from_end_block))
+    FROM hive.account_operations ao
+    WHERE ao.account_id = (SELECT ai.id FROM account_id ai)
+    AND (__no_ops_filter OR ao.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
+    AND (__no_start_date OR ao.operation_id >= (SELECT * FROM ops_from_start_block))
+    AND (__no_end_date OR ao.operation_id < (SELECT * FROM ops_from_end_block))
     );
 
 END IF;

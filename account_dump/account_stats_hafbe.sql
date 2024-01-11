@@ -44,6 +44,9 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
+DECLARE
+  __account_id INT := (SELECT id FROM hive.accounts_view WHERE name = _account);
+  __result hafbe_backend.account_type;
 BEGIN
 
   RETURN (SELECT ROW(

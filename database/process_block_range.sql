@@ -60,10 +60,9 @@ BEGIN
 
   WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
   (
-    SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
-    FROM hive.hafbe_app_operations_view ov
-    WHERE ov.op_type_id IN (12,42,11,7) 
-    AND ov.block_num BETWEEN _from AND _to
+  SELECT body_binary, (body)->'value' AS value, op_type_id
+  FROM hive.hafbe_app_operations_view
+  WHERE op_type_id IN (12,42,11,7) AND block_num BETWEEN _from AND _to
   ),
   select_witness_names AS MATERIALIZED ( 
     SELECT DISTINCT
@@ -76,9 +75,9 @@ BEGIN
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT av.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  SELECT hav.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
-  JOIN hive.hafbe_app_accounts_view av ON av.name = swn.name
+  JOIN hive.hafbe_app_accounts_view hav ON hav.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   -- insert witness node version
@@ -127,7 +126,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
-    SELECT av.id AS witness_id, url
+    SELECT hav.id AS witness_id, url
     FROM (
       SELECT
         url, witness,
@@ -143,7 +142,7 @@ BEGIN
       ) sp
       WHERE url IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
+    JOIN hive.accounts_view hav ON hav.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -179,7 +178,7 @@ BEGIN
     feed_updated_at = ops.feed_updated_at
   FROM (
     SELECT
-      av.id AS witness_id,
+      hav.id AS witness_id,
       (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
       ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
       timestamp AS feed_updated_at
@@ -198,7 +197,7 @@ BEGIN
       ) sp
       WHERE exchange_rate IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
+    JOIN hive.accounts_view hav ON hav.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -229,7 +228,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
-    SELECT av.id AS witness_id, block_size
+    SELECT hav.id AS witness_id, block_size
     FROM (
       SELECT
         block_size::INT, witness,
@@ -245,7 +244,7 @@ BEGIN
       ) sp
       WHERE block_size IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
+    JOIN hive.accounts_view hav ON hav.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -286,7 +285,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT av.id AS witness_id, signing_key
+    SELECT hav.id AS witness_id, signing_key
     FROM (
       SELECT
         signing_key, witness,
@@ -302,7 +301,7 @@ BEGIN
       ) sp
       WHERE signing_key IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
+    JOIN hive.accounts_view hav ON hav.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -333,12 +332,12 @@ FOR __balance_change IN
   WITH comment_operation AS (
 
 SELECT 
-    ov.body AS body,
-    ov.id AS source_op,
-    ov.block_num AS source_op_block,
-    ov.timestamp AS _timestamp,
-    ov.op_type_id AS op_type
-FROM hive.hafbe_app_operations_view ov
+    cao.body AS body,
+    cao.id AS source_op,
+    cao.block_num AS source_op_block,
+    cao.timestamp AS _timestamp,
+    cao.op_type_id AS op_type
+FROM hive.hafbe_app_operations_view cao
 LEFT JOIN (
   WITH pow AS MATERIALIZED (
   SELECT 
@@ -350,11 +349,11 @@ LEFT JOIN (
   WHERE pto.block_num BETWEEN _from AND _to
   )
   SELECT po.id AS source_op FROM pow po
-  JOIN hive.hafbe_app_accounts_view av ON av.name = po.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON av.id = ap.account
+  JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
-) po_subquery ON ov.id = po_subquery.source_op
+) po_subquery ON cao.id = po_subquery.source_op
 LEFT JOIN (
   WITH pow_two AS MATERIALIZED (
   SELECT 
@@ -366,16 +365,16 @@ LEFT JOIN (
   WHERE pto.block_num BETWEEN _from AND _to
   )
   SELECT po.id AS source_op FROM pow_two po
-  JOIN hive.hafbe_app_accounts_view av ON av.name = po.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON av.id = ap.account
+  JOIN hive.hafbe_app_accounts_view a ON a.name = po.worker_account
+  LEFT JOIN hafbe_app.account_parameters ap ON a.id = ap.account
   WHERE ap.account IS NULL
   ORDER BY po.worker_account, po.block_num, po.id DESC
-) pto_subquery ON ov.id = pto_subquery.source_op
+) pto_subquery ON cao.id = pto_subquery.source_op
 WHERE 
-  (ov.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
-  OR (ov.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
-  OR (ov.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
-  AND ov.block_num BETWEEN _from AND _to
+  (cao.op_type_id IN (9, 23, 41, 80, 76, 25, 36)
+  OR (cao.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
+  OR (cao.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
+  AND cao.block_num BETWEEN _from AND _to
 )
   SELECT * FROM comment_operation 
   ORDER BY source_op_block, source_op
@@ -469,14 +468,14 @@ WHERE (filtered = 0 AND prd_id IS NULL) or (filtered =1 AND prd_id IS NOT NULL)
 CREATE OR REPLACE VIEW hafbe_views.deleted_comments_view
 AS
   SELECT
-    ov.body-> 'value'->> 'author' AS author,
-    ov.body-> 'value'->> 'permlink' AS permlink,
-    ov.block_num,
-    ov.id
+    o.body-> 'value'->> 'author' AS author,
+    o.body-> 'value'->> 'permlink' AS permlink,
+    o.block_num,
+    o.id
   FROM 
-    hive.hafbe_app_operations_view ov
+    hive.hafbe_app_operations_view o
   WHERE 
-    ov.op_type_id =17;
+    o.op_type_id =17;
 
 CREATE OR REPLACE VIEW hafbe_views.comments_view
 AS

@@ -49,7 +49,7 @@ RETURN QUERY WITH op_types_cte AS (
   FROM hive.operation_types hot
   WHERE (
     SELECT EXISTS (
-      SELECT 1 FROM hive.account_operations_view aov WHERE aov.account_id = __account_id AND aov.op_type_id = hot.id)))
+      SELECT 1 FROM hive.account_operations_view haov WHERE haov.account_id = __account_id AND haov.op_type_id = hot.id)))
 
 SELECT cte.id, split_part( hot.name, '::', 3), hot.is_virtual
 FROM op_types_cte cte
@@ -68,12 +68,12 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
-RETURN QUERY SELECT DISTINCT ON (ov.op_type_id)
-  ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual
-FROM hive.operations_view ov
-JOIN hive.operation_types hot ON hot.id = ov.op_type_id
-WHERE ov.block_num = _block_num
-ORDER BY ov.op_type_id ASC
+RETURN QUERY SELECT DISTINCT ON (hov.op_type_id)
+  hov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual
+FROM hive.operations_view hov
+JOIN hive.operation_types hot ON hot.id = hov.op_type_id
+WHERE hov.block_num = _block_num
+ORDER BY hov.op_type_id ASC
 ;
 
 END
