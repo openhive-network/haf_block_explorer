@@ -327,18 +327,24 @@ BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
-SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
+--SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
 
 FOR __balance_change IN
   WITH comment_operation AS (
 
-SELECT 
-    ov.body AS body,
-    ov.id AS source_op,
-    ov.block_num AS source_op_block,
-    ov.timestamp AS _timestamp,
-    ov.op_type_id AS op_type
-FROM hive.hafbe_app_operations_view ov
+select ov.* from (
+	SELECT 
+  ds.body AS body,
+  ds.id,
+  ds.id AS source_op,
+  ds.block_num,
+	ds.block_num AS source_op_block,
+  ds.timestamp AS _timestamp,
+  ds.op_type_id,
+  ds.op_type_id AS op_type
+FROM hive.hafbe_app_operations_view ds
+where ds.op_type_id IN (9, 23, 41, 80, 76, 25, 36) and ds.block_num between _from and _to
+) ov
 LEFT JOIN (
   WITH pow AS MATERIALIZED (
   SELECT 
