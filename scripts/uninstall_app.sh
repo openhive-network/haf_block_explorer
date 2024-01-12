@@ -75,11 +75,9 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_insert(bigint);"
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP FUNCTION IF EXISTS hive.hive_hafbe_app_metadata_revert_update(bigint, bigint);"
 
-    psql "$POSTGRES_ACCESS_ADMIN"  -c "REASSIGN OWNED BY hafbe_owner TO postgres; " || true;
     psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP OWNED BY hafbe_owner" || true
     psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP ROLE IF EXISTS hafbe_owner" || true
 
-    psql "$POSTGRES_ACCESS_ADMIN" -c "REASSIGN OWNED BY hafbe_user TO postgres; " || true
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user" || true
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
 
