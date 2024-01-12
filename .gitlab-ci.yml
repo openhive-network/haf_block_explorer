@@ -13,6 +13,8 @@ variables:
   # Git configuration
   GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_DEPTH: 1
+  GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
   # HAF configuration
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf_block_explorer_haf_${CI_COMMIT_SHA}"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
