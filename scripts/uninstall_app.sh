@@ -71,10 +71,10 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_indexes CASCADE;"
     psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;"
 
-    psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP OWNED BY hafbe_owner" || true
+    psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP OWNED BY hafbe_owner CASCADE" || true
     psql "$POSTGRES_ACCESS_ADMIN"  -c "DROP ROLE IF EXISTS hafbe_owner" || true
 
-    psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user" || true
+    psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user CASCADE" || true
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
 
     if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
