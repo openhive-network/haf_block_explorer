@@ -1,9 +1,9 @@
 [submodule "submodules/btracker"]
 	path = submodules/btracker
-	url = https://gitlab.syncad.com/hive/balance_tracker.git
+	url = ../balance_tracker.git
 [submodule "submodules/hafah"]
 	path = submodules/hafah
-	url = https://gitlab.syncad.com/hive/HAfAH.git
+	url = ../HAfAH.git
 [submodule "submodules/haf"]
 	path = submodules/haf
-	url = https://gitlab.syncad.com/hive/haf.git
+	url = ../haf.git
