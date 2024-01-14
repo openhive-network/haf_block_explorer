@@ -62,8 +62,33 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
+BLOCK_PROCESSING_JOB_PID=0
+
+# shellcheck disable=SC2317
+cleanup () {
+  echo "Performing a cleanup - attempting to trigger app shutdown..."
+
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SELECT hafbe_app.stopProcessing();"
+
+  echo "hafbe shutdown trigerred."
+
+  echo "Waiting for hafbe block processing finish..."
+  [[ -z "$BLOCK_PROCESSING_JOB_PID" ]] || tail --pid="$BLOCK_PROCESSING_JOB_PID" -f /dev/null || true
+  echo "hafbe block processing finished."
+
+  echo "Cleanup actions done."
+}
+
+
+# https://gist.github.com/CMCDragonkai/e2cde09b688170fb84268cafe7a2b509
+# If we do `trap cleanup INT QUIT TERM` directly, then using `exit` command anywhere
+# in the script will exit the script without triggering the cleanup
+trap 'exit' INT QUIT TERM
+trap cleanup EXIT
+
 
 process_blocks() {
+{
     local n_blocks="${1:-null}"
     local log_file="${2:-}"
     echo "Log file: $log_file"
@@ -81,6 +106,17 @@ process_blocks() {
     else
         psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" > "$log_file")
     fi
+
+} &
+BLOCK_PROCESSING_JOB_PID=$!
+
+jobs -l
+
+echo "waiting for job finish: $BLOCK_PROCESSING_JOB_PID."
+local status=0
+wait $BLOCK_PROCESSING_JOB_PID || status=$?
+return ${status}
 }
 
 process_blocks "$PROCESS_BLOCK_LIMIT" "$LOG_FILE"
+
