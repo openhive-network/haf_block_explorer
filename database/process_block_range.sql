@@ -76,9 +76,10 @@ BEGIN
   )
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT av.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  SELECT 
+    (SELECT av.id FROM hive.accounts_view av WHERE av.name = swn.name) AS id,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
-  JOIN hive.hafbe_app_accounts_view av ON av.name = swn.name
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   -- insert witness node version
@@ -127,7 +128,9 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
-    SELECT av.id AS witness_id, url
+    SELECT 
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      url
     FROM (
       SELECT
         url, witness,
@@ -143,7 +146,6 @@ BEGIN
       ) sp
       WHERE url IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -179,7 +181,7 @@ BEGIN
     feed_updated_at = ops.feed_updated_at
   FROM (
     SELECT
-      av.id AS witness_id,
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
       ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
       timestamp AS feed_updated_at
@@ -198,7 +200,6 @@ BEGIN
       ) sp
       WHERE exchange_rate IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -229,7 +230,9 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
-    SELECT av.id AS witness_id, block_size
+    SELECT 
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      block_size
     FROM (
       SELECT
         block_size::INT, witness,
@@ -245,7 +248,6 @@ BEGIN
       ) sp
       WHERE block_size IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -286,7 +288,9 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT av.id AS witness_id, signing_key
+    SELECT 
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      signing_key
     FROM (
       SELECT
         signing_key, witness,
@@ -302,7 +306,6 @@ BEGIN
       ) sp
       WHERE signing_key IS NOT NULL
     ) prop
-    JOIN hive.accounts_view av ON av.name = prop.witness
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
@@ -327,11 +330,8 @@ BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
-SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
-
 FOR __balance_change IN
-  WITH comment_operation AS (
-
+WITH comment_operation AS (
 SELECT 
     ov.body AS body,
     ov.id AS source_op,
@@ -340,36 +340,56 @@ SELECT
     ov.op_type_id AS op_type
 FROM hive.hafbe_app_operations_view ov
 LEFT JOIN (
-  WITH pow AS MATERIALIZED (
-  SELECT 
-      DISTINCT ON (pto.worker_account) 
-      worker_account,
+  WITH pow AS MATERIALIZED 
+  (
+  SELECT  
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_view pto
   WHERE pto.block_num BETWEEN _from AND _to
+  ),
+  distint_accounts AS MATERIALIZED 
+  (
+  SELECT 
+      DISTINCT ON (pw.account_id) 
+      pw.account_id,
+      pw.id,
+      pw.block_num
+  FROM pow pw
   )
-  SELECT po.id AS source_op FROM pow po
-  JOIN hive.hafbe_app_accounts_view av ON av.name = po.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON av.id = ap.account
+  SELECT 
+  	  da.account_id AS source_op 
+  FROM distint_accounts da
+  LEFT JOIN hafbe_app.account_parameters ap ON ap.account = da.account_id 
   WHERE ap.account IS NULL
-  ORDER BY po.worker_account, po.block_num, po.id DESC
+  ORDER BY da.account_id, da.block_num, da.id DESC
 ) po_subquery ON ov.id = po_subquery.source_op
 LEFT JOIN (
-  WITH pow_two AS MATERIALIZED (
-  SELECT 
-      DISTINCT ON (pto.worker_account) 
-      worker_account,
+  WITH pow AS MATERIALIZED 
+  (
+  SELECT  
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_two_view pto
   WHERE pto.block_num BETWEEN _from AND _to
+  ),
+  distint_accounts AS MATERIALIZED 
+  (
+  SELECT 
+      DISTINCT ON (pw.account_id) 
+      pw.account_id,
+      pw.id,
+      pw.block_num
+  FROM pow pw
   )
-  SELECT po.id AS source_op FROM pow_two po
-  JOIN hive.hafbe_app_accounts_view av ON av.name = po.worker_account
-  LEFT JOIN hafbe_app.account_parameters ap ON av.id = ap.account
+  SELECT 
+  	  da.account_id AS source_op 
+  FROM distint_accounts da
+  LEFT JOIN hafbe_app.account_parameters ap ON ap.account = da.account_id 
   WHERE ap.account IS NULL
-  ORDER BY po.worker_account, po.block_num, po.id DESC
+  ORDER BY da.account_id, da.block_num, da.id DESC
 ) pto_subquery ON ov.id = pto_subquery.source_op
 WHERE 
   (ov.op_type_id IN (9, 23, 41, 80, 76, 25, 36)

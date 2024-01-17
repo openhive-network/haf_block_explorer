@@ -73,13 +73,12 @@ FROM (
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
 SELECT
   rapv.proxy_id,
-  av.name,
+  (SELECT av.name FROM hive.accounts_view av WHERE av.id = rapv.account_id) as name,
   (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
   rapv.which_proxy
 FROM hafbe_views.recursive_account_proxies_view rapv
 JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id
-JOIN hive.accounts_view av ON av.id = rapv.account_id;
+LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id;
 
 ------
 
@@ -102,11 +101,9 @@ LEFT JOIN btracker_app.current_account_balances cab ON cab.account = cwv_cap.vot
 CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
   SELECT
     ov.voter_id AS account,
-    av.name AS vote
+    (SELECT av.name FROM hive.accounts_view av WHERE av.id = ov.witness_id) as vote
   FROM
-    hafbe_app.current_witness_votes ov
-  JOIN 
-    hive.accounts_view av ON av.id = ov.witness_id;
+    hafbe_app.current_witness_votes ov;
 
 ------
 
@@ -282,12 +279,13 @@ WITH select_range AS (
 )
 
 SELECT
-  wvh.witness_id, av.name, wvh.approve, wvh.timestamp, 
+  wvh.witness_id, 
+  (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id) as name,
+  wvh.approve, wvh.timestamp, 
   (wvh.balance + COALESCE(wvh.proxied_vests, 0))::BIGINT  AS vests, 
   (wvh.balance)::BIGINT  AS account_vests, 
   (COALESCE(wvh.proxied_vests, 0))::BIGINT AS proxied_vests
 FROM select_range wvh
-JOIN hive.accounts_view av ON av.id = wvh.voter_id
 ORDER BY wvh.timestamp desc
 ;
 

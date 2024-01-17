@@ -27,7 +27,7 @@ SELECT ROW(
   bv.num,   
   bv.hash,
   bv.prev,
-  av.name::TEXT,
+  (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT,
   bv.transaction_merkle_root,
   bv.extensions,
   bv.witness_signature,
@@ -43,7 +43,6 @@ SELECT ROW(
   bv.created_at,
   NOW() - bv.created_at)
 FROM hive.blocks_view bv
-JOIN hive.accounts_view av ON av.id = bv.producer_account_id
 WHERE bv.num = _block_num
 );
 
@@ -80,9 +79,8 @@ RETURN QUERY
   WITH select_block_range AS MATERIALIZED (
     SELECT 
       bv.num as block_num,
-      av.name::TEXT as witness
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
     FROM hive.blocks_view bv
-    JOIN hive.accounts_view av ON av.id = bv.producer_account_id
     ORDER BY bv.num DESC LIMIT _limit
   ),
   join_operations AS MATERIALIZED (
