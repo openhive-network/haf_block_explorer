@@ -9,7 +9,9 @@ LANGUAGE 'plpgsql'
 AS
 $$
 BEGIN
-RETURN av.id FROM hive.accounts_view av WHERE av.name = _account
+RETURN 
+  av.id 
+FROM hive.accounts_view av WHERE av.name = _account
 ;
 
 END
@@ -69,9 +71,9 @@ STABLE
 AS
 $$
 BEGIN
-RETURN av.name 
+RETURN 
+(SELECT av.name FROM hive.accounts_view av WHERE av.id = cap.proxy_id)
 FROM hafbe_app.current_account_proxies cap
-JOIN hive.accounts_view av on av.id = cap.proxy_id 
 WHERE cap.account_id = _account
 ;
 

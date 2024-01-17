@@ -34,9 +34,10 @@ RETURN QUERY EXECUTE format(
   $query$
 
   WITH limited_set AS (
-    SELECT av.name::TEXT AS voter, voter_id, vests, account_vests, proxied_vests, timestamp
-    FROM hafbe_app.witness_voters_stats_cache
-    JOIN hive.accounts_view av ON av.id = voter_id
+    SELECT 
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
+      wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
+    FROM hafbe_app.witness_voters_stats_cache wvsc
     WHERE witness_id = %L   
   ),
   limited_set_order AS MATERIALIZED (
@@ -95,8 +96,10 @@ RETURN QUERY EXECUTE format(
   $query$
 
   WITH select_range AS MATERIALIZED (
-    SELECT av.name::TEXT AS voter, * FROM hafbe_app.witness_votes_history_cache wvh
-    JOIN hive.accounts_view av ON av.id = wvh.voter_id
+    SELECT 
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
+      * 
+    FROM hafbe_app.witness_votes_history_cache wvh
     WHERE wvh.witness_id = %L
     AND wvh.timestamp BETWEEN  %L AND  %L
     ORDER BY wvh.timestamp DESC
@@ -149,7 +152,7 @@ RETURN QUERY EXECUTE format(
   WITH limited_set AS (
     SELECT
       cw.witness_id, 
-      av.name::TEXT AS witness,
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
       cw.url,
       cw.price_feed,
       cw.bias,
@@ -165,7 +168,6 @@ RETURN QUERY EXECUTE format(
     FROM hafbe_app.current_witnesses cw
     LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-    JOIN hive.accounts_view av ON av.id = cw.witness_id
   ),
   limited_set_order AS MATERIALIZED (
     SELECT * FROM limited_set

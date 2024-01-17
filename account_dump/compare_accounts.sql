@@ -34,10 +34,11 @@ proxy_account_id AS MATERIALIZED (
   FROM hafbe_app.current_account_proxies cap
 ),
 last_vote_time AS MATERIALIZED (
-SELECT av.id as account_id, MAX(vv.timestamp) as timestamp
+SELECT 
+  (SELECT av.id FROM hive.accounts_view av WHERE av.name = vv.voter) as account_id,
+  MAX(vv.timestamp) as timestamp
 FROM hafbe_views.votes_view vv 
-JOIN hive.accounts_view av ON av.name = vv.voter
-GROUP BY av.id
+GROUP BY account_id
 ),
 selected AS MATERIALIZED (
 SELECT
