@@ -5,48 +5,50 @@ RETURNS VOID
 AS
 $function$
 DECLARE
-  __balance_change RECORD;
+  _result INT;
 BEGIN
-
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
-FOR __balance_change IN
+WITH proxy_ops AS MATERIALIZED 
+(
   SELECT 
     ov.body AS body,
+    ov.id,
+    ov.block_num,
     ov.op_type_id as op_type,
     ov.timestamp
   FROM hive.btracker_app_operations_view ov
   WHERE 
     ov.op_type_id IN (12,13,91,92,75)
     AND ov.block_num BETWEEN _from AND _to
-  ORDER BY ov.block_num, ov.id
+),
+balance_change AS MATERIALIZED 
+(
+SELECT
+  bc.id,
+  (CASE 
 
-LOOP
+    WHEN bc.op_type = 12 THEN
+     hafbe_app.process_vote_op(bc.body, bc.timestamp)
 
-  CASE 
+    WHEN bc.op_type = 13 OR bc.op_type = 91 THEN
+     hafbe_app.process_proxy_ops(bc.body, bc.timestamp, bc.op_type)
 
-    WHEN __balance_change.op_type = 12 THEN
-    PERFORM hafbe_app.process_vote_op(__balance_change.body, __balance_change.timestamp);
+    WHEN bc.op_type = 92 OR bc.op_type = 75 THEN
+     hafbe_app.process_expired_accounts(bc.body)
+  END)
+FROM proxy_ops bc
+ORDER BY bc.block_num, bc.id
+)
 
-    WHEN __balance_change.op_type = 13 OR __balance_change.op_type = 91 THEN
-    PERFORM hafbe_app.process_proxy_ops(__balance_change.body, __balance_change.timestamp, __balance_change.op_type);
-
-    WHEN __balance_change.op_type = 92 OR __balance_change.op_type = 75 THEN
-    PERFORM hafbe_app.process_expired_accounts(__balance_change.body);
-    
-
-    ELSE
-  END CASE;
-
-END LOOP;
+SELECT COUNT(*) FROM balance_change INTO _result;
 
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
-SET jit = OFF
-SET cursor_tuple_fraction = '0.9';
+SET jit = OFF;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_b(_from INT, _to INT)
 RETURNS VOID
@@ -325,15 +327,14 @@ RETURNS VOID
 AS
 $function$
 DECLARE
-  __balance_change RECORD;
+  _result INT;
 BEGIN
 -- function used for calculating witnesses
 -- updates tables hafbe_app.account_posts, hafbe_app.account_parameters
 
 --SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
 
-FOR __balance_change IN
-  WITH comment_operation AS (
+WITH comment_operation AS (
 
 select ov.* from (
 	SELECT 
@@ -405,34 +406,33 @@ WHERE
   OR (ov.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
   OR (ov.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND ov.block_num BETWEEN _from AND _to
-)
-  SELECT * FROM comment_operation 
-  ORDER BY source_op_block, source_op
+),
+balance_change AS MATERIALIZED 
+(
+SELECT 
+  bc.source_op,
+  (CASE 
 
-LOOP
+    WHEN bc.op_type = 9 OR bc.op_type = 23 OR bc.op_type = 41 OR bc.op_type = 80 THEN
+     hafbe_app.process_create_account_operation(bc.body, bc._timestamp, bc.op_type)
 
-  CASE 
-
-    WHEN __balance_change.op_type = 9 OR __balance_change.op_type = 23 OR __balance_change.op_type = 41 OR __balance_change.op_type = 80 THEN
-    PERFORM hafbe_app.process_create_account_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
-
-    WHEN __balance_change.op_type = 14 OR __balance_change.op_type = 30 THEN
-    PERFORM hafbe_app.process_pow_operation(__balance_change.body, __balance_change._timestamp, __balance_change.op_type);
+    WHEN bc.op_type = 14 OR bc.op_type = 30 THEN
+     hafbe_app.process_pow_operation(bc.body, bc._timestamp, bc.op_type)
     
-    WHEN __balance_change.op_type = 76 THEN
-    PERFORM hafbe_app.process_changed_recovery_account_operation(__balance_change.body);
+    WHEN bc.op_type = 76 THEN
+     hafbe_app.process_changed_recovery_account_operation(bc.body)
 
-    WHEN __balance_change.op_type = 25 THEN
-    PERFORM hafbe_app.process_recover_account_operation(__balance_change.body, __balance_change._timestamp);
+    WHEN bc.op_type = 25 THEN
+     hafbe_app.process_recover_account_operation(bc.body, bc._timestamp)
 
-    WHEN __balance_change.op_type = 36 THEN
-    PERFORM hafbe_app.process_decline_voting_rights_operation(__balance_change.body);
+    WHEN bc.op_type = 36 THEN
+     hafbe_app.process_decline_voting_rights_operation(bc.body)
+  END)
 
-    ELSE
-  END CASE;
-
-END LOOP;
-
+FROM comment_operation bc
+ORDER BY bc.source_op_block, bc.source_op
+)
+SELECT COUNT(*) FROM balance_change INTO _result;
 
 END
 $function$
@@ -441,8 +441,7 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
-SET enable_hashjoin = OFF
-SET cursor_tuple_fraction = '0.9';
+SET enable_hashjoin = OFF;
 
 /*
 
