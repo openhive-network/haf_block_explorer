@@ -1,0 +1,9 @@
+include:
+  - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+  - project: hive/haf
+    ref: 69ad550a6d71da2660c5472238c87657c7946ed6 # develop
+    file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
+  - project: hive/common-ci-configuration
+    ref: ba4d376866b1322ea262cd04f0cbdcd0d5667975
+    file:
+      - /templates/dynamic_tag_jobs.gitlab-ci.yml
