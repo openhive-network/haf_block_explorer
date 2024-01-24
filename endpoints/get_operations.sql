@@ -90,56 +90,46 @@ $$;
 -- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(
     _block_num INT,
-    _top_op_id BIGINT = 9223372036854775807,
-    _limit INT = 1000,
-    _filter SMALLINT [] = ARRAY[]::SMALLINT [],
+    _page_num INT = 1,
+    _page_size INT = 100,
+    _filter SMALLINT [] = NULL,
+    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
     _body_limit INT = 2147483647
 )
-RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
+RETURNS JSON -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
-DECLARE
-  __no_ops_filter BOOLEAN = ((SELECT array_length(_filter, 1)) IS NULL);
 BEGIN
-RETURN QUERY 
-WITH operation_range AS MATERIALIZED (
-  SELECT
-    ls.id,
-    ls.block_num,
-    ls.trx_in_block,
-    encode(htv.trx_hash, 'hex') AS trx_hash,
-    ls.op_pos,
-    ls.op_type_id,
-    ls.body,
-    hot.is_virtual,
-    ls.timestamp,
-    NOW() - ls.timestamp AS age
-  FROM (
-    SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
-    FROM hive.operations_view ov
-    WHERE
-      ov.block_num = _block_num AND
-      ov.id <= _top_op_id AND 
-      (__no_ops_filter OR ov.op_type_id = ANY(_filter))
-    ORDER BY ov.id DESC
-    LIMIT _limit
-  ) ls
-  JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
-  ORDER BY ls.id DESC)
-
--- filter too long operation bodies 
-  SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
-  (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
-  FROM (
-  SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
-  FROM operation_range opr
-  ) filtered_operations
-  ORDER BY filtered_operations.id;
+RETURN (
+  WITH ops_count AS MATERIALIZED (
+    SELECT * FROM hafbe_backend.get_ops_by_block_count(_block_num, _filter)
+  ),
+  calculate_total_pages AS MATERIALIZED (
+    SELECT 
+      (CASE 
+        WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN 
+          (SELECT * FROM ops_count)/_page_size 
+        ELSE 
+          (((SELECT * FROM ops_count)/_page_size) + 1) END)
+  )
+  SELECT json_build_object(
+    'total_operations', (SELECT * FROM ops_count),
+    'total_pages', (SELECT * FROM calculate_total_pages),
+    'operations_result', 
+    (SELECT to_json(array_agg(row)) FROM (
+      SELECT * FROM hafbe_backend.get_ops_by_block(
+      _block_num, 
+      _page_num,
+      _page_size,
+      _filter,
+      _order_is,
+      _body_limit)
+    ) row)
+  ));
 
 END
 $$;

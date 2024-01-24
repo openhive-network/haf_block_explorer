@@ -44,7 +44,7 @@ SET enable_hashjoin = OFF
 AS
 $$
 DECLARE
-  _offset INT := (_page_num - 1) * 100;
+  _offset INT := (_page_num - 1) * _page_size;
 BEGIN
   RETURN QUERY
   WITH operation_range AS MATERIALIZED (
@@ -289,5 +289,109 @@ END IF;
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(
+    _block_num INT,
+    _page_num INT,
+    _page_size INT,
+    _filter SMALLINT [],
+    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _body_limit INT
+)
+RETURNS SETOF hafbe_types.operation -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+DECLARE
+  __no_ops_filter BOOLEAN = (_filter IS NULL);
+  _offset INT := (_page_num - 1) * _page_size;
+BEGIN
+RETURN QUERY 
+WITH operation_range AS MATERIALIZED (
+  SELECT
+    ls.id,
+    ls.block_num,
+    ls.trx_in_block,
+    encode(htv.trx_hash, 'hex') AS trx_hash,
+    ls.op_pos,
+    ls.op_type_id,
+    ls.body,
+    hot.is_virtual,
+    ls.timestamp,
+    NOW() - ls.timestamp AS age
+  FROM (
+    With operations_in_block AS 
+    (
+    SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
+    FROM hive.operations_view ov
+    WHERE
+      ov.block_num = _block_num 
+    ),
+    filter_ops AS MATERIALIZED 
+    (
+    SELECT *
+    FROM operations_in_block oib 
+    WHERE (__no_ops_filter OR oib.op_type_id = ANY(_filter))
+    )
+    SELECT * FROM filter_ops fo
+    ORDER BY
+      (CASE WHEN _order_is = 'desc' THEN fo.id ELSE NULL END) DESC,
+      (CASE WHEN _order_is = 'asc' THEN fo.id ELSE NULL END) ASC
+    LIMIT _page_size
+    OFFSET _offset
+  ) ls
+  JOIN hive.operation_types hot ON hot.id = ls.op_type_id
+  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
+  ORDER BY
+    (CASE WHEN _order_is = 'desc' THEN ls.id ELSE NULL END) DESC,
+    (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
+
+-- filter too long operation bodies 
+  SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
+  (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
+  FROM (
+  SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
+  FROM operation_range opr
+  ) filtered_operations
+  ORDER BY filtered_operations.id;
+
+END
+$$;
+
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block_count(
+    _block_num INT,
+    _filter SMALLINT []
+)
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+DECLARE
+  __no_ops_filter BOOLEAN = (_filter IS NULL);
+BEGIN
+RETURN (
+  WITH operations_in_block AS 
+  (
+  SELECT ov.op_type_id
+  FROM hive.operations_view ov
+  WHERE
+    ov.block_num = _block_num 
+  ),
+  filter_ops AS MATERIALIZED 
+  (
+  SELECT oib.op_type_id 
+  FROM operations_in_block oib 
+  WHERE (__no_ops_filter OR oib.op_type_id = ANY(_filter))
+  )
+  SELECT COUNT(*) FROM filter_ops);
+
+END
+$$;
 
 RESET ROLE;
