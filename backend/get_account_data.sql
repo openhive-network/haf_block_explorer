@@ -123,10 +123,13 @@ STABLE
 AS
 $$
 BEGIN
-RETURN vv.timestamp 
-FROM hafbe_views.votes_view vv 
-WHERE vv.voter = (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account) 
-ORDER BY vv.block_num DESC 
+RETURN ov.timestamp 
+FROM hive.account_operations aov 
+JOIN hive.operations ov ON ov.id = aov.operation_id 
+WHERE aov.op_type_id = 72 
+AND aov.account_id = _account 
+AND ov.body_binary::JSONB->'value'->>'voter'= (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account)
+ORDER BY account_op_seq_no DESC
 LIMIT 1;
 
 END
