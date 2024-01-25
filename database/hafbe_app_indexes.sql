@@ -27,37 +27,4 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_indexes.do_haf_indexes_exist()
-RETURNS BOOLEAN
-LANGUAGE 'plpgsql' VOLATILE
-AS
-$$
-DECLARE __result BOOLEAN;
-BEGIN
-  select not exists(select 1
-                    from (values ('uq_hive_blocks_reversible_hash'),
-                                 ('uq_hive_blocks_hash'),
-                                 ('uq_hive_blocks_reversible_created_at'),
-                                 ('hive_operations_permlink_author'),
-                                 ('hive_operations_reversible_permlink_author'),
-                                 ('hive_operations_voter'),
-                                 ('hive_operations_reversible_voter'),
-                                 ('hive_operations_delete_permlink_author'),
-                                 ('hive_operations_reversible_delete_permlink_author'),
-                                 ('hive_operations_pow_operation'),
-                                 ('hive_operations_reversible_pow_operation'),
-                                 ('hive_operations_pow2_operation'),
-                                 ('hive_operations_reversible_pow2_operation'))
-                         desired_indexes(indexname)
-                    left join pg_indexes using (indexname)
-                    left join pg_class on desired_indexes.indexname = pg_class.relname
-                    left join pg_index on pg_class.oid = indexrelid
-                    where pg_indexes.indexname is null or not pg_index.indisvalid)
-  into __result;
-  return __result;
-END
-$$;
-COMMENT ON FUNCTION hafbe_indexes.do_haf_indexes_exist() IS 'Returns true if all hafbe indexes created on core haf indexes exist and are valid';
-
-
 RESET ROLE;
