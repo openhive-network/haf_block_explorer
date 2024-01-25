@@ -73,7 +73,7 @@ cleanup () {
   echo "hafbe shutdown trigerred."
 
   echo "Waiting for hafbe block processing finish..."
-  [[ -z "$BLOCK_PROCESSING_JOB_PID" ]] || tail --pid="$BLOCK_PROCESSING_JOB_PID" -f /dev/null || true
+  [ "$BLOCK_PROCESSING_JOB_PID" -eq 0 ] || wait $BLOCK_PROCESSING_JOB_PID || true
   echo "hafbe block processing finished."
 
   echo "Cleanup actions done."
