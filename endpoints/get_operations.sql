@@ -88,7 +88,7 @@ END
 $$;
 
 -- Block page endpoint
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block(
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     _block_num INT,
     _page_num INT = 1,
     _page_size INT = 100,
