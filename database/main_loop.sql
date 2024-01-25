@@ -41,7 +41,6 @@ BEGIN
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
     __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker]);
-    COMMIT;
 
     IF __next_block_range IS NOT NULL THEN
     
@@ -92,8 +91,8 @@ BEGIN
         -- ANALYZE VERBOSE;
       END IF;
 
-  END IF;
-
+    END IF;
+    COMMIT; --only commit after we've returned to a consistent state
   END LOOP;
 
   RAISE NOTICE 'Exiting application main loop at processed block: %.', __last_block;
