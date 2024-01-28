@@ -39,15 +39,14 @@ BEGIN
 
   CREATE TABLE IF NOT EXISTS hafbe_app.app_status (
     continue_processing BOOLEAN,
-    last_processed_block INT,
     started_processing_at TIMESTAMP,
     finished_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP,
     last_reported_block INT
   );
   
-  INSERT INTO hafbe_app.app_status (continue_processing, last_processed_block, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
-  VALUES (TRUE, 0, NULL, NULL, to_timestamp(0), 0);
+  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
+  VALUES (TRUE, NULL, NULL, to_timestamp(0), 0);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.version(
   git_hash TEXT

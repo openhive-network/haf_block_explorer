@@ -20,11 +20,10 @@ DECLARE
 
 BEGIN
   PERFORM hafbe_app.allowProcessing();
-  COMMIT;
 
   SELECT current_setting('synchronous_commit') into __original_commit_mode;
 
-  SELECT hafbe_app.lastProcessedBlock() INTO __last_block;
+  SELECT hive.get_current_block_num() INTO __last_block;
   RAISE NOTICE 'Last block processed by application: %', __last_block;
 
   IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker]) THEN
@@ -38,6 +37,7 @@ BEGIN
   END IF;
 
   UPDATE hafbe_app.app_status SET started_processing_at = NOW();
+  COMMIT; --save startup state of app
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
     __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker]);
@@ -86,9 +86,6 @@ BEGIN
         UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
         PERFORM hafbe_indexes.create_hafbe_indexes();
         PERFORM hafbe_indexes.create_btracker_indexes();
-        -- we used to analyze the entire database here, but I'm not sure there's any reason to do so.
-        -- the autovacuum daemon does this for us whenever the table changes enough to warrant it.
-        -- ANALYZE VERBOSE;
       END IF;
 
     END IF;
@@ -96,9 +93,6 @@ BEGIN
   END LOOP;
 
   RAISE NOTICE 'Exiting application main loop at processed block: %.', __last_block;
-  PERFORM hafbe_app.storeLastProcessedBlock(__last_block);
-
-  COMMIT;
 END
 $$;
 

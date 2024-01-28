@@ -33,26 +33,6 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.storeLastProcessedBlock(_lastBlock INT)
-RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
-AS
-$$
-BEGIN
-  UPDATE hafbe_app.app_status SET last_processed_block = _lastBlock;
-END
-$$;
-
-CREATE OR REPLACE FUNCTION hafbe_app.lastProcessedBlock()
-RETURNS INT
-LANGUAGE 'plpgsql' STABLE
-AS
-$$
-BEGIN
-  RETURN last_processed_block FROM hafbe_app.app_status LIMIT 1;
-END
-$$;
-
 CREATE OR REPLACE PROCEDURE hafbe_app.processBlock(_block INT, _appContext VARCHAR)
 LANGUAGE 'plpgsql'
 AS
@@ -92,7 +72,7 @@ BEGIN
   ',
   ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
 
-  COMMIT; -- For single block processing we want to commit all changes for each one.
+  COMMIT; -- For single block processing, commit all changes for the block at same time.
 END
 $$;
 
