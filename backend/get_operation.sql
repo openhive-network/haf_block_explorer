@@ -355,7 +355,8 @@ WITH operation_range AS MATERIALIZED (
   SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
   FROM operation_range opr
   ) filtered_operations
-  ORDER BY filtered_operations.id;
+  ORDER BY filtered_operations.id, filtered_operations.trx_in_block, filtered_operations.op_pos;
+
 
 END
 $$;
