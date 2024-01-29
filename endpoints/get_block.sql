@@ -110,6 +110,29 @@ RETURN QUERY
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_count_in_block(_block_num INT)
+RETURNS SETOF hafbe_types.get_latest_blocks -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+BEGIN
+RETURN QUERY
+  SELECT 
+    ov.op_type_id,
+    COUNT(ov.op_type_id) as count 
+  FROM hive.operations_view ov
+  WHERE ov.block_num = _block_num
+  GROUP BY ov.op_type_id
+;
+
+END
+$$;
+
+
+
 /*
 EXAMPLE USAGES
 

@@ -171,6 +171,14 @@ CREATE TYPE hafbe_types.get_latest_blocks AS (
     ops_count JSON
 );
 
+-- Used in
+-- hafbe_endpoints.get_op_count_in_block
+DROP TYPE IF EXISTS hafbe_types.get_op_count_in_block CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_types.get_op_count_in_block AS (
+    op_type_id SMALLINT,
+    count BIGINT
+);
+
 -- Used in 
 -- hafbe_backend.get_block_by_single_op
 -- hafbe_backend.get_block_by_ops_group_by_block_num
