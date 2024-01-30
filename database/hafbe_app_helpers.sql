@@ -66,8 +66,6 @@ BEGIN
 
   INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (_block, _time);
 
-  PERFORM hafbe_app.storeLastProcessedBlock(_block);
-
   RAISE NOTICE 'Block processing running for % minutes
   ',
   ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
