@@ -1,21 +1,12 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num(
-    _context TEXT = NULL
-)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-RETURN (
-CASE WHEN _context IS NULL THEN
-(SELECT bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
-ELSE
-(SELECT c.current_block_num FROM hive.contexts c WHERE c.name = _context)
-END
-);
-
+  RETURN current_block_num FROM hive.contexts WHERE name = 'hafbe_app';
 END
 $$;
 
