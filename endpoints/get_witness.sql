@@ -164,10 +164,13 @@ RETURN QUERY EXECUTE format(
       COALESCE(b.votes,0) AS votes, 
       COALESCE(b.voters_num,0) AS voters_num, 
       COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
-      COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change
+      COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
+      COALESCE(wmb.missed_blocks,0) AS missed_blocks,
+      COALESCE(wmb.hbd_interest_rate,0) AS hbd_interest_rate
     FROM hafbe_app.current_witnesses cw
     LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
+    LEFT JOIN hafbe_app.witness_missed_blocks_apr_cache wmb ON wmb.witness_id = cw.witness_id
   ),
   limited_set_order AS MATERIALIZED (
     SELECT * FROM limited_set
@@ -195,7 +198,9 @@ get_block_num AS MATERIALIZED
     ls.feed_age, 
     ls.block_size, 
     ls.signing_key, 
-    ls.version
+    ls.version,
+    ls.missed_blocks,
+    ls.hbd_interest_rate
   FROM limited_set_order ls
   ORDER BY
     (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
@@ -227,7 +232,9 @@ WITH limited_set AS (
     cw.witness_id, av.name::TEXT AS witness,
     cw.url, cw.price_feed, cw.bias,
     (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
-    cw.block_size, cw.signing_key, cw.version
+    cw.block_size, cw.signing_key, cw.version,
+    (SELECT hafbe_backend.get_witness_missed_blocks(cw.witness_id)) AS missed_blocks,
+    (SELECT hafbe_backend.get_witness_hbd_intrest_rate(cw.witness_id)) AS hbd_interest_rate
   FROM hive.accounts_view av
   JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
   WHERE av.name = _account
@@ -250,7 +257,10 @@ SELECT ROW(
   ls.feed_age, 
   ls.block_size, 
   ls.signing_key, 
-  ls.version)
+  ls.version,
+  ls.missed_blocks, 
+  ls.hbd_interest_rate
+  )
 FROM limited_set ls
 LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
 LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id

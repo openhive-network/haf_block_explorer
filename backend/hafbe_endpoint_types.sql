@@ -150,7 +150,9 @@ CREATE TYPE hafbe_types.witness_setof AS (
     feed_age INTERVAL,
     block_size INT,
     signing_key TEXT,
-    version TEXT
+    version TEXT,
+    missed_blocks INT,
+    hbd_interest_rate INT
 );
 
 -- Used in
