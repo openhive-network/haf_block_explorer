@@ -234,7 +234,7 @@ WITH limited_set AS (
     (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
     cw.block_size, cw.signing_key, cw.version,
     (SELECT hafbe_backend.get_witness_missed_blocks(cw.witness_id)) AS missed_blocks,
-    (SELECT hafbe_backend.get_witness_hbd_intrest_rate(cw.witness_id)) AS hbd_interest_rate
+    (SELECT hafbe_backend.get_witness_hbd_interest_rate(cw.witness_id)) AS hbd_interest_rate
   FROM hive.accounts_view av
   JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
   WHERE av.name = _account
