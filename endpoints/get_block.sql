@@ -1,12 +1,24 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_last_synced_block()
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
   RETURN current_block_num FROM hive.contexts WHERE name = 'hafbe_app';
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_head_block_num()
+RETURNS INT
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+RETURN bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
+;
+
 END
 $$;
 
