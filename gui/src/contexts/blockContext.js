@@ -44,7 +44,7 @@ export const BlockContextProvider = ({ children }) => {
     if (blockNumber !== "") {
       axios({
         method: "post",
-        url: "http://192.168.5.126:3002/rpc/get_ops_by_block",
+        url: "http://192.168.5.126:3002/rpc/get_ops_by_block_paging",
         headers: { "Content-Type": "application/json" },
         data: {
           _block_num: blockNumber,

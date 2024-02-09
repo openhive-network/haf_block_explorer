@@ -61,7 +61,7 @@ CREATE TYPE hafbe_types.account AS (
 
 -- Used in 
 -- hafbe_backend.get_ops_by_account
--- hafbe_endpoints.get_ops_by_block
+-- hafbe_endpoints.get_ops_by_block_paging
 -- hafbe_endpoints.get_operation
 DROP TYPE IF EXISTS hafbe_types.operation CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.operation AS (
