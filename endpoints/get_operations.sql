@@ -52,7 +52,7 @@ RETURN (
   ),
   calculate_total_pages AS MATERIALIZED (
     SELECT (CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN 
-    (SELECT * FROM ops_count)/100 ELSE (((SELECT * FROM ops_count)/100) + 1) END)
+    (SELECT * FROM ops_count)/_page_size ELSE (((SELECT * FROM ops_count)/_page_size) + 1) END)
   )
 
   SELECT json_build_object(
