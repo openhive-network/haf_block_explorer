@@ -196,8 +196,8 @@ WITH operation_range AS MATERIALIZED (
     SELECT aov.operation_id, aov.op_type_id, aov.block_num
     FROM hive.account_operations_view aov
     WHERE aov.account_id = __account_id
-    AND (__no_filters OR account_op_seq_no >= __op_seq)
-	  AND (__no_filters OR account_op_seq_no < (__op_seq + _limit))
+    AND (__no_filters OR account_op_seq_no >= (CASE WHEN (_rest_of_division) != 0 THEN __op_seq ELSE (__op_seq - _limit) END))
+	  AND (__no_filters OR account_op_seq_no < (CASE WHEN (_rest_of_division) != 0 THEN (__op_seq + _limit) ELSE __op_seq END))
     AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
     AND (__no_start_date OR aov.operation_id >= (SELECT * FROM ops_from_start_block))
 	  AND (__no_end_date OR aov.operation_id < (SELECT * FROM ops_from_end_block))
