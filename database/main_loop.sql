@@ -89,6 +89,7 @@ BEGIN
       END IF;
 
     END IF;
+    PERFORM hive.app_set_current_block_num(ARRAY[_appContext, _appContext_btracker], __last_block);
     COMMIT; --only commit after we've returned to a consistent state
   END LOOP;
 
