@@ -177,14 +177,6 @@ BEGIN
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_missed_blocks_apr_cache (
-    witness_id INT NOT NULL,
-    hbd_interest_rate INT NOT NULL,
-    missed_blocks INT NOT NULL,
-
-    CONSTRAINT pk_witness_missed_blocks_apr PRIMARY KEY (witness_id)
-  );
-
   CREATE TABLE IF NOT EXISTS hafbe_app.sync_time_logs (
     block_num INT NOT NULL,
     time_json JSONB NOT NULL,

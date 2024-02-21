@@ -149,57 +149,6 @@ BEGIN
 
   RAISE NOTICE 'Updated witness change cache';
 
-  TRUNCATE TABLE hafbe_app.witness_missed_blocks_apr_cache;
-
-  INSERT INTO hafbe_app.witness_missed_blocks_apr_cache (witness_id, hbd_interest_rate, missed_blocks)
-  WITH select_witness_missed_apr_props AS MATERIALIZED
-  (
-  SELECT
-    wvsc.witness_id,
-    (WITH select_witness_updating_ops AS 
-    (
-      SELECT operation_id, account_id
-      FROM hive.account_operations_view 
-      WHERE op_type_id in (42,11) 
-      AND account_id = wvsc.witness_id
-      ORDER BY account_op_seq_no DESC
-    )
-    SELECT 
-    (
-      CASE WHEN op_type_id = 11 THEN
-      (body->'value'->'props'->>'hbd_interest_rate')::INT
-      WHEN op_type_id = 42 THEN
-      (SELECT ((extract_set_witness_properties.prop_value)::TEXT)::INT FROM hive.extract_set_witness_properties(
-        json_build_array(
-          json_build_array(
-            'hbd_interest_rate',
-            (body->'value'->'props'->0->>1)::text
-          )
-        )::TEXT 
-      ))
-      END
-    ) 
-
-    FROM hive.operations_view
-    JOIN select_witness_updating_ops s ON s.operation_id = id
-    WHERE  (op_type_id = 42 AND (body->'value'->'props'->0->>0)::text = 'hbd_interest_rate')
-    OR op_type_id = 11
-    LIMIT 1)::INT AS hbd_interest_rate,
-
-    (SELECT count(*) 
-    FROM hive.account_operations aov 
-    WHERE aov.account_id = wvsc.witness_id
-    and aov.op_type_id = 86)::INT AS missed_blocks
-  FROM hafbe_app.current_witnesses wvsc
-  )
-  SELECT 
-  swmap.witness_id,
-  coalesce(swmap.hbd_interest_rate,0),
-  coalesce(swmap.missed_blocks,0)
-  FROM select_witness_missed_apr_props swmap;
-
-  RAISE NOTICE 'Updated witness missed blocks and hbd_interest_rate cache';
-
   UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
 END
 $function$
