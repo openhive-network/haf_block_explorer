@@ -312,6 +312,54 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
+      -- parse witness hbd_interest_rate
+  WITH select_ops_with_hbd_interest_rate AS (
+    SELECT witness, value, op_type_id, operation_id
+    FROM hafbe_views.witness_prop_op_view
+    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+  ),
+
+  select_hbd_interest_rate_from_set_witness_properties AS (
+    SELECT ex_prop.hbd_interest_rate, operation_id, witness
+    FROM select_ops_with_hbd_interest_rate sowu
+
+    JOIN LATERAL (
+      SELECT trim(both '"' FROM prop_value::TEXT)::INT AS hbd_interest_rate
+      FROM hive.extract_set_witness_properties(sowu.value->>'props')
+      WHERE prop_name = 'hbd_interest_rate'
+    ) ex_prop ON TRUE
+    WHERE op_type_id = 42
+  ),
+
+  select_hbd_interest_rate_from_witness_update_op AS (
+    SELECT (value->'props'->>'hbd_interest_rate')::INT AS hbd_interest_rate, operation_id, witness
+    FROM select_ops_with_hbd_interest_rate
+    WHERE op_type_id = 11
+  )
+
+  UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
+    SELECT 
+      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      hbd_interest_rate
+    FROM (
+      SELECT
+        hbd_interest_rate, witness,
+        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
+      FROM (
+        SELECT hbd_interest_rate, operation_id, witness
+        FROM select_hbd_interest_rate_from_set_witness_properties
+
+        UNION
+
+        SELECT hbd_interest_rate, operation_id, witness
+        FROM select_hbd_interest_rate_from_witness_update_op
+      ) sp
+      WHERE hbd_interest_rate IS NOT NULL
+    ) prop
+    WHERE row_n = 1
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE

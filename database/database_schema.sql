@@ -111,7 +111,8 @@ BEGIN
     feed_updated_at TIMESTAMP,
     block_size INT,
     signing_key TEXT,
-    version TEXT,
+    version TEXT, 
+    hbd_interest_rate INT,
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   ) INHERITS (hive.hafbe_app);
