@@ -54,6 +54,11 @@ BEGIN
 
     INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (b, _time);
 
+    --Save off last processed block number from the batch of blocks (current block number is directly managed during massive sync)
+    PERFORM hive.app_set_current_block_num(ARRAY[_appContext, _appContext_btracker], _last_block);
+    
+    COMMIT; --only commit after all block processing is finished for a batch of blocks
+
     RAISE NOTICE 'Processed % blocks in % seconds',
     _step ,ROUND(EXTRACT(epoch FROM (SELECT NOW() - last_reported_at FROM hafbe_app.app_status LIMIT 1)), 3);
     UPDATE hafbe_app.app_status SET last_reported_at = NOW();
@@ -61,11 +66,6 @@ BEGIN
     RAISE NOTICE 'Block processing running for % minutes
     ',
     ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
-
-    --Save off last processed block number from the batch of blocks (current block number is directly managed during massive sync)
-    PERFORM hive.app_set_current_block_num(ARRAY[_appContext, _appContext_btracker], _last_block);
-    
-    COMMIT; --only commit after all block processing is finished for a batch of blocks
 
     EXIT WHEN NOT hafbe_app.continueProcessing();
 
