@@ -98,6 +98,7 @@ prepare_haf_data:
     TAG: ""
     NAME: ""
     TARGET: "$NAME"
+    PROGRESS_DISPLAY: "plain"
   before_script:
     - !reference [.docker_image_builder_job_template, before_script]
     - |
@@ -118,7 +119,7 @@ prepare_haf_data:
       else
         echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG} image..."
         git config --global --add safe.directory $(pwd)
-        docker buildx bake --progress=plain --provenance=false "$TARGET"
+        scripts/build_instance.sh "$CI_PROJECT_DIR"
       fi
       echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
