@@ -39,7 +39,7 @@ No custom PostgREST image is neeed for the API. The application has been tested 
 
 There are several targets defined in the Bakefile
 
-- *default* - alias for *psql*
+- *default* - alias for *full*
 - *psql* - builds psql client image
 - *full* - builds image containing HAF BE scripts, but without HAFAH and Balance Tracker ones
 - *ci-runner* - builds CI runner

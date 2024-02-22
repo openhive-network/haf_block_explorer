@@ -1,6 +1,6 @@
 # Global variables
 variable "CI_REGISTRY_IMAGE" {
-    default = "registry.gitlab.syncad.com/hive/haf_block_explorer"
+  default = "registry.gitlab.syncad.com/hive/haf_block_explorer"
 }
 variable "CI_COMMIT_SHORT_SHA" {
   default = ""
@@ -20,6 +20,12 @@ variable "TAG_CI" {
 variable "PSQL_CLIENT_VERSION" {
   default = "14"
 }
+variable "BUILD_TIME" {}
+variable "GIT_COMMIT_SHA" {}
+variable "GIT_CURRENT_BRANCH" {}
+variable "GIT_LAST_LOG_MESSAGE" {}
+variable "GIT_LAST_COMMITTER" {}
+variable "GIT_LAST_COMMIT_DATE" {}
 
 # Functions
 function "notempty" {
@@ -34,7 +40,7 @@ function "registry-name" {
 
 # Target groups
 group "default" {
-  targets = ["psql"]
+  targets = ["full"]
 }
 
 # Targets
@@ -59,13 +65,22 @@ target "psql-ci" {
   ]
 }
 
-## Locally tag image with "latest"
+## Locally tag image with "$TAG",
+## which is "latest" by default
 target "full" {
   inherits = ["psql"]
   target = "full"
   tags = [
     "${CI_REGISTRY_IMAGE}:${TAG}"
   ]
+  args = {
+    BUILD_TIME = "${BUILD_TIME}",
+    GIT_COMMIT_SHA = "${GIT_COMMIT_SHA}",
+    GIT_CURRENT_BRANCH = "${GIT_CURRENT_BRANCH}",
+    GIT_LAST_LOG_MESSAGE = "${GIT_LAST_LOG_MESSAGE}",
+    GIT_LAST_COMMITTER = "${GIT_LAST_COMMITTER}",
+    GIT_LAST_COMMIT_DATE = "${GIT_LAST_COMMIT_DATE}",
+  }
   output = [
     "type=docker"
   ]
