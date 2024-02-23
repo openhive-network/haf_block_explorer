@@ -16,7 +16,7 @@ _time JSONB = '{}'::JSONB;
 BEGIN
   RAISE NOTICE 'Entering massive processing of block range: <%, %>...', _from, _to;
   RAISE NOTICE 'Detaching HAF application context...';
-  CALL hive.appproc_context_detach(ARRAY[_appContext, _appContext_btracker]);
+  PERFORM CALL hive.app_context_detach(ARRAY[_appContext, _appContext_btracker]);
   --- You can do here also other things to speedup your app, i.e. disable constrains, remove indexes etc.
 
   FOR b IN _from .. _to BY _step LOOP
@@ -71,7 +71,7 @@ BEGIN
   END LOOP;
 
   RAISE NOTICE 'Attaching HAF application context at block: %.', _last_block;
-  CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker], _last_block);
+  CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker]);
  --- You should enable here all things previously disabled at begin of this function...
 
  RAISE NOTICE 'Leaving massive processing of block range: <%, %>...', _from, _to;
