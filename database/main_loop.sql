@@ -27,7 +27,7 @@ BEGIN
   RAISE NOTICE 'Last block processed by application: %', __last_block;
 
   IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker]) THEN
-    CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker], __last_block);
+    CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker]);
   END IF;
 
   RAISE NOTICE 'Entering application main loop...';
