@@ -199,7 +199,7 @@ docker-setup-docker-image-build:
       IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
       echo "Docker Compose options: ${COMPOSE_OPTIONS[@]}"
       docker compose config | tee docker-compose-config.yml.log
-      timeout -s INT -k 60 3540 docker compose ${COMPOSE_OPTIONS[@]} up --detach
+      timeout -v -s INT -k 60 300 docker compose ${COMPOSE_OPTIONS[@]} up --detach
       popd
 
       echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
