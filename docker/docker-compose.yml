@@ -32,9 +32,13 @@ services:
   backend-setup:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
     working_dir: /app
+    profiles:
+      - full
+
     command: 
       - "./scripts/install_app.sh $${SETUP_OPTIONS}"
     user: $SETUP_UID
+
     environment:
       POSTGRES_HOST: haf
       SETUP_OPTIONS:
@@ -55,6 +59,9 @@ services:
   backend-block-processing:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
     working_dir: /app
+    profiles:
+      - full
+
     command:
       - "./scripts/process_blocks.sh"
     environment:
@@ -81,6 +88,9 @@ services:
     ports:
       - "3000:3000"
       - "3001:3001"
+    profiles:
+      - full
+
     environment:
       PGRST_ADMIN_SERVER_PORT: 3001
       PGRST_DB_URI: postgresql://hafbe_owner@haf:5432/haf_block_log
