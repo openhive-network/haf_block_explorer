@@ -84,6 +84,9 @@ prepare_haf_data:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/submodules/haf/docker/config_5M.ini"
+  before_script:
+    - echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" > ./sudoers
+    - sudo cp -vf ./sudoers /etc/sudoers
   tags:
     - data-cache-storage
 
