@@ -18,7 +18,6 @@ services:
     volumes:
       - haf_datadir:/home/hived/datadir
       - haf_shmdir:/home/hived/shm_dir
-      - ../blockchain:/home/hived/datadir/blockchain
       - ../scripts/haf-healthcheck.sh:/home/hived/healthcheck.sh
     networks:
       haf-network:

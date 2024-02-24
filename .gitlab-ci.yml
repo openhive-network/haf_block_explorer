@@ -16,7 +16,7 @@ variables:
   GIT_SUBMODULE_DEPTH: 1
   GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
   # HAF configuration
-  DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf_block_explorer_haf_${CI_COMMIT_SHA}"
+  DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf_for_hafbe_"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
 
 include:
@@ -70,8 +70,6 @@ prepare_haf_image:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     REGISTRY_USER: "$HAF_DEPLOY_USERNAME"
     REGISTRY_PASS: "$HAF_DEPLOY_TOKEN"
-  before_script:
-    - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
   tags:
     - public-runner-docker
     - hived-for-tests
@@ -86,7 +84,6 @@ prepare_haf_data:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/submodules/haf/docker/config_5M.ini"
-  resource_group: ${CI_COMMIT_SHA}
   tags:
     - data-cache-storage
 
@@ -162,12 +159,22 @@ docker-setup-docker-image-build:
   stage: test
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-3
   variables:
+    COMPOSE_OPTIONS_STRING: "" # to be overrided by derived jobs
+
     HAF_COMMAND: --shared-file-size=1G --plugin database_api --replay --stop-replay-at-block=5000000
-    HAF_DATA_DIRECTORY: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir
-    HAF_SHM_DIRECTORY: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/shm_dir
+
+    BASE_DIRECTORY: ${CI_PROJECT_DIR}/docker_${CI_JOB_NAME}
+    HAF_DATA_DIRECTORY: ${BASE_DIRECTORY}/datadir
+    HAF_SHM_DIRECTORY: ${BASE_DIRECTORY}/shm_dir
+
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMMAND: SELECT CASE WHEN irreversible_block = 5000000 THEN 0 ELSE 1 END FROM hive.contexts WHERE name = 'hafbe_app';
     MESSAGE: Waiting for HAF Block Explorer to finish processing blocks...
+
+    FF_ENABLE_JOB_CLEANUP: 1
+    FF_NETWORK_PER_BUILD: 1
+    PROGRESS_DISPLAY: "plain"
+
   timeout: 2 hours
   before_script:
     - |
@@ -180,12 +187,31 @@ docker-setup-docker-image-build:
       echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
   script:
     - |
-      echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=true]\r\e[0KStarting the test environment..."
+      set -x
+      echo -e "\e[0Ksection_start:$(date +%s):prepare_data[collapsed=true]\r\e[0KPreparing HAF data..."
 
-      cp /blockchain/block_log_5m/block_log docker/blockchain/block_log
-      chmod a+w docker/blockchain/block_log
+      echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" > ./sudoers
+      sudo cp -vf ./sudoers /etc/sudoers
 
-      pushd docker
+      cp -vfr "${CI_PROJECT_DIR}/docker" "${BASE_DIRECTORY}"
+
+      sudo cp -vfr -t "${BASE_DIRECTORY}" "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/datadir"
+      sudo cp -vfr -t "${BASE_DIRECTORY}" "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/shm_dir"
+
+      sudo chmod -Rc a+w "${BASE_DIRECTORY}/datadir/blockchain"
+      sudo chmod -Rc a+w "${BASE_DIRECTORY}/datadir/haf_postgresql_conf.d"
+      sudo chmod -Rc a+w "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}/shm_dir"
+
+      sudo rm -fv "${BASE_DIRECTORY}/datadir/*.log"
+
+      echo -e "\e[0Ksection_end:$(date +%s):prepare_data\r\e[0K"
+
+      echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=false]\r\e[0KStarting the test environment..."
+
+      echo "Entering a base directory ${BASE_DIRECTORY}"
+
+      cd "${BASE_DIRECTORY}"
+
       # Put all the variables that can be predefined in the "variables"
       # block and all the variables that have to be dynamically set by the script below
       {
@@ -193,14 +219,22 @@ docker-setup-docker-image-build:
         echo "HAF_VERSION=$HAF_REGISTRY_TAG"
         echo "HIVED_UID=$HIVED_UID"
         echo "SETUP_UID=$(id -u)"
+        echo "HAF_DATA_DIRECTORY=${HAF_DATA_DIRECTORY}"
+        echo "HAF_SHM_DIRECTORY=${HAF_SHM_DIRECTORY}"
+
       } > .env.local
       cat .env.local
       echo "Docker Compose options string: $COMPOSE_OPTIONS_STRING"
       IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
       echo "Docker Compose options: ${COMPOSE_OPTIONS[@]}"
-      docker compose config | tee docker-compose-config.yml.log
-      timeout -v -s INT -k 60 300 docker compose ${COMPOSE_OPTIONS[@]} up --detach
-      popd
+      docker compose version
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" config | tee docker-compose-config.yml.log
+      timeout -s INT -k 60 600 docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" up --remove-orphans -V --force-recreate --wait --quiet-pull
+      #--detach
+
+      echo "Returning to project directory ${CI_PROJECT_DIR}"
+
+      cd "${CI_PROJECT_DIR}"
 
       echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
       echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0K$MESSAGE"
@@ -217,15 +251,35 @@ docker-setup-docker-image-build:
       export COMMAND
       export MESSAGE
 
-      timeout -k 60 3540 bash -c wait-for-haf-be-startup
-      
+      timeout -k 60 600 bash -c wait-for-haf-be-startup
       echo "Block processing is finished."
 
       echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
+
+  after_script:
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):stop_env[collapsed=true]\r\e[0KStopping test environment..."
+
+      pushd "${BASE_DIRECTORY}"
+      IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" ps -a
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
+      docker compose --project-name hafbe --project-directory "${BASE_DIRECTORY}" --env-file .env.local --ansi never "${COMPOSE_OPTIONS[@]}" down --volumes
+      popd
+
+      tar -cf - ${BASE_DIRECTORY}/*.log ${BASE_DIRECTORY}/datadir/*.log | 7z a -si -mx9 "${CI_JOB_NAME}-container-logs.tar.7z"
+
+      echo -e "\e[0Ksection_end:$(date +%s):stop_env\r\e[0K"
+
   artifacts:
+    paths:
+      - "*-container-logs.tar.7z"
+
     expire_in: 1 week
     when: always
-  resource_group: ${CI_COMMIT_SHA}
   tags:
     - data-cache-storage
 
@@ -239,23 +293,7 @@ docker-setup-docker-image-build:
   variables:
     PGHERO_USERNAME: unused
     PGHERO_PASSWORD: unused
-    COMPOSE_OPTIONS_STRING: --project-name btracker --env-file .env.local --file docker-compose.yml --file ci/docker-compose.yml --ansi never
-  after_script:
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):compose2[collapsed=true]\r\e[0KStopping test environment..."
-
-      pushd docker
-      IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
-      docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
-      docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
-      popd
-
-      tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
-
-      echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
+    COMPOSE_OPTIONS_STRING: --file docker-compose.yml --file ci/docker-compose.yml
 
 .full-image-test-template:
   extends: .test-template
@@ -266,28 +304,11 @@ docker-setup-docker-image-build:
     - docker-ci-runner-build
   variables:
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
-    COMPOSE_OPTIONS_STRING: --project-name btracker --env-file .env.local --file ci/docker-compose.full.yml --ansi never
-  after_script:
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):compose2[collapsed=true]\r\e[0KStopping test environment..."
-
-      pushd docker
-      IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
-      docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > app-setup.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
-      docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
-      popd
-
-      tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
-
-      echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
+    COMPOSE_OPTIONS_STRING: --file ci/docker-compose.full.yml
 
 psql-client-regression-test:
   extends: .psql-client-test-template
-  timeout: 3 hours
+
   script:
     - !reference [.test-template, script]
     - |
@@ -297,13 +318,8 @@ psql-client-regression-test:
       ./accounts_dump_test.sh --host=docker
 
       echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
-  artifacts:
-    paths:
-      - docker/container-logs.tar.7z
-    expire_in: 1 week
-    when: always
 
-psql-client-performance-test:
+.psql-client-performance-test:
   extends: .psql-client-test-template
   script:
     - !reference [.test-template, script]
@@ -318,14 +334,14 @@ psql-client-performance-test:
       echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-      - docker/container-logs.tar.7z
+      - "*-container-logs.tar.7z"
       - tests/performance/result/result_report/
       - tests/performance/results.tar.7z
       - jmeter.log
     reports:
       junit: tests/performance/junit-result.xml
 
-full-image-regression-test:
+.full-image-regression-test:
   extends: .full-image-test-template
   script:
     - !reference [psql-client-regression-test, script]
@@ -333,15 +349,25 @@ full-image-regression-test:
     paths:
       !reference [psql-client-regression-test, artifacts, paths]
 
-full-image-performance-test:
+.full-image-performance-test:
   extends: .full-image-test-template
   script:
-    - !reference [psql-client-performance-test, script]
+    - !reference [.psql-client-performance-test, script]
   artifacts:
     paths:
-      !reference [psql-client-performance-test, artifacts, paths]
+      !reference [.psql-client-performance-test, artifacts, paths]
     reports:
-      junit: !reference [psql-client-performance-test, artifacts, reports, junit]
+      junit: !reference [.psql-client-performance-test, artifacts, reports, junit]
+
+cleanup_obsolete_haf_cache_manual:
+  extends: .cleanup_cache_manual
+  stage: cleanup
+  variables:
+    GIT_STRATEGY: none
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_block_explorer_haf_*"
+
+  tags:
+    - data-cache-storage
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual
@@ -349,6 +375,6 @@ cleanup_haf_cache_manual:
   variables:
     GIT_STRATEGY: none
     CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_*"
-  resource_group: ${CI_COMMIT_SHA}
+
   tags:
     - data-cache-storage
