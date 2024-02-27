@@ -121,7 +121,7 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_op_count_in_block(_block_num INT)
-RETURNS SETOF hafbe_types.get_latest_blocks -- noqa: LT01, CP05
+RETURNS SETOF hafbe_types.get_op_count_in_block -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
