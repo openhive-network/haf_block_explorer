@@ -67,11 +67,9 @@ BEGIN
           PERFORM set_config('synchronous_commit', __original_commit_mode, false);
           __commit_mode_changed := false;
         END IF;
-        FOR __block IN __next_block_range.first_block .. __next_block_range.last_block LOOP
-          CALL hafbe_app.processBlock(__block, _appContext);
-          __last_block := __block;
-          EXIT WHEN hafbe_app.continueProcessing() OR (_maxBlockLimit != 0 AND __last_block >= _maxBlockLimit);
-        END LOOP;
+
+        CALL hafbe_app.processBlock(__next_block_range.first_block, _appContext);
+        __last_block := __next_block_range.first_block;
 
         IF (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
            (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
