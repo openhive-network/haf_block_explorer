@@ -160,6 +160,9 @@ CREATE TYPE hafbe_types.witness_setof AS (
 DROP TYPE IF EXISTS hafbe_types.get_transaction CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_transaction AS (
     transaction_json JSON,
+    transaction_id TEXT,
+    block_num INT,
+    transaction_num INT,
     timestamp TIMESTAMP,
     age INTERVAL
 );
