@@ -103,6 +103,22 @@ CREATE TYPE hafbe_types.block AS (
 );
 
 -- Used in
+-- hafbe_endpoints.get_block
+DROP TYPE IF EXISTS hafbe_types.block_raw CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_types.block_raw AS (
+    previous bytea,
+    timestamp TIMESTAMP,
+    witness VARCHAR,
+    transaction_merkle_root bytea,
+    extensions JSONB,
+    witness_signature bytea,
+    transactions JSONB,
+    block_id bytea,
+    signing_key TEXT,
+    transaction_ids bytea[]
+);
+
+-- Used in
 -- hafbe_endpoints.get_witness_voters
 DROP TYPE IF EXISTS hafbe_types.witness_voters CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.witness_voters AS (

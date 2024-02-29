@@ -59,6 +59,33 @@ WHERE bv.num = _block_num
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_raw(_block_num INT)
+RETURNS hafbe_types.block_raw -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+BEGIN
+RETURN (
+SELECT ROW( 
+	previous,
+	timestamp,
+	witness,
+	transaction_merkle_root,	
+	extensions,
+	witness_signature,
+	hive.transactions_to_json(transactions),
+	block_id,
+	signing_key,
+	transaction_ids)
+FROM hive.get_block(_block_num)
+);
+
+END
+$$;
+
 -- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_time(_timestamp TIMESTAMP)
 RETURNS INT
