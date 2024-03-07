@@ -38,6 +38,9 @@ SET plan_cache_mode = force_custom_plan
 -- force_custom_plan added to every function that uses OFFSET
 AS
 $$
+DECLARE 
+  _ops_count BIGINT;
+  _calculate_total_pages INT; 
 BEGIN
 IF _date_start IS NOT NULL THEN
   _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
@@ -46,20 +49,23 @@ IF _date_end IS NOT NULL THEN
   _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
 END IF;
 
-RETURN (
-  WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_account_operations_count(_filter, _account, _from, _to)
-  ),
-  calculate_total_pages AS MATERIALIZED (
-    SELECT (CASE WHEN ((SELECT * FROM ops_count) % _page_size) = 0 THEN 
-    (SELECT * FROM ops_count)/_page_size ELSE (((SELECT * FROM ops_count)/_page_size) + 1) END)
-  )
+SELECT hafbe_backend.get_account_operations_count(_filter, _account, _from, _to) INTO _ops_count;
 
+SELECT (CASE WHEN (_ops_count % _page_size) = 0 THEN 
+    _ops_count/_page_size ELSE ((_ops_count/_page_size) + 1) END)::INT INTO _calculate_total_pages;
+
+IF _to <= hive.app_get_irreversible_block() OR (_page_num IS NOT NULL AND _calculate_total_pages != _page_num) THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
+RETURN (
   SELECT json_build_object(
 -- ops_count returns number of operations found with current filter
-    'total_operations', (SELECT * FROM ops_count),
+    'total_operations', _ops_count,
 -- to count total_pages we need to check if there was a rest from division by _page_size, if there was the page count is +1 
-    'total_pages', (SELECT * FROM calculate_total_pages),
+    'total_pages', _calculate_total_pages,
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
       SELECT * FROM hafbe_backend.get_ops_by_account(_account, 
@@ -71,14 +77,14 @@ RETURN (
 -- page 15 (external first page) 15 - 15 + 1 = 1 (internal first page)
 -- page 14 (external second page) 15 - 14 + 1 = 2 (internal second page)
 -- ... page 7, 15 - 7 + 1 =  9 (internal 9th page)
-      (CASE WHEN _page_num IS NULL THEN 1 ELSE (((SELECT * FROM calculate_total_pages) - _page_num) + 1) END)::INT,
+      (CASE WHEN _page_num IS NULL THEN 1 ELSE ((_calculate_total_pages - _page_num) + 1) END)::INT,
       _page_size,
       _filter,
       _from,
       _to,
       _body_limit,
-       ((SELECT * FROM ops_count) % _page_size)::INT,
-       (SELECT * FROM ops_count)::INT)
+       (_ops_count % _page_size)::INT,
+       _ops_count::INT)
 
 -- to return the first page with the rest of the division of ops count the number is handed over to backend function
     ) row)
@@ -104,6 +110,13 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN (
   WITH ops_count AS MATERIALIZED (
     SELECT * FROM hafbe_backend.get_ops_by_block_count(_block_num, _filter)
@@ -139,7 +152,16 @@ RETURNS hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
+DECLARE
+ _block_num INT := (SELECT ov.block_num FROM hive.operations_view ov WHERE ov.id = _operation_id);
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN (
   SELECT ROW (
       ov.id,
@@ -177,6 +199,9 @@ $$
 DECLARE
 	_example_key JSON := (SELECT ov.body FROM hive.operations_view ov WHERE ov.op_type_id = _op_type_id LIMIT 1);
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
 RETURN QUERY
 WITH RECURSIVE extract_keys AS (
   SELECT 
@@ -238,6 +263,12 @@ IF _end_date IS NOT NULL THEN
   _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
+IF _to <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN (
   WITH ops_count AS MATERIALIZED (
     SELECT * FROM hafbe_backend.get_comment_operations_count(_author, _permlink, _operation_types, _from, _to)
@@ -274,6 +305,8 @@ DECLARE
   __no_ops_filter BOOLEAN = (_filter IS NULL);
   __account_id INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = _account);
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
 RETURN QUERY   
 WITH operation_range AS MATERIALIZED (

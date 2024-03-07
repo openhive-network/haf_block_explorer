@@ -19,6 +19,10 @@ DECLARE
   __profile_image TEXT;
   _account_id INT = hafbe_backend.get_account_id(_account);
 BEGIN
+
+-- 2s because this endpoint result is live account parameters and balances 
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN (
 WITH select_parameters_from_backend AS MATERIALIZED (
   SELECT

@@ -8,6 +8,9 @@ $$
 DECLARE
   __operation_name TEXT = '%' || _operation_type_pattern || '%';
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
 RETURN QUERY SELECT
   id, split_part(name, '::', 3), is_virtual
 FROM hive.operation_types
@@ -24,6 +27,9 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
 RETURN QUERY SELECT
   id, split_part(name, '::', 3), is_virtual
 FROM hive.operation_types
@@ -44,6 +50,9 @@ $$
 DECLARE
   __account_id INT = hafbe_backend.get_account_id(_account);
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN QUERY WITH op_types_cte AS (
   SELECT id
   FROM hive.operation_types hot
@@ -68,6 +77,13 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN QUERY SELECT DISTINCT ON (ov.op_type_id)
   ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual
 FROM hive.operations_view ov

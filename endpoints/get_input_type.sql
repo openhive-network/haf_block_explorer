@@ -25,6 +25,9 @@ BEGIN
 
   -- first, name existance is checked
   IF (SELECT 1 FROM hive.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
+
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
     RETURN json_build_object(
       'input_type', 'account_name',
       'input_value', _input
@@ -35,8 +38,14 @@ BEGIN
   IF _input SIMILAR TO '(\d+)' THEN
     SELECT hafbe_endpoints.get_head_block_num() INTO __head_block_num;
     IF _input::NUMERIC > __head_block_num THEN
+
+      PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
       RETURN hafbe_exceptions.raise_block_num_too_high_exception(_input::NUMERIC, __head_block_num);
     ELSE
+
+      PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
       RETURN json_build_object(
         'input_type', 'block_num',
         'input_value', _input
@@ -50,6 +59,9 @@ BEGIN
     SELECT ('\x' || _input)::BYTEA INTO __hash;
     
     IF (SELECT trx_hash FROM hive.transactions WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
+
+      PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
       RETURN json_build_object(
         'input_type', 'transaction_hash',
         'input_value', _input
@@ -62,11 +74,17 @@ BEGIN
     END IF;
 
     IF __block_num IS NOT NULL THEN
+
+      PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
       RETURN json_build_object(
         'input_type', 'block_hash',
         'input_value', __block_num
       );
     ELSE
+
+      PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
       RETURN hafbe_exceptions.raise_unknown_hash_exception(_input);
     END IF;
   END IF;
@@ -75,11 +93,17 @@ BEGIN
   -- if no matching accounts were found, 'unknown_input' is returned
   SELECT btracker_app.find_matching_accounts(_input) INTO __accounts_array;
   IF __accounts_array IS NOT NULL THEN
+
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+
     RETURN json_build_object(
       'input_type', 'account_name_array',
       'input_value', __accounts_array
     );
   ELSE
+
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
     RETURN hafbe_exceptions.raise_unknown_input_exception(_input);
   END IF;
 END
@@ -91,6 +115,10 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
+
+--100000s because version of hafbe doesn't change as often, but it may change
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=100000"}]', true);
+
 RETURN (
 	SELECT git_hash
 	FROM hafbe_app.version

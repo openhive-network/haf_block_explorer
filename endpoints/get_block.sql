@@ -6,6 +6,8 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
+
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   RETURN current_block_num FROM hive.contexts WHERE name = 'hafbe_app';
 END
 $$;
@@ -16,8 +18,9 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-RETURN bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
-;
+
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  RETURN bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1;
 
 END
 $$;
@@ -32,6 +35,13 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN (
 SELECT ROW(
   bv.num,   
@@ -68,6 +78,13 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN (
 SELECT ROW( 
 	previous,
@@ -92,12 +109,22 @@ RETURNS INT
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
+DECLARE
+  _num INT;
 BEGIN
-RETURN bv.num
+
+SELECT bv.num INTO _num
 FROM hive.blocks_view bv 
 WHERE bv.created_at BETWEEN _timestamp - interval '2 seconds' 
-AND _timestamp ORDER BY bv.created_at LIMIT 1
-;
+AND _timestamp ORDER BY bv.created_at LIMIT 1;
+
+IF _num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
+RETURN _num;
 
 END
 $$;
@@ -112,6 +139,9 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN QUERY
   WITH select_block_range AS MATERIALIZED (
     SELECT 
@@ -156,6 +186,13 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+
+IF _block_num <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+END IF;
+
 RETURN QUERY
   SELECT 
     ov.op_type_id,
@@ -229,6 +266,12 @@ IF _start_date IS NOT NULL THEN
 END IF;
 IF _end_date IS NOT NULL THEN  
   _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+END IF;
+
+IF _to <= hive.app_get_irreversible_block() THEN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+ELSE
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
 IF array_length(_operations, 1) = 1 THEN

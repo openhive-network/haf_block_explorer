@@ -8,6 +8,7 @@ $$
 DECLARE
   _witness_id INT = hafbe_backend.get_account_id(_witness);
 BEGIN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   RETURN COUNT(1) FROM hafbe_app.current_witness_votes WHERE witness_id = _witness_id;
 END
 $$;
@@ -30,6 +31,9 @@ $$
 DECLARE
 _witness_id INT = hafbe_backend.get_account_id(_witness);
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN QUERY EXECUTE format(
   $query$
 
@@ -92,6 +96,9 @@ $$
 DECLARE
 _witness_id INT = hafbe_backend.get_account_id(_witness);
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN QUERY EXECUTE format(
   $query$
 
@@ -146,6 +153,9 @@ SET jit = OFF
 AS
 $$
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN QUERY EXECUTE format(
   $query$
 
@@ -231,6 +241,9 @@ SET jit = OFF
 AS
 $$
 BEGIN
+
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
 RETURN (
 WITH limited_set AS (
   SELECT
