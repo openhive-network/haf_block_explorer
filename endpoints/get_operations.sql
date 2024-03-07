@@ -147,7 +147,7 @@ RETURN (
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation(_operation_id INT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation(_operation_id BIGINT)
 RETURNS hafbe_types.operation -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
