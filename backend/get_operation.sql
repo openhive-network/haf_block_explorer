@@ -51,7 +51,7 @@ BEGIN
   SELECT 
     ov.body_binary::jsonb->'value'->>'permlink' as permlink,
     ov.body_binary::jsonb->'value'->>'author' as author,
-    ov.block_num, ov.id, ov.body_binary::jsonb, ov.timestamp
+    ov.block_num, ov.id, ov.body_binary::jsonb as body, ov.timestamp, ov.trx_in_block
   FROM hive.operations_view ov
   WHERE 
     ov.block_num BETWEEN _from AND _to AND
@@ -62,13 +62,25 @@ BEGIN
     TRUE END)
   ORDER BY author, permlink, ov.id
   LIMIT _page_size
-  OFFSET _offset)
-
+  OFFSET _offset),
+  add_transactions AS MATERIALIZED
+  (
+    SELECT 
+      orr.permlink, 
+      orr.author, 
+      orr.block_num, 
+      orr.id, 
+      orr.body, 
+      orr.timestamp, 
+      encode(htv.trx_hash, 'hex') AS trx_hash
+    FROM operation_range orr
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = orr.block_num AND htv.trx_in_block = orr.trx_in_block
+  )
 -- filter too long operation bodies 
-  SELECT filtered_operations.permlink, filtered_operations.block_num, filtered_operations.id, filtered_operations.timestamp, (filtered_operations.composite).body, (filtered_operations.composite).is_modified
+  SELECT filtered_operations.permlink, filtered_operations.block_num, filtered_operations.id, filtered_operations.timestamp, filtered_operations.trx_hash,  (filtered_operations.composite).body, (filtered_operations.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(opr.body_binary::jsonb, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, opr.timestamp
-  FROM operation_range opr
+  SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, opr.timestamp, opr.trx_hash
+  FROM add_transactions opr
   ) filtered_operations
   ORDER BY filtered_operations.author, filtered_operations.permlink, filtered_operations.id;
 

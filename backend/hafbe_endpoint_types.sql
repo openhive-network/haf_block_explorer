@@ -218,7 +218,8 @@ CREATE TYPE hafbe_types.comment_history AS (
     block_num INT,
     operation_id BIGINT,
     created_at TIMESTAMP,
-    body JSONB,
+    trx_hash TEXT,
+    operations JSONB,
     is_modified BOOLEAN
 );
 
