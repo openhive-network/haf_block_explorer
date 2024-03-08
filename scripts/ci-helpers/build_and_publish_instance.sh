@@ -1,0 +1,1 @@
+../../submodules/haf/hive/scripts/ci-helpers/build_and_publish_instance.sh

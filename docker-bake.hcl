@@ -2,9 +2,6 @@
 variable "CI_REGISTRY_IMAGE" {
   default = "registry.gitlab.syncad.com/hive/haf_block_explorer"
 }
-variable "CI_COMMIT_SHORT_SHA" {
-  default = ""
-}
 variable "CI_COMMIT_TAG" {
   default = ""
 }
@@ -23,12 +20,24 @@ variable "TAG_CI" {
 variable "PSQL_CLIENT_VERSION" {
   default = "14"
 }
-variable "BUILD_TIME" {}
-variable "GIT_COMMIT_SHA" {}
-variable "GIT_CURRENT_BRANCH" {}
-variable "GIT_LAST_LOG_MESSAGE" {}
-variable "GIT_LAST_COMMITTER" {}
-variable "GIT_LAST_COMMIT_DATE" {}
+variable "BUILD_TIME" {
+  default = "${timestamp()}"
+}
+variable "GIT_COMMIT_SHA" {
+  default = "[unknown]"
+}
+variable "GIT_CURRENT_BRANCH" {
+  default = "[unknown]"
+}
+variable "GIT_LAST_LOG_MESSAGE" {
+  default = "[unknown]"
+}
+variable "GIT_LAST_COMMITTER" {
+  default = "[unknown]"
+}
+variable "GIT_LAST_COMMIT_DATE" {
+  default = "[unknown]"
+}
 
 # Functions
 function "notempty" {
@@ -103,8 +112,8 @@ target "full-ci" {
     "type=registry,mode=max,ref=${registry-name("cache", "")}:${PSQL_CLIENT_VERSION}"
   ]
   tags = [
+    "${CI_REGISTRY_IMAGE}:${TAG}",
     equal(CI_COMMIT_BRANCH, CI_DEFAULT_BRANCH) ? "${CI_REGISTRY_IMAGE}:latest": "",
-    notempty(CI_COMMIT_SHORT_SHA) ? "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" : "",
     notempty(CI_COMMIT_TAG) ? "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}": ""
   ]
   output = [

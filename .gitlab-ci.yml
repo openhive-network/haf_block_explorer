@@ -3,6 +3,7 @@ stages:
  - build
  - test
  - cleanup
+ - publish
 
 variables:
   # Variables required by Common CI jobs
@@ -22,7 +23,7 @@ variables:
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: hive/haf
-    ref: b55244559833580cfa0ed92e9a387812a191ca3f # develop
+    ref: ebe02706ca2da8d94489770da2c241a1a49c3200 # develop
     file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
 
 .lint_job:
@@ -94,7 +95,7 @@ prepare_haf_data:
   stage: build
   variables:
     BASE_REPO_NAME: ""
-    TAG: ""
+    BASE_TAG: ""
     NAME: ""
     TARGET: "$NAME"
     PROGRESS_DISPLAY: "plain"
@@ -106,25 +107,24 @@ prepare_haf_data:
       echo -e "\e[0Ksection_end:$(date +%s):login\r\e[0K"
   script:
     - |
-      echo -e "\e[0Ksection_end:$(date +%s):tag\r\e[0K"
       echo -e "\e[0Ksection_start:$(date +%s):build[collapsed=true]\r\e[0KBaking $NAME${BASE_REPO_NAME:+/$BASE_REPO_NAME} image..."
       function image-exists() {
         local image=$1
         docker manifest inspect "$1" > /dev/null
         return $?
       }
-      if image-exists "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG}"; then
-        echo "Image $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG} already exists. Skipping..."
+      if image-exists "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}"; then
+        echo "Image $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} already exists. Skipping..."
         if [[ -n "$CI_COMMIT_TAG" && "$TARGET" == "full-ci" ]]; then
           echo "Tagging pre-existing image with Git tag..."
-          docker pull "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG}"
-          docker tag "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+          docker pull "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}"
+          docker tag "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
           docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
         fi
       else
-        echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${TAG} image..."
+        echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} image..."
         git config --global --add safe.directory $(pwd)
-        scripts/build_instance.sh "$CI_PROJECT_DIR"
+        scripts/build_docker_image.sh "$CI_PROJECT_DIR"
       fi
       echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
@@ -134,7 +134,7 @@ docker-ci-runner-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    TAG: "docker-24.0.1-4"
+    BASE_TAG: "docker-24.0.1-4"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
@@ -142,7 +142,7 @@ docker-psql-client-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    TAG: "14"
+    BASE_TAG: "14"
     NAME: "psql"
     TARGET: "psql-ci"
 
@@ -152,7 +152,7 @@ docker-setup-docker-image-build:
     GIT_SUBMODULE_STRATEGY: none
     GIT_DEPTH: 1
     BASE_REPO_NAME: ""
-    TAG: "$CI_COMMIT_SHORT_SHA"
+    BASE_TAG: "$CI_COMMIT_SHORT_SHA"
     NAME: ""
     TARGET: "full-ci"
 
@@ -359,3 +359,11 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_*"
   tags:
     - data-cache-storage
+
+build_and_publish_image:
+  stage: publish
+  extends: .publish_docker_image_template
+  script:
+    - scripts/ci-helpers/build_and_publish_instance.sh
+  tags:
+    - public-runner-docker
