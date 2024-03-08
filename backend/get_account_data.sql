@@ -63,6 +63,22 @@ ORDER BY aov.account_op_seq_no DESC LIMIT 1
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_last_post(_account_id INT, account_name TEXT)
+RETURNS TIMESTAMP
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+RETURN ov.timestamp FROM hive.account_operations aov 
+JOIN hive.operations ov ON ov.id = aov.operation_id 
+WHERE aov.op_type_id = 72 AND aov.account_id = _account_id AND ov.body_binary::JSONB->'value'->>'voter'= account_name
+ORDER BY account_op_seq_no DESC LIMIT 1
+;
+
+END
+$$;
+
 -- ACCOUNT PROXY
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
 RETURNS TEXT

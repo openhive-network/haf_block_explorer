@@ -219,7 +219,7 @@ CREATE TYPE hafbe_types.comment_history AS (
     operation_id BIGINT,
     created_at TIMESTAMP,
     trx_hash TEXT,
-    operations JSONB,
+    operation JSONB,
     is_modified BOOLEAN
 );
 

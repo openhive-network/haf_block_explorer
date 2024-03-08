@@ -52,7 +52,7 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     COALESCE(_result_curation_posting.curation_rewards, 0) AS curation_rewards,
     COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
     COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
-    COALESCE(_result_post.timestamp, '1970-01-01T00:00:00') AS last_vote_time,
+    COALESCE(_result_post.get_account_last_post, '1970-01-01T00:00:00') AS last_vote_time,
     COALESCE(NULL::INT, 0) AS post_count, --- FIXME to be supplemented by new data collection algorithm or removed soon
     COALESCE(_result_parameters.can_vote, TRUE) AS can_vote,
     COALESCE(_result_parameters.mined, TRUE) AS mined,
@@ -87,10 +87,7 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     (SELECT posting_rewards, curation_rewards
      FROM btracker_endpoints.get_account_info_rewards(_account_id)) AS _result_curation_posting,
 
-    (SELECT ov.timestamp FROM hive.account_operations aov 
-      JOIN hive.operations ov ON ov.id = aov.operation_id 
-      WHERE aov.op_type_id = 72 AND aov.account_id = _account_id AND ov.body_binary::JSONB->'value'->>'voter'= _account
-      ORDER BY account_op_seq_no DESC LIMIT 1) AS _result_post,
+    (SELECT get_account_last_post FROM hafbe_backend.get_account_last_post(_account_id, _account)) AS _result_post,
 
     (SELECT can_vote, mined, recovery_account, last_account_recovery, created
      FROM hafbe_backend.get_account_parameters(_account_id)) AS _result_parameters,
