@@ -187,7 +187,7 @@ WITH operation_range AS MATERIALIZED (
 	(
 		SELECT ov.id
 		FROM hive.operations_view ov
-		WHERE ov.block_num < _to
+		WHERE ov.block_num <= _to
 		ORDER BY ov.block_num DESC, ov.id DESC
 		LIMIT 1
 	)
@@ -284,7 +284,7 @@ ELSE
     (
       SELECT ov.id
       FROM hive.operations_view ov
-      WHERE ov.block_num < _to
+      WHERE ov.block_num <= _to
       ORDER BY ov.block_num DESC, ov.id DESC
       LIMIT 1
     )
