@@ -96,7 +96,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations_count(
     _to INT
 )
 RETURNS BIGINT -- noqa: LT01, CP05
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' STABLE 
 SET enable_hashjoin = OFF
 AS
 $$
@@ -213,7 +213,7 @@ WITH operation_range AS MATERIALIZED (
     AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
     AND (__no_start_date OR aov.operation_id >= (SELECT * FROM ops_from_start_block))
 	  AND (__no_end_date OR aov.operation_id < (SELECT * FROM ops_from_end_block))
-    ORDER BY (CASE WHEN NOT __no_start_date OR NOT __no_end_date THEN aov.operation_id WHEN NOT __no_filters THEN aov.account_op_seq_no END) DESC
+    ORDER BY (CASE WHEN NOT __no_start_date OR NOT __no_end_date THEN aov.operation_id ELSE aov.account_op_seq_no END) DESC
     LIMIT (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END)
     OFFSET (CASE WHEN _page_num = 1 OR NOT __no_filters THEN 0 ELSE __offset END)
   ) ls
