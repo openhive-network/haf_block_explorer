@@ -149,7 +149,6 @@ docker-psql-client-build:
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
   variables:
-    GIT_SUBMODULE_STRATEGY: none
     GIT_DEPTH: 1
     BASE_REPO_NAME: ""
     BASE_TAG: "$CI_COMMIT_SHORT_SHA"
@@ -242,6 +241,7 @@ docker-setup-docker-image-build:
   variables:
     PGHERO_USERNAME: unused
     PGHERO_PASSWORD: unused
+    SETUP_OPTIONS: --fetch-app-versions
     COMPOSE_OPTIONS_STRING: --project-name btracker --env-file .env.local --file docker-compose.yml --file ci/docker-compose.yml --ansi never
   after_script:
     - |

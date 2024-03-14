@@ -1,7 +1,7 @@
 version: '3.9'
 services:
   haf:
-    image: ${HAF_REGISTRY:-registry.gitlab.syncad.com/hive/haf/instance}:${HAF_VERSION:-instance-70a07a0e44b4c4183a32814a0ef04c8f3afd5e78}
+    image: ${HAF_REGISTRY:-registry.gitlab.syncad.com/hive/haf/instance}:${HAF_VERSION:-ebe02706}
     entrypoint: /home/haf_admin/docker_entrypoint.sh
     command: $${HAF_COMMAND}
     environment:
@@ -27,38 +27,17 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 48h #time for replay to finish
-  app-setup:
+      start_period: 48h #time for replay to finis
+  backend-setup:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
-    working_dir: /home/haf_admin/haf_block_explorer
-    entrypoint: 
-      - "/bin/bash"
-      - "-c"
-      - "./scripts/install_app.sh $${SETUP_OPTIONS}"
-    user: $SETUP_UID
+    command: "install_apps"
     environment:
       POSTGRES_HOST: haf
-      SETUP_OPTIONS: --only-apps
-    volumes:
-      - ../../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
-      - ../../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
-      - ../../scripts/generate_version_sql.sh:/home/haf_admin/haf_block_explorer/scripts/generate_version_sql.sh
-      - ../../.git:/home/haf_admin/haf_block_explorer/.git
     networks:
       haf-network:
     depends_on:
       haf:
-        condition: service_healthy
-  backend-setup:
-    image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
-    command: "install_app"
-    environment:
-      POSTGRES_HOST: haf
-    networks:
-      haf-network:
-    depends_on:
-      app-setup:
-        condition: service_completed_successfully
+         condition: service_healthy  
   backend-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
     command: "process_blocks"

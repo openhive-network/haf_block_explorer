@@ -1,4 +1,5 @@
 .git/modules
+!.git/modules/submodules/hafah
 .tests/*
 ./vscode/*
 docker/blockchain/*
@@ -8,7 +9,10 @@ docker/pgadmin4/*
 docker/srv/*
 gui/*
 misc/*
-submodules/*
+submodules/btracker/haf/*
+submodules/haf/*
+submodules/hafah/haf/*
+!submodules/hafah/haf/scripts/*
 tests/*
 .dockerignore
 .gitignore

@@ -15,6 +15,7 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
+    --fetch-app-versions     Fetch app versions (versions are required for app setup)
     --only-apps              Set up only HAfAH and Balance Tracker, without HAF Block Explorer
     --only-hafbe             Don't set up HAfAH and Balance Tracker, just HAF Block Explorer
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
@@ -22,6 +23,7 @@ cat <<EOF
 EOF
 }
 
+FETCH_VERSIONS=0
 ONLY_APPS=0
 ONLY_HAFBE=0
 
@@ -39,6 +41,9 @@ while [ $# -gt 0 ]; do
     --help|-h|-?)
         print_help
         exit 0
+        ;;
+    --fetch-app-versions)
+        FETCH_VERSIONS=1 
         ;;
     --only-apps)
         ONLY_APPS=1
@@ -87,19 +92,24 @@ EOF
 )
 }
 
+fetch_app_versions() {
+  pushd "$hafah_dir"
+  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"
+  popd
+
+  pushd "$hafbe_dir"
+  ./scripts/generate_version_sql.sh "$hafbe_dir"
+  popd
+}
+
 setup_apps() {
   pushd "$hafah_dir"
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
   pushd "$btracker_dir"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  popd
-
-  pushd "$hafbe_dir"
-  ./scripts/generate_version_sql.sh "$hafbe_dir"
   popd
 }
 
@@ -174,6 +184,10 @@ db_dir="$SCRIPT_DIR/../database"
 hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
 hafbe_dir="$SCRIPT_DIR/.."
+
+if [ "$FETCH_VERSIONS" -eq 1 ]; then
+  fetch_app_versions
+fi
 
 if [ "$ONLY_HAFBE" -eq 0 ]; then
   setup_apps

@@ -29,7 +29,7 @@ First, set up its dependencies:
 Next, install haf_block_explorer on the database:
 
 ```bash
-./scripts/install_app.sh
+./scripts/install_app.sh --fetch-app-versions
 ```
 
 You can use `./scripts/install_app.sh --help` to see available options.
