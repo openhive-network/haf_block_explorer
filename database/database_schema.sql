@@ -42,11 +42,12 @@ BEGIN
     started_processing_at TIMESTAMP,
     finished_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP,
-    last_reported_block INT
+    last_reported_block INT,
+    if_hf11 BOOLEAN
   );
   
-  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, finished_processing_at, last_reported_at, last_reported_block)
-  VALUES (TRUE, NULL, NULL, to_timestamp(0), 0);
+  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, finished_processing_at, last_reported_at, last_reported_block, if_hf11)
+  VALUES (TRUE, NULL, NULL, to_timestamp(0), 0, FALSE);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.version(
   git_hash TEXT
@@ -61,7 +62,7 @@ BEGIN
     account INT NOT NULL, 
     can_vote BOOLEAN DEFAULT TRUE,
     mined BOOLEAN DEFAULT TRUE,
-    recovery_account TEXT DEFAULT 'steem',
+    recovery_account TEXT DEFAULT '',
     last_account_recovery TIMESTAMP DEFAULT '1970-01-01T00:00:00',
     created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
 

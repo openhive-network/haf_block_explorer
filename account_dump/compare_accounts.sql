@@ -17,7 +17,8 @@ WITH account_balances AS MATERIALIZED (
     last_account_recovery,
     created,
     proxy,
-    last_vote_time
+    last_vote_time,
+    recovery_account
   FROM hafbe_backend.account_balances
 ),
 witnesses_voted_for AS MATERIALIZED (
@@ -26,7 +27,7 @@ witnesses_voted_for AS MATERIALIZED (
   GROUP BY cwvv.account
 ),
 account_params AS MATERIALIZED (
-  SELECT ap.account as account_id, ap.can_vote, ap.mined, ap.last_account_recovery, ap.created
+  SELECT ap.account as account_id, ap.can_vote, ap.mined, ap.last_account_recovery, ap.created, ap.recovery_account
   FROM hafbe_app.account_parameters ap
 ),
 proxy_account_id AS MATERIALIZED (
@@ -50,6 +51,7 @@ account_balances.last_account_recovery,
 account_balances.created,
 account_balances.proxy,
 account_balances.last_vote_time,
+account_balances.recovery_account,
 
 COALESCE(wvf.witnesses_voted_for, 0) AS current_witnesses_voted_for,
 COALESCE(ap.can_vote, TRUE) AS current_can_vote,
@@ -57,7 +59,9 @@ COALESCE(ap.mined, TRUE) AS current_mined,
 COALESCE(ap.last_account_recovery, '1970-01-01T00:00:00') AS current_last_account_recovery,
 COALESCE(ap.created, '1970-01-01T00:00:00') AS current_created,
 COALESCE(pai.proxy_id, NULL) AS current_proxy,
-COALESCE(lvt.timestamp, '1970-01-01T00:00:00') AS current_last_vote_time
+COALESCE(lvt.timestamp, '1970-01-01T00:00:00') AS current_last_vote_time,
+COALESCE(ap.recovery_account, '') AS current_recovery_account
+
 
 FROM account_balances
 LEFT JOIN witnesses_voted_for wvf ON wvf.account_id = account_balances.account_id
@@ -67,13 +71,16 @@ LEFT JOIN last_vote_time lvt ON lvt.account_id = account_balances.account_id
 )
 INSERT INTO hafbe_backend.differing_accounts
 SELECT account_id FROM selected
-WHERE witnesses_voted_for != current_witnesses_voted_for
+WHERE account_id > 4 AND (
+  witnesses_voted_for != current_witnesses_voted_for
   OR can_vote != current_can_vote
   OR mined != current_mined
   OR last_account_recovery != current_last_account_recovery
   OR created != current_created
   OR proxy != current_proxy
-  OR last_vote_time != current_last_vote_time;
+  OR last_vote_time != current_last_vote_time
+  OR recovery_account != current_recovery_account);
+
 END
 $$;
 
@@ -91,7 +98,8 @@ BEGIN
     last_account_recovery,
     created,
     proxy,
-    last_vote_time
+    last_vote_time,
+    recovery_account
 
   FROM hafbe_backend.account_balances WHERE account_id = _account_id
   UNION ALL

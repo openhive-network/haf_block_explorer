@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS hafbe_backend.account_balances (
     created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
     proxy INT DEFAULT NULL,
     last_vote_time TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    recovery_account TEXT DEFAULT '',
 
 
 CONSTRAINT pk_account_balances_comparison PRIMARY KEY (account_id)

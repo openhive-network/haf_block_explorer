@@ -56,7 +56,7 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     COALESCE(NULL::INT, 0) AS post_count, --- FIXME to be supplemented by new data collection algorithm or removed soon
     COALESCE(_result_parameters.can_vote, TRUE) AS can_vote,
     COALESCE(_result_parameters.mined, TRUE) AS mined,
-    COALESCE(_result_parameters.recovery_account, 'steem') AS recovery_account,
+    COALESCE(_result_parameters.recovery_account, '') AS recovery_account,
     COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00') AS last_account_recovery,
     COALESCE(_result_parameters.created,'1970-01-01T00:00:00') AS created,
     COALESCE(_result_votes.witness_votes, '[]') AS witness_votes,

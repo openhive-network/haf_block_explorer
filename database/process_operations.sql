@@ -11,9 +11,7 @@ WITH create_account_operation AS (
     (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'new_account_name') AS _account,
     _timestamp AS _time,
     _op_type AS _op_type_id
-),
-insert_created_accounts AS (
-
+)
   INSERT INTO hafbe_app.account_parameters
   (
     account,
@@ -25,25 +23,65 @@ insert_created_accounts AS (
     _time,
     FALSE
   FROM create_account_operation
-  WHERE _op_type_id != 80
-
-  ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO NOTHING
-)
-    INSERT INTO hafbe_app.account_parameters
-  (
-    account,
-    created
-  ) 
-  SELECT
-    _account,
-    _time
-  FROM create_account_operation
-  WHERE _op_type_id = 80
-
   ON CONFLICT ON CONSTRAINT pk_account_parameters
   DO NOTHING;
 
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_created_account_operation(_body jsonb, _timestamp timestamp, _if_hf11 boolean)
+RETURNS void
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+DECLARE
+  _recovery_account TEXT := _body->'value'->>'creator';
+  _new_account_name TEXT := _body->'value'->>'new_account_name';
+  _new_account INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = _body->'value'->>'new_account_name');
+BEGIN
+
+IF _if_hf11 THEN
+
+  INSERT INTO hafbe_app.account_parameters
+  (
+    account,
+    created,
+    recovery_account
+  ) 
+  SELECT
+    _new_account,
+    _timestamp,
+    (CASE WHEN _recovery_account = _new_account_name OR _recovery_account = 'temp' THEN
+     ''
+     ELSE
+     _recovery_account
+     END
+    )
+
+  ON CONFLICT ON CONSTRAINT pk_account_parameters
+  DO UPDATE SET
+    created = EXCLUDED.created,
+    recovery_account = EXCLUDED.recovery_account;
+
+ELSE
+
+  INSERT INTO hafbe_app.account_parameters
+  (
+    account,
+    created,
+    recovery_account
+  ) 
+  SELECT
+    _new_account,
+    _timestamp,
+    'steem'
+
+  ON CONFLICT ON CONSTRAINT pk_account_parameters
+  DO UPDATE SET
+    created = EXCLUDED.created,
+    recovery_account = EXCLUDED.recovery_account;
+
+END IF;
 
 END
 $$;
