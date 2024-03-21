@@ -22,7 +22,7 @@ SELECT
 	json_build_object(
 	'ref_block_num', (transaction_json->>'ref_block_num')::BIGINT,
 	'ref_block_prefix',(transaction_json->>'ref_block_prefix')::BIGINT,
-	'extensions', transaction_json->>'extensions',
+	'extensions', (transaction_json->>'extensions')::JSON,
 	'expiration', transaction_json->>'expiration',
 	'operations', (transaction_json->>'operations')::JSON,
 	'signatures', (transaction_json->>'signatures')::JSON
