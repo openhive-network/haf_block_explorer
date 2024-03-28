@@ -104,7 +104,10 @@ BEGIN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-    RETURN hafbe_exceptions.raise_unknown_input_exception(_input);
+    RETURN json_build_object(
+        'input_type', 'invalid_input',
+        'input_value', _input
+      );
   END IF;
 END
 $$;
