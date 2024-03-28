@@ -51,7 +51,6 @@ CREATE TYPE hafbe_types.account AS (
     post_count INT,
     last_post TIMESTAMP,
     last_root_post TIMESTAMP,
-    last_vote_time TIMESTAMP,
     delayed_vests BIGINT,
     vesting_balance BIGINT,
     witness_votes JSON,
