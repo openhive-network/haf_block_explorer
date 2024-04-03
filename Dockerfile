@@ -4,7 +4,7 @@ FROM ghcr.io/alphagov/paas/psql:${PAAS_PSQL_VERSION} AS psql
 
 RUN <<EOF
     set -e
-    apk add --no-cache sudo git bash
+    apk add --no-cache bash
     adduser -s /bin/bash -G users -D "haf_admin"
     echo "haf_admin ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
 EOF
@@ -25,8 +25,11 @@ EOF
 FROM psql as version-calculcation
 
 COPY --chown=haf_admin:users . /home/haf_admin/src
+USER root
+RUN apk add --no-cache git
+USER haf_admin
 WORKDIR /home/haf_admin/src
-RUN scripts/generate_version_sql.sh $(pwd)
+RUN scripts/generate_version_sql.sh $(pwd) 
 
 FROM psql as full
 
