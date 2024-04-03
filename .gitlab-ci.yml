@@ -134,7 +134,7 @@ docker-ci-runner-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-4"
+    BASE_TAG: "docker-24.0.1-5"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
@@ -149,7 +149,6 @@ docker-psql-client-build:
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
   variables:
-    GIT_SUBMODULE_STRATEGY: none
     GIT_DEPTH: 1
     BASE_REPO_NAME: ""
     BASE_TAG: "$CI_COMMIT_SHORT_SHA"
@@ -159,7 +158,7 @@ docker-setup-docker-image-build:
 .test-template:
   extends: .docker_image_builder_job_template
   stage: test
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   variables:
     HAF_COMMAND: --shared-file-size=1G --plugin database_api --replay --stop-replay-at-block=5000000
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
