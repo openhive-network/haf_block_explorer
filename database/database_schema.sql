@@ -50,10 +50,9 @@ BEGIN
   VALUES (TRUE, NULL, NULL, to_timestamp(0), 0, FALSE);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.version(
-  git_hash TEXT
+  schema_hash TEXT,
+  runtime_hash TEXT
   );
-
-  INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
 
 ------------------------------------------
 

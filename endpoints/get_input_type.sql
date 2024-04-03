@@ -123,7 +123,7 @@ BEGIN
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=100000"}]', true);
 
 RETURN (
-	SELECT git_hash
+	SELECT runtime_hash
 	FROM hafbe_app.version
 );
 
