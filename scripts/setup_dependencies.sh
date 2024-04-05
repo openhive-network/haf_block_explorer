@@ -98,7 +98,7 @@ while [ $# -gt 0 ]; do
         sudo apt-get update
         install_jmeter $jmeter_v
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;

@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 set -e
 cd /home/haf_admin/haf_block_explorer/scripts
 

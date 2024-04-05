@@ -16,4 +16,5 @@ backend/types_openapi
 docker/blockchain/block_log*
 docker/ci/.env
 docker/.env.*
+docker/*.env
 docker/srv

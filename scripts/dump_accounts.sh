@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
     --user=*)
         POSTGRES_USER="${1#*=}"
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;

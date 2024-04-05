@@ -18,7 +18,7 @@ variable "TAG_CI" {
   default = "docker-24.0.1-4"
 }
 variable "PSQL_CLIENT_VERSION" {
-  default = "14"
+  default = "14-1"
 }
 variable "BUILD_TIME" {
   default = "${timestamp()}"
@@ -56,31 +56,11 @@ group "default" {
 }
 
 # Targets
-target "psql" {
-  dockerfile = "Dockerfile"
-  target = "psql"
-  tags = [
-    "${registry-name("psql", "")}:${PSQL_CLIENT_VERSION}"
-  ]
-  platforms = [
-    "linux/amd64"
-  ]
-  output = [
-    "type=docker"
-  ]
-}
-
-target "psql-ci" {
-  inherits = ["psql"]
-  output = [
-    "type=registry"
-  ]
-}
 
 ## Locally tag image with "$TAG",
 ## which is "latest" by default
 target "full" {
-  inherits = ["psql"]
+  dockerfile = "Dockerfile"
   target = "full"
   tags = [
     "${CI_REGISTRY_IMAGE}:${TAG}"
@@ -92,7 +72,11 @@ target "full" {
     GIT_LAST_LOG_MESSAGE = "${GIT_LAST_LOG_MESSAGE}",
     GIT_LAST_COMMITTER = "${GIT_LAST_COMMITTER}",
     GIT_LAST_COMMIT_DATE = "${GIT_LAST_COMMIT_DATE}",
+    PSQL_CLIENT_VERSION = "${PSQL_CLIENT_VERSION}",
   }
+  platforms = [
+    "linux/amd64"
+  ]
   output = [
     "type=docker"
   ]
@@ -102,9 +86,6 @@ target "full" {
 ## on any other branch tag image with just commit hash
 target "full-ci" {
   inherits = ["full"]
-  contexts = {
-    psql = "docker-image://${registry-name("psql", "")}:${PSQL_CLIENT_VERSION}"
-  }
   cache-from = [
     "type=registry,ref=${registry-name("cache", "")}:${PSQL_CLIENT_VERSION}"
   ]

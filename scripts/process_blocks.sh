@@ -45,7 +45,7 @@ while [ $# -gt 0 ]; do
     --log-file=*)
         LOG_FILE="${1#*=}"
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;

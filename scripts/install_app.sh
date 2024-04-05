@@ -17,10 +17,10 @@ cat <<EOF
 
   Sets up a database, already filled by HAF instance, to work with haf_be application.
   OPTIONS:
-    --host=VALUE             PostgreSQL host location (defaults to localhost)
-    --port=NUMBER            PostgreSQL operating port (defaults to 5432)
-    --only-apps              Set up only HAfAH, Balance Tracker and Reputation Tracker, without HAF Block Explorer
-    --only-hafbe             Don't set up HAfAH, Balance Tracker and Reputation Tracker, just HAF Block Explorer
+    --host=VALUE                      PostgreSQL host location (defaults to localhost)
+    --port=NUMBER                     PostgreSQL operating port (defaults to 5432)
+    --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
+    --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
     --swagger-url=URL        Allows to specify a server URL
 
@@ -50,7 +50,7 @@ while [ $# -gt 0 ]; do
     --swagger-url=*)
         SWAGGER_URL="${1#*=}"
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;
