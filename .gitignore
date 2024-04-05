@@ -13,4 +13,5 @@ account_dump_test.log
 docker/blockchain/block_log*
 docker/ci/.env
 docker/.env.*
+docker/*.env
 docker/srv

@@ -1,7 +1,7 @@
 name: 'haf-be'
 services:
   haf:
-    image: ${HAF_REGISTRY:-hiveio/haf}:${HAF_VERSION:-v1.27.4.0}
+    image: ${HAF_REGISTRY:-registry.gitlab.syncad.com/hive/haf/instance}:${HAF_VERSION:-7bb7aab4}
     entrypoint: /home/haf_admin/docker_entrypoint.sh
     command: $${HAF_COMMAND}
     environment:
@@ -30,47 +30,52 @@ services:
       timeout: 10s
       retries: 3
       start_period: 48h #time for replay to finish
-  backend-setup:
-    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
-    working_dir: /app
-    command: 
-      - "./scripts/install_app.sh $${SETUP_OPTIONS}"
+  app-setup:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
+    working_dir: /home/haf_admin/haf_block_explorer
+    entrypoint: 
+      - "/bin/bash"
+      - "-c"
+      - "./scripts/install_app.sh $${APP_SETUP_OPTIONS}"
     user: $SETUP_UID
     environment:
       POSTGRES_HOST: haf
-      SETUP_OPTIONS:
+      APP_SETUP_OPTIONS: --only-apps
     volumes:
-      - ../account_dump:/app/account_dump
-      - ../endpoints:/app/endpoints
-      - ../backend:/app/backend
-      - ../database:/app/database
-      - ../submodules/hafah:/app/submodules/hafah
-      - ../submodules/btracker:/app/submodules/btracker
-      - ../submodules/reptracker:/app/submodules/reptracker
-      - ../scripts:/app/scripts
-      - ../.git:/app/.git
+      - ../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
+      - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
+      - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
+      - ../scripts/generate_version_sql.sh:/home/haf_admin/haf_block_explorer/scripts/generate_version_sql.sh
+      - ../.git:/home/haf_admin/haf_block_explorer/.git
     networks:
       haf-network:
     depends_on:
       haf:
         condition: service_healthy
-  backend-block-processing:
-    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer/psql}:${BACKEND_VERSION:-14}
-    working_dir: /app
-    command:
-      - "./scripts/process_blocks.sh"
+  backend-setup:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
+    command: install_app ${SETUP_OPTIONS:-}
     environment:
-      PROCESS_BLOCK_LIMIT: 0
+      POSTGRES_HOST: haf
+      SETUP_OPTIONS:
+    networks:
+      haf-network:
+    depends_on:
+      app-setup:
+        condition: service_completed_successfully
+  backend-block-processing:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
+    command: "process_blocks"
+    environment:
+      BLOCK_NUMBER: 0
       POSTGRES_HOST: haf
       POSTGRES_USER: hafbe_owner
-      LOG_FILE: STDOUT
     volumes:
-      - ../scripts:/app/scripts
-      - ./scripts/block-processing-healthcheck.sh:/app/healthcheck.sh
+      - ./scripts/block-processing-healthcheck.sh:/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh
     networks:
       haf-network:
     healthcheck:
-      test: ["CMD-SHELL","/app/healthcheck.sh"]
+      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh"]
       interval: 60s
       timeout: 5s
       retries: 20

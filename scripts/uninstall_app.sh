@@ -42,7 +42,7 @@ while [ $# -gt 0 ]; do
     --skip-reptracker)
         CLEAN_REPTRACKER=0
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;

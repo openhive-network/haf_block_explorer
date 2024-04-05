@@ -1,18 +1,6 @@
 # syntax=docker/dockerfile:1.5
-ARG PAAS_PSQL_VERSION=11251948d5dd4867552f9b9836a9e02110304df5
-FROM ghcr.io/alphagov/paas/psql:${PAAS_PSQL_VERSION} AS psql
-
-RUN <<EOF
-    set -e
-    apk add --no-cache sudo git bash
-    adduser -s /bin/bash -G users -D "haf_admin"
-    echo "haf_admin ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
-EOF
-
-USER haf_admin
-WORKDIR /home/haf_admin
-
-ENTRYPOINT [ "/bin/bash", "-c" ]
+ARG PSQL_CLIENT_VERSION=14-1
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/psql:$PSQL_CLIENT_VERSION AS psql
 
 FROM psql as daemontools
 USER root
@@ -71,5 +59,7 @@ COPY --chown=haf_admin:users docker/scripts/docker_entrypoint.sh /home/haf_admin
 COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/scripts/set_version_in_sql.pgsql /home/haf_admin/haf_block_explorer/scripts/set_version_in_sql.pgsql
 
 WORKDIR /home/haf_admin/haf_block_explorer/scripts
+
+SHELL ["/bin/bash", "-c"]
 
 ENTRYPOINT ["/home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh"]

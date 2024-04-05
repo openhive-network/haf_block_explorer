@@ -40,7 +40,7 @@ while [ $# -gt 0 ]; do
     --admin_port|--admin-port=*)
         ADMIN_PORT="${1#*=}"
         ;;
-    --help|-h|-?)
+    --help|-h|-\?)
         print_help
         exit 0
         ;;
