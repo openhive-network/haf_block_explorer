@@ -93,14 +93,34 @@ RETURN (
 END
 $$;
 
+/*
+
+SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(_block_num := 84353509, 
+	_key_content := ARRAY['follow'], 
+	_setof_keys := '[["value", "id"]]',
+	_filter := ARRAY[18],
+	_account := 'marcocasario'
+	)
+
+SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(_block_num := 84353509, 
+_key_content := ARRAY['follow'], 
+_setof_keys := '[["value", "id"]]',
+_filter := ARRAY[18]
+)
+
+*/
+
 -- Block page endpoint
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     _block_num INT,
     _page_num INT = 1,
     _page_size INT = 100,
-    _filter SMALLINT [] = NULL,
+    _filter INT [] = NULL,
     _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
-    _body_limit INT = 2147483647
+    _body_limit INT = 2147483647,
+    _account TEXT = NULL,
+    _key_content TEXT [] = NULL,
+    _setof_keys JSON = NULL
 )
 RETURNS JSON -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
@@ -111,6 +131,18 @@ AS
 $$
 BEGIN
 
+IF _key_content IS NOT NULL THEN
+  IF array_length(_filter, 1) != 1 THEN 
+    RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
+  END IF;
+  
+  FOR i IN 0 .. json_array_length(_setof_keys)-1 LOOP
+	IF NOT ARRAY(SELECT json_array_elements_text(_setof_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_filter)))) THEN
+	  RAISE EXCEPTION 'Invalid key %', _setof_keys->i;
+    END IF;
+  END LOOP;
+END IF;
+
 IF _block_num <= hive.app_get_irreversible_block() THEN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 ELSE
@@ -119,7 +151,7 @@ END IF;
 
 RETURN (
   WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_ops_by_block_count(_block_num, _filter)
+    SELECT * FROM hafbe_backend.get_ops_by_block_count(_block_num, _filter,_account, _key_content, _setof_keys)
   ),
   calculate_total_pages AS MATERIALIZED (
     SELECT 
@@ -140,7 +172,11 @@ RETURN (
       _page_size,
       _filter,
       _order_is,
-      _body_limit)
+      _body_limit,
+      _account,
+      _key_content,
+      _setof_keys
+      )
     ) row)
   ));
 
