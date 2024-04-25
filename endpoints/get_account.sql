@@ -3,8 +3,8 @@ SET ROLE hafbe_owner;
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
 -- Account page endpoint
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account text)
-RETURNS hafbe_types.account -- noqa: LT01
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
+RETURNS hafbe_types.account -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -148,6 +148,39 @@ WITH select_parameters_from_backend AS MATERIALIZED (
   is_witness)
 FROM select_parameters_from_backend
 );
+
+END
+$$;
+
+
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authorizations(_account TEXT)
+RETURNS hafbe_types.account_authorizations -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+BEGIN
+RETURN ROW(
+  (SELECT to_json(arr_owner) FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_account_authorizations(_account, 'OWNER')
+    ) arr_owner 
+  ) result),
+  (SELECT to_json(arr_active) FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_account_authorizations(_account, 'ACTIVE')
+    ) arr_active
+  ) result),
+  (SELECT to_json(arr_posting) FROM (
+    SELECT ARRAY(
+      SELECT hafbe_backend.get_account_authorizations(_account, 'POSTING')
+    ) arr_posting
+  ) result),   
+  (SELECT hafbe_backend.get_account_memo(_account)),
+  (SELECT hafbe_backend.get_account_witness_singing(_account)));
 
 END
 $$;

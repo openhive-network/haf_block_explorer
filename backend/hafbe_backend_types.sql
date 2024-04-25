@@ -84,4 +84,10 @@ CREATE TYPE hafbe_backend.operation_body_filter_result AS (
     is_modified BOOLEAN
 );
 
+DROP TYPE IF EXISTS hafbe_types.account_authorizations CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_backend.account_authorizations AS (
+    key_auth TEXT[],
+    account_auth TEXT[]
+);
+
 RESET ROLE;
