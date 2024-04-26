@@ -6,6 +6,7 @@ POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 BLOCKSEARCH_INDEXES=false
+BTRACKER_SCHEMA=btracker_app
 
 print_help () {
 cat <<EOF
@@ -35,6 +36,9 @@ while [ $# -gt 0 ]; do
         ;;
     --blocksearch-indexes=*)
         BLOCKSEARCH_INDEXES="${1#*=}"
+        ;;
+    --btracker-schema=*)
+        BTRACKER_SCHEMA="${1#*=}"
         ;;
     --help|-h|-?)
         print_help
@@ -95,7 +99,7 @@ setup_apps() {
   popd
 
   pushd "$btracker_dir"
-  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
+  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$BTRACKER_SCHEMA"
   popd
 
   pushd "$hafbe_dir"
