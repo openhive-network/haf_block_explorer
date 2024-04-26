@@ -185,6 +185,6 @@ if [ "$ONLY_APPS" -eq 0 ]; then
 fi
 
 if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
-  echo 'Creating blockseach indexes...'
+  echo 'Creating blocksearch indexes...'
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
 fi
