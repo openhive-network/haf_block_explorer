@@ -61,24 +61,24 @@ def call_sql(args, query_without_limit, limit):
     print(e)
 
 def gen_rand_block_range(args, limit):
-  max_block = int(call_sql(args, "SELECT num FROM hive.blocks_view ORDER BY num DESC", 1)[0])
+  max_block = int(call_sql(args, "SELECT num FROM hafbe_app.blocks_view ORDER BY num DESC", 1)[0])
   return [str(random.randint(0, max_block)) for i in range(limit)]
 
 def get_acc_names(args, limit):
-  return call_sql(args, "SELECT hav.name FROM hafbe_app.current_witnesses cw JOIN hive.accounts_view hav ON hav.id = cw.witness_id", limit)
+  return call_sql(args, "SELECT hav.name FROM hafbe_app.current_witnesses cw JOIN hafbe_app.accounts_view hav ON hav.id = cw.witness_id", limit)
 
 def generate_input_db(args):
   db_size = args.database_size
   limit = db_size // 4
   data = gen_rand_block_range(args, limit)
   rand_block_arr_str = "'{{{}}}'".format(','.join(data))
-  data += call_sql(args, "SELECT encode(hash, 'hex') FROM hive.blocks_view WHERE num = ANY({})".format(rand_block_arr_str), limit)
-  data += call_sql(args, "SELECT encode(trx_hash, 'hex') FROM hive.transactions_view WHERE block_num = ANY({})".format(rand_block_arr_str), limit)
+  data += call_sql(args, "SELECT encode(hash, 'hex') FROM hafbe_app.blocks_view WHERE num = ANY({})".format(rand_block_arr_str), limit)
+  data += call_sql(args, "SELECT encode(trx_hash, 'hex') FROM hafbe_app.transactions_view WHERE block_num = ANY({})".format(rand_block_arr_str), limit)
   data += get_acc_names(args, limit)
   return data
 
 def generate_timestamps(args, rand_block_arr_str):
-  return call_sql(args, "SELECT to_char(created_at, 'YYYY-MM-DDThh24:MI:SS') FROM hive.blocks_view WHERE num = ANY({})".format(rand_block_arr_str), args.database_size)
+  return call_sql(args, "SELECT to_char(created_at, 'YYYY-MM-DDThh24:MI:SS') FROM hafbe_app.blocks_view WHERE num = ANY({})".format(rand_block_arr_str), args.database_size)
 
 def generate_db(args):
   if args.debug:
@@ -95,7 +95,7 @@ def generate_db(args):
 
   if args.debug:
     print("Fetching transaction hashes...")
-  trx_hashes = call_sql(args, "SELECT encode(trx_hash, 'hex') FROM hive.transactions_view WHERE block_num = ANY({})".format(rand_block_arr_str), db_size)
+  trx_hashes = call_sql(args, "SELECT encode(trx_hash, 'hex') FROM hafbe_app.transactions_view WHERE block_num = ANY({})".format(rand_block_arr_str), db_size)
 
   if args.debug:
     print("Fetching account names...")
