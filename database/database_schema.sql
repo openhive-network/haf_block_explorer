@@ -26,12 +26,14 @@ BEGIN
 
   CREATE SCHEMA hafbe_app AUTHORIZATION hafbe_owner;
 
-  IF NOT hive.app_context_exists('hafbe_app') THEN 
+  IF NOT hive.app_context_exists('hafbe_app') THEN
 
-  PERFORM hive.app_create_context('hafbe_app',
-    TRUE, -- _if_forking
-    FALSE -- _is_attached
-    );
+  PERFORM hive.app_create_context(
+    _name =>'hafbe_app',
+    _schema => 'hafbe_app',
+    _is_forking => TRUE,
+    _is_attached => FALSE
+  );
 
   END IF;
 
@@ -67,7 +69,9 @@ BEGIN
     created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
 
     CONSTRAINT pk_account_parameters PRIMARY KEY (account)
-  ) INHERITS (hive.hafbe_app);
+  );
+
+  PERFORM hive.app_register_table( 'hafbe_app', 'account_parameters', 'hafbe_app' );
 
 ------------------------------------------
 
@@ -77,7 +81,8 @@ BEGIN
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'witness_votes_history', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     voter_id INT NOT NULL,
@@ -85,21 +90,24 @@ BEGIN
     timestamp TIMESTAMP NOT NULL,
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_witness_votes', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
     proxy BOOLEAN NOT NULL,
     timestamp TIMESTAMP NOT NULL
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'account_proxies_history', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_account_proxies', 'hafbe_app' );
 
 ------------------------------------------
 
@@ -116,7 +124,8 @@ BEGIN
     hbd_interest_rate INT,
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_witnesses', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
     op_type_ids_arr SMALLINT[] NOT NULL
@@ -184,7 +193,8 @@ BEGIN
     time_json JSONB NOT NULL,
 
     CONSTRAINT pk_massive_sync_time_logs PRIMARY KEY (block_num)
-  ) INHERITS (hive.hafbe_app);
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
 ------------------------------------------
 

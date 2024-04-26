@@ -17,7 +17,7 @@ WITH proxy_ops AS MATERIALIZED
     ov.block_num,
     ov.op_type_id as op_type,
     ov.timestamp
-  FROM hive.btracker_app_operations_view ov
+  FROM hafbe_app.operations_view ov
   WHERE 
     ov.op_type_id IN (12,13,91,92,75)
     AND ov.block_num BETWEEN _from AND _to
@@ -63,7 +63,7 @@ BEGIN
   WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
   (
     SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
-    FROM hive.hafbe_app_operations_view ov
+    FROM hafbe_app.operations_view ov
     WHERE ov.op_type_id IN (12,42,11,7) 
     AND ov.block_num BETWEEN _from AND _to
   ),
@@ -79,7 +79,7 @@ BEGIN
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
   SELECT 
-    (SELECT av.id FROM hive.accounts_view av WHERE av.name = swn.name) AS id,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = swn.name) AS id,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
@@ -96,7 +96,7 @@ BEGIN
           extensions->1->>'value'
         END AS version,
         ROW_NUMBER() OVER (PARTITION BY cw.witness_id ORDER BY num DESC) AS row_n
-      FROM hive.hafbe_app_blocks_view hbv
+      FROM hafbe_app.blocks_view hbv
       JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
       WHERE num BETWEEN _from AND _to AND extensions IS NOT NULL
     ) row_count
@@ -131,7 +131,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       url
     FROM (
       SELECT
@@ -183,7 +183,7 @@ BEGIN
     feed_updated_at = ops.feed_updated_at
   FROM (
     SELECT
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
       ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
       timestamp AS feed_updated_at
@@ -233,7 +233,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       block_size
     FROM (
       SELECT
@@ -291,7 +291,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       signing_key
     FROM (
       SELECT
@@ -339,7 +339,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       hbd_interest_rate
     FROM (
       SELECT
@@ -394,14 +394,14 @@ select ov.* from (
   ds.timestamp AS _timestamp,
   ds.op_type_id,
   ds.op_type_id AS op_type
-FROM hive.hafbe_app_operations_view ds
+FROM hafbe_app.operations_view ds
 where ds.op_type_id IN (9, 23, 41, 80, 76, 25, 36) and ds.block_num between _from and _to
 ) ov
 LEFT JOIN (
   WITH pow AS MATERIALIZED 
   (
   SELECT  
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_view pto
@@ -427,7 +427,7 @@ LEFT JOIN (
   WITH pow AS MATERIALIZED 
   (
   SELECT  
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_two_view pto
@@ -553,7 +553,7 @@ AS
     ov.block_num,
     ov.id
   FROM 
-    hive.hafbe_app_operations_view ov
+    hafbe_app.operations_view ov
   WHERE 
     ov.op_type_id =17;
 
@@ -565,7 +565,7 @@ AS
     ov.block_num,
     ov.id
   FROM
-    hive.hafbe_app_operations_view ov
+    hafbe_app.operations_view ov
   WHERE 
     ov.op_type_id = 1;
 

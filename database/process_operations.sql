@@ -8,7 +8,7 @@ $$
 BEGIN
 WITH create_account_operation AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'new_account_name') AS _account,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'new_account_name') AS _account,
     _timestamp AS _time,
     _op_type AS _op_type_id
 )
@@ -37,7 +37,7 @@ $$
 DECLARE
   _recovery_account TEXT := _body->'value'->>'creator';
   _new_account_name TEXT := _body->'value'->>'new_account_name';
-  _new_account INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = _body->'value'->>'new_account_name');
+  _new_account INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'new_account_name');
 BEGIN
 
 IF _if_hf11 THEN
@@ -95,9 +95,9 @@ BEGIN
 WITH pow_operation AS (
   SELECT
     CASE WHEN _op_type = 14 THEN
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'worker_account')
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'worker_account')
     ELSE
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->'work'->'value'->'input'->>'worker_account')
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->'work'->'value'->'input'->>'worker_account')
     END AS _account,
     _timestamp AS _time
 )
@@ -127,7 +127,7 @@ $$
 BEGIN
 WITH changed_recovery_account_operation AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account') AS _account,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS _account,
     _body->'value'->>'new_recovery_account' AS _new_recovery_account
 )
   INSERT INTO hafbe_app.account_parameters
@@ -155,7 +155,7 @@ $$
 BEGIN
 WITH recover_account_operation AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account_to_recover') AS _account,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account_to_recover') AS _account,
     _timestamp AS _time
 )
   INSERT INTO hafbe_app.account_parameters
@@ -183,7 +183,7 @@ $$
 BEGIN
 WITH decline_voting_rights_operation AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account') AS _account,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS _account,
     (CASE WHEN (_body->'value'->>'decline')::BOOLEAN = TRUE THEN FALSE ELSE TRUE END) AS _can_vote
 )
   INSERT INTO hafbe_app.account_parameters
@@ -211,8 +211,8 @@ $$
 BEGIN
 WITH vote_operation AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account') AS voter_id,
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'witness') AS witness_id,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS voter_id,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness') AS witness_id,
     (_body->'value'->>'approve')::BOOLEAN AS approve,
     _timestamp AS _time
 ),
@@ -256,8 +256,8 @@ WITH proxy_operations AS (
 selected AS (
     SELECT av_a.id AS account_id, av_p.id AS proxy_id, proxy, _time
     FROM proxy_operations proxy_op
-    JOIN hive.hafbe_app_accounts_view av_a ON av_a.name = proxy_op.witness_account
-    JOIN hive.hafbe_app_accounts_view av_p ON av_p.name = proxy_op.proxy_account
+    JOIN hafbe_app.accounts_view av_a ON av_a.name = proxy_op.witness_account
+    JOIN hafbe_app.accounts_view av_p ON av_p.name = proxy_op.proxy_account
 ),
 insert_proxy_history AS (
   INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, timestamp)
@@ -299,7 +299,7 @@ $$
 BEGIN
 WITH proxy_operations AS (
   SELECT
-    (SELECT av.id FROM hive.hafbe_app_accounts_view av WHERE av.name = _body->'value'->>'account') AS account_id
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS account_id
 ),
 delete_proxies AS (
   DELETE FROM hafbe_app.current_account_proxies cap USING (

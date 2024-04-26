@@ -43,10 +43,10 @@ DECLARE
   _calculate_total_pages INT; 
 BEGIN
 IF _date_start IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at >= _date_start ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _date_end IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at < _date_end ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 SELECT hafbe_backend.get_account_operations_count(_filter, _account, _from, _to) INTO _ops_count;
@@ -189,7 +189,7 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
- _block_num INT := (SELECT ov.block_num FROM hive.operations_view ov WHERE ov.id = _operation_id);
+ _block_num INT := (SELECT ov.block_num FROM hafbe_app.operations_view ov WHERE ov.id = _operation_id);
 BEGIN
 
 IF _block_num <= hive.app_get_irreversible_block() THEN
@@ -211,9 +211,9 @@ RETURN (
       ov.timestamp,
       NOW() - ov.timestamp,
   	  FALSE)
-    FROM hive.operations_view ov 
+    FROM hafbe_app.operations_view ov 
     JOIN hive.operation_types hot ON hot.id = ov.op_type_id
-    LEFT JOIN hive.transactions_view htv ON htv.block_num = ov.block_num AND htv.trx_in_block = ov.trx_in_block
+    LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = ov.block_num AND htv.trx_in_block = ov.trx_in_block
 	  WHERE ov.id = _operation_id
 );
 
@@ -233,7 +233,7 @@ SET enable_bitmapscan = OFF
 AS
 $$
 DECLARE
-	_example_key JSON := (SELECT ov.body FROM hive.operations_view ov WHERE ov.op_type_id = _op_type_id LIMIT 1);
+	_example_key JSON := (SELECT ov.body FROM hafbe_app.operations_view ov WHERE ov.op_type_id = _op_type_id LIMIT 1);
 BEGIN
 
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
@@ -293,10 +293,10 @@ IF NOT _operation_types <@ allowed_ids THEN
 END IF;
 
 IF _start_date IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _end_date IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 IF _to <= hive.app_get_irreversible_block() THEN
@@ -339,7 +339,7 @@ AS
 $$
 DECLARE
   __no_ops_filter BOOLEAN = (_filter IS NULL);
-  __account_id INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = _account);
+  __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _account);
 BEGIN
 
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
@@ -362,15 +362,15 @@ WITH operation_range AS MATERIALIZED (
       SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
   )
     SELECT aov.operation_id, aov.op_type_id, aov.block_num
-    FROM hive.account_operations_view aov
+    FROM hafbe_app.account_operations_view aov
     WHERE aov.account_id = __account_id
     AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
     ORDER BY aov.account_op_seq_no DESC
     LIMIT _limit
   ) ls
-  JOIN hive.operations_view ov ON ov.id = ls.operation_id
+  JOIN hafbe_app.operations_view ov ON ov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
+  LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
   )
 
 -- filter too long operation bodies 

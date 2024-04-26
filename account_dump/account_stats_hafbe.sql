@@ -16,7 +16,7 @@ SELECT
     (account_data->>'mined')::BOOLEAN AS mined,
     (account_data->>'last_account_recovery')::TIMESTAMP AS last_account_recovery,
     (account_data->>'created')::TIMESTAMP AS created,
-    (SELECT av.id FROM hive.accounts_view av WHERE av.name = (account_data->>'proxy')) AS proxy,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = (account_data->>'proxy')) AS proxy,
 --    (account_data->>'last_post')::TIMESTAMP AS last_post,
 --    (account_data->>'last_root_post')::TIMESTAMP AS last_root_post,
     (account_data->>'last_vote_time')::TIMESTAMP AS last_vote_time,
