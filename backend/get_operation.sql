@@ -172,7 +172,7 @@ WITH operation_range AS MATERIALIZED (
     NOW() - ov.timestamp AS age
   FROM (
   WITH op_filter AS MATERIALIZED (
-      SELECT ARRAY_AGG(ot.id) as op_id FROM operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
+      SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
   ),
 -- changing filtering method from block_num to operation_id
 	ops_from_start_block as MATERIALIZED
