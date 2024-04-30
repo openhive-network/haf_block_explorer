@@ -73,7 +73,7 @@ FROM (
 CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
 SELECT
   rapv.proxy_id,
-  (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = rapv.account_id) as name,
+  (SELECT av.name FROM hive.accounts_view av WHERE av.id = rapv.account_id) as name,
   (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
   rapv.which_proxy
 FROM hafbe_views.recursive_account_proxies_view rapv
@@ -101,7 +101,7 @@ LEFT JOIN btracker_app.current_account_balances cab ON cab.account = cwv_cap.vot
 CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
   SELECT
     ov.voter_id AS account,
-    (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = ov.witness_id) as vote
+    (SELECT av.name FROM hive.accounts_view av WHERE av.id = ov.witness_id) as vote
   FROM
     hafbe_app.current_witness_votes ov;
 
@@ -280,7 +280,7 @@ WITH select_range AS (
 
 SELECT
   wvh.witness_id, 
-  (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = wvh.voter_id) as name,
+  (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id) as name,
   wvh.approve, wvh.timestamp, 
   (wvh.balance + COALESCE(wvh.proxied_vests, 0))::BIGINT  AS vests, 
   (wvh.balance)::BIGINT  AS account_vests, 

@@ -21,7 +21,7 @@ IF _account IS NULL THEN
 
     $query$
     WITH operation_range AS (
-    SELECT DISTINCT ov.block_num FROM hafbe_app.operations_view ov
+    SELECT DISTINCT ov.block_num FROM hive.operations_view ov
     WHERE 
       ov.op_type_id = %L
       AND ov.block_num BETWEEN %L AND %L 
@@ -63,11 +63,11 @@ ELSE
   RETURN QUERY EXECUTE format(
       $query$
       WITH source_account_id AS MATERIALIZED (
-      SELECT av.id from hafbe_app.accounts_view av where av.name = %L),
+      SELECT av.id from hive.accounts_view av where av.name = %L),
 
       source_ops AS (
       SELECT array_agg(aov.operation_id) AS operation_id, aov.block_num
-      FROM hafbe_app.account_operations_view aov
+      FROM hive.account_operations_view aov
       WHERE 
         aov.op_type_id = %L AND 
         aov.account_id = (SELECT id FROM source_account_id) AND 
@@ -81,7 +81,7 @@ ELSE
 
       operation_range AS (
       SELECT DISTINCT ov.block_num
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       JOIN unnest_ops s on s.operation_id = ov.id
       WHERE 
         (CASE WHEN %L IS NOT NULL THEN
@@ -148,7 +148,7 @@ IF _account IS NULL THEN
     (
       WITH disc_num AS (
       SELECT DISTINCT ov.block_num 
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       WHERE ov.op_type_id = unnested_op_types.op_type_id
       AND ov.block_num BETWEEN %L AND %L
       GROUP BY ov.block_num
@@ -186,14 +186,14 @@ ELSE
   RETURN QUERY EXECUTE format(
     $query$
     WITH source_account_id AS MATERIALIZED (
-    SELECT av.id from hafbe_app.accounts_view av where av.name = %L),
+    SELECT av.id from hive.accounts_view av where av.name = %L),
 
     block_num_array AS (
     SELECT unnested_op_types.op_type_id, 
     (
       WITH disc_num AS (
       SELECT DISTINCT aov.block_num 
-      FROM hafbe_app.account_operations_view aov
+      FROM hive.account_operations_view aov
       WHERE aov.op_type_id = unnested_op_types.op_type_id
       AND aov.block_num BETWEEN %L AND %L 
       AND aov.account_id = (SELECT id FROM source_account_id)

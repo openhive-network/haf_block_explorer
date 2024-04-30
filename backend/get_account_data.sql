@@ -11,7 +11,7 @@ $$
 BEGIN
 RETURN 
   av.id 
-FROM hafbe_app.accounts_view av WHERE av.name = _account
+FROM hive.accounts_view av WHERE av.name = _account
 ;
 
 END
@@ -55,7 +55,7 @@ AS
 $$
 BEGIN
 RETURN aov.account_op_seq_no + 1
-FROM hafbe_app.account_operations_view aov
+FROM hive.account_operations_view aov
 WHERE aov.account_id = _account 
 ORDER BY aov.account_op_seq_no DESC LIMIT 1
 ;
@@ -70,8 +70,8 @@ STABLE
 AS
 $$
 BEGIN
-RETURN ov.timestamp FROM hafbe_app.account_operations_view aov 
-JOIN hafbe_app.operations_view ov ON ov.id = aov.operation_id 
+RETURN ov.timestamp FROM hive.account_operations_view aov
+JOIN hive.operations_view ov ON ov.id = aov.operation_id
 WHERE aov.op_type_id = 72 AND aov.account_id = _account_id AND ov.body_binary::JSONB->'value'->>'voter'= account_name
 ORDER BY account_op_seq_no DESC LIMIT 1
 ;
@@ -88,7 +88,7 @@ AS
 $$
 BEGIN
 RETURN 
-(SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = cap.proxy_id)
+(SELECT av.name FROM hive.accounts_view av WHERE av.id = cap.proxy_id)
 FROM hafbe_app.current_account_proxies cap
 WHERE cap.account_id = _account
 ;
@@ -140,11 +140,11 @@ AS
 $$
 BEGIN
 RETURN ov.timestamp 
-FROM hafbe_app.account_operations_view aov 
-JOIN hafbe_app.operations_view ov ON ov.id = aov.operation_id 
+FROM hive.account_operations_view aov
+JOIN hive.operations_view ov ON ov.id = aov.operation_id
 WHERE aov.op_type_id = 72 
 AND aov.account_id = _account 
-AND ov.body_binary::JSONB->'value'->>'voter'= (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = _account)
+AND ov.body_binary::JSONB->'value'->>'voter'= (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account)
 ORDER BY account_op_seq_no DESC
 LIMIT 1;
 
@@ -204,7 +204,7 @@ RETURN (
       WITH get_account_auth AS (
       SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth
       FROM hive.hafbe_app_accountauth_a active_account_auths
-      JOIN hafbe_app.accounts_view av ON active_account_auths.account_auth_id = av.id
+      JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
       WHERE active_account_auths.account_id = (SELECT get_account_id FROM hafbe_backend.get_account_id(_account))
       AND active_account_auths.key_kind = _key_kind)
 

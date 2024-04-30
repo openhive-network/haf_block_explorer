@@ -58,7 +58,7 @@ RETURN QUERY WITH op_types_cte AS (
   FROM hive.operation_types hot
   WHERE (
     SELECT EXISTS (
-      SELECT 1 FROM hafbe_app.account_operations_view aov WHERE aov.account_id = __account_id AND aov.op_type_id = hot.id)))
+      SELECT 1 FROM hive.account_operations_view aov WHERE aov.account_id = __account_id AND aov.op_type_id = hot.id)))
 
 SELECT cte.id, split_part( hot.name, '::', 3), hot.is_virtual
 FROM op_types_cte cte
@@ -86,7 +86,7 @@ END IF;
 
 RETURN QUERY SELECT DISTINCT ON (ov.op_type_id)
   ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual
-FROM hafbe_app.operations_view ov
+FROM hive.operations_view ov
 JOIN hive.operation_types hot ON hot.id = ov.op_type_id
 WHERE ov.block_num = _block_num
 ORDER BY ov.op_type_id ASC
