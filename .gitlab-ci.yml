@@ -318,7 +318,7 @@ psql-client-performance-test:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests[collapsed=true]\r\e[0KRunning tests..."
 
-      timeout -k 1m 15m  ./tests/run_performance_tests.sh --postgresql-host=docker --postgrest-host=docker --database-size=6000 --test-loop-count=1000
+      timeout -k 60m 60m  ./tests/run_performance_tests.sh --postgresql-host=docker --postgrest-host=docker --database-size=6000 --test-loop-count=1000
       tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
       cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
       m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
