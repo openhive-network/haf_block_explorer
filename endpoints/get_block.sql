@@ -20,7 +20,7 @@ $$
 BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-  RETURN bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1;
+  RETURN bv.num FROM hafbe_app.blocks_view bv ORDER BY bv.num DESC LIMIT 1;
 
 END
 $$;
@@ -47,7 +47,7 @@ SELECT ROW(
   bv.num,   
   bv.hash,
   bv.prev,
-  (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT,
+  (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT,
   bv.transaction_merkle_root,
   bv.extensions,
   bv.witness_signature,
@@ -62,7 +62,7 @@ SELECT ROW(
   bv.dhf_interval_ledger::numeric,
   bv.created_at,
   NOW() - bv.created_at)
-FROM hive.blocks_view bv
+FROM hafbe_app.blocks_view bv
 WHERE bv.num = _block_num
 );
 
@@ -114,7 +114,7 @@ DECLARE
 BEGIN
 
 SELECT bv.num INTO _num
-FROM hive.blocks_view bv
+FROM hafbe_app.blocks_view bv 
 WHERE bv.created_at BETWEEN _timestamp - interval '2 seconds' 
 AND _timestamp ORDER BY bv.created_at LIMIT 1;
 
@@ -146,8 +146,8 @@ RETURN QUERY
   WITH select_block_range AS MATERIALIZED (
     SELECT 
       bv.num as block_num,
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
-    FROM hive.blocks_view bv
+      (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
+    FROM hafbe_app.blocks_view bv
     ORDER BY bv.num DESC LIMIT _limit
   ),
   join_operations AS MATERIALIZED (
@@ -156,7 +156,7 @@ RETURN QUERY
       sbr.witness, 
       COUNT(ov.op_type_id) as count, 
       ov.op_type_id 
-    FROM hive.operations_view ov
+    FROM hafbe_app.operations_view ov
     JOIN select_block_range sbr ON sbr.block_num = ov.block_num
     GROUP BY ov.op_type_id,sbr.block_num,sbr.witness
   )
@@ -197,7 +197,7 @@ RETURN QUERY
   SELECT 
     ov.op_type_id,
     COUNT(ov.op_type_id) as count 
-  FROM hive.operations_view ov
+  FROM hafbe_app.operations_view ov
   WHERE ov.block_num = _block_num
   GROUP BY ov.op_type_id
 ;
@@ -262,10 +262,10 @@ IF _key_content IS NOT NULL THEN
 END IF;
 
 IF _start_date IS NOT NULL THEN
-  _from := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
+  _from := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at >= _start_date ORDER BY created_at ASC LIMIT 1);
 END IF;
 IF _end_date IS NOT NULL THEN  
-  _to := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
+  _to := (SELECT num FROM hafbe_app.blocks_view bv WHERE bv.created_at < _end_date ORDER BY created_at DESC LIMIT 1);
 END IF;
 
 IF _to <= hive.app_get_irreversible_block() THEN

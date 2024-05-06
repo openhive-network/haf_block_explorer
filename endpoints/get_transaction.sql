@@ -16,7 +16,7 @@ bv.created_at,
 NOW() - bv.created_at
 -- _trx_hash TEXT -> BYTEA, __include_reversible = TRUE, __is_legacy_style = FALSE
 FROM hafah_python.get_transaction_json(('\x' || _trx_hash)::BYTEA, TRUE, FALSE) AS transaction_json
-JOIN hive.blocks_view bv ON bv.num = (transaction_json->>'block_num')::INT
+JOIN hafbe_app.blocks_view bv ON bv.num = (transaction_json->>'block_num')::INT
 )
 SELECT 
 	json_build_object(

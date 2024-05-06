@@ -79,7 +79,7 @@ BEGIN
   
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
   SELECT 
-    (SELECT av.id FROM hive.accounts_view av WHERE av.name = swn.name) AS id,
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = swn.name) AS id,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
@@ -131,7 +131,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       url
     FROM (
       SELECT
@@ -183,7 +183,7 @@ BEGIN
     feed_updated_at = ops.feed_updated_at
   FROM (
     SELECT
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
       ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
       timestamp AS feed_updated_at
@@ -233,7 +233,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       block_size
     FROM (
       SELECT
@@ -291,7 +291,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       signing_key
     FROM (
       SELECT
@@ -339,7 +339,7 @@ BEGIN
 
   UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
     SELECT 
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       hbd_interest_rate
     FROM (
       SELECT
@@ -401,7 +401,7 @@ LEFT JOIN (
   WITH pow AS MATERIALIZED 
   (
   SELECT  
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_view pto
@@ -427,7 +427,7 @@ LEFT JOIN (
   WITH pow AS MATERIALIZED 
   (
   SELECT  
-      (SELECT av.id FROM hive.accounts_view av WHERE av.name = pto.worker_account) as account_id,
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = pto.worker_account) as account_id,
       pto.id,
       pto.block_num
   FROM hafbe_views.pow_two_view pto

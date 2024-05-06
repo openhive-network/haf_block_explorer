@@ -37,7 +37,7 @@ $$
 DECLARE
   _recovery_account TEXT := _body->'value'->>'creator';
   _new_account_name TEXT := _body->'value'->>'new_account_name';
-  _new_account INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = _body->'value'->>'new_account_name');
+  _new_account INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'new_account_name');
 BEGIN
 
 IF _if_hf11 THEN
