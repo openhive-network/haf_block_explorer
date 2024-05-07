@@ -39,7 +39,7 @@ RETURN QUERY EXECUTE format(
 
   WITH limited_set AS (
     SELECT 
-      (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
       wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
     FROM hafbe_app.witness_voters_stats_cache wvsc
     WHERE witness_id = %L   
@@ -52,7 +52,7 @@ RETURN QUERY EXECUTE format(
     LIMIT %L
   ),
   get_block_num AS MATERIALIZED
-  (SELECT bv.num AS block_num FROM hafbe_app.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+  (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
 
   SELECT ls.voter, 
   ls.vests,
@@ -104,7 +104,7 @@ RETURN QUERY EXECUTE format(
 
   WITH select_range AS MATERIALIZED (
     SELECT 
-      (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
       * 
     FROM hafbe_app.witness_votes_history_cache wvh
     WHERE wvh.witness_id = %L
@@ -113,7 +113,7 @@ RETURN QUERY EXECUTE format(
     LIMIT %L
   ),
   get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hafbe_app.blocks_view bv ORDER BY bv.num DESC LIMIT 1),
+    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1),
   select_votes_history AS (
   SELECT
     wvh.voter, wvh.approve, 
@@ -162,7 +162,7 @@ RETURN QUERY EXECUTE format(
   WITH limited_set AS (
     SELECT
       cw.witness_id, 
-      (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
       cw.url,
       cw.price_feed,
       cw.bias,
@@ -178,7 +178,7 @@ RETURN QUERY EXECUTE format(
       COALESCE(
       (
         SELECT count(*) as missed
-        FROM hafbe_app.account_operations_view aov 
+        FROM hive.account_operations_view aov
         WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
       )::INT
       ,0) AS missed_blocks,
@@ -196,7 +196,7 @@ RETURN QUERY EXECUTE format(
     LIMIT %L
   ),
 get_block_num AS MATERIALIZED
-(SELECT bv.num AS block_num FROM hafbe_app.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+(SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
 
   SELECT
     ls.witness, 
@@ -254,17 +254,17 @@ WITH limited_set AS (
     COALESCE(
       (
         SELECT count(*) as missed
-        FROM hafbe_app.account_operations_view aov 
+        FROM hive.account_operations_view aov
         WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
       )::INT
     ,0) AS missed_blocks,
     COALESCE(cw.hbd_interest_rate, 0) AS hbd_interest_rate
-  FROM hafbe_app.accounts_view av
+  FROM hive.accounts_view av
   JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
   WHERE av.name = _account
 ),
 get_block_num AS MATERIALIZED
-(SELECT bv.num AS block_num FROM hafbe_app.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+(SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
 
 SELECT ROW(
   ls.witness, 

@@ -24,7 +24,7 @@ BEGIN
   SELECT lower(_input) INTO _input;
 
   -- first, name existance is checked
-  IF (SELECT 1 FROM hafbe_app.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
+  IF (SELECT 1 FROM hive.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
@@ -58,7 +58,7 @@ BEGIN
   IF _input SIMILAR TO '([a-f0-9]{40})' THEN
     SELECT ('\x' || _input)::BYTEA INTO __hash;
     
-    IF (SELECT trx_hash FROM hafbe_app.transactions_view WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
+    IF (SELECT trx_hash FROM hive.transactions_view WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
@@ -68,7 +68,7 @@ BEGIN
       );
     ELSE
       SELECT bv.num 
-      FROM hafbe_app.blocks_view bv 
+      FROM hive.blocks_view bv
       WHERE bv.hash = __hash LIMIT 1 
       INTO __block_num;
     END IF;

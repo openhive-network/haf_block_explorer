@@ -52,7 +52,7 @@ BEGIN
     ov.body_binary::jsonb->'value'->>'permlink' as permlink,
     ov.body_binary::jsonb->'value'->>'author' as author,
     ov.block_num, ov.id, ov.body_binary::jsonb as body, ov.timestamp, ov.trx_in_block
-  FROM hafbe_app.operations_view ov
+  FROM hive.operations_view ov
   WHERE 
     ov.block_num BETWEEN _from AND _to AND
     ov.op_type_id = ANY(_operation_types) AND 
@@ -74,7 +74,7 @@ BEGIN
       orr.timestamp, 
       encode(htv.trx_hash, 'hex') AS trx_hash
     FROM operation_range orr
-    LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = orr.block_num AND htv.trx_in_block = orr.trx_in_block
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = orr.block_num AND htv.trx_in_block = orr.trx_in_block
   )
 -- filter too long operation bodies 
   SELECT filtered_operations.permlink, filtered_operations.block_num, filtered_operations.id, filtered_operations.timestamp, filtered_operations.trx_hash,  (filtered_operations.composite).body, (filtered_operations.composite).is_modified
@@ -103,7 +103,7 @@ $$
 BEGIN
   RETURN (
   SELECT COUNT(*) as count
-  FROM hafbe_app.operations_view ov
+  FROM hive.operations_view ov
   WHERE 
     ov.block_num BETWEEN _from AND _to AND 
     ov.op_type_id = ANY(_operation_types) AND 
@@ -178,7 +178,7 @@ WITH operation_range AS MATERIALIZED (
 	ops_from_start_block as MATERIALIZED
 	(
 		SELECT ov.id 
-		FROM hafbe_app.operations_view ov
+		FROM hive.operations_view ov
 		WHERE ov.block_num >= _from
 		ORDER BY ov.block_num, ov.id
 		LIMIT 1
@@ -186,7 +186,7 @@ WITH operation_range AS MATERIALIZED (
 	ops_from_end_block as MATERIALIZED
 	(
 		SELECT ov.id
-		FROM hafbe_app.operations_view ov
+		FROM hive.operations_view ov
 		WHERE ov.block_num <= _to
 		ORDER BY ov.block_num DESC, ov.id DESC
 		LIMIT 1
@@ -206,7 +206,7 @@ WITH operation_range AS MATERIALIZED (
   */ 
 
     SELECT aov.operation_id, aov.op_type_id, aov.block_num
-    FROM hafbe_app.account_operations_view aov
+    FROM hive.account_operations_view aov
     WHERE aov.account_id = __account_id
     AND (__no_filters OR account_op_seq_no >= (CASE WHEN (_rest_of_division) != 0 THEN __op_seq ELSE (__op_seq - _limit) END))
 	  AND (__no_filters OR account_op_seq_no < (CASE WHEN (_rest_of_division) != 0 THEN (__op_seq + _limit) ELSE __op_seq END))
@@ -217,9 +217,9 @@ WITH operation_range AS MATERIALIZED (
     LIMIT (CASE WHEN _page_num = 1 AND (_rest_of_division) != 0 THEN _rest_of_division ELSE _limit END)
     OFFSET (CASE WHEN _page_num = 1 OR NOT __no_filters THEN 0 ELSE __offset END)
   ) ls
-  JOIN hafbe_app.operations_view ov ON ov.id = ls.operation_id
+  JOIN hive.operations_view ov ON ov.id = ls.operation_id
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-  LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
+  LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
   )
 
 -- filter too long operation bodies 
@@ -256,10 +256,10 @@ BEGIN
 IF __no_ops_filter = TRUE AND __no_start_date = TRUE AND __no_end_date = TRUE THEN
   RETURN (
       WITH account_id AS MATERIALIZED (
-        SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _account)
+        SELECT av.id FROM hive.accounts_view av WHERE av.name = _account)
 
       SELECT aov.account_op_seq_no + 1
-      FROM hafbe_app.account_operations_view aov
+      FROM hive.account_operations_view aov
       WHERE aov.account_id = (SELECT ai.id FROM account_id ai) 
       ORDER BY aov.account_op_seq_no DESC LIMIT 1);
 
@@ -269,13 +269,13 @@ ELSE
       SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _operations IS NOT NULL THEN ot.id = ANY(_operations) ELSE TRUE END)
     ),
     account_id AS MATERIALIZED (
-      SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _account
+      SELECT av.id FROM hive.accounts_view av WHERE av.name = _account
     ),
 -- changing filtering method from block_num to operation_id
     	ops_from_start_block as MATERIALIZED
     (
       SELECT ov.id 
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       WHERE ov.block_num >= _from
       ORDER BY ov.block_num, ov.id
       LIMIT 1
@@ -283,14 +283,14 @@ ELSE
     ops_from_end_block as MATERIALIZED
     (
       SELECT ov.id
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       WHERE ov.block_num <= _to
       ORDER BY ov.block_num DESC, ov.id DESC
       LIMIT 1
     )
 -- using hive_account_operations_uq2, we are forcing planner to use this index on (account_id,operation_id), it achives better performance results
     SELECT COUNT(*)
-    FROM hafbe_app.account_operations_view aov
+    FROM hive.account_operations_view aov
     WHERE aov.account_id = (SELECT ai.id FROM account_id ai)
     AND (__no_ops_filter OR aov.op_type_id = ANY(ARRAY[(SELECT of.op_id FROM op_filter of)]))
     AND (__no_start_date OR aov.operation_id >= (SELECT * FROM ops_from_start_block))
@@ -345,7 +345,7 @@ IF _account IS NULL THEN
       With operations_in_block AS 
       (
       SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       WHERE
         ov.block_num = _block_num 
       ),
@@ -367,7 +367,7 @@ IF _account IS NULL THEN
       OFFSET _offset
     ) ls
     JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-    LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ls.id ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
@@ -400,15 +400,15 @@ ELSE
       WITH account_operations_in_block AS 
       (
         SELECT aov.operation_id
-        FROM hafbe_app.account_operations_view aov
+        FROM hive.account_operations_view aov
         WHERE
-          aov.account_id = (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _account ) AND
+          aov.account_id = (SELECT av.id FROM hive.accounts_view av WHERE av.name = _account ) AND
           aov.block_num = _block_num 
       ),
       operations_in_block AS 
       (
         SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
-        FROM hafbe_app.operations_view ov
+        FROM hive.operations_view ov
         JOIN account_operations_in_block aoib ON aoib.operation_id = ov.id
       ),
       filter_ops AS MATERIALIZED 
@@ -429,7 +429,7 @@ ELSE
       OFFSET _offset
     ) ls
     JOIN hive.operation_types hot ON hot.id = ls.op_type_id
-    LEFT JOIN hafbe_app.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
+    LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ls.trx_in_block
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ls.id ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
@@ -475,7 +475,7 @@ IF _account IS NULL THEN
     WITH operations_in_block AS 
     (
       SELECT ov.op_type_id, ov.body
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       WHERE
         ov.block_num = _block_num 
     ),
@@ -495,15 +495,15 @@ ELSE
     WITH account_operations_in_block AS 
     (
       SELECT aov.operation_id
-      FROM hafbe_app.account_operations_view aov
+      FROM hive.account_operations_view aov
       WHERE
-        aov.account_id = (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _account ) AND
+        aov.account_id = (SELECT av.id FROM hive.accounts_view av WHERE av.name = _account ) AND
         aov.block_num = _block_num 
     ),
     operations_in_block AS 
     (
       SELECT ov.op_type_id, ov.body
-      FROM hafbe_app.operations_view ov
+      FROM hive.operations_view ov
       JOIN account_operations_in_block aoib ON aoib.operation_id = ov.id
     ),
     filter_ops AS MATERIALIZED 
