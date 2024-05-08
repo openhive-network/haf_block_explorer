@@ -63,7 +63,8 @@ WITH select_parameters_from_backend AS MATERIALIZED (
     COALESCE(_result_votes.proxied_vsf_votes, '[]') AS proxied_vsf_votes,
     COALESCE(_result_proxy.get_account_proxy, '') AS proxy_name,
     COALESCE(_result_count.get_account_ops_count, 0) AS ops_count,
-    EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id) AS is_witness
+    EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id) AS is_witness,
+    COALESCE(_result_reputation.get_account_reputation, 0) AS reputation
   FROM
     (SELECT hbd_balance, hive_balance, vesting_shares, vesting_balance_hive, post_voting_power_vests 
      FROM btracker_endpoints.get_account_balances(_account_id)) AS _result_balance,
@@ -85,6 +86,9 @@ WITH select_parameters_from_backend AS MATERIALIZED (
 
     (SELECT posting_rewards, curation_rewards
      FROM btracker_endpoints.get_account_info_rewards(_account_id)) AS _result_curation_posting,
+
+    (SELECT get_account_reputation
+     FROM reptracker_endpoints.get_account_reputation(_account_id)) AS _result_reputation,
 
     (SELECT can_vote, mined, recovery_account, last_account_recovery, created
      FROM hafbe_backend.get_account_parameters(_account_id)) AS _result_parameters,
@@ -145,7 +149,8 @@ WITH select_parameters_from_backend AS MATERIALIZED (
 -- 'reputation', __response_data->>'reputation', --work in progress
   witness_votes,
   ops_count,
-  is_witness)
+  is_witness,
+  reputation)
 FROM select_parameters_from_backend
 );
 

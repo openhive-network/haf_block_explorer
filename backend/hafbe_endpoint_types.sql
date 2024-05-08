@@ -55,7 +55,8 @@ CREATE TYPE hafbe_types.account AS (
     vesting_balance BIGINT,
     witness_votes JSON,
     ops_count INT,
-    is_witness BOOLEAN
+    is_witness BOOLEAN,
+    reputation INT
 );
 
 -- Used in 
