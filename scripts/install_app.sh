@@ -7,6 +7,8 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 BLOCKSEARCH_INDEXES=false
 BTRACKER_SCHEMA=btracker_app
+REPTRACKER_SCHEMA=reptracker_app
+
 
 print_help () {
 cat <<EOF
@@ -39,6 +41,9 @@ while [ $# -gt 0 ]; do
         ;;
     --btracker-schema=*)
         BTRACKER_SCHEMA="${1#*=}"
+        ;;
+    --reptracker-schema=*)
+        REPTRACKER_SCHEMA="${1#*=}"
         ;;
     --help|-h|-?)
         print_help
@@ -100,6 +105,10 @@ setup_apps() {
 
   pushd "$btracker_dir"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$BTRACKER_SCHEMA"
+  popd
+
+  pushd "$reptracker_dir"
+  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$REPTRACKER_SCHEMA"
   popd
 
   pushd "$hafbe_dir"
@@ -177,6 +186,7 @@ backend="$SCRIPT_DIR/../backend"
 db_dir="$SCRIPT_DIR/../database"
 hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
+reptracker_dir="$SCRIPT_DIR/../submodules/reptracker"
 hafbe_dir="$SCRIPT_DIR/.."
 
 if [ "$ONLY_HAFBE" -eq 0 ]; then

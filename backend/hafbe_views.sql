@@ -253,6 +253,7 @@ CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
     block_num,
     (time_json->>'btracker_app_a')::NUMERIC AS btracker_app_a,
   	(time_json->>'btracker_app_b')::NUMERIC AS btracker_app_b,
+    (time_json->>'reptracker_app_a')::NUMERIC AS reptracker_app_b,
     (time_json->>'hafbe_app_a')::NUMERIC AS hafbe_app_a,
   	(time_json->>'hafbe_app_b')::NUMERIC AS hafbe_app_b,
     (time_json->>'hafbe_app_c')::NUMERIC AS hafbe_app_c,

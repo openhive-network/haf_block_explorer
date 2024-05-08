@@ -41,12 +41,16 @@ DECLARE
 _time JSONB = '{}'::JSONB;
 BEGIN
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM btracker_app.process_block_range_data_a(_block, _block);
+  PERFORM btracker_block_range_data_a(_block, _block);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM btracker_app.process_block_range_data_b(_block, _block);
+  PERFORM btracker_block_range_data_b(_block, _block);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+  PERFORM reptracker_block_range_data(_block, _block);
+  SELECT hafbe_backend.get_sync_time(_time, 'reptracker_app_a') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hafbe_app.process_block_range_data_a(_block, _block);

@@ -22,6 +22,7 @@ POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
 CLEAN_BTRACKER=1
+CLEAN_REPTRACKER=1
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -36,6 +37,9 @@ while [ $# -gt 0 ]; do
         ;;
     --skip-btracker)
         CLEAN_BTRACKER=0
+        ;;
+    --skip-reptracker)
+        CLEAN_REPTRACKER=0
         ;;
     --help|-h|-?)
         print_help
@@ -79,6 +83,10 @@ uninstall_app() {
 
     if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
       "${SCRIPT_DIR}/../submodules/btracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}"
+    fi
+
+    if [ "${CLEAN_REPTRACKER}" -eq 1 ]; then
+      "${SCRIPT_DIR}/../submodules/reptracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}"
     fi
 }
 

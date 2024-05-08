@@ -6,7 +6,12 @@ SET ROLE hafbe_owner;
   - starts application main-loop (which iterates infinitely).
     To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
-CREATE OR REPLACE PROCEDURE hafbe_app.main(_appContext VARCHAR, _appContext_btracker VARCHAR, _maxBlockLimit INT = NULL)
+CREATE OR REPLACE PROCEDURE hafbe_app.main(
+    _appContext VARCHAR,
+    _appContext_btracker VARCHAR,
+    _appContext_reptracker VARCHAR,
+    _maxBlockLimit INT = NULL
+)
 LANGUAGE 'plpgsql'
 AS
 $$
@@ -26,8 +31,8 @@ BEGIN
   SELECT hive.app_get_current_block_num(_appContext) INTO __last_block;
   RAISE NOTICE 'Last block processed by application: %', __last_block;
 
-  IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker]) THEN
-    CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker]);
+  IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]) THEN
+    CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]);
   END IF;
 
   RAISE NOTICE 'Entering application main loop...';
@@ -40,7 +45,7 @@ BEGIN
   COMMIT; --save startup state of app
 
   WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
-    __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker]);
+    __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]);
 
     IF __next_block_range IS NOT NULL THEN
     
@@ -61,7 +66,7 @@ BEGIN
           PERFORM set_config('synchronous_commit', 'OFF', false);
           __commit_mode_changed := true;
         END IF;
-        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, __next_block_range.first_block, __next_block_range.last_block, 10000, __last_block);
+        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, _appContext_reptracker, __next_block_range.first_block, __next_block_range.last_block, 10000, __last_block);
       ELSE
         IF __commit_mode_changed THEN
           PERFORM set_config('synchronous_commit', __original_commit_mode, false);

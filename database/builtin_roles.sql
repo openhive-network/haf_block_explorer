@@ -13,7 +13,10 @@ EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING E
 END
 $$;
 
+GRANT reptracker_owner TO hafbe_owner;
+GRANT reptracker_user TO hafbe_owner;
 GRANT btracker_owner TO hafbe_owner;
 GRANT btracker_user TO hafbe_owner;
 GRANT hafbe_user TO hafbe_owner;
 GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
+GRANT ALL ON SCHEMA reptracker_app TO hafbe_owner;

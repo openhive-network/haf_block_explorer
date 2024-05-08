@@ -24,6 +24,7 @@ POSTGRES_USER=${POSTGRES_USER:-"hafbe_owner"}
 PROCESS_BLOCK_LIMIT=${PROCESS_BLOCK_LIMIT:-0}
 LOG_FILE=${LOG_FILE:-"hafbe_sync.log"}
 BTRACKER_SCHEMA='btracker_app'
+REPTRACKER_SCHEMA='reptracker_app'
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,6 +42,9 @@ while [ $# -gt 0 ]; do
         ;;
     --btracker-schema=*)
         BTRACKER_SCHEMA="${1#*=}"
+        ;;
+    --reptracker-schema=*)
+        REPTRACKER_SCHEMA="${1#*=}"
         ;;
     --log-file=*)
         LOG_FILE="${1#*=}"
@@ -106,9 +110,9 @@ process_blocks() {
     fi
 
     if [[ "$log_file" == "STDOUT" ]]; then
-        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);"
+        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA} ;" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', '${REPTRACKER_SCHEMA}', $n_blocks);"
     else
-        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', 'btracker_app', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" > "$log_file")
+        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', '${REPTRACKER_SCHEMA}', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" > "$log_file")
     fi
 
 } &
