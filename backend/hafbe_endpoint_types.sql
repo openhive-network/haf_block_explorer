@@ -144,8 +144,54 @@ CREATE TYPE hafbe_types.block_raw AS (
 
 -- Used in
 -- hafbe_endpoints.get_witness_voters
-DROP TYPE IF EXISTS hafbe_types.witness_voters CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.witness_voters AS (
+/** openapi:components:schemas
+hafbe_types.witness_voter:
+  type: object
+  properties:
+    voter:
+      type: string
+      description: account name of the voter
+    vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: number of vests this voter is directly voting with
+    votes_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests this voter is directly voting with, expressed in
+        HIVE power, at the current ratio
+    account_vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests in the voter's account.  if some vests are
+        delegated, they will not be counted in voting
+    account_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests in the voter's account, expressed in HIVE power, at
+        the current ratio.  if some vests are delegated, they will not be
+        counted in voting
+    proxied_vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: the number of vests proxied to this account
+    proxied_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the number of vests proxied to this account expressed in HIVE power,
+        at the current ratio
+    timestamp:
+      type: string
+      format: date-time
+      description: the time this account last changed its voting power
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.witness_voter CASCADE;
+CREATE TYPE hafbe_types.witness_voter AS (
     voter TEXT,
     vests BIGINT,
     votes_hive_power BIGINT,
@@ -153,34 +199,180 @@ CREATE TYPE hafbe_types.witness_voters AS (
     account_hive_power BIGINT,
     proxied_vests BIGINT,
     proxied_hive_power BIGINT,
-    timestamp TIMESTAMP
+    "timestamp" TIMESTAMP
 );
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_types.array_of_witness_voters:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_types.witness_voter'
+ */
 
 -- Used in
 -- hafbe_endpoints.get_witness_votes_history
-DROP TYPE IF EXISTS hafbe_types.witness_votes_history CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.witness_votes_history AS (
+/** openapi:components:schemas
+hafbe_types.witness_votes_history_record:
+  type: object
+  properties:
+    voter:
+      type: string
+      description: account name of the voter
+    approve:
+      type: boolean
+      description: whether the voter approved or rejected the witness
+    vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: number of vests this voter is directly voting with
+    votes_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests this voter is directly voting with, expressed in
+        HIVE power, at the current ratio
+    account_vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests in the voter's account.  if some vests are
+        delegated, they will not be counted in voting
+    account_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        number of vests in the voter's account, expressed in HIVE power, at
+        the current ratio.  if some vests are delegated, they will not be
+        counted in voting
+    proxied_vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: the number of vests proxied to this account
+    proxied_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the number of vests proxied to this account expressed in HIVE power,
+        at the current ratio
+    timestamp:
+      type: string
+      format: date-time
+      description: the time of the vote change
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.witness_votes_history_record CASCADE;
+CREATE TYPE hafbe_types.witness_votes_history_record AS (
     voter TEXT,
     approve BOOLEAN,
     vests BIGINT,
-    vests_hive_power BIGINT,
+    votes_hive_power BIGINT,
     account_vests BIGINT,
     account_hive_power BIGINT,
     proxied_vests BIGINT,
     proxied_hive_power BIGINT,
-    timestamp TIMESTAMP
+    "timestamp" TIMESTAMP
 );
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_types.array_of_witness_vote_history_records:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_types.witness_votes_history_record'
+ */
 
 -- Used in
 -- hafbe_endpoints.get_witnesses
 -- hafbe_endpoints.get_witness
-DROP TYPE IF EXISTS hafbe_types.witness_setof CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.witness_setof AS (
+
+/** openapi:components:schemas
+hafbe_types.witness:
+  type: object
+  properties:
+    witness:
+      type: string
+      description: the name of the witness account
+    rank:
+      type: integer
+      description: >-
+        the current rank of the witness according to the votes cast on
+        the    blockchain.  The top 20 witnesses (ranks 1 - 20) will produce
+        blocks each round.
+    url:
+      type: string
+      description: the witness's home page
+    vests:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the total weight of votes cast in favor of this witness, expressed
+        in VESTS
+    vests_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the total weight of votes cast in favor of this witness, expressed
+        in HIVE power, at the current ratio
+    votes_daily_change:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the increase or decrease in votes for this witness over the last 24
+        hours, expressed in vests
+    votes_daily_change_hive_power:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        the increase or decrease in votes for this witness over the last 24
+        hours, expressed in HIVE power, at the current ratio
+    voters_num:
+      type: integer
+      description: the number of voters supporting this witness
+    voters_num_daily_change:
+      type: integer
+      description: >-
+        the increase or decrease in the number of voters voting for this
+        witness over the last 24 hours
+    price_feed:
+      type: number
+      description: the current price feed provided by the witness in HIVE/HBD
+    bias:
+      type: integer
+      x-sql-datatype: NUMERIC
+      description: no clue
+    feed_age:
+      type: string
+      x-sql-datatype: INTERVAL
+      description: >-
+        how old the witness price feed is (as a string formatted
+        hh:mm:ss.ssssss)
+    block_size:
+      type: integer
+      description: the maximum block size the witness is currently voting for, in bytes
+    signing_key:
+      type: string
+      description: the key used to verify blocks signed by this witness
+    version:
+      type: string
+      description: the version of hived the witness is running
+    missed_blocks:
+      type: integer
+      description: >-
+        the number of blocks the witness should have generated but didn't
+        (over the entire lifetime of the blockchain)
+    hbd_interest_rate:
+      type: integer
+      description: the interest rate the witness is voting for
+*/
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.witness CASCADE;
+CREATE TYPE hafbe_types.witness AS (
     witness TEXT,
     rank INT,
     url TEXT,
     vests BIGINT,
-    votes_hive_power BIGINT,
+    vests_hive_power BIGINT,
     votes_daily_change BIGINT,
     votes_daily_change_hive_power BIGINT,
     voters_num INT,
@@ -194,6 +386,14 @@ CREATE TYPE hafbe_types.witness_setof AS (
     missed_blocks INT,
     hbd_interest_rate INT
 );
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_types.array_of_witnesses:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_types.witness'
+*/
 
 -- Used in
 -- hafbe_endpoints.get_transaction
