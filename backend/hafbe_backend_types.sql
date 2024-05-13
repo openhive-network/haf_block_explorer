@@ -4,12 +4,20 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
 
-
-DROP TYPE IF EXISTS hafbe_types.order_is CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.order_is AS ENUM (
+/** openapi:components:schemas
+hafbe_types.sort_direction:
+  type: string
+  enum:
+    - asc
+    - desc
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.sort_direction CASCADE;
+CREATE TYPE hafbe_types.sort_direction AS ENUM (
     'asc',
     'desc'
 );
+-- openapi-generated-code-end
 
 DROP TYPE IF EXISTS hafbe_types.group_by CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.group_by AS ENUM (
@@ -17,7 +25,18 @@ CREATE TYPE hafbe_types.group_by AS ENUM (
     'block_num'
 );
 
-DROP TYPE IF EXISTS hafbe_types.order_by_votes CASCADE; -- noqa: LT01
+/** openapi:components:schemas
+hafbe_types.order_by_votes:
+  type: string
+  enum:
+    - voter
+    - vests
+    - account_vests
+    - proxied_vests
+    - timestamp
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.order_by_votes CASCADE;
 CREATE TYPE hafbe_types.order_by_votes AS ENUM (
     'voter',
     'vests',
@@ -25,8 +44,28 @@ CREATE TYPE hafbe_types.order_by_votes AS ENUM (
     'proxied_vests',
     'timestamp'
 );
+-- openapi-generated-code-end
 
-DROP TYPE IF EXISTS hafbe_types.order_by_witness CASCADE; -- noqa: LT01
+/** openapi:components:schemas
+hafbe_types.order_by_witness:
+  type: string
+  enum:
+    - witness
+    - rank
+    - url
+    - votes
+    - votes_daily_change
+    - voters_num
+    - voters_num_daily_change
+    - price_feed
+    - bias
+    - feed_age
+    - block_size
+    - signing_key
+    - version
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.order_by_witness CASCADE;
 CREATE TYPE hafbe_types.order_by_witness AS ENUM (
     'witness',
     'rank',
@@ -42,6 +81,7 @@ CREATE TYPE hafbe_types.order_by_witness AS ENUM (
     'signing_key',
     'version'
 );
+-- openapi-generated-code-end
 
 DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.last_post_vote_time AS

@@ -116,7 +116,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     _page_num INT = 1,
     _page_size INT = 100,
     _filter INT [] = NULL,
-    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction = 'desc', -- noqa: LT01, CP05
     _body_limit INT = 2147483647,
     _account TEXT = NULL,
     _key_content TEXT [] = NULL,

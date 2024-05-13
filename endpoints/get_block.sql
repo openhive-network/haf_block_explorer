@@ -232,7 +232,7 @@ SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[68], NULL, 'desc', 0, 214748
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     _operations INT [],
     _account TEXT = NULL,
-    _order_is hafbe_types.order_is = 'desc', -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction = 'desc', -- noqa: LT01, CP05
     _from INT = 0,
     _to INT = 2147483647,
     _start_date TIMESTAMP = NULL,

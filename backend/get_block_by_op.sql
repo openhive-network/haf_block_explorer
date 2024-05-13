@@ -5,7 +5,7 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(
     _operations INT,
     _account TEXT,
-    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _from INT, _to INT,
     _limit INT,
     _key_content TEXT [],
@@ -129,7 +129,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(
     _operations INT [],
     _account TEXT,
-    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _from INT,
     _to INT,
     _limit INT

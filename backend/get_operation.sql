@@ -306,7 +306,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_block(
     _page_num INT,
     _page_size INT,
     _filter INT [],
-    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _body_limit INT,
     _account TEXT,
     _key_content TEXT [],
