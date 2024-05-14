@@ -158,7 +158,7 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authorizations(_account TEXT)
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authority(_account TEXT)
 RETURNS hafbe_types.account_authorizations -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
