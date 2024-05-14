@@ -91,7 +91,7 @@ BEGIN
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT btracker_app.find_matching_accounts(_input) INTO __accounts_array;
+  SELECT btracker_endpoints.find_matching_accounts(_input) INTO __accounts_array;
   IF __accounts_array IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
