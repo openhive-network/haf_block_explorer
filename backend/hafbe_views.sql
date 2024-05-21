@@ -28,44 +28,37 @@ CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_view AS
 WITH proxies1 AS (
   SELECT
     prox1.proxy_id AS top_proxy_id,
-    prox1.account_id, 1 AS which_proxy
+    prox1.account_id, 1 AS proxy_level
   FROM hafbe_app.current_account_proxies prox1
 ),
 
 proxies2 AS (
-  SELECT prox1.top_proxy_id, prox2.account_id, 2 AS which_proxy
+  SELECT prox1.top_proxy_id, prox2.account_id, 2 AS proxy_level
   FROM proxies1 prox1
   JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
 ),
 
 proxies3 AS (
-  SELECT prox2.top_proxy_id, prox3.account_id, 3 AS which_proxy
+  SELECT prox2.top_proxy_id, prox3.account_id, 3 AS proxy_level
   FROM proxies2 prox2
   JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
 ),
 
 proxies4 AS (
-  SELECT prox3.top_proxy_id, prox4.account_id, 4 AS which_proxy
+  SELECT prox3.top_proxy_id, prox4.account_id, 4 AS proxy_level
   FROM proxies3 prox3
   JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
-),
-proxies5 AS (
-  SELECT prox4.top_proxy_id, prox5.account_id, 5 AS which_proxy
-  FROM proxies4 prox4
-  JOIN hafbe_app.current_account_proxies prox5 ON prox5.proxy_id = prox4.account_id
 )
 
-SELECT top_proxy_id AS proxy_id, account_id, which_proxy
+SELECT top_proxy_id AS proxy_id, account_id, proxy_level
 FROM (
-  SELECT top_proxy_id, account_id, which_proxy FROM proxies1
+  SELECT top_proxy_id, account_id, proxy_level FROM proxies1
   UNION
-  SELECT top_proxy_id, account_id, which_proxy FROM proxies2
+  SELECT top_proxy_id, account_id, proxy_level FROM proxies2
   UNION
-  SELECT top_proxy_id, account_id, which_proxy FROM proxies3
+  SELECT top_proxy_id, account_id, proxy_level FROM proxies3
   UNION
-  SELECT top_proxy_id, account_id, which_proxy FROM proxies4
-  UNION
-  SELECT top_proxy_id, account_id, which_proxy FROM proxies5
+  SELECT top_proxy_id, account_id, proxy_level FROM proxies4
 ) rap;
 ------
 
@@ -75,7 +68,7 @@ SELECT
   rapv.proxy_id,
   (SELECT av.name FROM hive.accounts_view av WHERE av.id = rapv.account_id) as name,
   (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
-  rapv.which_proxy
+  rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
 JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
 LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id;
@@ -101,10 +94,10 @@ LEFT JOIN btracker_app.current_account_balances cab ON cab.account = cwv_cap.vot
 CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
   SELECT
     ov.voter_id AS account,
-    (SELECT av.name FROM hive.accounts_view av WHERE av.id = ov.witness_id) as vote
+    av.name AS vote
   FROM
-    hafbe_app.current_witness_votes ov;
-
+    hafbe_app.current_witness_votes ov
+  JOIN hive.accounts_view av ON av.id = ov.witness_id;
 ------
 
 -- used in witness page endpoints
@@ -112,11 +105,11 @@ CREATE OR REPLACE VIEW hafbe_views.voters_proxied_vests_view AS
 SELECT
   rapv.proxy_id,
   SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
-  rapv.which_proxy
+  rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
 JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
 LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id
-GROUP BY rapv.proxy_id, rapv.which_proxy;
+GROUP BY rapv.proxy_id, rapv.proxy_level;
 
 ------
 
