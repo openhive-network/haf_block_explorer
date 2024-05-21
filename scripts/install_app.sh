@@ -142,6 +142,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_operation.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch_backend.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/account_stats_hafbe.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/compare_accounts.sql"
 
@@ -165,7 +166,7 @@ create_haf_indexes() {
     # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
     # want to add our own indexes, which would slow down massive sync, so we just wait.
     echo "Waiting for HAF to be out of massive sync"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'btracker_app'], interval '3 days');"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'btracker_app', 'reptracker_app'], interval '3 days');"
 
     echo "Creating indexes, this might take a while."
     # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time
@@ -175,6 +176,20 @@ create_haf_indexes() {
   else
     echo "HAF indexes already exist, skipping creation"
   fi
+}
+
+create_blocksearch_indexes() {
+if [ "$BLOCKSEARCH_INDEXES" = "true" ] && [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_blocksearch_indexes_exist();")" = f ]; then
+  echo 'Creating blocksearch indexes...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = TRUE;"
+elif [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_blocksearch_indexes_exist();")" = t ]; then
+  echo "blocksearch indexes already exist, skipping creation"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = TRUE;"
+else 
+  echo "blocksearch indexes do not exist, disabling block/comment search APIs"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = FALSE;"
+fi
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
@@ -195,9 +210,6 @@ fi
 if [ "$ONLY_APPS" -eq 0 ]; then
   setup_api
   create_haf_indexes
+  create_blocksearch_indexes
 fi
 
-if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
-  echo 'Creating blocksearch indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch.sql"
-fi

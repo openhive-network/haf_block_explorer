@@ -288,6 +288,10 @@ $$
 DECLARE
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
 BEGIN
+IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
+  RAISE EXCEPTION 'Commentsearch indexes are not installed';
+END IF;
+
 IF NOT _operation_types <@ allowed_ids THEN
     RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
 END IF;

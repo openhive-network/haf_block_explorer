@@ -249,6 +249,10 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 BEGIN
+IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
+  RAISE EXCEPTION 'Blocksearch indexes are not installed';
+END IF;
+
 IF _key_content IS NOT NULL THEN
   IF array_length(_operations, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
