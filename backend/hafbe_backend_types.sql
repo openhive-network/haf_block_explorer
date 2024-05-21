@@ -65,7 +65,6 @@ CREATE TYPE hafbe_backend.account_parameters AS
 DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_votes AS
 (
-    proxied_vsf_votes JSON,
     witnesses_voted_for INT,
     witness_votes JSON
 );

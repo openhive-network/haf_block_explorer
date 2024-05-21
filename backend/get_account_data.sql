@@ -108,10 +108,41 @@ $$
 BEGIN
 RETURN (
   SELECT ROW(
-    (SELECT json_agg(vpvv.proxied_vests) FROM hafbe_views.voters_proxied_vests_view vpvv WHERE vpvv.proxy_id= _account), 
     COUNT(*)::INT, 
     json_agg(cwvv.vote))
   FROM hafbe_views.current_witness_votes_view cwvv WHERE cwvv.account = _account
+);
+
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxied_vsf_votes(_account INT)
+RETURNS json -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+RETURN (
+  WITH proxy_levels as 
+  (
+    SELECT vpvv.proxied_vests as proxy, vpvv.proxy_level 
+    FROM hafbe_views.voters_proxied_vests_view vpvv 
+    WHERE vpvv.proxy_id= _account 
+    order by proxy_level 
+  ),
+  populate_record as MATERIALIZED
+  (
+    SELECT 0 as proxy, 1 as proxy_level
+    UNION ALL
+    SELECT 0 as proxy, 2 as proxy_level
+    UNION ALL
+    SELECT 0 as proxy, 3 as proxy_level
+    UNION ALL
+    SELECT 0 as proxy, 4 as proxy_level
+  )
+  SELECT json_agg(coalesce(s.proxy,0)) FROM populate_record pr
+  LEFT JOIN proxy_levels s ON s.proxy_level = pr.proxy_level
 );
 
 END
@@ -144,11 +175,13 @@ STABLE
 AS
 $$
 BEGIN
-RETURN (SELECT ROW (
-  m.json_metadata, 
-  m.posting_json_metadata)
-FROM hive.hafbe_app_metadata m
-WHERE m.account_id = _account
+RETURN (
+  SELECT ROW(
+    m.json_metadata, 
+    m.posting_json_metadata
+  )
+  FROM hive.hafbe_app_metadata m
+  WHERE m.account_id = _account
 );
 
 END
