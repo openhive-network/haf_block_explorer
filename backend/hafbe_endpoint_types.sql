@@ -16,47 +16,60 @@ CREATE TYPE hafbe_types.op_types AS (
 -- hafbe_endpoints.get_account
 DROP TYPE IF EXISTS hafbe_types.account CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.account AS (
+    --general
     id INT,
     name TEXT,
-    profile_image TEXT,
-    json_metadata TEXT,
-    posting_json_metadata TEXT,
-    proxy TEXT,
-    created TIMESTAMP,
+    can_vote BOOLEAN,
     mined BOOLEAN,
+    proxy TEXT,
     recovery_account TEXT,
     last_account_recovery TIMESTAMP,
-    can_vote BOOLEAN,
-    balance BIGINT,
-    savings_balance BIGINT,
+    created TIMESTAMP, 
+    reputation INT,
+
+    --metadata
+    json_metadata TEXT,
+    posting_json_metadata TEXT,
+    profile_image TEXT,
+
+    --balance
     hbd_balance BIGINT,
+    balance BIGINT,
+    vesting_shares BIGINT,
+    vesting_balance BIGINT,
+
+    --saving
     hbd_saving_balance BIGINT,
+    savings_balance BIGINT,
     savings_withdraw_requests INT,
+
+    --reward
     reward_hbd_balance BIGINT,
     reward_hive_balance BIGINT,
     reward_vesting_balance BIGINT,
     reward_vesting_hive BIGINT,
-    vesting_shares BIGINT,
-    delegated_vesting_shares BIGINT,
-    received_vesting_shares BIGINT,
-    vesting_withdraw_rate BIGINT,
-    to_withdraw BIGINT,
-    withdrawn BIGINT,
-    withdraw_routes INT,
-    post_voting_power BIGINT,
     posting_rewards BIGINT,
     curation_rewards BIGINT,
+
+    --received/delegated/proxied
+    delegated_vesting_shares BIGINT,
+    received_vesting_shares BIGINT,
     proxied_vsf_votes JSON,
-    witnesses_voted_for INT,
-    post_count INT,
-    last_post TIMESTAMP,
-    last_root_post TIMESTAMP,
+
+    --withdraw
+    withdrawn BIGINT,
+    vesting_withdraw_rate BIGINT,
+    to_withdraw BIGINT,
+    withdraw_routes INT,
     delayed_vests BIGINT,
-    vesting_balance BIGINT,
+
+    --witness vote
     witness_votes JSON,
+    witnesses_voted_for INT,
+
+    --FE info params
     ops_count INT,
-    is_witness BOOLEAN,
-    reputation INT
+    is_witness BOOLEAN
 );
 
 -- Used in 
