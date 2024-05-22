@@ -14,6 +14,7 @@ cat <<EOF
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
     --skip-btracker          Allows to skip cleanup of Balance Tracker application
+    --skip-reptracker        Allows to skip cleanup of Balance Tracker application
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
 }
