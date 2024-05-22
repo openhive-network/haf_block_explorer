@@ -63,21 +63,6 @@ ORDER BY aov.account_op_seq_no DESC LIMIT 1
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_last_post(_account_id INT, account_name TEXT)
-RETURNS TIMESTAMP
-LANGUAGE 'plpgsql'
-STABLE
-AS
-$$
-BEGIN
-RETURN ov.timestamp FROM hive.account_operations_view aov
-JOIN hive.operations_view ov ON ov.id = aov.operation_id
-WHERE aov.op_type_id = 72 AND aov.account_id = _account_id AND ov.body_binary::JSONB->'value'->>'voter'= account_name
-ORDER BY account_op_seq_no DESC LIMIT 1
-;
-
-END
-$$;
 
 -- ACCOUNT PROXY
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
@@ -170,11 +155,11 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authorizations(
-    _account TEXT,
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
+    _account_id INT,
     _key_kind hive.key_type -- noqa: LT01, CP05
 )
-RETURNS hafbe_backend.account_authorizations -- noqa: LT01, CP05
+RETURNS hafbe_backend.account_authority -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -182,43 +167,52 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
+DECLARE
+  _result hafbe_backend.account_authority;
 BEGIN
 RETURN (
-    COALESCE(
-    (
-      WITH get_key_auth AS (
-      SELECT ARRAY[hive.public_key_to_string(keys.key), active_key_auths.w::TEXT] as key_auth
-      FROM hive.hafbe_app_keyauth_a active_key_auths
-      JOIN hive.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-      WHERE active_key_auths.account_id = (SELECT get_account_id FROM hafbe_backend.get_account_id(_account)) 
-      AND active_key_auths.key_kind = _key_kind
-      AND (active_key_auths.key_kind != 'MEMO' OR active_key_auths.key_kind != 'WITNESS_SIGNING'))
-
-      SELECT array_agg(gka.key_auth) AS key_auth
-      FROM get_key_auth gka
-    ), '{}'
+  WITH get_key_auth AS 
+  (
+    SELECT ARRAY[hive.public_key_to_string(keys.key), active_key_auths.w::TEXT] as key_auth, active_key_auths.weight_threshold
+    FROM hive.hafbe_app_keyauth_a active_key_auths
+    JOIN hive.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
+    WHERE active_key_auths.account_id = _account_id 
+    AND active_key_auths.key_kind = _key_kind
+    AND (active_key_auths.key_kind != 'MEMO' OR active_key_auths.key_kind != 'WITNESS_SIGNING')
   ),
-
-    COALESCE(
-    (
-      WITH get_account_auth AS (
-      SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth
-      FROM hive.hafbe_app_accountauth_a active_account_auths
-      JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
-      WHERE active_account_auths.account_id = (SELECT get_account_id FROM hafbe_backend.get_account_id(_account))
-      AND active_account_auths.key_kind = _key_kind)
-
-      SELECT array_agg(gaa.key_auth) 
-      FROM get_account_auth gaa 
-    ), '{}'
-  )::TEXT[]
+  get_account_auth AS 
+  (
+    SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth, active_account_auths.weight_threshold
+    FROM hive.hafbe_app_accountauth_a active_account_auths
+    JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
+    WHERE active_account_auths.account_id = _account_id
+    AND active_account_auths.key_kind = _key_kind
+  )
+  SELECT ROW(
+      COALESCE(
+        (
+          SELECT array_agg(gka.key_auth) AS key_auth
+          FROM get_key_auth gka
+        ), '{}')::TEXT[],
+      COALESCE(
+        (
+          SELECT array_agg(gaa.key_auth) 
+          FROM get_account_auth gaa 
+        ), '{}')::TEXT[],
+      COALESCE(
+        (
+          SELECT aka.weight_threshold FROM get_key_auth aka LIMIT 1
+        ),
+        (
+          SELECT aaa.weight_threshold FROM get_account_auth aaa LIMIT 1
+        ), 1))
 );
 
 END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_memo(
-    _account TEXT
+    _account_id INT
 )
 RETURNS TEXT -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
@@ -235,7 +229,7 @@ RETURN (
       SELECT hive.public_key_to_string(keys.key) as key_auth
       FROM hive.hafbe_app_keyauth_a active_key_auths
       JOIN hive.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-      WHERE active_key_auths.account_id = (SELECT get_account_id FROM hafbe_backend.get_account_id(_account)) 
+      WHERE active_key_auths.account_id = _account_id 
       AND active_key_auths.key_kind = 'MEMO'
     ), ''
   )
@@ -244,8 +238,8 @@ RETURN (
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_singing(
-    _account TEXT
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_signing(
+    _account_id INT
 )
 RETURNS TEXT -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
@@ -262,7 +256,7 @@ RETURN (
       SELECT hive.public_key_to_string(keys.key) as key_auth
       FROM hive.hafbe_app_keyauth_a active_key_auths
       JOIN hive.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-      WHERE active_key_auths.account_id = (SELECT get_account_id FROM hafbe_backend.get_account_id(_account)) 
+      WHERE active_key_auths.account_id = _account_id
       AND active_key_auths.key_kind = 'WITNESS_SIGNING'
     ), ''
   )

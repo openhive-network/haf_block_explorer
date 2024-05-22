@@ -60,9 +60,9 @@ CREATE TYPE hafbe_types.account AS (
 );
 
 -- Used in 
--- hafbe_endpoints.get_account_authorizations
-DROP TYPE IF EXISTS hafbe_types.account_authorizations CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.account_authorizations AS (
+-- hafbe_endpoints.get_account_authority
+DROP TYPE IF EXISTS hafbe_types.account_authority CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_types.account_authority AS (
     owner JSON,
     active JSON,
     posting JSON,

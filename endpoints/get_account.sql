@@ -159,7 +159,7 @@ $$;
 
 
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authority(_account TEXT)
-RETURNS hafbe_types.account_authorizations -- noqa: LT01, CP05
+RETURNS hafbe_types.account_authority -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -168,24 +168,29 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
-RETURN ROW(
-  (SELECT to_json(arr_owner) FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_account_authorizations(_account, 'OWNER')
-    ) arr_owner 
-  ) result),
-  (SELECT to_json(arr_active) FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_account_authorizations(_account, 'ACTIVE')
-    ) arr_active
-  ) result),
-  (SELECT to_json(arr_posting) FROM (
-    SELECT ARRAY(
-      SELECT hafbe_backend.get_account_authorizations(_account, 'POSTING')
-    ) arr_posting
-  ) result),   
-  (SELECT hafbe_backend.get_account_memo(_account)),
-  (SELECT hafbe_backend.get_account_witness_singing(_account)));
+RETURN (
+  WITH get_account_id AS
+  (
+    SELECT av.id FROM hive.accounts_view av WHERE av.name = 'gtg'
+  ),
+  authorities AS
+  (
+    SELECT
+      hafbe_backend.get_account_authority(gai.id, 'OWNER') AS owner,
+      hafbe_backend.get_account_authority(gai.id, 'ACTIVE') AS active,
+      hafbe_backend.get_account_authority(gai.id, 'POSTING') AS posting,   
+      hafbe_backend.get_account_memo(gai.id) AS memo,
+      hafbe_backend.get_account_witness_signing(gai.id) AS signing
+    FROM get_account_id gai
+  )
+  SELECT ROW(
+    to_json(a.owner),
+    to_json(a.active),
+    to_json(a.posting),
+    a.memo,
+    a.signing)
+  FROM authorities a
+);
 
 END
 $$;
