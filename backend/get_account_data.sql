@@ -124,14 +124,14 @@ AS
 $$
 BEGIN
 RETURN (
-  WITH proxy_levels as 
+  WITH proxy_levels AS MATERIALIZED
   (
     SELECT vpvv.proxied_vests as proxy, vpvv.proxy_level 
     FROM hafbe_views.voters_proxied_vests_view vpvv 
-    WHERE vpvv.proxy_id= _account 
-    order by proxy_level 
+    WHERE vpvv.proxy_id= _account
+    order by vpvv.proxy_level 
   ),
-  populate_record as MATERIALIZED
+  populate_record AS MATERIALIZED
   (
     SELECT 0 as proxy, 1 as proxy_level
     UNION ALL
