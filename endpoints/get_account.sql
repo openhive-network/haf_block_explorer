@@ -119,7 +119,7 @@ BEGIN
 RETURN (
   WITH get_account_id AS
   (
-    SELECT av.id FROM hive.accounts_view av WHERE av.name = 'gtg'
+    SELECT av.id FROM hive.accounts_view av WHERE av.name = _account
   ),
   authorities AS
   (
