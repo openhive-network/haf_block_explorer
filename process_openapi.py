@@ -63,7 +63,10 @@ def generate_default_value_string_from_schema(schema):
         default_value = str(schema['default'])
 
         requires_quoting = True
-        if 'type' in schema:
+        if default_value  == str(None):
+            default_value = 'NULL'
+            requires_quoting = False
+        elif 'type' in schema:
             schema_type = schema['type']
             if schema_type == 'integer' or schema_type == 'number':
                 requires_quoting = False
@@ -90,9 +93,7 @@ def generate_default_value_string_from_schema(schema):
 
 def generate_type_field_or_parameter_string_from_openapi_fragment(property_name, property_properties, include_default_values = False):
     type_string = generate_type_string_from_schema(property_properties)
-    if is_sql_keyword(property_name):
-        property_name = f'"{property_name}"'
-    type_field_string = f'    {property_name} {type_string}'
+    type_field_string = f'    "{property_name}" {type_string}'
     if include_default_values:
         type_field_string += generate_default_value_string_from_schema(property_properties)
     return type_field_string
@@ -132,12 +133,20 @@ def generate_function_signature(method, method_fragment, sql_output):
 
 
     sql_output.write('-- openapi-generated-code-begin\n')
-    parameters_openapi_fragment = method_fragment['parameters']
-    #parameters = generate_parameter_list(parameters_openapi_fragment)
-    sql_output.write(f'DROP FUNCTION IF EXISTS {operationId}(\n{generate_parameter_list(parameters_openapi_fragment, False)}\n);\n')
-    sql_output.write(f'CREATE OR REPLACE FUNCTION {operationId}(\n{generate_parameter_list(parameters_openapi_fragment, True)}\n)\n')
-    sql_output.write(f'RETURNS {response_type_string}\n')
-    sql_output.write('-- openapi-generated-code-end\n')
+    if method_fragment['parameters'] == None:
+        sql_output.write(f'DROP FUNCTION IF EXISTS {operationId};\n')
+        sql_output.write(f'CREATE OR REPLACE FUNCTION {operationId}()\n')
+        sql_output.write(f'RETURNS {response_type_string} \n')
+        sql_output.write('-- openapi-generated-code-end\n')
+    else:
+        parameters_openapi_fragment = method_fragment['parameters']
+        #parameters = generate_parameter_list(parameters_openapi_fragment)
+        #(\n{generate_parameter_list(parameters_openapi_fragment, False)}\n) 
+        #- removed because on runtime code upgrade the functions that might have parameter changes won't be dropped due to parameters not matching
+        sql_output.write(f'DROP FUNCTION IF EXISTS {operationId};\n')
+        sql_output.write(f'CREATE OR REPLACE FUNCTION {operationId}(\n{generate_parameter_list(parameters_openapi_fragment, True)}\n)\n')
+        sql_output.write(f'RETURNS {response_type_string} \n')
+        sql_output.write('-- openapi-generated-code-end\n')
 
 def generate_code_from_openapi_fragment(openapi_fragment, sql_output):
     # figure out what type of fragment this is so we know what to generate
