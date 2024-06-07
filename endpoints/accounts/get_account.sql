@@ -1,10 +1,91 @@
 SET ROLE hafbe_owner;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
+/** openapi:paths
+/hafbe/accounts/{account-name}:
+  get:
+    tags:
+      - Accounts
+    summary: Get account info
+    description: |
+      Get information about account's balances and parameters
 
--- Account page endpoint
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(_account TEXT)
-RETURNS hafbe_types.account -- noqa: LT01, CP05
+      SQL example
+      * `SELECT * FROM hafbe_endpoints.get_account('blocktrades');`
+
+      * `SELECT * FROM hafbe_endpoints.get_account('initminer');`
+      
+      REST call example
+      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades`
+      
+      * `GET https://{hafbe-host}/hafbe/accounts/initminer`
+    operationId: hafbe_endpoints.get_account
+    parameters:
+      - in: path
+        name: account-name
+        required: true
+        schema:
+          type: string
+        description: Name of the account
+    responses:
+      '200':
+        description: |
+          The account's parameters
+      
+          * Returns `hafbe_types.account`
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/hafbe_types.account'
+            example:
+              - id: 440
+                name: blocktrades
+                can_vote: true
+                mined: true
+                proxy: 
+                recovery_account: steem
+                last_account_recovery: '1970-01-01T00:00:00'
+                created: '2016-03-30T00:04:33'
+                reputation: 79,
+                json_metadata: ''
+                posting_json_metadata: ''
+                profile_image: ''
+                hbd_balance: 19137472
+                balance: 352144597
+                vesting_shares: 20689331636290595
+                vesting_balance: 11996826266
+                hbd_saving_balance: 108376848
+                savings_balance: 52795
+                savings_withdraw_requests: 0
+                reward_hbd_balance: 0
+                reward_hive_balance: 0
+                reward_vesting_balance: 0
+                reward_vesting_hive: 0
+                posting_rewards: 124692738
+                curation_rewards: 2778463006
+                delegated_vesting_shares: 7002130390740040
+                received_vesting_shares: 93226683463768
+                proxied_vsf_votes: >-
+                  [19944304439583785, 0, 0, 0]
+                withdrawn: 0
+                vesting_withdraw_rate: 0
+                to_withdraw: 0
+                withdraw_routes: 3
+                delayed_vests: 0
+                witness_votes: >-
+                  ["blocktrades", "pharesim", "abit"]
+                witnesses_voted_for: 3
+                ops_count: 6558823
+                is_witness: true
+      '404':
+        description: No such account in the database
+ */
+-- openapi-generated-code-begin
+DROP FUNCTION IF EXISTS hafbe_endpoints.get_account;
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(
+    "account-name" TEXT
+)
+RETURNS hafbe_types.account 
+-- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -17,7 +98,7 @@ DECLARE
   __json_metadata JSON;
   __posting_json_metadata JSON;
   __profile_image TEXT;
-  _account_id INT = hafbe_backend.get_account_id(_account);
+  _account_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
 
 -- 2s because this endpoint result is live account parameters and balances 
@@ -28,7 +109,7 @@ RETURN (
 
     --general
     _account_id,
-    _account,
+    "account-name",
     COALESCE(_result_parameters.can_vote, TRUE),
     COALESCE(_result_parameters.mined, TRUE),
     COALESCE(_result_proxy, ''),
@@ -100,44 +181,6 @@ RETURN (
     hafbe_backend.get_account_proxy(_account_id)              _result_proxy,
     hafbe_backend.get_account_ops_count(_account_id)          _result_count,
     hafbe_backend.get_account_proxied_vsf_votes(_account_id)  _result_proxied_votes
-);
-
-END
-$$;
-
-
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authority(_account TEXT)
-RETURNS hafbe_types.account_authority -- noqa: LT01, CP05
-LANGUAGE 'plpgsql'
-STABLE
-SET JIT = OFF
-SET join_collapse_limit = 16
-SET from_collapse_limit = 16
-AS
-$$
-BEGIN
-RETURN (
-  WITH get_account_id AS
-  (
-    SELECT av.id FROM hive.accounts_view av WHERE av.name = _account
-  ),
-  authorities AS
-  (
-    SELECT
-      hafbe_backend.get_account_authority(gai.id, 'OWNER') AS owner,
-      hafbe_backend.get_account_authority(gai.id, 'ACTIVE') AS active,
-      hafbe_backend.get_account_authority(gai.id, 'POSTING') AS posting,   
-      hafbe_backend.get_account_memo(gai.id) AS memo,
-      hafbe_backend.get_account_witness_signing(gai.id) AS signing
-    FROM get_account_id gai
-  )
-  SELECT ROW(
-    to_json(a.owner),
-    to_json(a.active),
-    to_json(a.posting),
-    a.memo,
-    a.signing)
-  FROM authorities a
 );
 
 END

@@ -3,13 +3,13 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_single_op(
     _operations int,
     _account text,
-    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _from int, _to int,
     _limit int,
     _key_content text [],
     _setof_keys json
 )
-RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
+RETURNS SETOF hafbe_types.block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -112,12 +112,12 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_by_ops_group_by_block_num(
     _operations int [],
     _account text,
-    _order_is hafbe_types.order_is, -- noqa: LT01, CP05
+    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _from int,
     _to int,
     _limit int
 )
-RETURNS SETOF hafbe_types.get_block_by_ops -- noqa: LT01, CP05
+RETURNS SETOF hafbe_types.block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
