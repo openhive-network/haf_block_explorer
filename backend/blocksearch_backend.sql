@@ -33,7 +33,7 @@ IF _account IS NULL THEN
     ORDER BY ov.block_num %s
     LIMIT %L)
     
-    SELECT opr.block_num, ARRAY(SELECT %L::SMALLINT) FROM operation_range opr
+    SELECT opr.block_num, ARRAY(SELECT %L::INT) FROM operation_range opr
     ORDER BY opr.block_num %s
     $query$, 
 
@@ -84,7 +84,7 @@ ELSE
       ORDER BY ov.block_num %s
       LIMIT %L)
 
-      SELECT opr.block_num, ARRAY(SELECT %L::smallint) FROM operation_range opr
+      SELECT opr.block_num, ARRAY(SELECT %L::INT) FROM operation_range opr
       ORDER BY opr.block_num %s
       $query$, 
 
@@ -140,7 +140,7 @@ IF _account IS NULL THEN
       SELECT array_agg(dn.block_num) as block_nums
       FROM disc_num dn
     ) AS block_nums
-    FROM UNNEST(%L::smallint[]) AS unnested_op_types(op_type_id)),
+    FROM UNNEST(%L::INT[]) AS unnested_op_types(op_type_id)),
 
     unnest_block_nums AS (
     SELECT bna.op_type_id, unnest(bna.block_nums) AS block_num 
@@ -185,7 +185,7 @@ ELSE
       LIMIT %L)
       SELECT array_agg(block_num) as block_nums FROM disc_num
     ) AS block_nums
-    FROM UNNEST(%L::smallint[]) AS unnested_op_types(op_type_id)),
+    FROM UNNEST(%L::INT[]) AS unnested_op_types(op_type_id)),
 
     unnest_block_nums AS (
     SELECT bna.op_type_id, unnest(bna.block_nums) AS block_num 

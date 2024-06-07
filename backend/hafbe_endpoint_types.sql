@@ -7,7 +7,7 @@ SET ROLE hafbe_owner;
 -- hafbe_endpoints.get_block_op_types
 DROP TYPE IF EXISTS hafbe_types.op_types CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.op_types AS (
-    op_type_id SMALLINT,
+    op_type_id INT,
     operation_name TEXT,
     is_virtual BOOLEAN
 );
@@ -94,7 +94,7 @@ CREATE TYPE hafbe_types.operation AS (
     trx_in_block SMALLINT,
     trx_id TEXT,
     op_pos INT,
-    op_type_id SMALLINT,
+    op_type_id INT,
     operation JSONB,
     virtual_op BOOLEAN,
     timestamp TIMESTAMP,
@@ -220,7 +220,7 @@ CREATE TYPE hafbe_types.get_latest_blocks AS (
 -- hafbe_endpoints.get_op_count_in_block
 DROP TYPE IF EXISTS hafbe_types.get_op_count_in_block CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_op_count_in_block AS (
-    op_type_id SMALLINT,
+    op_type_id INT,
     count BIGINT
 );
 
@@ -231,7 +231,7 @@ CREATE TYPE hafbe_types.get_op_count_in_block AS (
 DROP TYPE IF EXISTS hafbe_types.get_block_by_ops CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_types.get_block_by_ops AS (
     block_num INT,
-    op_type_id smallint []
+    op_type_id int []
 );
 
 -- Used in 

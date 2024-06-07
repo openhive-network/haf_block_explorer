@@ -12,7 +12,7 @@ BEGIN
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
 RETURN QUERY SELECT
-  id, split_part(name, '::', 3), is_virtual
+  id::INT, split_part(name, '::', 3), is_virtual
 FROM hive.operation_types
 WHERE name LIKE __operation_name
 ORDER BY id ASC
@@ -31,7 +31,7 @@ BEGIN
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
 RETURN QUERY SELECT
-  id, split_part(name, '::', 3), is_virtual
+  id::INT, split_part(name, '::', 3), is_virtual
 FROM hive.operation_types
 ORDER BY id ASC
 ;
@@ -60,7 +60,7 @@ RETURN QUERY WITH op_types_cte AS (
     SELECT EXISTS (
       SELECT 1 FROM hive.account_operations_view aov WHERE aov.account_id = __account_id AND aov.op_type_id = hot.id)))
 
-SELECT cte.id, split_part( hot.name, '::', 3), hot.is_virtual
+SELECT cte.id::INT, split_part( hot.name, '::', 3), hot.is_virtual
 FROM op_types_cte cte
 JOIN hive.operation_types hot ON hot.id = cte.id
 ;
