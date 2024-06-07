@@ -1,16 +1,59 @@
 SET ROLE hafbe_owner;
 
-/*
-determines the input type as one of 'account_name', 'block_num', 'transaction_hash', 'block_hash'
-returns 'account_name_array' when incomplete account name is provided
-raises exceptions:
-  > 'raise_block_num_too_high_exception()'
-  > 'raise_unknown_hash_exception()'
-  > 'raise_unknown_input_exception()'
-*/
+/** openapi:paths
+/hafbe/input-type/{input-value}:
+  get:
+    tags:
+      - Other
+    summary: Get input type
+    description: |
+      Determines whether the entered value is a block,
+      block hash, transaction hash, or account name
 
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(_input TEXT)
-RETURNS JSON
+      SQL example
+      * `SELECT * FROM hafbe_endpoints.get_input_type('blocktrades');`
+
+      * `SELECT * FROM hafbe_endpoints.get_input_type('10000');`
+      
+      REST call example
+      * `GET https://{hafbe-host}/hafbe/input-type/blocktrades`
+      
+      * `GET https://{hafbe-host}/hafbe/input-type/10000`
+    operationId: hafbe_endpoints.get_input_type
+    parameters:
+      - in: path
+        name: input-value
+        required: true
+        schema:
+          type: string
+        description: Given value
+    responses:
+      '200':
+        description: |
+          Result contains total operations number,
+          total pages and the list of operations
+
+          * Returns `JSON`
+        content:
+          application/json:
+            schema:
+              type: string
+              x-sql-datatype: JSON
+            example:      
+              - {
+                  "input_type" : "block_num",
+                  "input_value" : "1000"
+                }
+      '404':
+        description: Input is not recognized
+ */
+-- openapi-generated-code-begin
+DROP FUNCTION IF EXISTS hafbe_endpoints.get_input_type;
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(
+    "input-value" TEXT
+)
+RETURNS JSON 
+-- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
@@ -21,42 +64,42 @@ DECLARE
   __accounts_array JSON;
 BEGIN
   -- names in db are lowercase, no uppercase is used in hashes
-  SELECT lower(_input) INTO _input;
+  SELECT lower("input-value") INTO "input-value";
 
   -- first, name existance is checked
-  IF (SELECT 1 FROM hive.accounts_view WHERE name = _input LIMIT 1) IS NOT NULL THEN
+  IF (SELECT 1 FROM hive.accounts_view WHERE name = "input-value" LIMIT 1) IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
     RETURN json_build_object(
       'input_type', 'account_name',
-      'input_value', _input
+      'input_value', "input-value"
     );
   END IF;
 
   -- second, positive digit and not name is assumed to be block number
-  IF _input SIMILAR TO '(\d+)' THEN
+  IF "input-value" SIMILAR TO '(\d+)' THEN
     SELECT hafbe_endpoints.get_head_block_num() INTO __head_block_num;
-    IF _input::NUMERIC > __head_block_num THEN
+    IF "input-value"::NUMERIC > __head_block_num THEN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      RETURN hafbe_exceptions.raise_block_num_too_high_exception(_input::NUMERIC, __head_block_num);
+      RETURN hafbe_exceptions.raise_block_num_too_high_exception("input-value"::NUMERIC, __head_block_num);
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
       RETURN json_build_object(
         'input_type', 'block_num',
-        'input_value', _input
+        'input_value', "input-value"
       );
     END IF;
   END IF;
 
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
-  IF _input SIMILAR TO '([a-f0-9]{40})' THEN
-    SELECT ('\x' || _input)::BYTEA INTO __hash;
+  IF "input-value" SIMILAR TO '([a-f0-9]{40})' THEN
+    SELECT ('\x' || "input-value")::BYTEA INTO __hash;
     
     IF (SELECT trx_hash FROM hive.transactions_view WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
 
@@ -64,7 +107,7 @@ BEGIN
 
       RETURN json_build_object(
         'input_type', 'transaction_hash',
-        'input_value', _input
+        'input_value', "input-value"
       );
     ELSE
       SELECT bv.num 
@@ -85,13 +128,13 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      RETURN hafbe_exceptions.raise_unknown_hash_exception(_input);
+      RETURN hafbe_exceptions.raise_unknown_hash_exception("input-value");
     END IF;
   END IF;
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT btracker_endpoints.find_matching_accounts(_input) INTO __accounts_array;
+  SELECT btracker_endpoints.find_matching_accounts("input-value") INTO __accounts_array;
   IF __accounts_array IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
@@ -106,27 +149,9 @@ BEGIN
 
     RETURN json_build_object(
         'input_type', 'invalid_input',
-        'input_value', _input
+        'input_value', "input-value"
       );
   END IF;
-END
-$$;
-
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_version()
-RETURNS TEXT -- noqa: LT01, CP05
-LANGUAGE 'plpgsql' STABLE
-AS
-$$
-BEGIN
-
---100000s because version of hafbe doesn't change as often, but it may change
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=100000"}]', true);
-
-RETURN (
-	SELECT git_hash
-	FROM hafbe_app.version
-);
-
 END
 $$;
 

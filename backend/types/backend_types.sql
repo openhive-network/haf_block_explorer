@@ -4,6 +4,8 @@ SET ROLE hafbe_owner;
 
 CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
 
+----------------------------------------------------------------------
+
 /** openapi:components:schemas
 hafbe_types.sort_direction:
   type: string
@@ -19,11 +21,7 @@ CREATE TYPE hafbe_types.sort_direction AS ENUM (
 );
 -- openapi-generated-code-end
 
-DROP TYPE IF EXISTS hafbe_types.group_by CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_types.group_by AS ENUM (
-    'op_type_id',
-    'block_num'
-);
+----------------------------------------------------------------------
 
 /** openapi:components:schemas
 hafbe_types.order_by_votes:
@@ -45,6 +43,8 @@ CREATE TYPE hafbe_types.order_by_votes AS ENUM (
     'timestamp'
 );
 -- openapi-generated-code-end
+
+----------------------------------------------------------------------
 
 /** openapi:components:schemas
 hafbe_types.order_by_witness:
@@ -83,6 +83,8 @@ CREATE TYPE hafbe_types.order_by_witness AS ENUM (
 );
 -- openapi-generated-code-end
 
+----------------------------------------------------------------------
+
 DROP TYPE IF EXISTS hafbe_backend.last_post_vote_time CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.last_post_vote_time AS
 (
@@ -91,6 +93,8 @@ CREATE TYPE hafbe_backend.last_post_vote_time AS
     last_vote_time TIMESTAMP,
     post_count INT
 );
+
+----------------------------------------------------------------------
 
 DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_parameters AS
@@ -102,12 +106,16 @@ CREATE TYPE hafbe_backend.account_parameters AS
     created TIMESTAMP
 );
 
+----------------------------------------------------------------------
+
 DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_votes AS
 (
     witnesses_voted_for INT,
     witness_votes JSON
 );
+
+----------------------------------------------------------------------
 
 DROP TYPE IF EXISTS hafbe_backend.json_metadata CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.json_metadata AS
@@ -116,6 +124,8 @@ CREATE TYPE hafbe_backend.json_metadata AS
     posting_json_metadata TEXT
 );
 
+----------------------------------------------------------------------
+
 DROP TYPE IF EXISTS hafbe_backend.operation_body_filter_result CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.operation_body_filter_result AS (
     body JSONB,
@@ -123,11 +133,15 @@ CREATE TYPE hafbe_backend.operation_body_filter_result AS (
     is_modified BOOLEAN
 );
 
+----------------------------------------------------------------------
+
 DROP TYPE IF EXISTS hafbe_backend.account_authority CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_authority AS (
     key_auth TEXT[],
     account_auth TEXT[],
     weight_threshold INT
 );
+
+----------------------------------------------------------------------
 
 RESET ROLE;
