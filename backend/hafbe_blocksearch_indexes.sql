@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hive.opera
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
 )
-WHERE op_type_id = 1;
+WHERE hive.operation_id_to_type_id(id) = 1;
 
 DO $$
   BEGIN
@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hive.operatio
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 0;
+WHERE hive.operation_id_to_type_id(id) = 0;
 
 DO $$
   BEGIN
@@ -55,7 +55,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hiv
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = any(ARRAY[17, 73]);
+WHERE hive.operation_id_to_type_id(id) = any(ARRAY[17, 73]);
 
 DO $$
   BEGIN
@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hi
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 19;
+WHERE hive.operation_id_to_type_id(id) = 19;
 
 DO $$
   BEGIN
@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hive
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 51;
+WHERE hive.operation_id_to_type_id(id) = 51;
 
 DO $$
   BEGIN
@@ -100,7 +100,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 63;
+WHERE hive.operation_id_to_type_id(id) = 63;
 
 DO $$
   BEGIN
@@ -115,7 +115,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hiv
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 61;
+WHERE hive.operation_id_to_type_id(id) = 61;
 
 DO $$
   BEGIN
@@ -130,7 +130,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hiv
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 53;
+WHERE hive.operation_id_to_type_id(id) = 53;
 
 DO $$
   BEGIN
@@ -145,7 +145,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hiv
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE op_type_id = 72;
+WHERE hive.operation_id_to_type_id(id) = 72;
 
 -- Used in hafbe_backend.get_comment_operations and hafbe_backend.get_comment_operations_count (endpoint hafbe_endpoints.get_comment_operations)
 DO $$
@@ -161,7 +161,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hiv
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
 )
-WHERE op_type_id = any(ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]);
+WHERE hive.operation_id_to_type_id(id) = any(ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]);
 
 ANALYZE VERBOSE hive.operations;
 ----------------------------------------------------------------------------------
