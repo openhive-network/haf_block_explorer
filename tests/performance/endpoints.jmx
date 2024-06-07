@@ -66,7 +66,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-	&quot;_input&quot;: &quot;${input_value}&quot;&#xd;
+	&quot;input-value&quot;: &quot;${input_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -212,7 +212,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_operation_type_pattern&quot;: &quot;vesting&quot;&#xd;
+  &quot;input-value&quot;: &quot;vesting&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -254,7 +254,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_account&quot;: &quot;${account_value}&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -298,7 +298,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_block_num&quot;: &quot;${block_num_value}&quot;&#xd;
+  &quot;block-num&quot;: &quot;${block_num_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -341,8 +341,8 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_account&quot;: &quot;${account_value}&quot;,&#xd;
-  &quot;_page_num&quot;: &quot;1&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;,&#xd;
+  &quot;page&quot;: &quot;1&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -385,7 +385,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_block_num&quot;: &quot;${block_num_value}&quot;&#xd;
+  &quot;block-num&quot;: &quot;${block_num_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -428,7 +428,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_timestamp&quot;: &quot;${block_timestamp}&quot;&#xd;
+  &quot;timestamp&quot;: &quot;${block_timestamp}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -471,7 +471,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_block_num&quot;: &quot;${block_num_value}&quot;&#xd;
+  &quot;block-num&quot;: &quot;${block_num_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -514,7 +514,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_trx_hash&quot;: &quot;${trx_hash_value}&quot;&#xd;
+  &quot;transaction-id&quot;: &quot;${trx_hash_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -557,7 +557,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_witness&quot;: &quot;${account_value}&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -600,7 +600,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_witness&quot;: &quot;${account_value}&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -643,7 +643,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_witness&quot;: &quot;${account_value}&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -720,7 +720,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;_account&quot;: &quot;${account_value}&quot;&#xd;
+  &quot;account-name&quot;: &quot;${account_value}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
