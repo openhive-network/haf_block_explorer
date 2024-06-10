@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/blocks/{block-num}/operation-types:
+/hafbe/blocks/{block-num}/operations/types:
   get:
     tags:
       - Blocks
@@ -15,9 +15,9 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_block_op_types(43000);`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/blocks/10000/operation-types`
+      * `GET https://{hafbe-host}/hafbe/blocks/10000/operations/types`
       
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/operation-types`
+      * `GET https://{hafbe-host}/hafbe/blocks/43000/operations/types`
     operationId: hafbe_endpoints.get_block_op_types
     parameters:
       - in: path

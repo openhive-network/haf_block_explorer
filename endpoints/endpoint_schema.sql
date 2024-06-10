@@ -16,18 +16,18 @@ externalDocs:
   description: HAF Block Explorer gitlab repository
   url: https://gitlab.syncad.com/hive/haf_block_explorer
 tags:
-  - name: Witnesses
-    description: Informations about witnesses
-  - name: Accounts
-    description: Informations about accounts
   - name: Blocks
     description: Informations about blocks
   - name: Block-numbers
-    description: Informations about accounts
-  - name: Operations
-    description: Search for operations
+    description: Informations about block numbers
   - name: Transactions
     description: Informations about transactions
+  - name: Operations
+    description: Informations about operations
+  - name: Accounts
+    description: Informations about accounts
+  - name: Witnesses
+    description: Informations about witnesses
   - name: Other
     description: General API informations
 servers:
@@ -860,28 +860,28 @@ declare
   },
   "tags": [
     {
-      "name": "Witnesses",
-      "description": "Informations about witnesses"
+      "name": "Blocks",
+      "description": "Informations about blocks"
+    },
+    {
+      "name": "Block-numbers",
+      "description": "Informations about block numbers"
+    },
+    {
+      "name": "Transactions",
+      "description": "Informations about transactions"
+    },
+    {
+      "name": "Operations",
+      "description": "Informations about operations"
     },
     {
       "name": "Accounts",
       "description": "Informations about accounts"
     },
     {
-      "name": "Blocks",
-      "description": "Informations about blocks"
-    },
-    {
-      "name": "Block-numbers",
-      "description": "Informations about accounts"
-    },
-    {
-      "name": "Operations",
-      "description": "Search for operations"
-    },
-    {
-      "name": "Transactions",
-      "description": "Informations about transactions"
+      "name": "Witnesses",
+      "description": "Informations about witnesses"
     },
     {
       "name": "Other",
@@ -1618,13 +1618,13 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/operation-types": {
+    "/hafbe/accounts/{account-name}/operations/types": {
       "get": {
         "tags": [
           "Accounts"
         ],
         "summary": "Lists operation types",
-        "description": "Lists all types of operations that the account has performed since its creation\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('initminer');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operation-types`\n\n* `GET https://{hafbe-host}/hafbe/accounts/initminer/operation-types`\n",
+        "description": "Lists all types of operations that the account has performed since its creation\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('initminer');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/types`\n\n* `GET https://{hafbe-host}/hafbe/accounts/initminer/operations/types`\n",
         "operationId": "hafbe_endpoints.get_acc_op_types",
         "parameters": [
           {
@@ -1666,13 +1666,13 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/comments-operations": {
+    "/hafbe/accounts/{account-name}/operations/comments": {
       "get": {
         "tags": [
           "Accounts"
         ],
         "summary": "Get comment related operations",
-        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('gtg');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/comments-operations`\n\n* `GET https://{hafbe-host}/hafbe/accounts/gtg/comments-operations`\n",
+        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('gtg');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/comments`\n\n* `GET https://{hafbe-host}/hafbe/accounts/gtg/operations/comments`\n",
         "operationId": "hafbe_endpoints.get_comment_operations",
         "parameters": [
           {
@@ -2174,13 +2174,13 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/operations-count": {
+    "/hafbe/blocks/{block-num}/operations/count": {
       "get": {
         "tags": [
           "Blocks"
         ],
         "summary": "Count operations in block",
-        "description": "List count for each operation type for given block number\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations-count`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations-count`\n",
+        "description": "List count for each operation type for given block number\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations/count`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations/count`\n",
         "operationId": "hafbe_endpoints.get_op_count_in_block",
         "parameters": [
           {
@@ -2224,13 +2224,13 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/operation-types": {
+    "/hafbe/blocks/{block-num}/operations/types": {
       "get": {
         "tags": [
           "Blocks"
         ],
         "summary": "List operations that were present in given block",
-        "description": "List operations that were present in given block\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operation-types`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operation-types`\n",
+        "description": "List operations that were present in given block\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations/types`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations/types`\n",
         "operationId": "hafbe_endpoints.get_block_op_types",
         "parameters": [
           {
@@ -2469,13 +2469,13 @@ declare
         }
       }
     },
-    "/hafbe/block-numbers/last-synced-block": {
+    "/hafbe/block-numbers/headblock/hafbe": {
       "get": {
         "tags": [
           "Block-numbers"
         ],
         "summary": "Haf_block_explorer's last synced block",
-        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/last-synced-block`\n",
+        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "parameters": null,
         "responses": {

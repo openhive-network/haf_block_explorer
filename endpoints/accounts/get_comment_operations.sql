@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/accounts/{account-name}/comments-operations:
+/hafbe/accounts/{account-name}/operations/comments:
   get:
     tags:
       - Accounts
@@ -16,9 +16,9 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_comment_operations('gtg');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/comments-operations`
+      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/comments`
       
-      * `GET https://{hafbe-host}/hafbe/accounts/gtg/comments-operations`
+      * `GET https://{hafbe-host}/hafbe/accounts/gtg/operations/comments`
     operationId: hafbe_endpoints.get_comment_operations
     parameters:
       - in: path

@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/block-numbers/last-synced-block:
+/hafbe/block-numbers/headblock/hafbe:
   get:
     tags:
       - Block-numbers
@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/block-numbers/last-synced-block`
+      * `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`
     operationId: hafbe_endpoints.get_hafbe_last_synced_block
     parameters:
     responses:
