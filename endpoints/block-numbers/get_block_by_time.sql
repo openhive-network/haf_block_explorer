@@ -5,7 +5,7 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Block-numbers
-    summary: Search for last created block for given date `need fixes`
+    summary: Search for last created block for given date
     description: |
       Returns last created block number for given date
 

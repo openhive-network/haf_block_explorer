@@ -133,7 +133,7 @@ def generate_function_signature(method, method_fragment, sql_output):
 
 
     sql_output.write('-- openapi-generated-code-begin\n')
-    if method_fragment['parameters'] == None:
+    if 'parameters' not in method_fragment or method_fragment['parameters'] == None:
         sql_output.write(f'DROP FUNCTION IF EXISTS {operationId};\n')
         sql_output.write(f'CREATE OR REPLACE FUNCTION {operationId}()\n')
         sql_output.write(f'RETURNS {response_type_string} \n')

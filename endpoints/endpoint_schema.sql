@@ -2450,7 +2450,6 @@ declare
         "summary": "HAF last synced block",
         "description": "Get last block-num in HAF database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_head_block_num();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/headblock`\n",
         "operationId": "hafbe_endpoints.get_head_block_num",
-        "parameters": null,
         "responses": {
           "200": {
             "description": "Last HAF block\n\n* Returns `INT`\n",
@@ -2477,7 +2476,6 @@ declare
         "summary": "Haf_block_explorer's last synced block",
         "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
-        "parameters": null,
         "responses": {
           "200": {
             "description": "Last synced block\n\n* Returns `INT`\n",
@@ -2501,7 +2499,7 @@ declare
         "tags": [
           "Block-numbers"
         ],
-        "summary": "Search for last created block for given date `need fixes`",
+        "summary": "Search for last created block for given date",
         "description": "Returns last created block number for given date\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_time('2016-03-24T16:05:00');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/by-creation-date/2016-03-24T16:05:00`\n",
         "operationId": "hafbe_endpoints.get_block_by_time",
         "parameters": [
@@ -2539,7 +2537,6 @@ declare
         "summary": "Lists operation types",
         "description": "Lists all types of operations available in the database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_types();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-types`\n",
         "operationId": "hafbe_endpoints.get_op_types",
-        "parameters": null,
         "responses": {
           "200": {
             "description": "Operation type list\n\n* Returns array of `hafbe_types.op_types`\n",
@@ -2826,7 +2823,6 @@ declare
         "summary": "Haf_block_explorer's version",
         "description": "Get haf_block_explorer's last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/hafbe-version`\n",
         "operationId": "hafbe_endpoints.get_hafbe_version",
-        "parameters": null,
         "responses": {
           "200": {
             "description": "Haf_block_explorer version\n\n* Returns `TEXT`\n",

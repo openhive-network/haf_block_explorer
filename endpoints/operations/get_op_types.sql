@@ -15,7 +15,6 @@ SET ROLE hafbe_owner;
       REST call example
       * `GET https://{hafbe-host}/hafbe/operation-types`
     operationId: hafbe_endpoints.get_op_types
-    parameters:
     responses:
       '200':
         description: |
