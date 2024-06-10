@@ -4,7 +4,7 @@ SET ROLE hafbe_owner;
 /hafbe/block-numbers/headblock:
   get:
     tags:
-      - Blocks
+      - Block-numbers
     summary: HAF last synced block
     description: |
       Get last block-num in HAF database

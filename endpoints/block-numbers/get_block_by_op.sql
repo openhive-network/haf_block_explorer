@@ -4,8 +4,8 @@ SET ROLE hafbe_owner;
 /hafbe/block-numbers:
   get:
     tags:
-      - Blocks
-    summary: Get block numbers by filter
+      - Block-numbers
+    summary: Get block numbers by filters
     description: |
       List the block numbers that match given operation type filter,
       account name and time/block range in specified order
