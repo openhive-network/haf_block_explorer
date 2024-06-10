@@ -370,6 +370,11 @@ def dump_openapi_spec(sql_output):
 def generate_rewrite_rules(rewrite_rules_file):
     if 'paths' in collected_openapi_fragments:
         with open(rewrite_rules_file, 'w') as rewrite_rules_file:
+            # generate default rules that are always the same
+            rewrite_rules_file.write(f'# default endpoint for everything else\n')
+            rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
+            rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
+            rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
             for path, methods_for_path in collected_openapi_fragments['paths'].items():
                 for method, method_data in methods_for_path.items():
                     path_parts = path.split('/')
@@ -400,11 +405,6 @@ def generate_rewrite_rules(rewrite_rules_file):
                     rewrite_to = f'/rpc/{rpc_method_name}{query_string}'
                     rewrite_rules_file.write(f'# endpoint for {method} {path}\n')
                     rewrite_rules_file.write(f'rewrite {rewrite_from} {rewrite_to} break;\n\n')
-            # generate default rules that are always the same
-            rewrite_rules_file.write(f'# endpoint for openapi spec itself\n')
-            rewrite_rules_file.write(f'rewrite ^/$ / break;\n\n')
-            rewrite_rules_file.write(f'# default endpoint for everything else\n')
-            rewrite_rules_file.write(f'rewrite ^/(.*)$ /rpc/$1 break;\n\n')
 
 def process_sql_file(sql_input, sql_output):
     yaml_comment_path = []
