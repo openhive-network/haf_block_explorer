@@ -6,6 +6,9 @@ set -o pipefail
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit 1; pwd -P )"
 types_dir="backend/types/"
 endpoints_dir="endpoints/"
+input_file="rewrite_rules.conf"
+temp_output_file=$(mktemp)
+
 
 cat <<EOF
   Script used to search for all SQL scripts with openapi descriptions...
@@ -84,3 +87,29 @@ echo "$DEFAULT_ENDPOINTS"
 
 # shellcheck disable=SC2086
 python3 process_openapi.py $DEFAULT_OUTPUT $DEFAULT_TYPES $DEFAULT_ENDPOINTS
+
+# Function to reverse the lines
+reverse_lines() {
+    awk '
+    BEGIN {
+        RS = ""
+        FS = "\n"
+    }
+    {
+        for (i = 1; i <= NF; i++) {
+            if ($i ~ /^#/) {
+                comment = $i
+            } else if ($i ~ /^rewrite/) {
+                rewrite = $i
+            }
+        }
+        if (NR > 1) {
+            print ""
+        }
+        print comment
+        print rewrite
+    }' "$input_file" | tac
+}
+
+reverse_lines > "$temp_output_file"
+mv "$temp_output_file" "$input_file"
