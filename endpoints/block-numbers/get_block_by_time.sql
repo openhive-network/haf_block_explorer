@@ -4,7 +4,7 @@ SET ROLE hafbe_owner;
 /hafbe/block-numbers/by-creation-date/{timestamp}:
   get:
     tags:
-      - Blocks
+      - Block-numbers
     summary: Search for last created block for given date `need fixes`
     description: |
       Returns last created block number for given date
