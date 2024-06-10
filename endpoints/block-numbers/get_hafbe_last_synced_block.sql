@@ -15,7 +15,6 @@ SET ROLE hafbe_owner;
       REST call example
       * `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`
     operationId: hafbe_endpoints.get_hafbe_last_synced_block
-    parameters:
     responses:
       '200':
         description: |
