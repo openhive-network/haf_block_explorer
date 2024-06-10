@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/accounts/{account-name}/operation-types:
+/hafbe/accounts/{account-name}/operations/types:
   get:
     tags:
       - Accounts
@@ -15,9 +15,9 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_acc_op_types('initminer');`
 
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operation-types`
+      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/types`
       
-      * `GET https://{hafbe-host}/hafbe/accounts/initminer/operation-types`
+      * `GET https://{hafbe-host}/hafbe/accounts/initminer/operations/types`
     operationId: hafbe_endpoints.get_acc_op_types
     parameters:
       - in: path
