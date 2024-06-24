@@ -249,13 +249,11 @@ IF _account IS NULL THEN
       ls.op_pos,
       ls.op_type_id,
       ls.body,
-      hot.is_virtual,
-      ls.timestamp,
-      NOW() - ls.timestamp AS age
+      hot.is_virtual
     FROM (
       With operations_in_block AS 
       (
-      SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
+      SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.body, ov.op_type_id, ov.block_num
       FROM hive.operations_view ov
       WHERE
         ov.block_num = _block_num 
@@ -287,8 +285,9 @@ IF _account IS NULL THEN
     SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
     (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
     FROM (
-    SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
+    SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
     FROM operation_range opr
+    JOIN hive.blocks_view hb ON hb.num = opr.block_num
     ) filtered_operations
     ORDER BY filtered_operations.id, filtered_operations.trx_in_block, filtered_operations.op_pos;
 
@@ -304,9 +303,7 @@ ELSE
       ls.op_pos,
       ls.op_type_id,
       ls.body,
-      hot.is_virtual,
-      ls.timestamp,
-      NOW() - ls.timestamp AS age
+      hot.is_virtual
     FROM (
       WITH account_operations_in_block AS 
       (
@@ -318,7 +315,7 @@ ELSE
       ),
       operations_in_block AS 
       (
-        SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.timestamp, ov.body, ov.op_type_id, ov.block_num
+        SELECT ov.id, ov.trx_in_block, ov.op_pos, ov.body, ov.op_type_id, ov.block_num
         FROM hive.operations_view ov
         JOIN account_operations_in_block aoib ON aoib.operation_id = ov.id
       ),
@@ -349,8 +346,9 @@ ELSE
     SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
     (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
     FROM (
-    SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, opr.timestamp, opr.age
+    SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
     FROM operation_range opr
+    JOIN hive.blocks_view hb ON hb.num = opr.block_num
     ) filtered_operations
     ORDER BY filtered_operations.id, filtered_operations.trx_in_block, filtered_operations.op_pos;
 
