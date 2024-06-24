@@ -18,5 +18,5 @@ GRANT reptracker_user TO hafbe_owner;
 GRANT btracker_owner TO hafbe_owner;
 GRANT btracker_user TO hafbe_owner;
 GRANT hafbe_user TO hafbe_owner;
-GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
-GRANT ALL ON SCHEMA reptracker_app TO hafbe_owner;
+GRANT ALL ON SCHEMA hafbe_bal TO hafbe_owner;
+GRANT ALL ON SCHEMA hafbe_rep TO hafbe_owner;

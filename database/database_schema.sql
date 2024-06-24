@@ -199,7 +199,7 @@ BEGIN
 
 ------------------------------------------
 
-GRANT ALL ON SCHEMA btracker_app TO hafbe_owner;
+GRANT ALL ON SCHEMA hafbe_bal TO hafbe_owner;
 
 GRANT ALL ON SCHEMA btracker_endpoints TO hafbe_owner;
 

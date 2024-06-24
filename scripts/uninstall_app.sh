@@ -24,6 +24,8 @@ POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
 CLEAN_BTRACKER=1
 CLEAN_REPTRACKER=1
+BTRACKER_SCHEMA=hafbe_bal
+REPTRACKER_SCHEMA=hafbe_rep
 
 while [ $# -gt 0 ]; do
   case "$1" in

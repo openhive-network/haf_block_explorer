@@ -14,17 +14,17 @@ GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_views TO hafbe_user;
 GRANT USAGE ON SCHEMA hafbe_types TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_types TO hafbe_user;
 
-GRANT USAGE ON SCHEMA btracker_app TO hafbe_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA btracker_app TO hafbe_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_app TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_bal TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_bal TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_bal TO hafbe_user;
 
 GRANT USAGE ON SCHEMA btracker_endpoints TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA btracker_endpoints TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_endpoints TO hafbe_user;
 
-GRANT USAGE ON SCHEMA reptracker_app TO hafbe_user;
-GRANT SELECT ON ALL TABLES IN SCHEMA reptracker_app TO hafbe_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA reptracker_app TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_rep TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_rep TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_rep TO hafbe_user;
 
 GRANT USAGE ON SCHEMA reptracker_endpoints TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA reptracker_endpoints TO hafbe_user;

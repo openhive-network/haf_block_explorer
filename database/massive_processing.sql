@@ -44,15 +44,15 @@ BEGIN
 
     SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM btracker_block_range_data_a(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_a') INTO _time;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_bal_a') INTO _time;
 
     SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM btracker_block_range_data_b(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'btracker_app_b') INTO _time;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_bal_b') INTO _time;
 
     SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM reptracker_block_range_data(b, _last_block);
-    SELECT hafbe_backend.get_sync_time(_time, 'reptracker_app') INTO _time;
+    SELECT hafbe_backend.get_sync_time(_time, 'hafbe_rep') INTO _time;
 
     SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
     PERFORM hafbe_app.process_block_range_data_a(b, _last_block);

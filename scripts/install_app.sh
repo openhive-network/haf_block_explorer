@@ -6,8 +6,8 @@ POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 BLOCKSEARCH_INDEXES=false
-BTRACKER_SCHEMA=btracker_app
-REPTRACKER_SCHEMA=reptracker_app
+BTRACKER_SCHEMA=hafbe_bal
+REPTRACKER_SCHEMA=hafbe_rep
 
 
 print_help () {
@@ -166,7 +166,7 @@ create_haf_indexes() {
     # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
     # want to add our own indexes, which would slow down massive sync, so we just wait.
     echo "Waiting for HAF to be out of massive sync"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'btracker_app', 'reptracker_app'], interval '3 days');"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal', 'hafbe_rep'], interval '3 days');"
 
     echo "Creating indexes, this might take a while."
     # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time
