@@ -211,7 +211,7 @@ RETURN (
       ov.timestamp,
       NOW() - ov.timestamp,
   	  FALSE)
-    FROM hive.operations_view ov
+    FROM hive.operations_view_extended ov
     JOIN hive.operation_types hot ON hot.id = ov.op_type_id
     LEFT JOIN hive.transactions_view htv ON htv.block_num = ov.block_num AND htv.trx_in_block = ov.trx_in_block
 	  WHERE ov.id = _operation_id
@@ -358,9 +358,7 @@ WITH operation_range AS MATERIALIZED (
     ov.op_pos,
     ls.op_type_id,
     ov.body,
-    hot.is_virtual,
-    ov.timestamp,
-    NOW() - ov.timestamp AS age
+    hot.is_virtual
   FROM (
   WITH op_filter AS MATERIALIZED (
       SELECT ARRAY_AGG(ot.id) as op_id FROM hive.operation_types ot WHERE (CASE WHEN _filter IS NOT NULL THEN ot.id = ANY(_filter) ELSE TRUE END)
@@ -380,8 +378,9 @@ WITH operation_range AS MATERIALIZED (
 -- filter too long operation bodies 
   SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id, (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
   FROM (
-  SELECT hafbe_backend.operation_body_filter(ov.body, ov.id, _body_limit) as composite, ov.id, ov.block_num, ov.trx_in_block, ov.trx_hash, ov.op_pos, ov.op_type_id, ov.is_virtual, ov.timestamp, ov.age
+  SELECT hafbe_backend.operation_body_filter(ov.body, ov.id, _body_limit) as composite, ov.id, ov.block_num, ov.trx_in_block, ov.trx_hash, ov.op_pos, ov.op_type_id, ov.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
   FROM operation_range ov 
+  JOIN hive.blocks_view hb ON hb.num = ov.block_num
   ) filtered_operations
   ORDER BY filtered_operations.id DESC;
 

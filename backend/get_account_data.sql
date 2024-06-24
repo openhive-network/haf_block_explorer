@@ -157,7 +157,7 @@ $$
 BEGIN
 RETURN ov.timestamp 
 FROM hive.account_operations_view aov
-JOIN hive.operations_view ov ON ov.id = aov.operation_id
+JOIN hive.operations_view_extended ov ON ov.id = aov.operation_id
 WHERE aov.op_type_id = 72 
 AND aov.account_id = _account 
 AND ov.body_binary::JSONB->'value'->>'voter'= (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account)
