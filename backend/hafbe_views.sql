@@ -70,8 +70,8 @@ SELECT
   (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
   rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
-JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id;
+JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id;
 
 ------
 
@@ -86,7 +86,7 @@ FROM (
   FROM hafbe_app.current_witness_votes cwv
   LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = cwv.voter_id
 ) cwv_cap
-LEFT JOIN btracker_app.current_account_balances cab ON cab.account = cwv_cap.voter_id AND cab.nai = 37;
+LEFT JOIN current_account_balances cab ON cab.account = cwv_cap.voter_id AND cab.nai = 37;
 
 ------
 
@@ -107,8 +107,8 @@ SELECT
   SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
   rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
-JOIN btracker_app.current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN btracker_app.account_withdraws dv ON dv.account = rapv.account_id
+JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id, rapv.proxy_level;
 
 ------
@@ -133,7 +133,7 @@ SELECT
   wvvv.timestamp
 FROM hafbe_views.witness_voters_vests_view wvvv
 LEFT JOIN hafbe_views.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = wvvv.voter_id
-LEFT JOIN btracker_app.account_withdraws dv ON dv.account = wvvv.voter_id;
+LEFT JOIN account_withdraws dv ON dv.account = wvvv.voter_id;
 
 ------
 
@@ -147,7 +147,7 @@ FROM hafbe_app.witness_votes_history wvh
 
 JOIN (
   SELECT balance, account, nai
-  FROM btracker_app.current_account_balances
+  FROM current_account_balances
 ) cab ON cab.account = wvh.voter_id AND cab.nai = 37
 
 LEFT JOIN LATERAL (
@@ -168,7 +168,7 @@ FROM hafbe_app.account_proxies_history aph
 
 JOIN (
   SELECT balance, account, nai
-  FROM btracker_app.current_account_balances 
+  FROM current_account_balances 
 ) cab ON cab.account = aph.account_id AND cab.nai = 37
 
 LEFT JOIN LATERAL (
@@ -246,7 +246,7 @@ CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
     block_num,
     (time_json->>'btracker_app_a')::NUMERIC AS btracker_app_a,
   	(time_json->>'btracker_app_b')::NUMERIC AS btracker_app_b,
-    (time_json->>'reptracker_app_a')::NUMERIC AS reptracker_app_b,
+    (time_json->>'hafbe_rep_a')::NUMERIC AS hafbe_rep_b,
     (time_json->>'hafbe_app_a')::NUMERIC AS hafbe_app_a,
   	(time_json->>'hafbe_app_b')::NUMERIC AS hafbe_app_b,
     (time_json->>'hafbe_app_c')::NUMERIC AS hafbe_app_c,
@@ -264,9 +264,9 @@ WITH select_range AS (
     COALESCE(cab.balance, 0) - COALESCE(dv.delayed_vests, 0) AS balance,
     COALESCE(rpav.proxied_vests, 0) AS proxied_vests
   FROM hafbe_app.witness_votes_history wvh
-  LEFT JOIN btracker_app.current_account_balances cab
+  LEFT JOIN current_account_balances cab
     ON cab.account = wvh.voter_id AND cab.nai = 37
-  LEFT JOIN btracker_app.account_withdraws dv
+  LEFT JOIN account_withdraws dv
   	ON dv.account = wvh.voter_id
   LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
   ON rpav.proxy_id = wvh.voter_id

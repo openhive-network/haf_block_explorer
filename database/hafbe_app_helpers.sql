@@ -117,9 +117,9 @@ BEGIN
       wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
       ((COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0)))::BIGINT AS account_vests
     FROM hafbe_app.witness_votes_history wvh
-    LEFT JOIN btracker_app.current_account_balances av
+    LEFT JOIN current_account_balances av
       ON av.account = wvh.voter_id AND av.nai = 37
-    LEFT JOIN btracker_app.account_withdraws dv
+    LEFT JOIN account_withdraws dv
       ON dv.account = wvh.voter_id
     LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
     ON rpav.proxy_id = wvh.voter_id;

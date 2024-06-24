@@ -42,6 +42,12 @@ while [ $# -gt 0 ]; do
     --skip-reptracker)
         CLEAN_REPTRACKER=0
         ;;
+    --btracker-schema=*)
+        BTRACKER_SCHEMA="${1#*=}"
+        ;;
+    --reptracker-schema=*)
+        REPTRACKER_SCHEMA="${1#*=}"
+        ;;
     --help|-h|-?)
         print_help
         exit 0
@@ -83,11 +89,11 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
 
     if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
-      "${SCRIPT_DIR}/../submodules/btracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}"
+      "${SCRIPT_DIR}/../submodules/btracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}" --schema="${BTRACKER_SCHEMA}"
     fi
 
     if [ "${CLEAN_REPTRACKER}" -eq 1 ]; then
-      "${SCRIPT_DIR}/../submodules/reptracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}"
+      "${SCRIPT_DIR}/../submodules/reptracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}" --schema="${REPTRACKER_SCHEMA}"
     fi
 }
 
