@@ -13,7 +13,7 @@ SELECT
   bia.name AS witness,
   (body)->'value' AS value,
   body_binary,
-  block_num, op_type_id, timestamp, id AS operation_id
+  block_num, op_type_id, id AS operation_id
 FROM hafbe_app.operations_view ov
 
 JOIN LATERAL (

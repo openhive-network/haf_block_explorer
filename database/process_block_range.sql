@@ -153,10 +153,16 @@ BEGIN
   WHERE cw.witness_id = ops.witness_id;
   
   -- parse witness exchange_rate
-  WITH select_ops_with_exchange_rate AS (
-    SELECT witness, value, op_type_id, operation_id, timestamp
+  WITH select_ops_with_exchange_rate_without_timestamp AS (
+    SELECT witness, value, op_type_id, operation_id, block_num
     FROM hafbe_views.witness_prop_op_view
     WHERE op_type_id = ANY('{42,7}') AND block_num BETWEEN _from AND _to
+  ),
+
+  select_ops_with_exchange_rate AS (
+    SELECT select_ops.witness, select_ops.value, select_ops.op_type_id, select_ops.operation_id, hb.created_at timestamp
+    FROM select_ops_with_exchange_rate_without_timestamp select_ops
+    JOIN hive.blocks_view hb ON hb.num = select_ops.block_num
   ),
 
   select_exchange_rate_from_set_witness_properties AS (
