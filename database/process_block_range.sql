@@ -9,18 +9,28 @@ DECLARE
 BEGIN
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
-WITH proxy_ops AS MATERIALIZED 
+WITH proxy_ops_without_timestamp AS MATERIALIZED 
 (
   SELECT 
     ov.body AS body,
     ov.id,
     ov.block_num,
-    ov.op_type_id as op_type,
-    ov.timestamp
+    ov.op_type_id as op_type
   FROM hafbe_app.operations_view ov
   WHERE 
     ov.op_type_id IN (12,13,91,92,75)
     AND ov.block_num BETWEEN _from AND _to
+),
+proxy_ops AS MATERIALIZED 
+(
+  SELECT 
+    proxy_ops_w_t.body,
+    proxy_ops_w_t.id,
+    proxy_ops_w_t.block_num,
+    proxy_ops_w_t.op_type,
+    hb.created_at timestamp
+  FROM proxy_ops_without_timestamp proxy_ops_w_t
+  JOIN hive.blocks_view hb ON hb.num = proxy_ops_w_t.block_num
 ),
 balance_change AS MATERIALIZED 
 (
