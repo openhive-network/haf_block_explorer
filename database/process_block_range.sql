@@ -398,7 +398,7 @@ BEGIN
 
 --SET ENABLE_NESTLOOP TO FALSE; --TODO: Temporary patch, remove later!!!!!!!!!
 
-WITH comment_operation AS (
+WITH comment_operation_without_timestamp AS (
 
 select ov.* from (
 	SELECT 
@@ -406,8 +406,7 @@ select ov.* from (
   ds.id,
   ds.id AS source_op,
   ds.block_num,
-	ds.block_num AS source_op_block,
-  ds.timestamp AS _timestamp,
+  ds.block_num AS source_op_block,
   ds.op_type_id,
   ds.op_type_id AS op_type
 FROM hafbe_app.operations_view ds
@@ -470,6 +469,12 @@ WHERE
   OR (ov.op_type_id = 14 AND po_subquery.source_op IS NOT NULL)
   OR (ov.op_type_id = 30 AND pto_subquery.source_op IS NOT NULL))
   AND ov.block_num BETWEEN _from AND _to
+),
+comment_operation AS
+(
+  SELECT co_w_t.*, hb.created_at _timestamp
+  FROM comment_operation_without_timestamp co_w_t
+  JOIN hive.blocks_view hb ON hb.num = co_w_t.source_op_block
 ),
 balance_change AS MATERIALIZED 
 (
