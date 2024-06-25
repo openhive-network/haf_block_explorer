@@ -183,15 +183,20 @@ GROUP BY aph.account_id;
 -- used in hafbe_app.process_block_range_data_c
 CREATE OR REPLACE VIEW hafbe_views.votes_view
 AS
-  SELECT
-    (ov.body)->'value'->>'voter' AS voter,
-    ov.block_num,
-    ov.id,
-    ov.timestamp
-  FROM
-    hafbe_app.operations_view ov
-  WHERE 
-    ov.op_type_id = 72;
+  WITH select_operations AS
+  (
+    SELECT
+      (ov.body)->'value'->>'voter' AS voter,
+      ov.block_num,
+      ov.id
+    FROM
+      hafbe_app.operations_view ov
+    WHERE 
+      ov.op_type_id = 72
+  )
+  SELECT so.voter, so.block_num, so.id, hb.created_at timestamp
+  FROM select_operations so
+  JOIN hive.blocks_view hb ON hb.num = so.block_num;
 
 ------
 
