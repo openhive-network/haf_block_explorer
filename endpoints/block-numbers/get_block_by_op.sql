@@ -25,14 +25,11 @@ SET ROLE hafbe_owner;
         name: operation-types
         required: false
         schema:
-          type: array
-          items:
-            type: integer
-          x-sql-datatype: INT[]
+          type: string
           default: NULL
         description: |
           List of operations: if the parameter is NULL, all operations will be included
-          sql example: `ARRAY[18]`
+          sql example: `'18,12'`
       - in: query
         name: account-name
         required: false
@@ -54,14 +51,11 @@ SET ROLE hafbe_owner;
         name: key-content
         required: false
         schema:
-          type: array
-          items:
-            type: string
-          x-sql-datatype: TEXT[]
+          type: string
           default: NULL
         description: |
           A parameter specifying the desired value related to the set-of-keys
-          sql example: `ARRAY['follow']`
+          sql example: `'follow'`
       - in: query
         name: direction
         required: false
@@ -134,10 +128,10 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_by_op;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
-    "operation-types" INT[] = NULL,
+    "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
     "set-of-keys" JSON = NULL,
-    "key-content" TEXT[] = NULL,
+    "key-content" TEXT = NULL,
     "direction" hafbe_types.sort_direction = 'desc',
     "from-block" INT = 0,
     "to-block" INT = 2147483647,
@@ -153,25 +147,28 @@ SET join_collapse_limit = 16
 SET plan_cache_mode = force_custom_plan
 AS
 $$
+DECLARE
+  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
+  _key_content TEXT[] := (SELECT string_to_array("key-content", ',')::TEXT[]);
 BEGIN
+IF _key_content IS NOT NULL THEN
 IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
   RAISE EXCEPTION 'Blocksearch indexes are not installed';
 END IF;
 
-IF "key-content" IS NOT NULL THEN
-  IF array_length("operation-types", 1) != 1 THEN 
+  IF array_length(_operation_types, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
   FOR i IN 0 .. json_array_length("set-of-keys")-1 LOOP
-	  IF NOT ARRAY(SELECT json_array_elements_text("set-of-keys"->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest("operation-types")))) THEN
+	  IF NOT ARRAY(SELECT json_array_elements_text("set-of-keys"->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
 	  RAISE EXCEPTION 'Invalid key %', "set-of-keys"->i;
     END IF;
   END LOOP;
 END IF;
 
-IF "operation-types" IS NULL THEN
-  SELECT array_agg(id) FROM hive.operation_types INTO "operation-types";
+IF _operation_types IS NULL THEN
+  SELECT array_agg(id) FROM hive.operation_types INTO _operation_types;
 END IF;
 
 IF "start-date" IS NOT NULL THEN
@@ -187,17 +184,17 @@ ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
-IF array_length("operation-types", 1) = 1 THEN
+IF array_length(_operation_types, 1) = 1 THEN
   RETURN QUERY 
       SELECT * FROM hafbe_backend.get_block_by_single_op(
-        "operation-types"[1], "account-name", "direction", "from-block", "to-block", "limit", "key-content", "set-of-keys"
+        _operation_types[1], "account-name", "direction", "from-block", "to-block", "limit", _key_content, "set-of-keys"
       )
   ;
 
 ELSE
   RETURN QUERY
       SELECT * FROM hafbe_backend.get_block_by_ops_group_by_block_num(
-        "operation-types", "account-name", "direction", "from-block", "to-block", "limit"
+        _operation_types, "account-name", "direction", "from-block", "to-block", "limit"
       )
   ;
 

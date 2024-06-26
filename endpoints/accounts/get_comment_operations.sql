@@ -31,14 +31,11 @@ SET ROLE hafbe_owner;
         name: operation-types
         required: false
         schema:
-          type: array
-          items:
-            type: integer
-          x-sql-datatype: INT[]
-          x-sql-default-value: "ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]"
+          type: string
+          x-sql-default-value: "'0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'"
         description: |
           List of operations: if the parameter is NULL, all operations will be included
-          sql example: `ARRAY[18]`
+          sql example: `'18,12'`
       - in: query
         name: page
         required: false
@@ -149,7 +146,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_operations;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     "account-name" TEXT,
-    "operation-types" INT[] = ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73],
+    "operation-types" TEXT = '0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73',
     "page" INT = 1,
     "permlink" TEXT = NULL,
     "page-size" INT = 100,
@@ -171,12 +168,13 @@ AS
 $$
 DECLARE
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
+  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
 BEGIN
 IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
   RAISE EXCEPTION 'Commentsearch indexes are not installed';
 END IF;
 
-IF NOT "operation-types" <@ allowed_ids THEN
+IF NOT _operation_types <@ allowed_ids THEN
     RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
 END IF;
 
@@ -195,7 +193,7 @@ END IF;
 
 RETURN (
   WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_comment_operations_count("account-name", "permlink", "operation-types", "from-block", "to-block")
+    SELECT * FROM hafbe_backend.get_comment_operations_count("account-name", "permlink", _operation_types, "from-block", "to-block")
   )
 
   SELECT json_build_object(
@@ -203,7 +201,7 @@ RETURN (
     'total_pages', (SELECT * FROM ops_count)/100,
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
-      SELECT * FROM hafbe_backend.get_comment_operations("account-name", "permlink", "page", "page-size", "operation-types", "from-block", "to-block", "data-size-limit")
+      SELECT * FROM hafbe_backend.get_comment_operations("account-name", "permlink", "page", "page-size", _operation_types, "from-block", "to-block", "data-size-limit")
     ) row)
   ));
 
