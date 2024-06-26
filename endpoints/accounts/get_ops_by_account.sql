@@ -31,14 +31,11 @@ SET ROLE hafbe_owner;
         name: operation-types
         required: false
         schema:
-          type: array
-          items:
-            type: integer
-          x-sql-datatype: INT[]
+          type: string
           default: NULL
         description: |
           List of operations: if the parameter is empty, all operations will be included
-          sql example: `ARRAY[18]`
+          sql example: `'18,12'`
       - in: query
         name: page
         required: false
@@ -170,7 +167,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_ops_by_account;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_account(
     "account-name" TEXT,
-    "operation-types" INT[] = NULL,
+    "operation-types" TEXT = NULL,
     "page" INT = NULL,
     "page-size" INT = 100,
     "data-size-limit" INT = 200000,
@@ -193,6 +190,7 @@ $$
 DECLARE 
   _ops_count BIGINT;
   _calculate_total_pages INT; 
+  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
 BEGIN
 IF "start-date" IS NOT NULL THEN
   "from-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= "start-date" ORDER BY created_at ASC LIMIT 1);
@@ -201,7 +199,7 @@ IF "end-date" IS NOT NULL THEN
   "to-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < "end-date" ORDER BY created_at DESC LIMIT 1);
 END IF;
 
-SELECT hafbe_backend.get_account_operations_count("operation-types", "account-name", "from-block", "to-block") INTO _ops_count;
+SELECT hafbe_backend.get_account_operations_count(_operation_types, "account-name", "from-block", "to-block") INTO _ops_count;
 
 SELECT (CASE WHEN (_ops_count % "page-size") = 0 THEN 
     _ops_count/"page-size" ELSE ((_ops_count/"page-size") + 1) END)::INT INTO _calculate_total_pages;
@@ -231,7 +229,7 @@ RETURN (
 -- ... page 7, 15 - 7 + 1 =  9 (internal 9th page)
       (CASE WHEN "page" IS NULL THEN 1 ELSE ((_calculate_total_pages - "page") + 1) END)::INT,
       "page-size",
-      "operation-types",
+      _operation_types,
       "from-block",
       "to-block",
       "data-size-limit",

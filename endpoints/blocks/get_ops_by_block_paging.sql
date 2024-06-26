@@ -11,14 +11,14 @@ SET ROLE hafbe_owner;
       The page size determines the number of operations per page
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_op_count_in_block(10000);`
+      * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(10000);`
 
-      * `SELECT * FROM hafbe_endpoints.get_op_count_in_block(43000,ARRAY[0,1]);`
+      * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(43000,ARRAY[0,1]);`
       
       REST call example
       * `GET https://{hafbe-host}/hafbe/blocks/10000/operations`
 
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types={0,1}`
+      * `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types=0,1`
     operationId: hafbe_endpoints.get_ops_by_block_paging
     parameters:
       - in: path
@@ -31,14 +31,11 @@ SET ROLE hafbe_owner;
         name: operation-types
         required: false
         schema:
-          type: array
-          items:
-            type: integer
-          x-sql-datatype: INT[]
+          type: string
           default: NULL
         description: |
           List of operations: if the parameter is empty, all operations will be included
-          sql example: `ARRAY[18]`
+          sql example: `'18,12'`
       - in: query
         name: account-name
         required: false
@@ -74,14 +71,11 @@ SET ROLE hafbe_owner;
         name: key-content
         required: false
         schema:
-          type: array
-          items:
-            type: string
-          x-sql-datatype: TEXT[]
+          type: string
           default: NULL
         description: |
           A parameter specifying the desired value related to the set-of-keys
-          sql example: `ARRAY['follow']`
+          sql example: `'follow'`
       - in: query
         name: direction
         required: false
@@ -152,12 +146,12 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_ops_by_block_paging;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     "block-num" INT,
-    "operation-types" INT[] = NULL,
+    "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
     "set-of-keys" JSON = NULL,
-    "key-content" TEXT[] = NULL,
+    "key-content" TEXT = NULL,
     "direction" hafbe_types.sort_direction = 'desc',
     "data-size-limit" INT = 200000
 )
@@ -169,15 +163,17 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
+DECLARE
+  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
+  _key_content TEXT[] := (SELECT string_to_array("key-content", ',')::TEXT[]);
 BEGIN
-
-IF "key-content" IS NOT NULL THEN
-  IF array_length("operation-types", 1) != 1 THEN 
+IF _key_content IS NOT NULL THEN
+  IF array_length(_operation_types, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
   FOR i IN 0 .. json_array_length("set-of-keys")-1 LOOP
-	IF NOT ARRAY(SELECT json_array_elements_text("set-of-keys"->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest("operation-types")))) THEN
+	IF NOT ARRAY(SELECT json_array_elements_text("set-of-keys"->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
 	  RAISE EXCEPTION 'Invalid key %', "set-of-keys"->i;
     END IF;
   END LOOP;
@@ -191,7 +187,7 @@ END IF;
 
 RETURN (
   WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_ops_by_block_count("block-num", "operation-types", "account-name", "key-content", "set-of-keys")
+    SELECT * FROM hafbe_backend.get_ops_by_block_count("block-num", _operation_types, "account-name", _key_content, "set-of-keys")
   ),
   calculate_total_pages AS MATERIALIZED (
     SELECT 
@@ -210,11 +206,11 @@ RETURN (
       "block-num", 
       "page",
       "page-size",
-      "operation-types",
+      _operation_types,
       "direction",
       "data-size-limit",
       "account-name",
-      "key-content",
+      _key_content,
       "set-of-keys"
       )
     ) row)

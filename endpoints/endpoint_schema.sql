@@ -1461,14 +1461,10 @@ declare
             "name": "operation-types",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "integer"
-              },
-              "x-sql-datatype": "INT[]",
+              "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `ARRAY[18]`\n"
+            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -1689,14 +1685,10 @@ declare
             "name": "operation-types",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "integer"
-              },
-              "x-sql-datatype": "INT[]",
-              "x-sql-default-value": "ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]"
+              "type": "string",
+              "x-sql-default-value": "'0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'"
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `ARRAY[18]`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -2040,14 +2032,10 @@ declare
             "name": "operation-types",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "integer"
-              },
-              "x-sql-datatype": "INT[]",
+              "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `ARRAY[18]`\n"
+            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -2095,14 +2083,10 @@ declare
             "name": "key-content",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "x-sql-datatype": "TEXT[]",
+              "type": "string",
               "default": null
             },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `ARRAY['follow']`\n"
+            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `'follow'`\n"
           },
           {
             "in": "query",
@@ -2286,14 +2270,10 @@ declare
             "name": "operation-types",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "integer"
-              },
-              "x-sql-datatype": "INT[]",
+              "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `ARRAY[18]`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -2321,14 +2301,10 @@ declare
             "name": "key-content",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "x-sql-datatype": "TEXT[]",
+              "type": "string",
               "default": null
             },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `ARRAY['follow']`\n"
+            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `'follow'`\n"
           },
           {
             "in": "query",
