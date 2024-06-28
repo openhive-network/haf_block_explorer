@@ -11,7 +11,7 @@ hafbe_types.array_of_text_array:
  */
 
 /** openapi:paths
-/hafbe/operation-keys/{operation-type}:
+/operation-keys/{operation-type}:
   get:
     tags:
       - Operations

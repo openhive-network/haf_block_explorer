@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/blocks/{block-num}/operations/count:
+/blocks/{block-num}/operations/count:
   get:
     tags:
       - Blocks

@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/input-type/{input-value}:
+/input-type/{input-value}:
   get:
     tags:
       - Other

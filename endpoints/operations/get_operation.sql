@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/operations/{operation-id}:
+/operations/{operation-id}:
   get:
     tags:
       - Operations
