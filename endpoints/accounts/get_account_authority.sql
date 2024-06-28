@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/accounts/{account-name}/authority:
+/accounts/{account-name}/authority:
   get:
     tags:
       - Accounts

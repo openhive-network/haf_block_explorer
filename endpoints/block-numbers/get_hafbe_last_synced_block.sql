@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/block-numbers/headblock/hafbe:
+/block-numbers/headblock/hafbe:
   get:
     tags:
       - Block-numbers

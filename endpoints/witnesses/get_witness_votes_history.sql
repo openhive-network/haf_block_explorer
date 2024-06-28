@@ -2,7 +2,7 @@ SET ROLE hafbe_owner;
 
 -- Witness page endpoint
 /** openapi:paths
-/hafbe/witnesses/{account-name}/votes/history:
+/witnesses/{account-name}/votes/history:
   get:
     tags:
       - Witnesses

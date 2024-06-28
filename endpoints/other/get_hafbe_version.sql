@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/hafbe-version:
+/hafbe-version:
   get:
     tags:
       - Other

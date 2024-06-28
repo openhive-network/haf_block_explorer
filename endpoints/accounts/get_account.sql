@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/accounts/{account-name}:
+/accounts/{account-name}:
   get:
     tags:
       - Accounts
@@ -168,13 +168,13 @@ RETURN (
     EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
   )
   FROM 
-    btracker_endpoints.get_account_balances(_account_id)      _result_balance,
-    btracker_endpoints.get_account_withdraws(_account_id)     _result_withdraws,
-    btracker_endpoints.get_account_delegations(_account_id)   _result_vest_balance,
-    btracker_endpoints.get_account_rewards(_account_id)       _result_rewards,
-    btracker_endpoints.get_account_savings(_account_id)       _result_savings,
-    btracker_endpoints.get_account_info_rewards(_account_id)  _result_curation_posting,
-    reptracker_endpoints.get_account_reputation(_account_id)  _result_reputation,
+    btracker_endpoints.get_account_balances("account-name")      _result_balance,
+    btracker_endpoints.get_account_withdraws("account-name")     _result_withdraws,
+    btracker_endpoints.get_account_delegations("account-name")   _result_vest_balance,
+    btracker_endpoints.get_account_rewards("account-name")       _result_rewards,
+    btracker_endpoints.get_account_savings("account-name")       _result_savings,
+    btracker_endpoints.get_account_info_rewards("account-name")  _result_curation_posting,
+    reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
     hafbe_backend.get_json_metadata(_account_id)              _result_json_metadata,
     hafbe_backend.get_account_parameters(_account_id)         _result_parameters,
     hafbe_backend.get_account_witness_votes(_account_id)      _result_votes,

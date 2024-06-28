@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe/witnesses/{account-name}/voters/count:
+/witnesses/{account-name}/voters/count:
   get:
     tags:
       - Witnesses

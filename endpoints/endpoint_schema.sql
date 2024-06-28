@@ -31,7 +31,7 @@ tags:
   - name: Other
     description: General API informations
 servers:
-  - url: /
+  - url: /hafbe
  */
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
@@ -890,11 +890,11 @@ declare
   ],
   "servers": [
     {
-      "url": "/"
+      "url": "/hafbe"
     }
   ],
   "paths": {
-    "/hafbe/witnesses": {
+    "/witnesses": {
       "get": {
         "tags": [
           "Witnesses"
@@ -998,7 +998,7 @@ declare
         }
       }
     },
-    "/hafbe/witnesses/{account-name}": {
+    "/witnesses/{account-name}": {
       "get": {
         "tags": [
           "Witnesses"
@@ -1053,7 +1053,7 @@ declare
         }
       }
     },
-    "/hafbe/witnesses/{account-name}/voters": {
+    "/witnesses/{account-name}/voters": {
       "get": {
         "tags": [
           "Witnesses"
@@ -1141,7 +1141,7 @@ declare
         }
       }
     },
-    "/hafbe/witnesses/{account-name}/voters/count": {
+    "/witnesses/{account-name}/voters/count": {
       "get": {
         "tags": [
           "Witnesses"
@@ -1178,7 +1178,7 @@ declare
         }
       }
     },
-    "/hafbe/witnesses/{account-name}/votes/history": {
+    "/witnesses/{account-name}/votes/history": {
       "get": {
         "tags": [
           "Witnesses"
@@ -1289,7 +1289,7 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}": {
+    "/accounts/{account-name}": {
       "get": {
         "tags": [
           "Accounts"
@@ -1366,7 +1366,7 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/authority": {
+    "/accounts/{account-name}/authority": {
       "get": {
         "tags": [
           "Accounts"
@@ -1438,7 +1438,7 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/operations": {
+    "/accounts/{account-name}/operations": {
       "get": {
         "tags": [
           "Accounts"
@@ -1614,7 +1614,7 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/operations/types": {
+    "/accounts/{account-name}/operations/types": {
       "get": {
         "tags": [
           "Accounts"
@@ -1662,7 +1662,7 @@ declare
         }
       }
     },
-    "/hafbe/accounts/{account-name}/operations/comments": {
+    "/accounts/{account-name}/operations/comments": {
       "get": {
         "tags": [
           "Accounts"
@@ -1822,7 +1822,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks": {
+    "/blocks": {
       "get": {
         "tags": [
           "Blocks"
@@ -1901,7 +1901,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}": {
+    "/blocks/{block-num}": {
       "get": {
         "tags": [
           "Blocks"
@@ -1959,7 +1959,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/raw-details": {
+    "/blocks/{block-num}/raw-details": {
       "get": {
         "tags": [
           "Blocks"
@@ -2009,7 +2009,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/operations": {
+    "/blocks/{block-num}/operations": {
       "get": {
         "tags": [
           "Blocks"
@@ -2158,7 +2158,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/operations/count": {
+    "/blocks/{block-num}/operations/count": {
       "get": {
         "tags": [
           "Blocks"
@@ -2208,7 +2208,7 @@ declare
         }
       }
     },
-    "/hafbe/blocks/{block-num}/operations/types": {
+    "/blocks/{block-num}/operations/types": {
       "get": {
         "tags": [
           "Blocks"
@@ -2256,7 +2256,7 @@ declare
         }
       }
     },
-    "/hafbe/block-numbers": {
+    "/block-numbers": {
       "get": {
         "tags": [
           "Block-numbers"
@@ -2418,7 +2418,7 @@ declare
         }
       }
     },
-    "/hafbe/block-numbers/headblock": {
+    "/block-numbers/headblock": {
       "get": {
         "tags": [
           "Block-numbers"
@@ -2444,7 +2444,7 @@ declare
         }
       }
     },
-    "/hafbe/block-numbers/headblock/hafbe": {
+    "/block-numbers/headblock/hafbe": {
       "get": {
         "tags": [
           "Block-numbers"
@@ -2470,7 +2470,7 @@ declare
         }
       }
     },
-    "/hafbe/block-numbers/by-creation-date/{timestamp}": {
+    "/block-numbers/by-creation-date/{timestamp}": {
       "get": {
         "tags": [
           "Block-numbers"
@@ -2505,7 +2505,7 @@ declare
         }
       }
     },
-    "/hafbe/operation-types": {
+    "/operation-types": {
       "get": {
         "tags": [
           "Operations"
@@ -2542,7 +2542,7 @@ declare
         }
       }
     },
-    "/hafbe/operation-types/{input-value}": {
+    "/operation-types/{input-value}": {
       "get": {
         "tags": [
           "Operations"
@@ -2590,7 +2590,7 @@ declare
         }
       }
     },
-    "/hafbe/operation-keys/{operation-type}": {
+    "/operation-keys/{operation-type}": {
       "get": {
         "tags": [
           "Operations"
@@ -2656,7 +2656,7 @@ declare
         }
       }
     },
-    "/hafbe/operations/{operation-id}": {
+    "/operations/{operation-id}": {
       "get": {
         "tags": [
           "Operations"
@@ -2724,7 +2724,7 @@ declare
         }
       }
     },
-    "/hafbe/transactions/{transaction-id}": {
+    "/transactions/{transaction-id}": {
       "get": {
         "tags": [
           "Transactions"
@@ -2791,7 +2791,7 @@ declare
         }
       }
     },
-    "/hafbe/hafbe-version": {
+    "/hafbe-version": {
       "get": {
         "tags": [
           "Other"
@@ -2817,7 +2817,7 @@ declare
         }
       }
     },
-    "/hafbe/input-type/{input-value}": {
+    "/input-type/{input-value}": {
       "get": {
         "tags": [
           "Other"
