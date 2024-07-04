@@ -39,13 +39,12 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-  RETURN COALESCE(
-    (
+  RETURN EXISTS(
       SELECT true FROM pg_index WHERE indexrelid = 
       (
         SELECT oid FROM pg_class WHERE relname = 'account_proxies_history_account_id'
       )
-    ), false);
+    );
 END
 $$;
 
