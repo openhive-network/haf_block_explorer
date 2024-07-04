@@ -12,13 +12,12 @@ $$
 BEGIN
   IF hive.get_current_stage_name(_context_name) = 'MASSIVE_PROCESSING' THEN
     CALL hafbe_app.massive_processing(_block_range.first_block, _block_range.last_block, _logs);
-  ELSE
-    IF NOT hafbe_app.isIndexesCreated() THEN
-      PERFORM hafbe_indexes.create_hafbe_indexes();
-      PERFORM hafbe_app.updateIndexesCreated(true);
-    END IF;
-    CALL hafbe_app.single_processing(_block_range.first_block, _logs);
+    RETURN;
   END IF;
+  IF NOT hafbe_app.isIndexesCreated() THEN
+    PERFORM hafbe_indexes.create_hafbe_indexes();
+  END IF;
+  CALL hafbe_app.single_processing(_block_range.first_block, _logs);
 END
 $$;
 

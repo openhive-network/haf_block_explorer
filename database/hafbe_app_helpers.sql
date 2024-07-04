@@ -33,23 +33,19 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_app.updateIndexesCreated(_is_indexes_created BOOLEAN)
-RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
-AS
-$$
-BEGIN
-  UPDATE hafbe_app.app_status SET is_indexes_created = _is_indexes_created;
-END
-$$;
-
 CREATE OR REPLACE FUNCTION hafbe_app.isIndexesCreated()
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-  RETURN is_indexes_created FROM hafbe_app.app_status LIMIT 1;
+  RETURN COALESCE(
+    (
+      SELECT true FROM pg_index WHERE indexrelid = 
+      (
+        SELECT oid FROM pg_class WHERE relname = 'account_proxies_history_account_id'
+      )
+    ), false);
 END
 $$;
 
