@@ -33,48 +33,23 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.processBlock(_block INT, _appContext VARCHAR)
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION hafbe_app.updateIndexesCreated(_is_indexes_created BOOLEAN)
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
-DECLARE
-_time JSONB = '{}'::JSONB;
 BEGIN
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM btracker_block_range_data_a(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_bal_a') INTO _time;
+  UPDATE hafbe_app.app_status SET is_indexes_created = _is_indexes_created;
+END
+$$;
 
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM btracker_block_range_data_b(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_bal_b') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM reptracker_block_range_data(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_rep_a') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM hafbe_app.process_block_range_data_a(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_a') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM hafbe_app.process_block_range_data_b(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_b') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM hafbe_app.process_block_range_data_c(_block, _block);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe_app_c') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM hive.app_state_providers_update(_block, _block, _appContext);
-  SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
-
-  INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (_block, _time);
-
-  RAISE NOTICE 'Block processing running for % minutes
-  ',
-  ROUND((EXTRACT(epoch FROM (SELECT NOW() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
-
-  COMMIT; -- For single block processing, commit all changes for the block at same time.
+CREATE OR REPLACE FUNCTION hafbe_app.isIndexesCreated()
+RETURNS BOOLEAN
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN is_indexes_created FROM hafbe_app.app_status LIMIT 1;
 END
 $$;
 

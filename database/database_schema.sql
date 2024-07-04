@@ -22,17 +22,21 @@ SET ROLE hafbe_owner;
 --posts and votes 69.61m
 
 DO $$
+  DECLARE synchronization_stages hive.application_stages;
 BEGIN
 
   CREATE SCHEMA hafbe_app AUTHORIZATION hafbe_owner;
 
   IF NOT hive.app_context_exists('hafbe_app') THEN
 
+  synchronization_stages := ARRAY[( 'MASSIVE_PROCESSING', 101, 10000 ), hive.live_stage()]::hive.application_stages;
+
   PERFORM hive.app_create_context(
     _name =>'hafbe_app',
     _schema => 'hafbe_app',
     _is_forking => TRUE,
-    _is_attached => FALSE
+    _is_attached => FALSE,
+    _stages => synchronization_stages
   );
 
   END IF;
@@ -40,17 +44,16 @@ BEGIN
   RAISE NOTICE 'Attempting to create an application schema tables...';
 
   CREATE TABLE IF NOT EXISTS hafbe_app.app_status (
-    continue_processing BOOLEAN,
+    continue_processing BOOLEAN, 
     started_processing_at TIMESTAMP,
-    finished_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP,
-    last_reported_block INT,
     if_hf11 BOOLEAN,
-    blocksearch_indexes BOOLEAN
+    blocksearch_indexes BOOLEAN,
+    is_indexes_created BOOLEAN
   );
   
-  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, finished_processing_at, last_reported_at, last_reported_block, if_hf11, blocksearch_indexes)
-  VALUES (TRUE, NULL, NULL, to_timestamp(0), 0, FALSE, FALSE);
+  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11, blocksearch_indexes, is_indexes_created)
+  VALUES (TRUE, NULL, NULL, FALSE, FALSE, FALSE);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.version(
   git_hash TEXT

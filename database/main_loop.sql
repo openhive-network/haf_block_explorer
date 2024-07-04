@@ -7,96 +7,55 @@ SET ROLE hafbe_owner;
     To stop it call `hafbe_app.stopProcessing();` from another session and commit its trasaction.
 */
 CREATE OR REPLACE PROCEDURE hafbe_app.main(
-    _appContext VARCHAR,
-    _appContext_btracker VARCHAR,
-    _appContext_reptracker VARCHAR,
-    _maxBlockLimit INT = NULL
+    IN _appContext hive.context_name,
+    IN _appContext_btracker hive.context_name,
+    IN _appContext_reptracker hive.context_name,
+    IN _maxBlockLimit INT = NULL
 )
 LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __last_block INT;
-  __next_block_range hive.blocks_range;
-  __block_range_len INT := 0;
-  __massive_processing_threshold INT := 100;
-  __original_commit_mode TEXT;
-  __commit_mode_changed BOOLEAN := false;
-
+  _blocks_range hive.blocks_range := (0,0);
 BEGIN
-  PERFORM hafbe_app.allowProcessing();
-
-  SELECT current_setting('synchronous_commit') into __original_commit_mode;
-
-  SELECT hive.app_get_current_block_num(_appContext) INTO __last_block;
-  RAISE NOTICE 'Last block processed by application: %', __last_block;
-
-  IF NOT hive.app_context_are_attached(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]) THEN
-    CALL hive.appproc_context_attach(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]);
+  IF _maxBlockLimit != NULL THEN
+    RAISE NOTICE 'Max block limit is specified as: %', _maxBlockLimit;
   END IF;
+
+  --used in time logs
+  UPDATE hafbe_app.app_status 
+  SET last_reported_at = clock_timestamp(),
+      started_processing_at = clock_timestamp();
+  
+  PERFORM hafbe_app.allowProcessing();
+  
+  RAISE NOTICE 'Last block processed by application: %', hive.app_get_current_block_num(_appContext);
 
   RAISE NOTICE 'Entering application main loop...';
 
-  IF _maxBlockLimit IS NULL THEN
-    _maxBlockLimit = 2147483647;
-  END IF;
+  LOOP
+    CALL hive.app_next_iteration(
+      ARRAY[_appContext, _appContext_btracker, _appContext_reptracker],
+      _blocks_range, 
+      _override_max_batch => NULL, 
+      _limit => _maxBlockLimit);
 
-  UPDATE hafbe_app.app_status SET started_processing_at = NOW();
-  COMMIT; --save startup state of app
-
-  WHILE hafbe_app.continueProcessing() AND (_maxBlockLimit = 0 OR __last_block < _maxBlockLimit) LOOP
-    __next_block_range := hive.app_next_block(ARRAY[_appContext, _appContext_btracker, _appContext_reptracker]);
-
-    IF __next_block_range IS NOT NULL THEN
-    
-      IF _maxBlockLimit != 0 and __next_block_range.first_block > _maxBlockLimit THEN
-        __next_block_range.first_block  := _maxBlockLimit;
-      END IF;
-
-      IF _maxBlockLimit != 0 and __next_block_range.last_block > _maxBlockLimit THEN
-        __next_block_range.last_block  := _maxBlockLimit;
-      END IF;
-
-      RAISE NOTICE 'Attempting to process block range: <%,%>', __next_block_range.first_block, __next_block_range.last_block;
-
-      __block_range_len := __next_block_range.last_block - __next_block_range.first_block + 1;
-
-      IF __block_range_len >= __massive_processing_threshold THEN
-        IF NOT __commit_mode_changed AND __original_commit_mode != 'OFF' THEN
-          PERFORM set_config('synchronous_commit', 'OFF', false);
-          __commit_mode_changed := true;
-        END IF;
-        CALL hafbe_app.do_massive_processing(_appContext, _appContext_btracker, _appContext_reptracker, __next_block_range.first_block, __next_block_range.last_block, 10000, __last_block);
-      ELSE
-        IF __commit_mode_changed THEN
-          PERFORM set_config('synchronous_commit', __original_commit_mode, false);
-          __commit_mode_changed := false;
-        END IF;
-
-        CALL hafbe_app.processBlock(__next_block_range.first_block, _appContext);
-        __last_block := __next_block_range.first_block;
-
-        IF (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
-           (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
-          RAISE NOTICE 'Process witness cache...';
-          CALL hafbe_app.update_witnesses_cache();
-          RAISE NOTICE 'Witness cache processing done.';
-        END IF;
-      END IF;
-
-      IF __next_block_range.first_block = __next_block_range.last_block AND 
-         (SELECT finished_processing_at FROM hafbe_app.app_status LIMIT 1) IS NULL THEN
-        UPDATE hafbe_app.app_status SET finished_processing_at = NOW();
-        PERFORM hafbe_indexes.create_hafbe_indexes();
-        PERFORM hafbe_indexes.create_btracker_indexes();
-      END IF;
-
+    IF NOT hafbe_app.continueProcessing() THEN
+      ROLLBACK;
+      RETURN;
     END IF;
-    COMMIT; --only commit after we've returned to a consistent state
+
+    IF _blocks_range IS NULL THEN
+      RAISE WARNING 'Waiting for next block...';
+      CONTINUE;
+    END IF;
+
+    PERFORM hafbe_app.log_and_process_blocks(_appContext, _appContext_btracker, _appContext_reptracker, _blocks_range);
   END LOOP;
 
-  RAISE NOTICE 'Exiting application main loop at processed block: %.', __last_block;
+  RAISE NOTICE 'Exiting application main loop at processed block: %.', hive.app_get_current_block_num(_appContext);
 END
 $$;
+
 
 RESET ROLE;

@@ -13,7 +13,7 @@ cat <<EOF
     --host=HOST             PostgreSQL host (defaults to localhost)
     --port=PORT             PostgreSQL operating port (defaults to 5432)
     --user=USER             PostgreSQL username (defaults to hafbe_owner)
-    --limit=LIMIT           Max number of blocks to process (0 for infinite, defaults to 0)
+    --stop-at-block=LIMIT           Max number of blocks to process (0 for infinite, defaults to 0)
     --log-file              Log file location (defaults to hafbe_sync.log, set to 'STDOUT' to log to STDOUT only)
 EOF
 }
@@ -21,7 +21,7 @@ EOF
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_USER=${POSTGRES_USER:-"hafbe_owner"}
-PROCESS_BLOCK_LIMIT=${PROCESS_BLOCK_LIMIT:-0}
+PROCESS_BLOCK_LIMIT=${PROCESS_BLOCK_LIMIT:-null}
 LOG_FILE=${LOG_FILE:-"hafbe_sync.log"}
 BTRACKER_SCHEMA='hafbe_bal'
 REPTRACKER_SCHEMA='hafbe_rep'
@@ -37,7 +37,7 @@ while [ $# -gt 0 ]; do
     --user=*)
         POSTGRES_USER="${1#*=}"
         ;;
-    --limit=*)
+    --stop-at-block=*)
         PROCESS_BLOCK_LIMIT="${1#*=}"
         ;;
     --btracker-schema=*)

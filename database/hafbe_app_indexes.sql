@@ -17,17 +17,6 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_indexes.create_btracker_indexes()
-RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
-AS
-$$
-BEGIN
-  CREATE INDEX IF NOT EXISTS idx_hafbe_bal_account_balance_history_nai ON hafbe_bal.account_balance_history(nai);
-  CREATE INDEX IF NOT EXISTS idx_hafbe_bal_account_balance_history_account_nai ON hafbe_bal.account_balance_history(account, nai);
-END
-$$;
-
 CREATE OR REPLACE FUNCTION hafbe_indexes.do_haf_indexes_exist()
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql' VOLATILE

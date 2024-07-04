@@ -244,12 +244,9 @@ LEFT JOIN LATERAL (
 CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
   SELECT
     block_num,
-    (time_json->>'btracker_app_a')::NUMERIC AS btracker_app_a,
-  	(time_json->>'btracker_app_b')::NUMERIC AS btracker_app_b,
-    (time_json->>'hafbe_rep_a')::NUMERIC AS hafbe_rep_b,
-    (time_json->>'hafbe_app_a')::NUMERIC AS hafbe_app_a,
-  	(time_json->>'hafbe_app_b')::NUMERIC AS hafbe_app_b,
-    (time_json->>'hafbe_app_c')::NUMERIC AS hafbe_app_c,
+    (time_json->>'hafbe')::NUMERIC AS hafbe,
+  	(time_json->>'reptracker')::NUMERIC AS reptracker,
+    (time_json->>'btracker')::NUMERIC AS btracker,
   	(time_json->>'state_provider')::NUMERIC AS state_provider
   FROM
     hafbe_app.sync_time_logs;
