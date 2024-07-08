@@ -180,9 +180,11 @@ END IF;
 
 IF "start-date" IS NOT NULL THEN
   "from-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= "start-date" ORDER BY created_at ASC LIMIT 1);
+  ASSERT "from-block" IS NOT NULL, 'No block found for the given start-date';
 END IF;
 IF "end-date" IS NOT NULL THEN  
   "to-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < "end-date" ORDER BY created_at DESC LIMIT 1);
+  ASSERT "to-block" IS NOT NULL, 'No block found for the given end-date';
 END IF;
 
 IF "to-block" <= hive.app_get_irreversible_block() THEN
