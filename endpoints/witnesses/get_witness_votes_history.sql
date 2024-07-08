@@ -65,21 +65,21 @@ SET ROLE hafbe_owner;
 
            * `desc` - Descending, from Z to A or largest to smallest
       - in: query
-        name: from_time
+        name: start-date
         required: false
         schema:
           type: string
           format: date-time
           x-sql-default-value: "'1970-01-01T00:00:00'::TIMESTAMP"
-        description: Return only votes newer than `from_time`
+        description: Return only votes newer than `start-date`
       - in: query
-        name: to_time
+        name: end-date
         required: false
         schema:
           type: string
           format: date-time
           x-sql-default-value: now()
-        description: Return only votes older than `to_time`
+        description: Return only votes older than `end-date`
     responses:
       '200':
         description: |
@@ -119,8 +119,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "sort" hafbe_types.order_by_votes = 'timestamp',
     "direction" hafbe_types.sort_direction = 'desc',
     "limit" INT = 100,
-    "from_time" TIMESTAMP = '1970-01-01T00:00:00'::TIMESTAMP,
-    "to_time" TIMESTAMP = now()
+    "start-date" TIMESTAMP = '1970-01-01T00:00:00'::TIMESTAMP,
+    "end-date" TIMESTAMP = now()
 )
 RETURNS SETOF hafbe_types.witness_votes_history_record 
 -- openapi-generated-code-end
@@ -170,7 +170,7 @@ RETURN QUERY EXECUTE format(
     (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
   ;
   $query$,
-  _witness_id,"from_time", "to_time", "limit", "direction", "sort", "direction", "sort"
+  _witness_id,"start-date", "end-date", "limit", "direction", "sort", "direction", "sort"
 ) res;
 END
 $$;

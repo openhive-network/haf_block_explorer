@@ -1227,25 +1227,25 @@ declare
           },
           {
             "in": "query",
-            "name": "from_time",
+            "name": "start-date",
             "required": false,
             "schema": {
               "type": "string",
               "format": "date-time",
               "x-sql-default-value": "'1970-01-01T00:00:00'::TIMESTAMP"
             },
-            "description": "Return only votes newer than `from_time`"
+            "description": "Return only votes newer than `start-date`"
           },
           {
             "in": "query",
-            "name": "to_time",
+            "name": "end-date",
             "required": false,
             "schema": {
               "type": "string",
               "format": "date-time",
               "x-sql-default-value": "now()"
             },
-            "description": "Return only votes older than `to_time`"
+            "description": "Return only votes older than `end-date`"
           }
         ],
         "responses": {
