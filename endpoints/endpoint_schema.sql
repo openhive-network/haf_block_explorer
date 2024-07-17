@@ -750,8 +750,7 @@ declare
         "type": "object",
         "properties": {
           "operation_id": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "unique operation identifier with an encoded block number and operation type id"
           },
           "block_num": {

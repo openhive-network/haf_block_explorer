@@ -5,8 +5,7 @@ hafbe_types.operation:
   type: object
   properties:
     operation_id:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: >-
         unique operation identifier with
         an encoded block number and operation type id
@@ -51,7 +50,7 @@ hafbe_types.operation:
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.operation CASCADE;
 CREATE TYPE hafbe_types.operation AS (
-    "operation_id" BIGINT,
+    "operation_id" TEXT,
     "block_num" INT,
     "trx_in_block" SMALLINT,
     "trx_id" TEXT,

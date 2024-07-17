@@ -15,7 +15,7 @@ BEGIN
         _result.body := jsonb_build_object(
             'type', 'body_placeholder_operation', 
             'value', jsonb_build_object(
-                'org-op-id', _op_id, 
+                'org-op-id', _op_id::TEXT, 
                 'org-operation_type', _body->>'type', 
                 'truncated_body', 'body truncated up to specified limit just for presentation purposes'
             )
@@ -132,7 +132,7 @@ WITH operation_range AS MATERIALIZED (
   )
 
 -- filter too long operation bodies 
-  SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id, (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
+  SELECT filtered_operations.id::TEXT, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id, (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
   FROM (
   SELECT hafbe_backend.operation_body_filter(ov.body, ov.id, _body_limit) as composite, ov.id, ov.block_num, ov.trx_in_block, ov.trx_hash, ov.op_pos, ov.op_type_id, ov.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
   FROM operation_range ov 
@@ -281,7 +281,7 @@ IF _account IS NULL THEN
       (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
 
   -- filter too long operation bodies 
-    SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
+    SELECT filtered_operations.id::TEXT, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
     (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
     FROM (
     SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
@@ -342,7 +342,7 @@ ELSE
       (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
 
   -- filter too long operation bodies 
-    SELECT filtered_operations.id, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
+    SELECT filtered_operations.id::TEXT, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
     (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
     FROM (
     SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age

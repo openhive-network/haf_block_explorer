@@ -129,7 +129,7 @@ CREATE TYPE hafbe_backend.json_metadata AS
 DROP TYPE IF EXISTS hafbe_backend.operation_body_filter_result CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.operation_body_filter_result AS (
     body JSONB,
-    id BIGINT,
+    id TEXT,
     is_modified BOOLEAN
 );
 
