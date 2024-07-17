@@ -11,7 +11,7 @@ hafbe_types.array_of_text_array:
  */
 
 /** openapi:paths
-/operation-keys/{operation-type}:
+/operations/types/{type-id}/keys:
   get:
     tags:
       - Operations
@@ -23,11 +23,11 @@ hafbe_types.array_of_text_array:
       * `SELECT * FROM hafbe_endpoints.get_operation_keys(1);`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/operation-keys/1`
+      * `GET https://{hafbe-host}/hafbe//operations/types/1/keys`
     operationId: hafbe_endpoints.get_operation_keys
     parameters:
       - in: path
-        name: operation-type
+        name: type-id
         required: true
         schema:
           type: integer
@@ -56,7 +56,7 @@ hafbe_types.array_of_text_array:
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_operation_keys;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_keys(
-    "operation-type" INT
+    "type-id" INT
 )
 RETURNS SETOF TEXT[] 
 -- openapi-generated-code-end
@@ -70,7 +70,7 @@ SET enable_bitmapscan = OFF
 AS
 $$
 DECLARE
-	_example_key JSON := (SELECT ov.body FROM hive.operations_view ov WHERE ov.op_type_id = "operation-type" LIMIT 1);
+	_example_key JSON := (SELECT ov.body FROM hive.operations_view ov WHERE ov.op_type_id = "type-id" LIMIT 1);
 BEGIN
 
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);

@@ -2014,7 +2014,7 @@ declare
           "Blocks"
         ],
         "summary": "Get operations in block",
-        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(43000,ARRAY[0,1]);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types={0,1}`\n",
+        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(43000,ARRAY[0,1]);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types=0,1`\n",
         "operationId": "hafbe_endpoints.get_ops_by_block_paging",
         "parameters": [
           {
@@ -2504,17 +2504,29 @@ declare
         }
       }
     },
-    "/operation-types": {
+    "/operations/types": {
       "get": {
         "tags": [
           "Operations"
         ],
         "summary": "Lists operation types",
-        "description": "Lists all types of operations available in the database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_types();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-types`\n",
+        "description": "Lists all types of operations available in the database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_types();`\n\n* `SELECT * FROM hafbe_endpoints.get_op_types('comment');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-types`\n\n* `GET https://{hafbe-host}/hafbe/operation-types?input-value=\"comment\"`\n",
         "operationId": "hafbe_endpoints.get_op_types",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "input-value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "parial name of operation"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Operation type list\n\n* Returns array of `hafbe_types.op_types`\n",
+            "description": "Operation type list, \nif provided is `input-value` the list\nis limited to operations that partially match the `input-value`\n\n* Returns array of `hafbe_types.op_types`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -2541,66 +2553,18 @@ declare
         }
       }
     },
-    "/operation-types/{input-value}": {
-      "get": {
-        "tags": [
-          "Operations"
-        ],
-        "summary": "Lists operation types",
-        "description": "Lists all types of operations that are matching with the `input-value`\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_matching_operation_types('comment');`\n\n* `SELECT * FROM hafbe_endpoints.get_matching_operation_types('vote');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-types/comment`\n\n* `GET https://{hafbe-host}/hafbe/operation-types/vote`\n",
-        "operationId": "hafbe_endpoints.get_matching_operation_types",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "input-value",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Given value"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation type list\n\n* Returns array of `hafbe_types.op_types`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types"
-                },
-                "example": [
-                  {
-                    "op_type_id": 72,
-                    "operation_name": "effective_comment_vote_operation",
-                    "is_virtual": true
-                  },
-                  {
-                    "op_type_id": 0,
-                    "operation_name": "vote_operation",
-                    "is_virtual": false
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No matching operations in the database"
-          }
-        }
-      }
-    },
-    "/operation-keys/{operation-type}": {
+    "/operations/types/{type-id}/keys": {
       "get": {
         "tags": [
           "Operations"
         ],
         "summary": "Get operation json body keys",
-        "description": "Lists possible json key paths in operation body for given operation type id\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation_keys(1);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-keys/1`\n",
+        "description": "Lists possible json key paths in operation body for given operation type id\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation_keys(1);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe//operations/types/1/keys`\n",
         "operationId": "hafbe_endpoints.get_operation_keys",
         "parameters": [
           {
             "in": "path",
-            "name": "operation-type",
+            "name": "type-id",
             "required": true,
             "schema": {
               "type": "integer"
@@ -2655,7 +2619,7 @@ declare
         }
       }
     },
-    "/operations/{operation-id}": {
+    "/operations/body/{operation-id}": {
       "get": {
         "tags": [
           "Operations"
@@ -2790,13 +2754,13 @@ declare
         }
       }
     },
-    "/hafbe-version": {
+    "/version": {
       "get": {
         "tags": [
           "Other"
         ],
         "summary": "Haf_block_explorer's version",
-        "description": "Get haf_block_explorer's last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/hafbe-version`\n",
+        "description": "Get haf_block_explorer's last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/version`\n",
         "operationId": "hafbe_endpoints.get_hafbe_version",
         "responses": {
           "200": {

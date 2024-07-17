@@ -68,7 +68,7 @@ def generate_default_value_string_from_schema(schema):
             requires_quoting = False
         elif 'type' in schema:
             schema_type = schema['type']
-            if schema_type == 'integer' or schema_type == 'number':
+            if schema_type == 'integer' or schema_type == 'number' or  schema_type == 'boolean':
                 requires_quoting = False
         elif 'x-sql-datatype' in schema:
             sql_datatype = schema['x-sql-datatype']
@@ -380,8 +380,8 @@ def generate_rewrite_rules(rewrite_rules_file):
                     path_parts = path.split('/')
                     # paths in openapi spec will start with / and then the name of the API, like: GET /hafbe/witnesses
                     # an upstream server will remove the name of the API, so we get rid of it here:
-                    if len(path_parts) > 2:
-                        path_parts = path_parts[2:]
+                    if len(path_parts) > 1:
+                        path_parts = path_parts[1:]
                     rewrite_parts = ['^']
                     query_parts = []
                     next_placeholder = 1

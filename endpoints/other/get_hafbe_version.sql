@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/hafbe-version:
+/version:
   get:
     tags:
       - Other
@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_version();`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/hafbe-version`
+      * `GET https://{hafbe-host}/hafbe/version`
     operationId: hafbe_endpoints.get_hafbe_version
     responses:
       '200':

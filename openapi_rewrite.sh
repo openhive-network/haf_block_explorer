@@ -70,7 +70,6 @@ $endpoints_dir/block-numbers/get_hafbe_last_synced_block.sql
 $endpoints_dir/block-numbers/get_block_by_time.sql
 
 $endpoints_dir/operations/get_op_types.sql
-$endpoints_dir/operations/get_matching_operation_types.sql
 $endpoints_dir/operations/get_operation_keys.sql
 $endpoints_dir/operations/get_operation.sql
 
