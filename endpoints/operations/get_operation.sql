@@ -87,7 +87,7 @@ END IF;
 
 RETURN (
   SELECT ROW (
-      ov.id,
+      ov.id::TEXT,
       ov.block_num,
       ov.trx_in_block,
       encode(htv.trx_hash, 'hex'),
