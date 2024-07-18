@@ -7,7 +7,7 @@ SET ROLE hafbe_owner;
       - Blocks
     summary: Informations about number of operations in block
     description: |
-      Lists counts of operations in last `limit` blocks and its creator
+      Lists counts of operations in last `result-limit` blocks and its creator
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_latest_blocks();`
@@ -17,16 +17,16 @@ SET ROLE hafbe_owner;
       REST call example
       * `GET https://{hafbe-host}/hafbe/blocks`
       
-      * `GET https://{hafbe-host}/hafbe/blocks?limit=20`
+      * `GET https://{hafbe-host}/hafbe/blocks?result-limit=20`
     operationId: hafbe_endpoints.get_latest_blocks
     parameters:
       - in: query
-        name: limit
+        name: result-limit
         required: false
         schema:
           type: integer
           default: 20
-        description: Return max `limit` operations per page
+        description: Return max `result-limit` operations per page
     responses:
       '200':
         description: |
@@ -60,7 +60,7 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_latest_blocks;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(
-    "limit" INT = 20
+    "result-limit" INT = 20
 )
 RETURNS SETOF hafbe_types.latest_blocks 
 -- openapi-generated-code-end
@@ -80,7 +80,7 @@ RETURN QUERY
       bv.num as block_num,
       (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
     FROM hive.blocks_view bv
-    ORDER BY bv.num DESC LIMIT "limit"
+    ORDER BY bv.num DESC LIMIT "result-limit"
   ),
   join_operations AS MATERIALIZED (
     SELECT 

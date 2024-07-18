@@ -58,12 +58,12 @@ SET ROLE hafbe_owner;
 
            * `desc` - Descending, from Z to A or largest to smallest
       - in: query
-        name: limit
+        name: result-limit
         required: false
         schema:
           type: integer
           default: 2147483647
-        description: Return at most `limit` voters
+        description: Return at most `result-limit` voters
     responses:
       '200':
         description: |
@@ -100,7 +100,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     "account-name" TEXT,
     "sort" hafbe_types.order_by_votes = 'vests',
     "direction" hafbe_types.sort_direction = 'desc',
-    "limit" INT = 2147483647
+    "result-limit" INT = 2147483647
 )
 RETURNS SETOF hafbe_types.witness_voter 
 -- openapi-generated-code-end
@@ -152,7 +152,7 @@ RETURN QUERY EXECUTE format(
   ;
 
   $query$,
-  _witness_id, "direction", "sort", "direction", "sort", "limit",
+  _witness_id, "direction", "sort", "direction", "sort", "result-limit",
   "direction", "sort", "direction", "sort"
 ) res;
 

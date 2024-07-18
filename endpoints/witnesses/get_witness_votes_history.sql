@@ -52,12 +52,12 @@ SET ROLE hafbe_owner;
           $ref: '#/components/schemas/hafbe_types.sort_direction'
           default: desc
       - in: query
-        name: limit
+        name: result-limit
         required: false
         schema:
           type: integer
           default: 100
-        description: Return at most `limit` voters
+        description: Return at most `result-limit` voters
         description: |
           Sort order:
 
@@ -118,7 +118,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "account-name" TEXT,
     "sort" hafbe_types.order_by_votes = 'timestamp',
     "direction" hafbe_types.sort_direction = 'desc',
-    "limit" INT = 100,
+    "result-limit" INT = 100,
     "start-date" TIMESTAMP = '1970-01-01T00:00:00'::TIMESTAMP,
     "end-date" TIMESTAMP = now()
 )
@@ -170,7 +170,7 @@ RETURN QUERY EXECUTE format(
     (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
   ;
   $query$,
-  _witness_id,"start-date", "end-date", "limit", "direction", "sort", "direction", "sort"
+  _witness_id,"start-date", "end-date", "result-limit", "direction", "sort", "direction", "sort"
 ) res;
 END
 $$;
