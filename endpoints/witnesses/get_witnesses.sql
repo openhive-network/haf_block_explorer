@@ -16,23 +16,23 @@ SET ROLE hafbe_owner;
       
       REST call example
       * `GET https://{hafbe-host}/hafbe/witnesses`
-      * `GET https://{hafbe-host}/hafbe/witnesses?limit=10`
+      * `GET https://{hafbe-host}/hafbe/witnesses?result-limit=10`
     operationId: hafbe_endpoints.get_witnesses
     parameters:
       - in: query
-        name: limit
+        name: result-limit
         required: false
         schema:
           type: integer
           default: 100
-        description: For pagination, return at most `limit` witnesses
+        description: For pagination, return at most `result-limit` witnesses
       - in: query
         name: offset
         required: false
         schema:
           type: integer
           default: 0
-        description: For pagination, start at the `offset`th witness
+        description: For pagination, start at the `offset` witness
       - in: query
         name: sort
         required: false
@@ -132,7 +132,7 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
-    "limit" INT = 100,
+    "result-limit" INT = 100,
     "offset" INT = 0,
     "sort" hafbe_types.order_by_witness = 'votes',
     "direction" hafbe_types.sort_direction = 'desc'
@@ -216,7 +216,7 @@ get_block_num AS MATERIALIZED
     (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
   $query$,
-  "direction", "sort", "direction", "sort", "offset","limit",
+  "direction", "sort", "direction", "sort", "offset","result-limit",
   "direction", "sort", "direction", "sort"
 )
 ;

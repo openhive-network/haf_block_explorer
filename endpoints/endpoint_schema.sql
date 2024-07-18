@@ -899,18 +899,18 @@ declare
           "Witnesses"
         ],
         "summary": "List witnesses",
-        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses();`\n* `SELECT * FROM hafbe_endpoints.get_witnesses(10);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses`\n* `GET https://{hafbe-host}/hafbe/witnesses?limit=10`\n",
+        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses();`\n* `SELECT * FROM hafbe_endpoints.get_witnesses(10);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses`\n* `GET https://{hafbe-host}/hafbe/witnesses?result-limit=10`\n",
         "operationId": "hafbe_endpoints.get_witnesses",
         "parameters": [
           {
             "in": "query",
-            "name": "limit",
+            "name": "result-limit",
             "required": false,
             "schema": {
               "type": "integer",
               "default": 100
             },
-            "description": "For pagination, return at most `limit` witnesses"
+            "description": "For pagination, return at most `result-limit` witnesses"
           },
           {
             "in": "query",
@@ -920,7 +920,7 @@ declare
               "type": "integer",
               "default": 0
             },
-            "description": "For pagination, start at the `offset`th witness"
+            "description": "For pagination, start at the `offset` witness"
           },
           {
             "in": "query",
@@ -1092,13 +1092,13 @@ declare
           },
           {
             "in": "query",
-            "name": "limit",
+            "name": "result-limit",
             "required": false,
             "schema": {
               "type": "integer",
               "default": 2147483647
             },
-            "description": "Return at most `limit` voters"
+            "description": "Return at most `result-limit` voters"
           }
         ],
         "responses": {
@@ -1216,7 +1216,7 @@ declare
           },
           {
             "in": "query",
-            "name": "limit",
+            "name": "result-limit",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1827,18 +1827,18 @@ declare
           "Blocks"
         ],
         "summary": "Informations about number of operations in block",
-        "description": "Lists counts of operations in last `limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks();`\n\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(20);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks`\n\n* `GET https://{hafbe-host}/hafbe/blocks?limit=20`\n",
+        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks();`\n\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(20);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks`\n\n* `GET https://{hafbe-host}/hafbe/blocks?result-limit=20`\n",
         "operationId": "hafbe_endpoints.get_latest_blocks",
         "parameters": [
           {
             "in": "query",
-            "name": "limit",
+            "name": "result-limit",
             "required": false,
             "schema": {
               "type": "integer",
               "default": 20
             },
-            "description": "Return max `limit` operations per page"
+            "description": "Return max `result-limit` operations per page"
           }
         ],
         "responses": {
@@ -2359,13 +2359,13 @@ declare
           },
           {
             "in": "query",
-            "name": "limit",
+            "name": "result-limit",
             "required": false,
             "schema": {
               "type": "integer",
               "default": 100
             },
-            "description": "Limits the result to `limit` records"
+            "description": "Limits the result to `result-limit` records"
           }
         ],
         "responses": {

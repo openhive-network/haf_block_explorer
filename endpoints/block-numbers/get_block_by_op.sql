@@ -99,12 +99,12 @@ SET ROLE hafbe_owner;
           default: NULL
         description: Upper limit of the time range
       - in: query
-        name: limit
+        name: result-limit
         required: false
         schema:
           type: integer
           default: 100
-        description: Limits the result to `limit` records
+        description: Limits the result to `result-limit` records
     responses:
       '200':
         description: |
@@ -137,7 +137,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "to-block" INT = 2147483647,
     "start-date" TIMESTAMP = NULL,
     "end-date" TIMESTAMP = NULL,
-    "limit" INT = 100
+    "result-limit" INT = 100
 )
 RETURNS SETOF hafbe_types.block_by_ops 
 -- openapi-generated-code-end
@@ -189,14 +189,14 @@ END IF;
 IF array_length(_operation_types, 1) = 1 THEN
   RETURN QUERY 
       SELECT * FROM hafbe_backend.get_block_by_single_op(
-        _operation_types[1], "account-name", "direction", "from-block", "to-block", "limit", _key_content, "set-of-keys"
+        _operation_types[1], "account-name", "direction", "from-block", "to-block", "result-limit", _key_content, "set-of-keys"
       )
   ;
 
 ELSE
   RETURN QUERY
       SELECT * FROM hafbe_backend.get_block_by_ops_group_by_block_num(
-        _operation_types, "account-name", "direction", "from-block", "to-block", "limit"
+        _operation_types, "account-name", "direction", "from-block", "to-block", "result-limit"
       )
   ;
 
