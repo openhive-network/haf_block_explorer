@@ -8,6 +8,8 @@ hafbe_sync.log
 *.tar.xz*
 accounts_dump.json
 account_dump_test.log
+endpoints_openapi
+backend/types_openapi
 
 # Docker
 docker/blockchain/block_log*
