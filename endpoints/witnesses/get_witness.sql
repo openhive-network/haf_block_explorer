@@ -83,6 +83,7 @@ WITH limited_set AS (
     cw.witness_id, av.name::TEXT AS witness,
     cw.url, cw.price_feed, cw.bias,
     (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
+    cw.feed_updated_at,
     cw.block_size, cw.signing_key, cw.version,
     COALESCE(
       (
@@ -111,7 +112,8 @@ SELECT ROW(
   COALESCE(wvcc.voters_num_daily_change, 0),
   ls.price_feed, 
   ls.bias, 
-  ls.feed_age, 
+  ls.feed_age,
+  ls.feed_updated_at,
   ls.block_size, 
   ls.signing_key, 
   ls.version,

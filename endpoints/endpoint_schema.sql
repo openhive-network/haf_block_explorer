@@ -136,6 +136,11 @@ declare
             "x-sql-datatype": "INTERVAL",
             "description": "how old the witness price feed is (as a string formatted hh:mm:ss.ssssss)"
           },
+          "feed_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "the timestamp when feed was updated"
+          },
           "block_size": {
             "type": "integer",
             "description": "the maximum block size the witness is currently voting for, in bytes"
