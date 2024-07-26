@@ -148,21 +148,26 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
-  _key_content TEXT[] := (SELECT string_to_array("key-content", ',')::TEXT[]);
+  _operation_types INT[];
+  _key_content TEXT[];
+  _set_of_keys JSON;
 BEGIN
-IF _key_content IS NOT NULL THEN
-IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
-  RAISE EXCEPTION 'Blocksearch indexes are not installed';
-END IF;
+IF "key-content" IS NOT NULL THEN
+  IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
+    RAISE EXCEPTION 'Blocksearch indexes are not installed';
+  END IF;
+
+  _operation_types := string_to_array("operation-types", ',')::INT[];
+  _key_content := string_to_array("key-content", ',')::TEXT[];
+  _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
 
   IF array_length(_operation_types, 1) != 1 THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
-  FOR i IN 0 .. json_array_length("set-of-keys")-1 LOOP
-	  IF NOT ARRAY(SELECT json_array_elements_text("set-of-keys"->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
-	  RAISE EXCEPTION 'Invalid key %', "set-of-keys"->i;
+  FOR i IN 0 .. json_array_length(_set_of_keys)-1 LOOP
+	  IF NOT ARRAY(SELECT json_array_elements_text(_set_of_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
+	  RAISE EXCEPTION 'Invalid key %', _set_of_keys->i;
     END IF;
   END LOOP;
 END IF;
@@ -189,7 +194,7 @@ END IF;
 IF array_length(_operation_types, 1) = 1 THEN
   RETURN QUERY 
       SELECT * FROM hafbe_backend.get_block_by_single_op(
-        _operation_types[1], "account-name", "direction", "from-block", "to-block", "result-limit", _key_content, "set-of-keys"
+        _operation_types[1], "account-name", "direction", "from-block", "to-block", "result-limit", _key_content, _set_of_keys
       )
   ;
 
