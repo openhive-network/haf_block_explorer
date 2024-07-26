@@ -71,6 +71,10 @@ hafbe_types.witness:
       description: >-
         how old the witness price feed is (as a string formatted
         hh:mm:ss.ssssss)
+    feed_updated_at:
+      type: string
+      format: date-time
+      description: the timestamp when feed was updated
     block_size:
       type: integer
       description: the maximum block size the witness is currently voting for, in bytes
@@ -104,6 +108,7 @@ CREATE TYPE hafbe_types.witness AS (
     "price_feed" FLOAT,
     "bias" NUMERIC,
     "feed_age" INTERVAL,
+    "feed_updated_at" TIMESTAMP,
     "block_size" INT,
     "signing_key" TEXT,
     "version" TEXT,
