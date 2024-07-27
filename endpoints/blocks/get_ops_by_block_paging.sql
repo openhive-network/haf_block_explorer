@@ -164,28 +164,17 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  _operation_types INT[];
-  _key_content TEXT[];
-  _set_of_keys JSON;
+  _operation_types INT[] := NULL;
+  _key_content TEXT[] := NULL;
+  _set_of_keys JSON := NULL;
 BEGIN
 IF "key-content" IS NOT NULL THEN
-  IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
-    RAISE EXCEPTION 'Blocksearch indexes are not installed';
+  IF "operation-types" IS NOT NULL THEN
+    _operation_types := string_to_array("operation-types", ',')::INT[];
   END IF;
 
-  _operation_types := string_to_array("operation-types", ',')::INT[];
   _key_content := string_to_array("key-content", ',')::TEXT[];
   _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
-
-  IF array_length(_operation_types, 1) != 1 THEN 
-    RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
-  END IF;
-  
-  FOR i IN 0 .. json_array_length(_set_of_keys)-1 LOOP
-	IF NOT ARRAY(SELECT json_array_elements_text(_set_of_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
-	  RAISE EXCEPTION 'Invalid key %', _set_of_keys->i;
-    END IF;
-  END LOOP;
 END IF;
 
 IF "block-num" <= hive.app_get_irreversible_block() THEN

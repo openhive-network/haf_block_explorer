@@ -148,9 +148,9 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  _operation_types INT[];
-  _key_content TEXT[];
-  _set_of_keys JSON;
+  _operation_types INT[] := NULL;
+  _key_content TEXT[] := NULL;
+  _set_of_keys JSON := NULL;
 BEGIN
 IF "key-content" IS NOT NULL THEN
   IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
@@ -161,7 +161,7 @@ IF "key-content" IS NOT NULL THEN
   _key_content := string_to_array("key-content", ',')::TEXT[];
   _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
 
-  IF array_length(_operation_types, 1) != 1 THEN 
+  IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
