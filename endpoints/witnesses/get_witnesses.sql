@@ -40,7 +40,7 @@ SET ROLE hafbe_owner;
           $ref: '#/components/schemas/hafbe_types.order_by_witness'
           default: votes
         description: |
-          Sort order:
+          Sort key:
 
            * `witness` - the witness' name
 
