@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/blocks/{block-num}/raw-details:
+/blocks/{block-num}:
   get:
     tags:
       - Blocks
@@ -15,9 +15,9 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_block_raw(43000);`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/blocks/10000/raw-details`
+      * `GET https://{hafbe-host}/hafbe/blocks/10000`
       
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/raw-details`
+      * `GET https://{hafbe-host}/hafbe/blocks/43000`
     operationId: hafbe_endpoints.get_block_raw
     parameters:
       - in: path
