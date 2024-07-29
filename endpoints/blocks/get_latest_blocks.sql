@@ -5,19 +5,19 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Blocks
-    summary: Informations about number of operations in block
+    summary: Informations about operations in latest blocks
     description: |
       Lists counts of operations in last `result-limit` blocks and its creator
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_latest_blocks();`
 
-      * `SELECT * FROM hafbe_endpoints.get_latest_blocks(20);`
+      * `SELECT * FROM hafbe_endpoints.get_latest_blocks(30);`
       
       REST call example
       * `GET https://{hafbe-host}/hafbe/blocks`
       
-      * `GET https://{hafbe-host}/hafbe/blocks?result-limit=20`
+      * `GET https://{hafbe-host}/hafbe/blocks?result-limit=30`
     operationId: hafbe_endpoints.get_latest_blocks
     parameters:
       - in: query
@@ -26,7 +26,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 20
-        description: Return max `result-limit` operations per page
+        description: |
+          Specifies number of blocks to return starting with head block, defaults to `20`
     responses:
       '200':
         description: |
