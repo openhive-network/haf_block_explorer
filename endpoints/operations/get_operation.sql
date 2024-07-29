@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_operation(3448858738752);`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/operations/3448858738752`
+      * `GET https://{hafbe-host}/hafbe/operations/body/3448858738752`
     operationId: hafbe_endpoints.get_operation
     parameters:
       - in: path
@@ -22,7 +22,22 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           x-sql-datatype: BIGINT
-        description: Unique operation identifier 
+        description: |
+          An operation-id is a unique operation identifier,
+          encodes three key pieces of information into a single number,
+          with each piece occupying a specific number of bits:
+
+          ```
+          msb.....................lsb
+           || block | seq | type ||
+           ||  32b  | 24b |  8b  ||
+          ```
+
+           * block (block number) - occupies 32 bits.
+
+           * seq (position of an operation in block) - occupies 24 bits.
+
+           * type (operation type) - occupies 8 bits.
     responses:
       '200':
         description: |
