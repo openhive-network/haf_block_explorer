@@ -708,26 +708,6 @@ declare
           "$ref": "#/components/schemas/hafbe_types.block_by_ops"
         }
       },
-      "hafbe_types.op_count_in_block": {
-        "type": "object",
-        "properties": {
-          "op_type_id": {
-            "type": "integer",
-            "description": "operation id"
-          },
-          "count": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of the operations in block"
-          }
-        }
-      },
-      "hafbe_types.array_of_op_count_in_block": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.op_count_in_block"
-        }
-      },
       "hafbe_types.op_types": {
         "type": "object",
         "properties": {
@@ -802,6 +782,34 @@ declare
             "type": "boolean",
             "description": "true if operation body was modified with body placeholder due to its lenght"
           }
+        }
+      },
+      "hafbe_types.op_types_count": {
+        "type": "object",
+        "properties": {
+          "op_type_id": {
+            "type": "integer",
+            "description": "operation type id"
+          },
+          "operation_name": {
+            "type": "string",
+            "description": "operation type name"
+          },
+          "is_virtual": {
+            "type": "boolean",
+            "description": "true if operation is virtual"
+          },
+          "count": {
+            "type": "integer",
+            "x-sql-datatype": "BIGINT",
+            "description": "number of the operations in block"
+          }
+        }
+      },
+      "hafbe_types.array_of_op_types_count": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_types.op_types_count"
         }
       },
       "hafbe_types.transaction": {
@@ -935,7 +943,7 @@ declare
               "$ref": "#/components/schemas/hafbe_types.order_by_witness",
               "default": "votes"
             },
-            "description": "Sort order:\n\n * `witness` - the witness' name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness' url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%\n\n * `feed_age` - how old their feed value is\n\n * `block_size` - the block size they're voting for\n\n * `signing_key` - the witness' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
+            "description": "Sort key:\n\n * `witness` - the witness' name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness' url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%\n\n * `feed_age` - how old their feed value is\n\n * `block_size` - the block size they're voting for\n\n * `signing_key` - the witness' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
           },
           {
             "in": "query",
@@ -1468,7 +1476,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `'18,12'`\n"
+            "description": "List of operations: if the parameter is empty, all operations will be included\nexample: `18,12`\n"
           },
           {
             "in": "query",
@@ -1488,7 +1496,7 @@ declare
               "type": "integer",
               "default": 100
             },
-            "description": "Return max `page-size` operations per page"
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -1498,7 +1506,7 @@ declare
               "type": "integer",
               "default": 200000
             },
-            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder\n"
+            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
           },
           {
             "in": "query",
@@ -1692,7 +1700,7 @@ declare
               "type": "string",
               "x-sql-default-value": "'0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'"
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `'18,12'`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `18,12`\n"
           },
           {
             "in": "query",
@@ -1702,7 +1710,7 @@ declare
               "type": "integer",
               "default": 1
             },
-            "description": "Return page on `page` number"
+            "description": "Return page on `page` number, defaults to `1`"
           },
           {
             "in": "query",
@@ -1722,7 +1730,7 @@ declare
               "type": "integer",
               "default": 100
             },
-            "description": "Return max `page-size` operations per page"
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -1732,7 +1740,7 @@ declare
               "type": "integer",
               "default": 200000
             },
-            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder\n"
+            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
           },
           {
             "in": "query",
@@ -1831,8 +1839,8 @@ declare
         "tags": [
           "Blocks"
         ],
-        "summary": "Informations about number of operations in block",
-        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks();`\n\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(20);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks`\n\n* `GET https://{hafbe-host}/hafbe/blocks?result-limit=20`\n",
+        "summary": "Informations about operations in latest blocks",
+        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks();`\n\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(30);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks`\n\n* `GET https://{hafbe-host}/hafbe/blocks?result-limit=30`\n",
         "operationId": "hafbe_endpoints.get_latest_blocks",
         "parameters": [
           {
@@ -1843,7 +1851,7 @@ declare
               "type": "integer",
               "default": 20
             },
-            "description": "Return max `result-limit` operations per page"
+            "description": "Specifies number of blocks to return starting with head block, defaults to `20`\n"
           }
         ],
         "responses": {
@@ -1910,8 +1918,58 @@ declare
         "tags": [
           "Blocks"
         ],
+        "summary": "Raw informations about block",
+        "description": "Lists the raw parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_raw(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_raw(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000`\n",
+        "operationId": "hafbe_endpoints.get_block_raw",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block-num",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Given block number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Given block's raw stats\n\n* Returns `hafbe_types.block_raw`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_types.block_raw"
+                },
+                "example": [
+                  {
+                    "previous": "\\\\x000004ce0536f08f1e09c3dc7b12b8ddf13f1c5a",
+                    "timestamp": "2016-03-24T17:07:15",
+                    "witness": "root",
+                    "transaction_merkle_root": "\\\\x0000000000000000000000000000000000000000",
+                    "extensions": [],
+                    "witness_signature": "\\\\x207f255f2d6c69c04ccfa4a541792a773412307735ccf90bd8efb26ba9e12d9c84b714c4711cf1d1bed561994c46daf33a24e8071f15f92",
+                    "transactions": [],
+                    "block_id": "\\\\x000004cf8319149b0743acdcf2a17a332677fb0f",
+                    "signing_key": "STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G",
+                    "transaction_ids": null
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "No blocks in the database"
+          }
+        }
+      }
+    },
+    "/blocks/{block-num}/header": {
+      "get": {
+        "tags": [
+          "Blocks"
+        ],
         "summary": "Informations about block",
-        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000`\n",
+        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/header`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/header`\n",
         "operationId": "hafbe_endpoints.get_block",
         "parameters": [
           {
@@ -1963,56 +2021,6 @@ declare
         }
       }
     },
-    "/blocks/{block-num}/raw-details": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Raw informations about block",
-        "description": "Lists the raw parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_raw(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_raw(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/raw-details`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/raw-details`\n",
-        "operationId": "hafbe_endpoints.get_block_raw",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block's raw stats\n\n* Returns `hafbe_types.block_raw`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.block_raw"
-                },
-                "example": [
-                  {
-                    "previous": "\\\\x000004ce0536f08f1e09c3dc7b12b8ddf13f1c5a",
-                    "timestamp": "2016-03-24T17:07:15",
-                    "witness": "root",
-                    "transaction_merkle_root": "\\\\x0000000000000000000000000000000000000000",
-                    "extensions": [],
-                    "witness_signature": "\\\\x207f255f2d6c69c04ccfa4a541792a773412307735ccf90bd8efb26ba9e12d9c84b714c4711cf1d1bed561994c46daf33a24e8071f15f92",
-                    "transactions": [],
-                    "block_id": "\\\\x000004cf8319149b0743acdcf2a17a332677fb0f",
-                    "signing_key": "STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G",
-                    "transaction_ids": null
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
     "/blocks/{block-num}/operations": {
       "get": {
         "tags": [
@@ -2039,7 +2047,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nsql example: `'18,12'`\n"
+            "description": "List of operations: if the parameter is empty, all operations will be included\nexample: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -2059,7 +2067,7 @@ declare
               "type": "integer",
               "default": 1
             },
-            "description": "Return page on `page` number"
+            "description": "Return page on `page` number, defaults to `1`"
           },
           {
             "in": "query",
@@ -2069,7 +2077,7 @@ declare
               "type": "integer",
               "default": 100
             },
-            "description": "Return max `page-size` operations per page"
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -2080,7 +2088,7 @@ declare
               "x-sql-datatype": "JSON",
               "default": null
             },
-            "description": "A JSON object detailing the path to the filtered key specified in key-content\nsql example: `[[\"value\", \"id\"]]`\n"
+            "description": "A JSON object detailing the path to the filtered key specified in key-content\nexample: `[[\"value\", \"id\"]]`\n"
           },
           {
             "in": "query",
@@ -2090,17 +2098,17 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `'follow'`\n"
+            "description": "A parameter specifying the desired value related to the set-of-keys\nexample: `follow`\n"
           },
           {
             "in": "query",
-            "name": "direction",
+            "name": "page-order",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/hafbe_types.sort_direction",
               "default": "desc"
             },
-            "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n \n * `desc` - Descending, from Z to A or largest to smallest\n"
+            "description": "page order:\n\n * `asc` - Ascending, from oldest to newest page\n \n * `desc` - Descending, from newest to oldest page\n"
           },
           {
             "in": "query",
@@ -2110,7 +2118,7 @@ declare
               "type": "integer",
               "default": 200000
             },
-            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder\n"
+            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
           }
         ],
         "responses": {
@@ -2162,56 +2170,6 @@ declare
         }
       }
     },
-    "/blocks/{block-num}/operations/count": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Count operations in block",
-        "description": "List count for each operation type for given block number\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_op_count_in_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations/count`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations/count`\n",
-        "operationId": "hafbe_endpoints.get_op_count_in_block",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block's operations count\n\n* Returns array of `hafbe_types.op_count_in_block`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_count_in_block"
-                },
-                "example": [
-                  {
-                    "op_type_id": 0,
-                    "count": 1
-                  },
-                  {
-                    "op_type_id": 1,
-                    "count": 5
-                  },
-                  {
-                    "op_type_id": 72,
-                    "count": 1
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No block in the database"
-          }
-        }
-      }
-    },
     "/blocks/{block-num}/operations/types": {
       "get": {
         "tags": [
@@ -2233,22 +2191,24 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Given block's operation list\n\n* Returns array of `hafbe_types.op_types`\n",
+            "description": "Given block's operation list\n\n* Returns array of `hafbe_types.op_types_count`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types"
+                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types_count"
                 },
                 "example": [
                   {
                     "op_type_id": 72,
                     "operation_name": "effective_comment_vote_operation",
-                    "is_virtual": true
+                    "is_virtual": true,
+                    "count": 1
                   },
                   {
                     "op_type_id": 0,
                     "operation_name": "vote_operation",
-                    "is_virtual": false
+                    "is_virtual": false,
+                    "count": 1
                   }
                 ]
               }
@@ -2277,7 +2237,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nsql example: `'18,12'`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `'18,12'`\n"
           },
           {
             "in": "query",
@@ -2298,7 +2258,7 @@ declare
               "x-sql-datatype": "JSON",
               "default": null
             },
-            "description": "A JSON object detailing the path to the filtered key specified in key-content\nsql example: `[[\"value\", \"id\"]]`\n"
+            "description": "A JSON object detailing the path to the filtered key specified in key-content\nexample: `[[\"value\", \"id\"]]`\n"
           },
           {
             "in": "query",
@@ -2308,7 +2268,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nsql example: `'follow'`\n"
+            "description": "A parameter specifying the desired value related to the set-of-keys\nexample: `follow`\n"
           },
           {
             "in": "query",
@@ -2630,7 +2590,7 @@ declare
           "Operations"
         ],
         "summary": "Get informations about the operation",
-        "description": "Get operation's body and its extended parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation(3448858738752);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operations/3448858738752`\n",
+        "description": "Get operation's body and its extended parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation(3448858738752);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operations/body/3448858738752`\n",
         "operationId": "hafbe_endpoints.get_operation",
         "parameters": [
           {
@@ -2641,7 +2601,7 @@ declare
               "type": "integer",
               "x-sql-datatype": "BIGINT"
             },
-            "description": "Unique operation identifier"
+            "description": "An operation-id is a unique operation identifier,\nencodes three key pieces of information into a single number,\nwith each piece occupying a specific number of bits:\n\n```\nmsb.....................lsb\n || block | seq | type ||\n ||  32b  | 24b |  8b  ||\n```\n\n * block (block number) - occupies 32 bits.\n\n * seq (position of an operation in block) - occupies 24 bits.\n\n * type (operation type) - occupies 8 bits.\n"
           }
         ],
         "responses": {

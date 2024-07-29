@@ -35,7 +35,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           List of operations: if the parameter is empty, all operations will be included
-          sql example: `'18,12'`
+          example: `'18,12'`
       - in: query
         name: account-name
         required: false
@@ -49,14 +49,14 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
-        description: Return page on `page` number
+        description: Return page on `page` number, defaults to `1`
       - in: query
         name: page-size
         required: false
         schema:
           type: integer
           default: 100
-        description: Return max `page-size` operations per page
+        description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: set-of-keys
         required: false
@@ -66,7 +66,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           A JSON object detailing the path to the filtered key specified in key-content
-          sql example: `[["value", "id"]]`
+          example: `[["value", "id"]]`
       - in: query
         name: key-content
         required: false
@@ -75,19 +75,19 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           A parameter specifying the desired value related to the set-of-keys
-          sql example: `'follow'`
+          example: `follow`
       - in: query
-        name: direction
+        name: page-order
         required: false
         schema:
           $ref: '#/components/schemas/hafbe_types.sort_direction'
           default: desc
         description: |
-          Sort order:
+          page order:
 
-           * `asc` - Ascending, from A to Z or smallest to largest
+           * `asc` - Ascending, from oldest to newest page
            
-           * `desc` - Descending, from Z to A or largest to smallest
+           * `desc` - Descending, from newest to oldest page
       - in: query
         name: data-size-limit
         required: false
@@ -96,7 +96,7 @@ SET ROLE hafbe_owner;
           default: 200000
         description: |
           If the operation length exceeds the data size limit,
-          the operation body is replaced with a placeholder
+          the operation body is replaced with a placeholder, defaults to `200000`
     responses:
       '200':
         description: |
@@ -152,7 +152,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     "page-size" INT = 100,
     "set-of-keys" JSON = NULL,
     "key-content" TEXT = NULL,
-    "direction" hafbe_types.sort_direction = 'desc',
+    "page-order" hafbe_types.sort_direction = 'desc',
     "data-size-limit" INT = 200000
 )
 RETURNS JSON 
@@ -205,7 +205,7 @@ RETURN (
       "page",
       "page-size",
       _operation_types,
-      "direction",
+      "page-order",
       "data-size-limit",
       "account-name",
       _key_content,
