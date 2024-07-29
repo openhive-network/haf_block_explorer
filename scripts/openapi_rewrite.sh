@@ -27,9 +27,9 @@ DEFAULT_TYPES="
 ../$types/blocks/block.sql
 ../$types/blocks/block_raw.sql
 ../$types/blocks/block_by_ops.sql
-../$types/blocks/op_count_in_block.sql
 ../$types/operations/op_types.sql
 ../$types/operations/operation.sql
+../$types/operations/op_types_count.sql
 ../$types/transactions/transaction.sql"
 
 ENDPOINTS_IN_ORDER="
@@ -45,10 +45,9 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_acc_op_types.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/blocks/get_latest_blocks.sql
-../$endpoints/blocks/get_block.sql
 ../$endpoints/blocks/get_block_raw.sql
+../$endpoints/blocks/get_block.sql
 ../$endpoints/blocks/get_ops_by_block_paging.sql
-../$endpoints/blocks/get_op_count_in_block.sql
 ../$endpoints/blocks/get_block_op_types.sql
 ../$endpoints/block-numbers/get_block_by_op.sql
 ../$endpoints/block-numbers/get_head_block_num.sql

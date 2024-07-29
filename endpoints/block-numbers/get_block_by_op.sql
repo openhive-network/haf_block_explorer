@@ -29,7 +29,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           List of operations: if the parameter is NULL, all operations will be included
-          sql example: `'18,12'`
+          example: `'18,12'`
       - in: query
         name: account-name
         required: false
@@ -46,7 +46,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           A JSON object detailing the path to the filtered key specified in key-content
-          sql example: `[["value", "id"]]`
+          example: `[["value", "id"]]`
       - in: query
         name: key-content
         required: false
@@ -55,7 +55,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           A parameter specifying the desired value related to the set-of-keys
-          sql example: `'follow'`
+          example: `follow`
       - in: query
         name: direction
         required: false

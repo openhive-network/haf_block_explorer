@@ -35,7 +35,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           List of operations: if the parameter is empty, all operations will be included
-          sql example: `'18,12'`
+          example: `18,12`
       - in: query
         name: page
         required: false
@@ -51,7 +51,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
-        description: Return max `page-size` operations per page
+        description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: data-size-limit
         required: false
@@ -60,7 +60,7 @@ SET ROLE hafbe_owner;
           default: 200000
         description: |
           If the operation length exceeds the data size limit,
-          the operation body is replaced with a placeholder
+          the operation body is replaced with a placeholder, defaults to `200000`
       - in: query
         name: from-block
         required: false
