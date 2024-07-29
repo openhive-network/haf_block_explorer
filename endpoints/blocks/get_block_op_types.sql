@@ -31,18 +31,20 @@ SET ROLE hafbe_owner;
         description: |
           Given block's operation list
 
-          * Returns array of `hafbe_types.op_types`
+          * Returns array of `hafbe_types.op_types_count`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_op_types'
+              $ref: '#/components/schemas/hafbe_types.array_of_op_types_count'
             example:
               - op_type_id: 72
                 operation_name: effective_comment_vote_operation
                 is_virtual: true
+                count: 1
               - op_type_id: 0
                 operation_name: vote_operation
                 is_virtual: false
+                count: 1
       '404':
         description: No block in the database
  */
@@ -51,7 +53,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_op_types;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_op_types(
     "block-num" INT
 )
-RETURNS SETOF hafbe_types.op_types 
+RETURNS SETOF hafbe_types.op_types_count 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
@@ -67,11 +69,19 @@ ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
-RETURN QUERY SELECT DISTINCT ON (ov.op_type_id)
-  ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual
-FROM hive.operations_view ov
+RETURN QUERY
+WITH get_ops_count AS (
+  SELECT 
+    ov.op_type_id,
+    COUNT(ov.op_type_id) as count 
+  FROM hive.operations_view ov
+  WHERE ov.block_num = "block-num"
+  GROUP BY ov.op_type_id
+)
+SELECT 
+  ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual, ov.count
+FROM get_ops_count ov
 JOIN hive.operation_types hot ON hot.id = ov.op_type_id
-WHERE ov.block_num = "block-num"
 ORDER BY ov.op_type_id ASC
 ;
 
