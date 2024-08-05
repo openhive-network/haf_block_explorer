@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/blocks/{block-num}/header:
+/blocks/{block-num}/global-state:
   get:
     tags:
       - Blocks
@@ -10,14 +10,10 @@ SET ROLE hafbe_owner;
       Lists the parameters of the block provided by the user
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block(10000);`
-
-      * `SELECT * FROM hafbe_endpoints.get_block(43000);`
+      * `SELECT * FROM hafbe_endpoints.get_block(5000000);`
       
-      REST call example
-      * `GET https://{hafbe-host}/hafbe/blocks/10000/header`
-      
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/header`
+      REST call example      
+      * `GET ''https://%1$s/hafbe/blocks/5000000/global-state''`
     operationId: hafbe_endpoints.get_block
     parameters:
       - in: path
@@ -29,7 +25,7 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          Given block's stats
+          Given block''s stats
 
           * Returns `hafbe_types.block`
         content:
@@ -37,24 +33,23 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.block'
             example:
-              - block_num: 1231
-                hash: \\x000004cf8319149b0743acdcf2a17a332677fb0f
-                prev: \\x000004ce0536f08f1e09c3dc7b12b8ddf13f1c5a
-                producer_account: 'producer_account'
-                transaction_merkle_root: \\x0000000000000000000000000000000000000000
-                extensions: NULL
-                witness_signature: \\x207f255f2d6c69c04ccfa4a541792a773412307735ccf96ba9e12d9c84b714c4711cf1d1bed561994c46daf33a24e8071f15f92
-                signing_key: STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G
+              - block_num: 5000000
+                hash: "004c4b40245ffb07380a393fb2b3d841b76cdaec"
+                prev: "004c4b3fc6a8735b4ab5433d59f4526e4a042644"
+                producer_account: "ihashfury"
+                transaction_merkle_root: "97a8f2b04848b860f1792dc07bf58efcb15aeb8c"
+                extensions: []
+                witness_signature: "1f6aa1c6311c768b5225b115eaf5798e5f1d8338af3970d90899cd5ccbe38f6d1f7676c5649bcca18150cbf8f07c0cc7ec3ae40d5936cfc6d5a650e582ba0f8002"
+                signing_key: STM8aUs6SGoEmNYMd3bYjE1UBr6NQPxGWmTqTdBaxJYSx244edSB2
                 hbd_interest_rate: 1000
-                total_vesting_fund_hive: 28000
-                total_vesting_shares: 28000000
-                total_reward_fund_hive: 2462000
-                virtual_supply: 4932000
-                current_supply: 4932000
-                current_hbd_supply: 0
+                total_vesting_fund_hive: 149190428013
+                total_vesting_shares: 448144916705468350
+                total_reward_fund_hive: 66003975
+                virtual_supply: 161253662237
+                current_supply: 157464400971
+                current_hbd_supply: 2413759427
                 dhf_interval_ledger: 0
-                created_at: '2016-03-24T17:07:15'
-                age: '2993 days 15:24:08.630023'
+                created_at: "2016-09-15T19:47:21"
       '404':
         description: No blocks in the database
  */
@@ -82,12 +77,12 @@ END IF;
 RETURN (
 SELECT ROW(
   bv.num,   
-  bv.hash,
-  bv.prev,
+  encode(bv.hash,'hex'),
+  encode(bv.prev,'hex'),
   (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT,
-  bv.transaction_merkle_root,
-  bv.extensions,
-  bv.witness_signature,
+  encode(bv.transaction_merkle_root,'hex'),
+  COALESCE(bv.extensions, '[]'),
+  encode(bv.witness_signature, 'hex'),
   bv.signing_key,
   bv.hbd_interest_rate::numeric,
   bv.total_vesting_fund_hive::numeric,
@@ -97,8 +92,7 @@ SELECT ROW(
   bv.current_supply::numeric,
   bv.current_hbd_supply::numeric,
   bv.dhf_interval_ledger::numeric,
-  bv.created_at,
-  NOW() - bv.created_at)
+  bv.created_at)
 FROM hive.blocks_view bv
 WHERE bv.num = "block-num"
 );

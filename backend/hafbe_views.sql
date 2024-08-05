@@ -67,7 +67,7 @@ CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
 SELECT
   rapv.proxy_id,
   (SELECT av.name FROM hive.accounts_view av WHERE av.id = rapv.account_id) as name,
-  (cab.balance - COALESCE(dv.delayed_vests,0)) AS proxied_vests,
+  (cab.balance::BIGINT - COALESCE(dv.delayed_vests::BIGINT,0)) AS proxied_vests,
   rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
 JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
@@ -79,7 +79,7 @@ LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id;
 CREATE OR REPLACE VIEW hafbe_views.witness_voters_vests_view AS
 SELECT
   cwv_cap.witness_id, cwv_cap.voter_id,
-  CASE WHEN cwv_cap.proxy_id IS NULL THEN COALESCE(cab.balance, 0) ELSE 0 END AS account_vests,
+  CASE WHEN cwv_cap.proxy_id IS NULL THEN COALESCE(cab.balance::BIGINT, 0) ELSE 0 END AS account_vests,
   cwv_cap.timestamp
 FROM (
   SELECT cwv.witness_id, cwv.voter_id, cwv.timestamp, cap.proxy_id
@@ -104,7 +104,7 @@ CREATE OR REPLACE VIEW hafbe_views.current_witness_votes_view AS
 CREATE OR REPLACE VIEW hafbe_views.voters_proxied_vests_view AS
 SELECT
   rapv.proxy_id,
-  SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
+  SUM(cab.balance::BIGINT - COALESCE(dv.delayed_vests::BIGINT,0))::BIGINT AS proxied_vests,
   rapv.proxy_level
 FROM hafbe_views.recursive_account_proxies_view rapv
 JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
@@ -127,8 +127,8 @@ GROUP BY rapv.proxy_id;
 CREATE OR REPLACE VIEW hafbe_views.voters_stats_view AS
 SELECT
   wvvv.witness_id, wvvv.voter_id,
-  wvvv.account_vests - COALESCE(dv.delayed_vests,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
-  wvvv.account_vests - COALESCE(dv.delayed_vests,0) AS account_vests,
+  wvvv.account_vests - COALESCE(dv.delayed_vests::BIGINT,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
+  wvvv.account_vests - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
   COALESCE(vpvv.proxied_vests, 0) AS proxied_vests,
   wvvv.timestamp
 FROM hafbe_views.witness_voters_vests_view wvvv
@@ -146,7 +146,7 @@ SELECT
 FROM hafbe_app.witness_votes_history wvh
 
 JOIN (
-  SELECT balance, account, nai
+  SELECT balance::BIGINT, account, nai
   FROM current_account_balances
 ) cab ON cab.account = wvh.voter_id AND cab.nai = 37
 
@@ -167,7 +167,7 @@ SELECT
 FROM hafbe_app.account_proxies_history aph
 
 JOIN (
-  SELECT balance, account, nai
+  SELECT balance::BIGINT, account, nai
   FROM current_account_balances 
 ) cab ON cab.account = aph.account_id AND cab.nai = 37
 
@@ -263,7 +263,7 @@ CREATE OR REPLACE VIEW hafbe_views.votes_history_view AS
 WITH select_range AS (
   SELECT
     wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-    COALESCE(cab.balance, 0) - COALESCE(dv.delayed_vests, 0) AS balance,
+    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS balance,
     COALESCE(rpav.proxied_vests, 0) AS proxied_vests
   FROM hafbe_app.witness_votes_history wvh
   LEFT JOIN current_account_balances cab

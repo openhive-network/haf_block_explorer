@@ -38,14 +38,6 @@ hafbe_types.operation:
       type: string
       format: date-time
       description: creation date
-    age:
-      type: string
-      x-sql-datatype: INTERVAL
-      description: how old is the operation
-    is_modified:
-      type: boolean
-      description: >-
-        true if operation body was modified with body placeholder due to its lenght
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.operation CASCADE;
@@ -58,9 +50,7 @@ CREATE TYPE hafbe_types.operation AS (
     "op_type_id" INT,
     "operation" JSONB,
     "virtual_op" BOOLEAN,
-    "timestamp" TIMESTAMP,
-    "age" INTERVAL,
-    "is_modified" BOOLEAN
+    "timestamp" TIMESTAMP
 );
 -- openapi-generated-code-end
 

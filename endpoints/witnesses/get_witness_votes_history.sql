@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       Get information about each vote cast for this witness
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_witness_votes_history('gtg');`
-      
-      * `SELECT * FROM hafbe_endpoints.get_witness_votes_history('blocktrades');`
+      * `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/witnesses/gtg/votes/history`
-
-      * `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/votes/history`
+      * `GET ''https://%1$s/hafbe/witnesses/blocktrades/votes/history?result-limit=2''`
     operationId: hafbe_endpoints.get_witness_votes_history
     parameters:
       - in: path
@@ -36,15 +32,15 @@ SET ROLE hafbe_owner;
         description: |
           Sort order:
 
-           * `voter` - total number of voters casting their votes for each witness.  this probably makes no sense for this call???
+           * `voter` - account name of voter
 
-           * `vests` - total weight of vests casting their votes for each witness
+           * `vests` - total voting power = account_vests + proxied_vests of voter
 
-           * `account_vests` - total weight of vests owned by accounts voting for each witness
+           * `account_vests` - direct vests of voter
 
-           * `proxied_vests` - total weight of vests owned by accounts who proxy their votes to a voter voting for each witness
+           * `proxied_vests` - proxied vests of voter
 
-           * `timestamp` - the time the voter last changed their vote???
+           * `timestamp` - time when user performed vote/unvote operation
       - in: query
         name: direction
         required: false
@@ -70,7 +66,7 @@ SET ROLE hafbe_owner;
         schema:
           type: string
           format: date-time
-          x-sql-default-value: "'1970-01-01T00:00:00'::TIMESTAMP"
+          default: NULL
         description: Return only votes newer than `start-date`
       - in: query
         name: end-date
@@ -91,24 +87,24 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_witness_vote_history_records'
             example:
-              - voter: reugie
+              - voter: "jeremyfromwi"
                 approve: true
-                vests: 1492852870616
-                vests_hive_power: 863149
-                account_vests: 1492852870616
-                account_hive_power: 863149
-                proxied_vests: 0
+                vests: "441156952466"
+                votes_hive_power: 146864
+                account_vests: "441156952466"
+                account_hive_power: 146864
+                proxied_vests: "0"
                 proxied_hive_power: 0
-                timestamp: '2024-03-27T14:46:09.000Z'
-              - voter: cooperclub
+                timestamp: "2016-09-15T07:07:15"
+              - voter: "cryptomental"
                 approve: true
-                vests: 8238935864379
-                vests_hive_power: 4763650
-                account_vests: 8238935864379
-                account_hive_power: 4763650
-                proxied_vests: 0
+                vests: "686005633844"
+                votes_hive_power: 228376
+                account_vests: "686005633844"
+                account_hive_power: 228376
+                proxied_vests: "0"
                 proxied_hive_power: 0
-                timestamp: '2024-03-27T14:42:06.000Z'
+                timestamp: "2016-09-15T07:00:51"
       '404':
         description: No such witness
  */
@@ -119,7 +115,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "sort" hafbe_types.order_by_votes = 'timestamp',
     "direction" hafbe_types.sort_direction = 'desc',
     "result-limit" INT = 100,
-    "start-date" TIMESTAMP = '1970-01-01T00:00:00'::TIMESTAMP,
+    "start-date" TIMESTAMP = NULL,
     "end-date" TIMESTAMP = now()
 )
 RETURNS SETOF hafbe_types.witness_votes_history_record 
@@ -134,6 +130,10 @@ $$
 DECLARE
 _witness_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
+
+IF "start-date" IS NULL THEN 
+  "start-date" := '1970-01-01T00:00:00'::TIMESTAMP;
+END IF;
 
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
@@ -155,11 +155,11 @@ RETURN QUERY EXECUTE format(
   select_votes_history AS (
   SELECT
     wvh.voter, wvh.approve, 
-    (wvh.account_vests + wvh.proxied_vests ) AS vests, 
+    (wvh.account_vests + wvh.proxied_vests )::TEXT AS vests, 
     (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), (wvh.account_vests + wvh.proxied_vests) ))::BIGINT AS vests_hive_power,
-    wvh.account_vests AS account_vests, 
+    wvh.account_vests::TEXT AS account_vests, 
     (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.account_vests))::BIGINT AS account_hive_power,
-    wvh.proxied_vests AS proxied_vests,
+    wvh.proxied_vests::TEXT AS proxied_vests,
     (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.proxied_vests))::BIGINT AS proxied_hive_power,
     wvh.timestamp AS timestamp
   FROM select_range wvh

@@ -20,10 +20,6 @@ tags:
     description: Informations about blocks
   - name: Block-numbers
     description: Informations about block numbers
-  - name: Transactions
-    description: Informations about transactions
-  - name: Operations
-    description: Informations about operations
   - name: Accounts
     description: Informations about accounts
   - name: Witnesses
@@ -36,7 +32,14 @@ servers:
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
 
-create or replace function hafbe_endpoints.root() returns json as $_$
+DO $__$
+DECLARE 
+  swagger_url TEXT;
+BEGIN
+  swagger_url := current_setting('custom.swagger_url')::TEXT;
+  
+EXECUTE FORMAT(
+'create or replace function hafbe_endpoints.root() returns json as $_$
 declare
 -- openapi-spec
 -- openapi-generated-code-begin
@@ -73,7 +76,6 @@ declare
           "voters_num_daily_change",
           "price_feed",
           "bias",
-          "feed_age",
           "block_size",
           "signing_key",
           "version"
@@ -92,11 +94,10 @@ declare
           },
           "url": {
             "type": "string",
-            "description": "the witness's home page"
+            "description": "the witness''s home page"
           },
           "vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the total weight of votes cast in favor of this witness, expressed in VESTS"
           },
           "vests_hive_power": {
@@ -105,8 +106,7 @@ declare
             "description": "the total weight of votes cast in favor of this witness, expressed in HIVE power, at the current ratio"
           },
           "votes_daily_change": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the increase or decrease in votes for this witness over the last 24 hours, expressed in vests"
           },
           "votes_daily_change_hive_power": {
@@ -129,12 +129,7 @@ declare
           "bias": {
             "type": "integer",
             "x-sql-datatype": "NUMERIC",
-            "description": "When setting the price feed, you specify the base and quote. Typically, if market conditions are stable and, for example, HBD is trading at 0.25 USD on exchanges, a witness would set:\n  base: 0.250 HBD\n  quote: 1.000 HIVE\n(This indicates that one HIVE costs 0.25 HBD.) However, if the peg is not maintained and HBD does not equal 1 USD (either higher or lower), the witness can adjust the feed accordingly. For instance, if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n  base: 0.250 HBD\n  quote: 1.100 HIVE\nIn this case, the bias is 10%"
-          },
-          "feed_age": {
-            "type": "string",
-            "x-sql-datatype": "INTERVAL",
-            "description": "how old the witness price feed is (as a string formatted hh:mm:ss.ssssss)"
+            "description": "When setting the price feed, you specify the base and quote. Typically, if market conditions are stable and, for example, HBD is trading at 0.25 USD on exchanges, a witness would set:\n  base: 0.250 HBD\n  quote: 1.000 HIVE\n(This indicates that one HIVE costs 0.25 HBD.) However, if the peg is not maintained and HBD does not equal 1 USD (either higher or lower), the witness can adjust the feed accordingly. For instance, if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n  base: 0.250 HBD\n  quote: 1.100 HIVE\nIn this case, the bias is 10%%"
           },
           "feed_updated_at": {
             "type": "string",
@@ -155,7 +150,7 @@ declare
           },
           "missed_blocks": {
             "type": "integer",
-            "description": "the number of blocks the witness should have generated but didn't (over the entire lifetime of the blockchain)"
+            "description": "the number of blocks the witness should have generated but didn''t (over the entire lifetime of the blockchain)"
           },
           "hbd_interest_rate": {
             "type": "integer",
@@ -177,8 +172,7 @@ declare
             "description": "account name of the voter"
           },
           "vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "number of vests this voter is directly voting with"
           },
           "votes_hive_power": {
@@ -187,18 +181,16 @@ declare
             "description": "number of vests this voter is directly voting with, expressed in HIVE power, at the current ratio"
           },
           "account_vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter's account.  if some vests are delegated, they will not be counted in voting"
+            "type": "string",
+            "description": "number of vests in the voter''s account.  if some vests are delegated, they will not be counted in voting"
           },
           "account_hive_power": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter's account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
+            "description": "number of vests in the voter''s account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
           },
           "proxied_vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the number of vests proxied to this account"
           },
           "proxied_hive_power": {
@@ -231,8 +223,7 @@ declare
             "description": "whether the voter approved or rejected the witness"
           },
           "vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "number of vests this voter is directly voting with"
           },
           "votes_hive_power": {
@@ -241,18 +232,16 @@ declare
             "description": "number of vests this voter is directly voting with, expressed in HIVE power, at the current ratio"
           },
           "account_vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter's account.  if some vests are delegated, they will not be counted in voting"
+            "type": "string",
+            "description": "number of vests in the voter''s account.  if some vests are delegated, they will not be counted in voting"
           },
           "account_hive_power": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter's account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
+            "description": "number of vests in the voter''s account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
           },
           "proxied_vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the number of vests proxied to this account"
           },
           "proxied_hive_power": {
@@ -278,11 +267,11 @@ declare
         "properties": {
           "id": {
             "type": "integer",
-            "description": "account's identification number"
+            "description": "account''s identification number"
           },
           "name": {
             "type": "string",
-            "description": "account's name"
+            "description": "account''s name"
           },
           "can_vote": {
             "type": "boolean",
@@ -312,7 +301,7 @@ declare
           },
           "reputation": {
             "type": "integer",
-            "description": "numerical rating of the user  based on upvotes and downvotes on user's posts"
+            "description": "numerical rating of the user  based on upvotes and downvotes on user''s posts"
           },
           "json_metadata": {
             "type": "string",
@@ -334,12 +323,11 @@ declare
           "balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "account's HIVE balance"
+            "description": "account''s HIVE balance"
           },
           "vesting_shares": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "account's VEST balance"
+            "type": "string",
+            "description": "account''s VEST balance"
           },
           "vesting_balance": {
             "type": "integer",
@@ -358,7 +346,7 @@ declare
           },
           "savings_withdraw_requests": {
             "type": "integer",
-            "description": "number representing how many payouts are pending  from user's saving balance "
+            "description": "number representing how many payouts are pending  from user''s saving balance "
           },
           "reward_hbd_balance": {
             "type": "integer",
@@ -371,8 +359,7 @@ declare
             "description": "not yet claimed HIVE  stored in hive reward balance"
           },
           "reward_vesting_balance": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "not yet claimed VESTS  stored in vest reward balance"
           },
           "reward_vesting_hive": {
@@ -381,24 +368,20 @@ declare
             "description": "the reward vesting balance, denominated in HIVE,  is determined by the prevailing HIVE price at the time of reward reception"
           },
           "posting_rewards": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "rewards obtained by posting and commenting expressed in VEST"
           },
           "curation_rewards": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "curator's reward expressed in VEST"
+            "type": "string",
+            "description": "curator''s reward expressed in VEST"
           },
           "delegated_vesting_shares": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "VESTS delegated to another user,  account's power is lowered by delegated VESTS"
+            "type": "string",
+            "description": "VESTS delegated to another user,  account''s power is lowered by delegated VESTS"
           },
           "received_vesting_shares": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "VESTS received from another user,  account's power is increased by received VESTS"
+            "type": "string",
+            "description": "VESTS received from another user,  account''s power is increased by received VESTS"
           },
           "proxied_vsf_votes": {
             "type": "string",
@@ -406,18 +389,15 @@ declare
             "description": "recursive proxy of VESTS "
           },
           "withdrawn": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the total VESTS already withdrawn from active withdrawals"
           },
           "vesting_withdraw_rate": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "received until the withdrawal is complete,  with each installment amounting to 1/13 of the withdrawn total"
           },
           "to_withdraw": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "the remaining total VESTS needed to complete withdrawals"
           },
           "withdraw_routes": {
@@ -425,8 +405,7 @@ declare
             "description": "list of account receiving the part of a withdrawal"
           },
           "delayed_vests": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "type": "string",
             "description": "blocked VESTS by a withdrawal"
           },
           "witness_votes": {
@@ -481,7 +460,7 @@ declare
         "properties": {
           "permlink": {
             "type": "string",
-            "description": "unique post identifier containing post's title and generated number"
+            "description": "unique post identifier containing post''s title and generated number"
           },
           "block_num": {
             "type": "integer",
@@ -505,10 +484,6 @@ declare
             "type": "string",
             "x-sql-datatype": "JSONB",
             "description": "operation body"
-          },
-          "is_modified": {
-            "type": "boolean",
-            "description": "true if operation body was modified with body placeholder due to its lenght"
           }
         }
       },
@@ -545,31 +520,27 @@ declare
           },
           "hash": {
             "type": "string",
-            "x-sql-datatype": "bytea",
-            "description": "block hash in a blockchain is a unique, fixed-length string generated  by applying a cryptographic hash function to a block's contents"
+            "description": "block hash in a blockchain is a unique, fixed-length string generated  by applying a cryptographic hash function to a block''s contents"
           },
           "prev": {
             "type": "string",
-            "x-sql-datatype": "bytea",
             "description": "hash of a previous block"
           },
           "producer_account": {
             "type": "string",
-            "description": "account name of block's producer"
+            "description": "account name of block''s producer"
           },
           "transaction_merkle_root": {
             "type": "string",
-            "x-sql-datatype": "bytea",
             "description": "single hash representing the combined hashes of all transactions in a block"
           },
           "extensions": {
             "type": "string",
             "x-sql-datatype": "JSONB",
-            "description": "various additional data/parameters related to the subject at hand. Most often, there's nothing specific, but it's a mechanism for extending various functionalities where something might appear in the future."
+            "description": "various additional data/parameters related to the subject at hand. Most often, there''s nothing specific, but it''s a mechanism for extending various functionalities where something might appear in the future."
           },
           "witness_signature": {
             "type": "string",
-            "x-sql-datatype": "bytea",
             "description": "witness signature"
           },
           "signing_key": {
@@ -620,68 +591,6 @@ declare
             "type": "string",
             "format": "date-time",
             "description": "the timestamp when the block was created"
-          },
-          "age": {
-            "type": "string",
-            "x-sql-datatype": "INTERVAL",
-            "description": "the time that has elapsed since the block was created."
-          }
-        }
-      },
-      "hafbe_types.block_raw": {
-        "type": "object",
-        "properties": {
-          "previous": {
-            "type": "string",
-            "x-sql-datatype": "bytea",
-            "description": "hash of a previous block"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "the timestamp when the block was created"
-          },
-          "witness": {
-            "type": "string",
-            "x-sql-datatype": "VARCHAR",
-            "description": "account name of block's producer"
-          },
-          "transaction_merkle_root": {
-            "type": "string",
-            "x-sql-datatype": "bytea",
-            "description": "single hash representing the combined hashes of all transactions in a block"
-          },
-          "extensions": {
-            "type": "string",
-            "x-sql-datatype": "JSONB",
-            "description": "various additional data/parameters related to the subject at hand. Most often, there's nothing specific, but it's a mechanism for extending various functionalities where something might appear in the future."
-          },
-          "witness_signature": {
-            "type": "string",
-            "x-sql-datatype": "bytea",
-            "description": "witness signature"
-          },
-          "transactions": {
-            "type": "string",
-            "x-sql-datatype": "JSONB",
-            "description": "list of transactions"
-          },
-          "block_id": {
-            "type": "string",
-            "x-sql-datatype": "bytea",
-            "description": "the block_id from the block header"
-          },
-          "signing_key": {
-            "type": "string",
-            "description": "it refers to the public key of the witness used for signing blocks and other witness operations"
-          },
-          "transaction_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-sql-datatype": "bytea[]",
-            "description": "list of transaction's hashes that occured in given block"
           }
         }
       },
@@ -706,29 +615,6 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_types.block_by_ops"
-        }
-      },
-      "hafbe_types.op_types": {
-        "type": "object",
-        "properties": {
-          "op_type_id": {
-            "type": "integer",
-            "description": "operation type id"
-          },
-          "operation_name": {
-            "type": "string",
-            "description": "operation type name"
-          },
-          "is_virtual": {
-            "type": "boolean",
-            "description": "true if operation is virtual"
-          }
-        }
-      },
-      "hafbe_types.array_of_op_types": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.op_types"
         }
       },
       "hafbe_types.operation": {
@@ -772,15 +658,6 @@ declare
             "type": "string",
             "format": "date-time",
             "description": "creation date"
-          },
-          "age": {
-            "type": "string",
-            "x-sql-datatype": "INTERVAL",
-            "description": "how old is the operation"
-          },
-          "is_modified": {
-            "type": "boolean",
-            "description": "true if operation body was modified with body placeholder due to its lenght"
           }
         }
       },
@@ -790,14 +667,6 @@ declare
           "op_type_id": {
             "type": "integer",
             "description": "operation type id"
-          },
-          "operation_name": {
-            "type": "string",
-            "description": "operation type name"
-          },
-          "is_virtual": {
-            "type": "boolean",
-            "description": "true if operation is virtual"
           },
           "count": {
             "type": "integer",
@@ -810,48 +679,6 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_types.op_types_count"
-        }
-      },
-      "hafbe_types.transaction": {
-        "type": "object",
-        "properties": {
-          "transaction_json": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
-            "description": "contents of the transaction"
-          },
-          "transaction_id": {
-            "type": "string",
-            "description": "hash of the transaction"
-          },
-          "block_num": {
-            "type": "integer",
-            "description": "number of block the transaction was in"
-          },
-          "transaction_num": {
-            "type": "integer",
-            "description": "number of the transaction in block"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "the time of the transaction was made"
-          },
-          "age": {
-            "type": "string",
-            "x-sql-datatype": "INTERVAL",
-            "description": "how old is the transaction"
-          }
-        }
-      },
-      "hafbe_types.array_of_text_array": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "x-sql-datatype": "TEXT[]"
         }
       }
     }
@@ -880,14 +707,6 @@ declare
       "description": "Informations about block numbers"
     },
     {
-      "name": "Transactions",
-      "description": "Informations about transactions"
-    },
-    {
-      "name": "Operations",
-      "description": "Informations about operations"
-    },
-    {
       "name": "Accounts",
       "description": "Informations about accounts"
     },
@@ -912,7 +731,7 @@ declare
           "Witnesses"
         ],
         "summary": "List witnesses",
-        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses();`\n* `SELECT * FROM hafbe_endpoints.get_witnesses(10);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses`\n* `GET https://{hafbe-host}/hafbe/witnesses?result-limit=10`\n",
+        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witnesses",
         "parameters": [
           {
@@ -943,7 +762,7 @@ declare
               "$ref": "#/components/schemas/hafbe_types.order_by_witness",
               "default": "votes"
             },
-            "description": "Sort key:\n\n * `witness` - the witness' name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness' url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%\n\n * `feed_age` - how old their feed value is\n\n * `block_size` - the block size they're voting for\n\n * `signing_key` - the witness' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
+            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they''re voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
           },
           {
             "in": "query",
@@ -966,42 +785,42 @@ declare
                 },
                 "example": [
                   {
-                    "witness": "arcange",
+                    "witnes\"": "roadscape",
                     "rank": 1,
-                    "url": "https://peakd.com/witness-category/@arcange/witness-update-202103",
-                    "vests": 141591182132060780,
-                    "votes_hive_power": 81865807173,
-                    "votes_daily_change": 39841911089,
-                    "votes_daily_change_hive_power": 23036,
-                    "voters_num": 4481,
-                    "voters_num_daily_change": 5,
-                    "price_feed": 0.302,
+                    "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
+                    "vests": "94172201023355097",
+                    "vests_hive_power": 31350553033,
+                    "votes_daily_change": "0",
+                    "votes_daily_change_hive_power": "0,",
+                    "voters_num": 306,
+                    "voters_num_daily_change": 0,
+                    "price_feed": 0.539,
                     "bias": 0,
-                    "feed_age": "00:45:20.244402",
+                    "feed_updated_at": "2016-09-15T16:07:42",
                     "block_size": 65536,
-                    "signing_key": "STM6wjYfYn728hR5yXNBS5GcMoACfYymKEWW1WFzDGiMaeo9qUKwH",
-                    "version": "1.27.4",
-                    "missed_blocks": 697,
-                    "hbd_interest_rate": 2000
+                    "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
+                    "version": "0.13.0",
+                    "missed_blocks": 129,
+                    "hbd_interest_rate": 1000
                   },
                   {
-                    "witness": "gtg",
+                    "witness": "arhag",
                     "rank": 2,
-                    "url": "https://gtg.openhive.network",
-                    "vests": 141435014237847520,
-                    "votes_hive_power": 81775513339,
-                    "votes_daily_change": 186512763933,
-                    "votes_daily_change_hive_power": 107839,
-                    "voters_num": 3131,
-                    "voters_num_daily_change": 4,
-                    "price_feed": 0.3,
+                    "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
+                    "vests": "91835048921097725",
+                    "vests_hive_power": 30572499530,
+                    "votes_daily_change": "0",
+                    "votes_daily_change_hive_power": 0,
+                    "voters_num": 348,
+                    "voters_num_daily_change": 0,
+                    "price_feed": 0.536,
                     "bias": 0,
-                    "feed_age": "00:55:26.244402",
+                    "feed_updated_at": "2016-09-15T19:31:18",
                     "block_size": 65536,
-                    "signing_key": "STM5dLh5HxjjawY4Gm6o6ugmJUmEXgnfXXXRJPRTxRnvfFBJ24c1M",
-                    "version": "1.27.5",
-                    "missed_blocks": 986,
-                    "hbd_interest_rate": 1500
+                    "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
+                    "version": "0.13.0",
+                    "missed_blocks": 61,
+                    "hbd_interest_rate": 1000
                   }
                 ]
               }
@@ -1016,7 +835,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get a single witness",
-        "description": "Return a single witness given their account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness('gtg');`\n\n* `SELECT * FROM hafbe_endpoints.get_witness('blocktrades');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses/gtg`\n\n* `GET https://{hafbe-host}/hafbe/witnesses/blocktrades`\n",
+        "description": "Return a single witness given their account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_witness",
         "parameters": [
           {
@@ -1038,23 +857,23 @@ declare
                   "$ref": "#/components/schemas/hafbe_types.witness"
                 },
                 "example": {
-                  "witness": "arcange",
-                  "rank": 1,
-                  "url": "https://peakd.com/witness-category/@arcange/witness-update-202103",
-                  "vests": 141591182132060780,
-                  "votes_hive_power": 81865807173,
-                  "votes_daily_change": 39841911089,
-                  "votes_daily_change_hive_power": 23036,
-                  "voters_num": 4481,
-                  "voters_num_daily_change": 5,
-                  "price_feed": 0.302,
+                  "witness": "blocktrades",
+                  "rank": 8,
+                  "url": "https://blocktrades.us",
+                  "vests": "82373419958692803",
+                  "vests_hive_power": 27422660221,
+                  "votes_daily_change": "0",
+                  "votes_daily_change_hive_power": 0,
+                  "voters_num": 263,
+                  "voters_num_daily_change": 0,
+                  "price_feed": 0.545,
                   "bias": 0,
-                  "feed_age": "00:45:20.244402",
+                  "feed_updated_at": "2016-09-15T16:02:21",
                   "block_size": 65536,
-                  "signing_key": "STM6wjYfYn728hR5yXNBS5GcMoACfYymKEWW1WFzDGiMaeo9qUKwH",
-                  "version": "1.27.4",
-                  "missed_blocks": 697,
-                  "hbd_interest_rate": 2000
+                  "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
+                  "version": "0.13.0",
+                  "missed_blocks": 935,
+                  "hbd_interest_rate": 1000
                 }
               }
             }
@@ -1071,7 +890,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get information about the voters for a witness",
-        "description": "Get information about the voters voting for a given witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_voters('gtg');`\n\n* `SELECT * FROM hafbe_endpoints.get_witness_voters('blocktrades');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses/gtg/voters`\n\n* `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/voters`\n",
+        "description": "Get information about the voters voting for a given witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters",
         "parameters": [
           {
@@ -1091,7 +910,7 @@ declare
               "$ref": "#/components/schemas/hafbe_types.order_by_votes",
               "default": "vests"
             },
-            "description": "Sort order:\n\n * `voter` - total number of voters casting their votes for each witness.  this probably makes no sense for call???\n\n * `vests` - total weight of vests casting their votes for each witness\n\n * `account_vests` - total weight of vests owned by accounts voting for each witness\n\n * `proxied_vests` - total weight of vests owned by accounts who proxy their votes to a voter voting for each witness\n\n * `timestamp` - the time the voter last changed their vote???\n"
+            "description": "Sort order:\n\n * `voter` - account name of voter\n\n * `vests` - total voting power = account_vests + proxied_vests of voter\n\n * `account_vests` - direct vests of voter\n\n * `proxied_vests` - proxied vests of voter\n\n * `timestamp` - last time voter voted for the witness\n"
           },
           {
             "in": "query",
@@ -1124,24 +943,24 @@ declare
                 },
                 "example": [
                   {
-                    "voter": "reugie",
-                    "vests": 1492852870616,
-                    "vests_hive_power": 863149,
-                    "account_vests": 1492852870616,
-                    "account_hive_power": 863149,
-                    "proxied_vests": 0,
-                    "proxied_hive_power": 0,
-                    "timestamp": "2024-03-27T14:46:09.000Z"
+                    "voter": "blocktrades",
+                    "vests": "13155953611548185",
+                    "votes_hive_power": 4379704593,
+                    "account_vests": "8172549681941451",
+                    "account_hive_power": 2720696229,
+                    "proxied_vests": "4983403929606734",
+                    "proxied_hive_power": 1659008364,
+                    "timestamp": "2016-04-15T02:19:57"
                   },
                   {
-                    "voter": "cooperclub",
-                    "vests": 8238935864379,
-                    "vests_hive_power": 4763650,
-                    "account_vests": 8238935864379,
-                    "account_hive_power": 4763650,
-                    "proxied_vests": 0,
+                    "voter": "dan",
+                    "vests": "9928811304950768",
+                    "votes_hive_power": 3305367423,
+                    "account_vests": "9928811304950768",
+                    "account_hive_power": 3305367423,
+                    "proxied_vests": "0",
                     "proxied_hive_power": 0,
-                    "timestamp": "2024-03-27T14:42:06.000Z"
+                    "timestamp": "2016-06-27T12:41:42"
                   }
                 ]
               }
@@ -1159,7 +978,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the number of voters for a witness",
-        "description": "Get the number of voters for a witness given their account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num('gtg');`\n\n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num('blocktrades');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses/gtg/voters/count`\n\n* `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/voters/count`\n",
+        "description": "Get the number of voters for a witness given their account name\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters_num",
         "parameters": [
           {
@@ -1180,7 +999,7 @@ declare
                 "schema": {
                   "type": "integer"
                 },
-                "example": 3131
+                "example": 263
               }
             }
           },
@@ -1196,7 +1015,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the history of votes for this witness",
-        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history('gtg');`\n\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history('blocktrades');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/witnesses/gtg/votes/history`\n\n* `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/votes/history`\n",
+        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/votes/history?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_votes_history",
         "parameters": [
           {
@@ -1216,7 +1035,7 @@ declare
               "$ref": "#/components/schemas/hafbe_types.order_by_votes",
               "default": "timestamp"
             },
-            "description": "Sort order:\n\n * `voter` - total number of voters casting their votes for each witness.  this probably makes no sense for this call???\n\n * `vests` - total weight of vests casting their votes for each witness\n\n * `account_vests` - total weight of vests owned by accounts voting for each witness\n\n * `proxied_vests` - total weight of vests owned by accounts who proxy their votes to a voter voting for each witness\n\n * `timestamp` - the time the voter last changed their vote???\n"
+            "description": "Sort order:\n\n * `voter` - account name of voter\n\n * `vests` - total voting power = account_vests + proxied_vests of voter\n\n * `account_vests` - direct vests of voter\n\n * `proxied_vests` - proxied vests of voter\n\n * `timestamp` - time when user performed vote/unvote operation\n"
           },
           {
             "in": "query",
@@ -1244,7 +1063,7 @@ declare
             "schema": {
               "type": "string",
               "format": "date-time",
-              "x-sql-default-value": "'1970-01-01T00:00:00'::TIMESTAMP"
+              "default": null
             },
             "description": "Return only votes newer than `start-date`"
           },
@@ -1270,26 +1089,26 @@ declare
                 },
                 "example": [
                   {
-                    "voter": "reugie",
+                    "voter": "jeremyfromwi",
                     "approve": true,
-                    "vests": 1492852870616,
-                    "vests_hive_power": 863149,
-                    "account_vests": 1492852870616,
-                    "account_hive_power": 863149,
-                    "proxied_vests": 0,
+                    "vests": "441156952466",
+                    "votes_hive_power": 146864,
+                    "account_vests": "441156952466",
+                    "account_hive_power": 146864,
+                    "proxied_vests": "0",
                     "proxied_hive_power": 0,
-                    "timestamp": "2024-03-27T14:46:09.000Z"
+                    "timestamp": "2016-09-15T07:07:15"
                   },
                   {
-                    "voter": "cooperclub",
+                    "voter": "cryptomental",
                     "approve": true,
-                    "vests": 8238935864379,
-                    "vests_hive_power": 4763650,
-                    "account_vests": 8238935864379,
-                    "account_hive_power": 4763650,
-                    "proxied_vests": 0,
+                    "vests": "686005633844",
+                    "votes_hive_power": 228376,
+                    "account_vests": "686005633844",
+                    "account_hive_power": 228376,
+                    "proxied_vests": "0",
                     "proxied_hive_power": 0,
-                    "timestamp": "2024-03-27T14:42:06.000Z"
+                    "timestamp": "2016-09-15T07:00:51"
                   }
                 ]
               }
@@ -1307,7 +1126,7 @@ declare
           "Accounts"
         ],
         "summary": "Get account info",
-        "description": "Get information about account's balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_account('initminer');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades`\n\n* `GET https://{hafbe-host}/hafbe/accounts/initminer`\n",
+        "description": "Get information about account''s balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_account",
         "parameters": [
           {
@@ -1322,7 +1141,7 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The account's parameters\n\n* Returns `hafbe_types.account`\n",
+            "description": "The account''s parameters\n\n* Returns `hafbe_types.account`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1334,38 +1153,48 @@ declare
                     "name": "blocktrades",
                     "can_vote": true,
                     "mined": true,
-                    "proxy": null,
+                    "proxy": "",
                     "recovery_account": "steem",
                     "last_account_recovery": "1970-01-01T00:00:00",
-                    "created": "2016-03-30T00:04:33",
-                    "reputation": "79,",
+                    "created": "2016-03-30T00:04:36",
+                    "reputation": "69,",
                     "json_metadata": "",
                     "posting_json_metadata": "",
                     "profile_image": "",
-                    "hbd_balance": 19137472,
-                    "balance": 352144597,
-                    "vesting_shares": 20689331636290595,
-                    "vesting_balance": 11996826266,
-                    "hbd_saving_balance": 108376848,
-                    "savings_balance": 52795,
+                    "hbd_balance": 77246982,
+                    "balance": 29594875,
+                    "vesting_shares": "8172549681941451",
+                    "vesting_balance": 2720696229,
+                    "hbd_saving_balance": 0,
+                    "savings_balance": 0,
                     "savings_withdraw_requests": 0,
                     "reward_hbd_balance": 0,
                     "reward_hive_balance": 0,
-                    "reward_vesting_balance": 0,
+                    "reward_vesting_balance": "0",
                     "reward_vesting_hive": 0,
-                    "posting_rewards": 124692738,
-                    "curation_rewards": 2778463006,
-                    "delegated_vesting_shares": 7002130390740040,
-                    "received_vesting_shares": 93226683463768,
-                    "proxied_vsf_votes": "[19944304439583785, 0, 0, 0]",
-                    "withdrawn": 0,
-                    "vesting_withdraw_rate": 0,
-                    "to_withdraw": 0,
-                    "withdraw_routes": 3,
-                    "delayed_vests": 0,
-                    "witness_votes": "[\"blocktrades\", \"pharesim\", \"abit\"]",
-                    "witnesses_voted_for": 3,
-                    "ops_count": 6558823,
+                    "posting_rewards": "65916519",
+                    "curation_rewards": "196115157",
+                    "delegated_vesting_shares": "0",
+                    "received_vesting_shares": "0",
+                    "proxied_vsf_votes": "[4983403929606734, 0, 0, 0]",
+                    "withdrawn": "804048182205290",
+                    "vesting_withdraw_rate": "80404818220529",
+                    "to_withdraw": "8362101094935031",
+                    "withdraw_routes": 4,
+                    "delayed_vests": "0",
+                    "witness_votes": [
+                      "steempty",
+                      "blocktrades",
+                      "datasecuritynode",
+                      "steemed",
+                      "silversteem",
+                      "witness.svk",
+                      "joseph",
+                      "smooth.witness",
+                      "gtg"
+                    ],
+                    "witnesses_voted_for": 9,
+                    "ops_count": 219867,
                     "is_witness": true
                   }
                 ]
@@ -1384,7 +1213,7 @@ declare
           "Accounts"
         ],
         "summary": "Get account info",
-        "description": "Get information about account's OWNER, ACTIVE, POSTING, memo and signing authorities\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_account_authority('initminer');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/authority`\n\n* `GET https://{hafbe-host}/hafbe/accounts/initminer/authority`\n",
+        "description": "Get information about account''s OWNER, ACTIVE, POSTING, memo and signing authorities\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/authority''` \n",
         "operationId": "hafbe_endpoints.get_account_authority",
         "parameters": [
           {
@@ -1399,7 +1228,7 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "List of account's authorities\n\n* Returns `hafbe_types.account_authority`\n",
+            "description": "List of account''s authorities\n\n* Returns `hafbe_types.account_authority`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1410,7 +1239,7 @@ declare
                     "owner": {
                       "key_auth": [
                         [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
+                          "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
                           "1"
                         ]
                       ],
@@ -1420,7 +1249,7 @@ declare
                     "active": {
                       "key_auth": [
                         [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
+                          "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
                           "1"
                         ]
                       ],
@@ -1430,15 +1259,15 @@ declare
                     "posting": {
                       "key_auth": [
                         [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
+                          "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
                           "1"
                         ]
                       ],
                       "account_auth": [],
                       "weight_threshold": 1
                     },
-                    "memo": "STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz",
-                    "witness_signing": "STM776t8h7dXbvM8BYGoLjCr3nYRnmqmvVg9hTrGTn5FQvLkMZKM2"
+                    "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
+                    "witness_signing": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
                   }
                 ]
               }
@@ -1456,7 +1285,7 @@ declare
           "Accounts"
         ],
         "summary": "Get operations for an account",
-        "description": "List the operations in the reversed  order (first page is the oldest) for given account. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_account('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_ops_by_account('gtg');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations`\n\n* `GET https://{hafbe-host}/hafbe/accounts/gtg/operations`\n",
+        "description": "List the operations in the reversed  order (first page is the oldest) for given account. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/operations?page-size=3''`\n",
         "operationId": "hafbe_endpoints.get_ops_by_account",
         "parameters": [
           {
@@ -1562,107 +1391,75 @@ declare
                 },
                 "example": [
                   {
-                    "total_operations": 4417,
-                    "total_pages": 45,
+                    "total_operations": 219867,
+                    "total_pages": 73289,
                     "operations_result": [
                       {
-                        "operation_id": 21474759170589000,
-                        "block_num": 4999982,
-                        "trx_in_block": 0,
-                        "trx_id": "fa7c8ac738b4c1fdafd4e20ee6ca6e431b641de3",
-                        "op_pos": 1,
-                        "op_type_id": 72,
-                        "operation": {
-                          "type": "effective_comment_vote_operation",
-                          "value": {
-                            "voter": "gtg",
-                            "author": "skypilot",
-                            "weight": "19804864940707296",
-                            "rshares": 87895502383,
-                            "permlink": "sunset-at-point-sur-california",
-                            "pending_payout": {
-                              "nai": "@@000000013",
-                              "amount": "14120",
-                              "precision": 3
-                            },
-                            "total_vote_weight": "14379148533547713492"
-                          }
-                        },
-                        "virtual_op": true,
-                        "timestamp": "2016-09-15T19:46:21",
-                        "age": "2820 days 02:03:05.095628",
-                        "is_modified": false
-                      },
-                      {
-                        "operation_id": 21474759170588670,
-                        "block_num": 4999982,
-                        "trx_in_block": 0,
-                        "trx_id": "fa7c8ac738b4c1fdafd4e20ee6ca6e431b641de3",
+                        "operation_id": "21474823595099394",
+                        "block_num": 4999997,
+                        "trx_in_block": 3,
+                        "trx_id": "e75f833ceb62570c25504b55d0f23d86d9d76423",
                         "op_pos": 0,
-                        "op_type_id": 0,
+                        "op_type_id": 2,
                         "operation": {
-                          "type": "vote_operation",
+                          "type": "transfer_operation",
                           "value": {
-                            "voter": "gtg",
-                            "author": "skypilot",
-                            "weight": 10000,
-                            "permlink": "sunset-at-point-sur-california"
+                            "to": "blocktrades",
+                            "from": "mrwang",
+                            "memo": "a79c09cd-0084-4cd4-ae63-bf6d2514fef9",
+                            "amount": {
+                              "nai": "@@000000013",
+                              "amount": "1633",
+                              "precision": 3
+                            }
                           }
                         },
                         "virtual_op": false,
-                        "timestamp": "2016-09-15T19:46:21",
-                        "age": "2820 days 02:03:05.095628",
-                        "is_modified": false
+                        "timestamp": "2016-09-15T19:47:12"
+                      },
+                      {
+                        "operation_id": "21474802120262208",
+                        "block_num": 4999992,
+                        "trx_in_block": -1,
+                        "trx_id": null,
+                        "op_pos": 1,
+                        "op_type_id": 64,
+                        "operation": {
+                          "type": "producer_reward_operation",
+                          "value": {
+                            "producer": "blocktrades",
+                            "vesting_shares": {
+                              "nai": "@@000000037",
+                              "amount": "3003850165",
+                              "precision": 6
+                            }
+                          }
+                        },
+                        "virtual_op": true,
+                        "timestamp": "2016-09-15T19:46:57"
+                      },
+                      {
+                        "operation_id": "21474660386343488",
+                        "block_num": 4999959,
+                        "trx_in_block": -1,
+                        "trx_id": null,
+                        "op_pos": 1,
+                        "op_type_id": 64,
+                        "operation": {
+                          "type": "producer_reward_operation",
+                          "value": {
+                            "producer": "blocktrades",
+                            "vesting_shares": {
+                              "nai": "@@000000037",
+                              "amount": "3003868105",
+                              "precision": 6
+                            }
+                          }
+                        },
+                        "virtual_op": true,
+                        "timestamp": "2016-09-15T19:45:12"
                       }
                     ]
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No such account in the database"
-          }
-        }
-      }
-    },
-    "/accounts/{account-name}/operations/types": {
-      "get": {
-        "tags": [
-          "Accounts"
-        ],
-        "summary": "Lists operation types",
-        "description": "Lists all types of operations that the account has performed since its creation\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_acc_op_types('initminer');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/types`\n\n* `GET https://{hafbe-host}/hafbe/accounts/initminer/operations/types`\n",
-        "operationId": "hafbe_endpoints.get_acc_op_types",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "account-name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Name of the account"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation type list\n\n* Returns array of `hafbe_types.op_types`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types"
-                },
-                "example": [
-                  {
-                    "op_type_id": 72,
-                    "operation_name": "effective_comment_vote_operation",
-                    "is_virtual": true
-                  },
-                  {
-                    "op_type_id": 0,
-                    "operation_name": "vote_operation",
-                    "is_virtual": false
                   }
                 ]
               }
@@ -1680,7 +1477,7 @@ declare
           "Accounts"
         ],
         "summary": "Get comment related operations",
-        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_comment_operations('gtg');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/comments`\n\n* `GET https://{hafbe-host}/hafbe/accounts/gtg/operations/comments`\n",
+        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/operations/comments?page-size=2&from-block=4000000&to-block=5000000''`\n",
         "operationId": "hafbe_endpoints.get_comment_operations",
         "parameters": [
           {
@@ -1698,9 +1495,9 @@ declare
             "required": false,
             "schema": {
               "type": "string",
-              "x-sql-default-value": "'0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'"
+              "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `18,12`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\ncomment related op type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`\n"
           },
           {
             "in": "query",
@@ -1720,7 +1517,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "Unique post identifier containing post's title and generated number\n"
+            "description": "Unique post identifier containing post''s title and generated number\n"
           },
           {
             "in": "query",
@@ -1796,31 +1593,36 @@ declare
                 },
                 "example": [
                   {
-                    "total_operations": 1,
-                    "total_pages": 1,
+                    "total_operations": 3158,
+                    "total_pages": 31,
                     "operations_result": [
                       {
-                        "operation_id": 5287104741440,
-                        "block_num": 1231,
-                        "trx_in_block": -1,
-                        "trx_id": null,
-                        "op_pos": 1,
-                        "op_type_id": 64,
+                        "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s",
+                        "block_num": 4364560,
+                        "operation_id": 18745642461431100,
+                        "created_at": "2016-08-24T15:52:00",
+                        "trx_hash": null,
                         "operation": {
-                          "type": "producer_reward_operation",
+                          "type": "comment_payout_update_operation",
                           "value": {
-                            "producer": "root",
-                            "vesting_shares": {
-                              "nai": "@@000000021",
-                              "amount": "1000",
-                              "precision": 3
-                            }
+                            "author": "blocktrades",
+                            "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s"
                           }
-                        },
-                        "virtual_op": true,
-                        "timestamp": "2016-03-24T17:07:15",
-                        "age": "2993 days 16:17:51.591008",
-                        "is_modified": false
+                        }
+                      },
+                      {
+                        "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
+                        "block_num": 4347061,
+                        "operation_id": 18670484828720700,
+                        "created_at": "2016-08-24T01:13:48",
+                        "trx_hash": null,
+                        "operation": {
+                          "type": "comment_payout_update_operation",
+                          "value": {
+                            "author": "blocktrades",
+                            "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem"
+                          }
+                        }
                       }
                     ]
                   }
@@ -1834,142 +1636,13 @@ declare
         }
       }
     },
-    "/blocks": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Informations about operations in latest blocks",
-        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks();`\n\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(30);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks`\n\n* `GET https://{hafbe-host}/hafbe/blocks?result-limit=30`\n",
-        "operationId": "hafbe_endpoints.get_latest_blocks",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "result-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "Specifies number of blocks to return starting with head block, defaults to `20`\n"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block's stats\n\n* Returns array of `hafbe_types.latest_blocks`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_latest_blocks"
-                },
-                "example": [
-                  {
-                    "block_num": 5000000,
-                    "witness": "ihashfury",
-                    "ops_count": [
-                      {
-                        "count": 1,
-                        "op_type_id": 0
-                      },
-                      {
-                        "count": 2,
-                        "op_type_id": 85
-                      },
-                      {
-                        "count": 1,
-                        "op_type_id": 30
-                      }
-                    ]
-                  },
-                  {
-                    "block_num": 4999999,
-                    "witness": "smooth.witness",
-                    "ops_count": [
-                      {
-                        "count": 1,
-                        "op_type_id": 0
-                      },
-                      {
-                        "count": 2,
-                        "op_type_id": 85
-                      },
-                      {
-                        "count": 1,
-                        "op_type_id": 30
-                      },
-                      {
-                        "count": 2,
-                        "op_type_id": 6
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
-    "/blocks/{block-num}": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Raw informations about block",
-        "description": "Lists the raw parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_raw(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_raw(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000`\n",
-        "operationId": "hafbe_endpoints.get_block_raw",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block's raw stats\n\n* Returns `hafbe_types.block_raw`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.block_raw"
-                },
-                "example": [
-                  {
-                    "previous": "\\\\x000004ce0536f08f1e09c3dc7b12b8ddf13f1c5a",
-                    "timestamp": "2016-03-24T17:07:15",
-                    "witness": "root",
-                    "transaction_merkle_root": "\\\\x0000000000000000000000000000000000000000",
-                    "extensions": [],
-                    "witness_signature": "\\\\x207f255f2d6c69c04ccfa4a541792a773412307735ccf90bd8efb26ba9e12d9c84b714c4711cf1d1bed561994c46daf33a24e8071f15f92",
-                    "transactions": [],
-                    "block_id": "\\\\x000004cf8319149b0743acdcf2a17a332677fb0f",
-                    "signing_key": "STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G",
-                    "transaction_ids": null
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
-    "/blocks/{block-num}/header": {
+    "/blocks/{block-num}/global-state": {
       "get": {
         "tags": [
           "Blocks"
         ],
         "summary": "Informations about block",
-        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/header`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/header`\n",
+        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(5000000);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/blocks/5000000/global-state''`\n",
         "operationId": "hafbe_endpoints.get_block",
         "parameters": [
           {
@@ -1984,7 +1657,7 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Given block's stats\n\n* Returns `hafbe_types.block`\n",
+            "description": "Given block''s stats\n\n* Returns `hafbe_types.block`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1992,24 +1665,23 @@ declare
                 },
                 "example": [
                   {
-                    "block_num": 1231,
-                    "hash": "\\\\x000004cf8319149b0743acdcf2a17a332677fb0f",
-                    "prev": "\\\\x000004ce0536f08f1e09c3dc7b12b8ddf13f1c5a",
-                    "producer_account": "producer_account",
-                    "transaction_merkle_root": "\\\\x0000000000000000000000000000000000000000",
-                    "extensions": null,
-                    "witness_signature": "\\\\x207f255f2d6c69c04ccfa4a541792a773412307735ccf96ba9e12d9c84b714c4711cf1d1bed561994c46daf33a24e8071f15f92",
-                    "signing_key": "STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G",
+                    "block_num": 5000000,
+                    "hash": "004c4b40245ffb07380a393fb2b3d841b76cdaec",
+                    "prev": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
+                    "producer_account": "ihashfury",
+                    "transaction_merkle_root": "97a8f2b04848b860f1792dc07bf58efcb15aeb8c",
+                    "extensions": [],
+                    "witness_signature": "1f6aa1c6311c768b5225b115eaf5798e5f1d8338af3970d90899cd5ccbe38f6d1f7676c5649bcca18150cbf8f07c0cc7ec3ae40d5936cfc6d5a650e582ba0f8002",
+                    "signing_key": "STM8aUs6SGoEmNYMd3bYjE1UBr6NQPxGWmTqTdBaxJYSx244edSB2",
                     "hbd_interest_rate": 1000,
-                    "total_vesting_fund_hive": 28000,
-                    "total_vesting_shares": 28000000,
-                    "total_reward_fund_hive": 2462000,
-                    "virtual_supply": 4932000,
-                    "current_supply": 4932000,
-                    "current_hbd_supply": 0,
+                    "total_vesting_fund_hive": 149190428013,
+                    "total_vesting_shares": 448144916705468350,
+                    "total_reward_fund_hive": 66003975,
+                    "virtual_supply": 161253662237,
+                    "current_supply": 157464400971,
+                    "current_hbd_supply": 2413759427,
                     "dhf_interval_ledger": 0,
-                    "created_at": "2016-03-24T17:07:15",
-                    "age": "2993 days 15:24:08.630023"
+                    "created_at": "2016-09-15T19:47:21"
                   }
                 ]
               }
@@ -2027,7 +1699,7 @@ declare
           "Blocks"
         ],
         "summary": "Get operations in block",
-        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(43000,ARRAY[0,1]);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types=0,1`\n",
+        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=5,64''`\n",
         "operationId": "hafbe_endpoints.get_ops_by_block_paging",
         "parameters": [
           {
@@ -2047,7 +1719,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nexample: `'18,12'`\n"
+            "description": "List of operations: if the parameter is empty, all operations will be included,\nexample: `18,12`\n"
           },
           {
             "in": "query",
@@ -2088,7 +1760,7 @@ declare
               "x-sql-datatype": "JSON",
               "default": null
             },
-            "description": "A JSON object detailing the path to the filtered key specified in key-content\nexample: `[[\"value\", \"id\"]]`\n"
+            "description": "A JSON object detailing the path to the filtered key specified in key-content,\nexample: `[[\"value\", \"id\"]]`\n"
           },
           {
             "in": "query",
@@ -2132,12 +1804,41 @@ declare
                 },
                 "example": [
                   {
-                    "total_operations": 1,
+                    "total_operations": 2,
                     "total_pages": 1,
                     "operations_result": [
                       {
-                        "operation_id": 5287104741440,
-                        "block_num": 1231,
+                        "operation_id": "21474836480000517",
+                        "block_num": 5000000,
+                        "trx_in_block": 1,
+                        "trx_id": "973290d26bac31335c000c7a3d3fe058ce3dbb9f",
+                        "op_pos": 0,
+                        "op_type_id": 5,
+                        "operation": {
+                          "type": "limit_order_create_operation",
+                          "value": {
+                            "owner": "cvk",
+                            "orderid": 1473968838,
+                            "expiration": "2035-10-29T06:32:22",
+                            "fill_or_kill": false,
+                            "amount_to_sell": {
+                              "nai": "@@000000021",
+                              "amount": "10324",
+                              "precision": 3
+                            },
+                            "min_to_receive": {
+                              "nai": "@@000000013",
+                              "amount": "6819",
+                              "precision": 3
+                            }
+                          }
+                        },
+                        "virtual_op": false,
+                        "timestamp": "2016-09-15T19:47:21"
+                      },
+                      {
+                        "operation_id": "21474836480000832",
+                        "block_num": 5000000,
                         "trx_in_block": -1,
                         "trx_id": null,
                         "op_pos": 1,
@@ -2145,18 +1846,16 @@ declare
                         "operation": {
                           "type": "producer_reward_operation",
                           "value": {
-                            "producer": "root",
+                            "producer": "ihashfury",
                             "vesting_shares": {
-                              "nai": "@@000000021",
-                              "amount": "1000",
-                              "precision": 3
+                              "nai": "@@000000037",
+                              "amount": "3003845513",
+                              "precision": 6
                             }
                           }
                         },
                         "virtual_op": true,
-                        "timestamp": "2016-03-24T17:07:15",
-                        "age": "2993 days 16:17:51.591008",
-                        "is_modified": false
+                        "timestamp": "2016-09-15T19:47:21"
                       }
                     ]
                   }
@@ -2170,13 +1869,13 @@ declare
         }
       }
     },
-    "/blocks/{block-num}/operations/types": {
+    "/blocks/{block-num}/operation-types/count": {
       "get": {
         "tags": [
           "Blocks"
         ],
         "summary": "List operations that were present in given block",
-        "description": "List operations that were present in given block\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(10000);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(43000);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/blocks/10000/operations/types`\n\n* `GET https://{hafbe-host}/hafbe/blocks/43000/operations/types`\n",
+        "description": "List operations that were present in given block\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(5000000);`\n\nREST call example   \n* `GET ''https://%1$s/hafbe/blocks/5000000/operation-types/count''`\n",
         "operationId": "hafbe_endpoints.get_block_op_types",
         "parameters": [
           {
@@ -2191,7 +1890,7 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Given block's operation list\n\n* Returns array of `hafbe_types.op_types_count`\n",
+            "description": "Operation counts for a given block-num\n\n* Returns array of `hafbe_types.op_types_count`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -2199,15 +1898,19 @@ declare
                 },
                 "example": [
                   {
-                    "op_type_id": 72,
-                    "operation_name": "effective_comment_vote_operation",
-                    "is_virtual": true,
+                    "op_type_id": 80,
                     "count": 1
                   },
                   {
-                    "op_type_id": 0,
-                    "operation_name": "vote_operation",
-                    "is_virtual": false,
+                    "op_type_id": 9,
+                    "count": 1
+                  },
+                  {
+                    "op_type_id": 5,
+                    "count": 1
+                  },
+                  {
+                    "op_type_id": 64,
                     "count": 1
                   }
                 ]
@@ -2226,7 +1929,7 @@ declare
           "Block-numbers"
         ],
         "summary": "Get block numbers by filters",
-        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[14]);`\n\n* `SELECT * FROM hafbe_endpoints.get_block_by_op();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers?operation-types={14}`\n\n* `GET https://{hafbe-host}/hafbe/block-numbers`\n",
+        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,NULL,NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
         "operationId": "hafbe_endpoints.get_block_by_op",
         "parameters": [
           {
@@ -2237,7 +1940,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `'18,12'`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `18,12`\n"
           },
           {
             "in": "query",
@@ -2343,33 +2046,9 @@ declare
                 },
                 "example": [
                   {
-                    "block_num": 5000000,
-                    "op_type_id": [
-                      9,
-                      5,
-                      64,
-                      80
-                    ]
-                  },
-                  {
                     "block_num": 4999999,
                     "op_type_id": [
-                      64,
-                      30,
-                      6,
-                      0,
-                      85,
-                      72,
-                      78
-                    ]
-                  },
-                  {
-                    "block_num": 4999998,
-                    "op_type_id": [
-                      1,
-                      64,
-                      0,
-                      72
+                      6
                     ]
                   }
                 ]
@@ -2388,7 +2067,7 @@ declare
           "Block-numbers"
         ],
         "summary": "HAF last synced block",
-        "description": "Get last block-num in HAF database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_head_block_num();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/headblock`\n",
+        "description": "Get last block-num in HAF database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_head_block_num();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/headblock''`\n",
         "operationId": "hafbe_endpoints.get_head_block_num",
         "responses": {
           "200": {
@@ -2398,7 +2077,7 @@ declare
                 "schema": {
                   "type": "integer"
                 },
-                "example": 3131
+                "example": 5000000
               }
             }
           },
@@ -2413,8 +2092,8 @@ declare
         "tags": [
           "Block-numbers"
         ],
-        "summary": "Haf_block_explorer's last synced block",
-        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`\n",
+        "summary": "Haf_block_explorer''s last synced block",
+        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/headblock/hafbe''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "responses": {
           "200": {
@@ -2424,7 +2103,7 @@ declare
                 "schema": {
                   "type": "integer"
                 },
-                "example": 3131
+                "example": 5000000
               }
             }
           },
@@ -2440,7 +2119,7 @@ declare
           "Block-numbers"
         ],
         "summary": "Search for last created block for given date",
-        "description": "Returns last created block number for given date\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_time('2016-03-24T16:05:00');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/block-numbers/by-creation-date/2016-03-24T16:05:00`\n",
+        "description": "Returns last created block number for given date\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_time(''2016-06-24T16:05:00'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/by-creation-date/2016-06-24T16:05:00''`\n",
         "operationId": "hafbe_endpoints.get_block_by_time",
         "parameters": [
           {
@@ -2462,259 +2141,9 @@ declare
                 "schema": {
                   "type": "integer"
                 },
-                "example": 3131
+                "example": 2621429
               }
             }
-          }
-        }
-      }
-    },
-    "/operations/types": {
-      "get": {
-        "tags": [
-          "Operations"
-        ],
-        "summary": "Lists operation types",
-        "description": "Lists all types of operations available in the database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_op_types();`\n\n* `SELECT * FROM hafbe_endpoints.get_op_types('comment');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operation-types`\n\n* `GET https://{hafbe-host}/hafbe/operation-types?input-value=\"comment\"`\n",
-        "operationId": "hafbe_endpoints.get_op_types",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "input-value",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "parial name of operation"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation type list, \nif provided is `input-value` the list\nis limited to operations that partially match the `input-value`\n\n* Returns array of `hafbe_types.op_types`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types"
-                },
-                "example": [
-                  {
-                    "op_type_id": 72,
-                    "operation_name": "effective_comment_vote_operation",
-                    "is_virtual": true
-                  },
-                  {
-                    "op_type_id": 0,
-                    "operation_name": "vote_operation",
-                    "is_virtual": false
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No operations in the database"
-          }
-        }
-      }
-    },
-    "/operations/types/{type-id}/keys": {
-      "get": {
-        "tags": [
-          "Operations"
-        ],
-        "summary": "Get operation json body keys",
-        "description": "Lists possible json key paths in operation body for given operation type id\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation_keys(1);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe//operations/types/1/keys`\n",
-        "operationId": "hafbe_endpoints.get_operation_keys",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "type-id",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Unique operation identifier"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation json key paths\n\n* Returns array of `TEXT[]`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_text_array"
-                },
-                "example": [
-                  [
-                    "value",
-                    "body"
-                  ],
-                  [
-                    "value",
-                    "title"
-                  ],
-                  [
-                    "value",
-                    "author"
-                  ],
-                  [
-                    "value",
-                    "permlink"
-                  ],
-                  [
-                    "value",
-                    "json_metadata"
-                  ],
-                  [
-                    "value",
-                    "parent_author"
-                  ],
-                  [
-                    "value",
-                    "parent_permlink"
-                  ]
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No such operation"
-          }
-        }
-      }
-    },
-    "/operations/body/{operation-id}": {
-      "get": {
-        "tags": [
-          "Operations"
-        ],
-        "summary": "Get informations about the operation",
-        "description": "Get operation's body and its extended parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation(3448858738752);`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/operations/body/3448858738752`\n",
-        "operationId": "hafbe_endpoints.get_operation",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "operation-id",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "x-sql-datatype": "BIGINT"
-            },
-            "description": "An operation-id is a unique operation identifier,\nencodes three key pieces of information into a single number,\nwith each piece occupying a specific number of bits:\n\n```\nmsb.....................lsb\n || block | seq | type ||\n ||  32b  | 24b |  8b  ||\n```\n\n * block (block number) - occupies 32 bits.\n\n * seq (position of an operation in block) - occupies 24 bits.\n\n * type (operation type) - occupies 8 bits.\n"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation parameters\n\n* Returns `hafbe_types.operation`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.operation"
-                },
-                "example": [
-                  {
-                    "operation_id": 4294967376,
-                    "block_num": 1,
-                    "trx_in_block": -1,
-                    "trx_id": null,
-                    "op_pos": 1,
-                    "op_type_id": 80,
-                    "operation": {
-                      "type": "account_created_operation",
-                      "value": {
-                        "creator": "miners",
-                        "new_account_name": "miners",
-                        "initial_delegation": {
-                          "nai": "@@000000037",
-                          "amount": "0",
-                          "precision": 6
-                        },
-                        "initial_vesting_shares": {
-                          "nai": "@@000000037",
-                          "amount": "0",
-                          "precision": 6
-                        }
-                      }
-                    },
-                    "virtual_op": true,
-                    "timestamp": "2016-03-24T16:00:00",
-                    "ag\"": "2995 days 00:02:08.146978",
-                    "is_modified": false
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No such operation"
-          }
-        }
-      }
-    },
-    "/transactions/{transaction-id}": {
-      "get": {
-        "tags": [
-          "Transactions"
-        ],
-        "summary": "Get transaction info",
-        "description": "Get information about transaction \n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_transaction('954f6de36e6715d128fa8eb5a053fc254b05ded0');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/transactions/954f6de36e6715d128fa8eb5a053fc254b05ded0`\n",
-        "operationId": "hafbe_endpoints.get_transaction",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "transaction-id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The transaction hash"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The transaction body\n\n* Returns `hafbe_types.transaction`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.transaction"
-                },
-                "example": [
-                  {
-                    "transaction_json": {
-                      "ref_block_num": 25532,
-                      "ref_block_prefix": 3338687976,
-                      "extensions": [],
-                      "expiration": "2016-08-12T17:23:48",
-                      "operations": [
-                        {
-                          "type": "custom_json_operation",
-                          "value": {
-                            "id": "follow",
-                            "json": "{\"follower\":\"breck0882\",\"following\":\"steemship\",\"what\":[]}",
-                            "required_auths": [],
-                            "required_posting_auths": [
-                              "breck0882"
-                            ]
-                          }
-                        }
-                      ],
-                      "signatures": [
-                        "201655190aac43bb272185c577262796c57e5dd654e3e491b921a38697d04d1a8e6a9deb722ec6d6b5d2f395dcfbb94f0e5898e858f"
-                      ]
-                    },
-                    "transaction_id": "954f6de36e6715d128fa8eb5a053fc254b05ded0",
-                    "block_num": 4023233,
-                    "transaction_num": 0,
-                    "timestamp": "2016-08-12T17:23:39",
-                    "age": "2852 days 15:46:22.097754"
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No such transaction"
           }
         }
       }
@@ -2724,8 +2153,8 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Haf_block_explorer's version",
-        "description": "Get haf_block_explorer's last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/version`\n",
+        "summary": "Haf_block_explorer''s version",
+        "description": "Get haf_block_explorer''s last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/version''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_version",
         "responses": {
           "200": {
@@ -2751,7 +2180,7 @@ declare
           "Other"
         ],
         "summary": "Get input type",
-        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type('blocktrades');`\n\n* `SELECT * FROM hafbe_endpoints.get_input_type('10000');`\n\nREST call example\n* `GET https://{hafbe-host}/hafbe/input-type/blocktrades`\n\n* `GET https://{hafbe-host}/hafbe/input-type/10000`\n",
+        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`\n      \nREST call example\n* `GET ''https://%1$s/hafbe/input-type/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_input_type",
         "parameters": [
           {
@@ -2775,8 +2204,8 @@ declare
                 },
                 "example": [
                   {
-                    "input_type": "block_num",
-                    "input_value": "1000"
+                    "input_type": "account_name",
+                    "input_value": "blocktrades"
                   }
                 ]
               }
@@ -2784,6 +2213,67 @@ declare
           },
           "404": {
             "description": "Input is not recognized"
+          }
+        }
+      }
+    },
+    "/operation-types/count": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "summary": "Informations about operations in latest blocks",
+        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/blocks?result-limit=1''`\n",
+        "operationId": "hafbe_endpoints.get_latest_blocks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "result-limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Specifies number of blocks to return starting with head block, defaults to `20`\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation counts for each block \n\n* Returns array of `hafbe_types.latest_blocks`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_types.array_of_latest_blocks"
+                },
+                "example": [
+                  {
+                    "block_num": 5000000,
+                    "witness": "ihashfury",
+                    "ops_count": [
+                      {
+                        "count": 1,
+                        "op_type_id": 64
+                      },
+                      {
+                        "count": 1,
+                        "op_type_id": 9
+                      },
+                      {
+                        "count": 1,
+                        "op_type_id": 80
+                      },
+                      {
+                        "count": 1,
+                        "op_type_id": 5
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "No blocks in the database"
           }
         }
       }
@@ -2795,6 +2285,10 @@ $$;
 begin
   return openapi;
 end
-$_$ language plpgsql;
+$_$ language plpgsql;'
+, swagger_url);
+
+END
+$__$;
 
 RESET ROLE;

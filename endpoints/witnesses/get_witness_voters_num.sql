@@ -9,15 +9,11 @@ SET ROLE hafbe_owner;
     description: |
       Get the number of voters for a witness given their account name
 
-      SQL example
-      * `SELECT * FROM hafbe_endpoints.get_witness_voters_num('gtg');`
-      
-      * `SELECT * FROM hafbe_endpoints.get_witness_voters_num('blocktrades');`
+      SQL example      
+      * `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/witnesses/gtg/voters/count`
-
-      * `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/voters/count`
+      * `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`
     operationId: hafbe_endpoints.get_witness_voters_num
     parameters:
       - in: path
@@ -36,7 +32,7 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               type: integer
-            example: 3131
+            example: 263
       '404':
         description: No such witness
  */

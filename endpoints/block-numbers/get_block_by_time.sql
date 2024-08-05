@@ -10,10 +10,10 @@ SET ROLE hafbe_owner;
       Returns last created block number for given date
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_by_time('2016-03-24T16:05:00');`
+      * `SELECT * FROM hafbe_endpoints.get_block_by_time(''2016-06-24T16:05:00'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/block-numbers/by-creation-date/2016-03-24T16:05:00`
+      * `GET ''https://%1$s/hafbe/block-numbers/by-creation-date/2016-06-24T16:05:00''`
     operationId: hafbe_endpoints.get_block_by_time
     parameters:
       - in: path
@@ -33,7 +33,7 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               type: integer
-            example: 3131
+            example: 2621429
         description: No blocks created at that time
  */
 -- openapi-generated-code-begin

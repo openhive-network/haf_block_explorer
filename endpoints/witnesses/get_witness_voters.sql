@@ -10,15 +10,11 @@ SET ROLE hafbe_owner;
     description: |
       Get information about the voters voting for a given witness
 
-      SQL example
-      * `SELECT * FROM hafbe_endpoints.get_witness_voters('gtg');`
-      
-      * `SELECT * FROM hafbe_endpoints.get_witness_voters('blocktrades');`
+      SQL example      
+      * `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/witnesses/gtg/voters`
-
-      * `GET https://{hafbe-host}/hafbe/witnesses/blocktrades/voters`
+      * `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters?result-limit=2''`
     operationId: hafbe_endpoints.get_witness_voters
     parameters:
       - in: path
@@ -36,15 +32,15 @@ SET ROLE hafbe_owner;
         description: |
           Sort order:
 
-           * `voter` - total number of voters casting their votes for each witness.  this probably makes no sense for call???
+           * `voter` - account name of voter
 
-           * `vests` - total weight of vests casting their votes for each witness
+           * `vests` - total voting power = account_vests + proxied_vests of voter
 
-           * `account_vests` - total weight of vests owned by accounts voting for each witness
+           * `account_vests` - direct vests of voter
 
-           * `proxied_vests` - total weight of vests owned by accounts who proxy their votes to a voter voting for each witness
+           * `proxied_vests` - proxied vests of voter
 
-           * `timestamp` - the time the voter last changed their vote???
+           * `timestamp` - last time voter voted for the witness
       - in: query
         name: direction
         required: false
@@ -75,22 +71,22 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_witness_voters'
             example:
-              - voter: reugie
-                vests: 1492852870616
-                vests_hive_power: 863149
-                account_vests: 1492852870616
-                account_hive_power: 863149
-                proxied_vests: 0
+              - voter: "blocktrades"
+                vests: "13155953611548185"
+                votes_hive_power: 4379704593
+                account_vests: "8172549681941451"
+                account_hive_power: 2720696229
+                proxied_vests: "4983403929606734"
+                proxied_hive_power: 1659008364
+                timestamp: "2016-04-15T02:19:57"
+              - voter: "dan"
+                vests: "9928811304950768"
+                votes_hive_power: 3305367423
+                account_vests: "9928811304950768"
+                account_hive_power: 3305367423
+                proxied_vests: "0"
                 proxied_hive_power: 0
-                timestamp: '2024-03-27T14:46:09.000Z'
-              - voter: cooperclub
-                vests: 8238935864379
-                vests_hive_power: 4763650
-                account_vests: 8238935864379
-                account_hive_power: 4763650
-                proxied_vests: 0
-                proxied_hive_power: 0
-                timestamp: '2024-03-27T14:42:06.000Z'
+                timestamp: "2016-06-27T12:41:42"
       '404':
         description: No such witness
  */
@@ -138,11 +134,11 @@ RETURN QUERY EXECUTE format(
   (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
 
   SELECT ls.voter, 
-  ls.vests,
+  ls.vests::TEXT,
   (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.vests))::BIGINT,
-  ls.account_vests,
+  ls.account_vests::TEXT,
   (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.account_vests))::BIGINT,
-  ls.proxied_vests,
+  ls.proxied_vests::TEXT,
   (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.proxied_vests))::BIGINT,
   ls.timestamp
   FROM limited_set_order ls

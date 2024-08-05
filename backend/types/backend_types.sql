@@ -59,7 +59,6 @@ hafbe_types.order_by_witness:
     - voters_num_daily_change
     - price_feed
     - bias
-    - feed_age
     - block_size
     - signing_key
     - version
@@ -76,7 +75,6 @@ CREATE TYPE hafbe_types.order_by_witness AS ENUM (
     'voters_num_daily_change',
     'price_feed',
     'bias',
-    'feed_age',
     'block_size',
     'signing_key',
     'version'

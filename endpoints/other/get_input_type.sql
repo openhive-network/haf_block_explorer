@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       block hash, transaction hash, or account name
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_input_type('blocktrades');`
-
-      * `SELECT * FROM hafbe_endpoints.get_input_type('10000');`
-      
+      * `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`
+            
       REST call example
-      * `GET https://{hafbe-host}/hafbe/input-type/blocktrades`
-      
-      * `GET https://{hafbe-host}/hafbe/input-type/10000`
+      * `GET ''https://%1$s/hafbe/input-type/blocktrades''`
     operationId: hafbe_endpoints.get_input_type
     parameters:
       - in: path
@@ -41,8 +37,8 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:      
               - {
-                  "input_type" : "block_num",
-                  "input_value" : "1000"
+                  "input_type": "account_name",
+                  "input_value": "blocktrades"
                 }
       '404':
         description: Input is not recognized
@@ -134,7 +130,25 @@ BEGIN
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT btracker_endpoints.find_matching_accounts("input-value") INTO __accounts_array;
+  SELECT json_agg(account_query.accounts
+    ORDER BY
+      account_query.name_lengths,
+      account_query.accounts)
+  INTO __accounts_array
+  FROM (
+    SELECT
+      ha.name AS accounts,
+      LENGTH(ha.name) AS name_lengths
+    FROM
+      hive.accounts_view ha
+    WHERE
+      ha.name LIKE "input-value"
+    ORDER BY
+      accounts,
+      name_lengths
+    LIMIT 50
+  ) account_query;
+
   IF __accounts_array IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);

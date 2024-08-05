@@ -25,12 +25,9 @@ DEFAULT_TYPES="
 ../$types/accounts/comment_history.sql
 ../$types/blocks/latest_blocks.sql
 ../$types/blocks/block.sql
-../$types/blocks/block_raw.sql
 ../$types/blocks/block_by_ops.sql
-../$types/operations/op_types.sql
 ../$types/operations/operation.sql
-../$types/operations/op_types_count.sql
-../$types/transactions/transaction.sql"
+../$types/operations/op_types_count.sql"
 
 ENDPOINTS_IN_ORDER="
 ../$endpoints/endpoint_schema.sql
@@ -42,10 +39,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_account.sql
 ../$endpoints/accounts/get_account_authority.sql
 ../$endpoints/accounts/get_ops_by_account.sql
-../$endpoints/accounts/get_acc_op_types.sql
 ../$endpoints/accounts/get_comment_operations.sql
-../$endpoints/blocks/get_latest_blocks.sql
-../$endpoints/blocks/get_block_raw.sql
 ../$endpoints/blocks/get_block.sql
 ../$endpoints/blocks/get_ops_by_block_paging.sql
 ../$endpoints/blocks/get_block_op_types.sql
@@ -53,12 +47,10 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/block-numbers/get_head_block_num.sql
 ../$endpoints/block-numbers/get_hafbe_last_synced_block.sql
 ../$endpoints/block-numbers/get_block_by_time.sql
-../$endpoints/operations/get_op_types.sql
-../$endpoints/operations/get_operation_keys.sql
-../$endpoints/operations/get_operation.sql
-../$endpoints/transactions/get_transaction.sql
 ../$endpoints/other/get_hafbe_version.sql
-../$endpoints/other/get_input_type.sql"
+../$endpoints/other/get_input_type.sql
+../$endpoints/other/get_latest_blocks.sql"
+
 
 # Function to reverse the lines
 reverse_lines() {
