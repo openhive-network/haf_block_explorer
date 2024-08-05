@@ -9,20 +9,17 @@ hafbe_types.block:
       description: block number
     hash:
       type: string
-      x-sql-datatype: bytea
       description: >-
         block hash in a blockchain is a unique, fixed-length string generated 
-        by applying a cryptographic hash function to a block's contents
+        by applying a cryptographic hash function to a block''s contents
     prev:
       type: string
-      x-sql-datatype: bytea
       description: hash of a previous block
     producer_account:
       type: string
-      description: account name of block's producer
+      description: account name of block''s producer
     transaction_merkle_root:
       type: string
-      x-sql-datatype: bytea
       description: >-
         single hash representing the combined hashes of all transactions in a block
     extensions:
@@ -30,11 +27,10 @@ hafbe_types.block:
       x-sql-datatype: JSONB
       description: >-
         various additional data/parameters related to the subject at hand.
-        Most often, there's nothing specific, but it's a mechanism for extending various functionalities
+        Most often, there''s nothing specific, but it''s a mechanism for extending various functionalities
         where something might appear in the future.
     witness_signature:
       type: string
-      x-sql-datatype: bytea
       description: witness signature
     signing_key:
       type: string
@@ -88,21 +84,17 @@ hafbe_types.block:
       type: string
       format: date-time
       description: the timestamp when the block was created
-    age:
-      type: string
-      x-sql-datatype: INTERVAL
-      description: the time that has elapsed since the block was created. 
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.block CASCADE;
 CREATE TYPE hafbe_types.block AS (
     "block_num" INT,
-    "hash" bytea,
-    "prev" bytea,
+    "hash" TEXT,
+    "prev" TEXT,
     "producer_account" TEXT,
-    "transaction_merkle_root" bytea,
+    "transaction_merkle_root" TEXT,
     "extensions" JSONB,
-    "witness_signature" bytea,
+    "witness_signature" TEXT,
     "signing_key" TEXT,
     "hbd_interest_rate" numeric,
     "total_vesting_fund_hive" numeric,
@@ -112,8 +104,7 @@ CREATE TYPE hafbe_types.block AS (
     "current_supply" numeric,
     "current_hbd_supply" numeric,
     "dhf_interval_ledger" numeric,
-    "created_at" TIMESTAMP,
-    "age" INTERVAL
+    "created_at" TIMESTAMP
 );
 -- openapi-generated-code-end
 

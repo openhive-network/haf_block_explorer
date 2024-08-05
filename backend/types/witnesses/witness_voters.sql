@@ -8,8 +8,7 @@ hafbe_types.witness_voter:
       type: string
       description: account name of the voter
     vests:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: number of vests this voter is directly voting with
     votes_hive_power:
       type: integer
@@ -18,21 +17,19 @@ hafbe_types.witness_voter:
         number of vests this voter is directly voting with, expressed in
         HIVE power, at the current ratio
     account_vests:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: >-
-        number of vests in the voter's account.  if some vests are
+        number of vests in the voter''s account.  if some vests are
         delegated, they will not be counted in voting
     account_hive_power:
       type: integer
       x-sql-datatype: BIGINT
       description: >-
-        number of vests in the voter's account, expressed in HIVE power, at
+        number of vests in the voter''s account, expressed in HIVE power, at
         the current ratio.  if some vests are delegated, they will not be
         counted in voting
     proxied_vests:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: the number of vests proxied to this account
     proxied_hive_power:
       type: integer
@@ -49,11 +46,11 @@ hafbe_types.witness_voter:
 DROP TYPE IF EXISTS hafbe_types.witness_voter CASCADE;
 CREATE TYPE hafbe_types.witness_voter AS (
     "voter" TEXT,
-    "vests" BIGINT,
+    "vests" TEXT,
     "votes_hive_power" BIGINT,
-    "account_vests" BIGINT,
+    "account_vests" TEXT,
     "account_hive_power" BIGINT,
-    "proxied_vests" BIGINT,
+    "proxied_vests" TEXT,
     "proxied_hive_power" BIGINT,
     "timestamp" TIMESTAMP
 );

@@ -7,17 +7,13 @@ SET ROLE hafbe_owner;
       - Accounts
     summary: Get account info
     description: |
-      Get information about account's balances and parameters
+      Get information about account''s balances and parameters
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_account('blocktrades');`
-
-      * `SELECT * FROM hafbe_endpoints.get_account('initminer');`
+      * `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades`
-      
-      * `GET https://{hafbe-host}/hafbe/accounts/initminer`
+      * `GET ''https://%1$s/hafbe/accounts/blocktrades''`
     operationId: hafbe_endpoints.get_account
     parameters:
       - in: path
@@ -29,7 +25,7 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          The account's parameters
+          The account''s parameters
       
           * Returns `hafbe_types.account`
         content:
@@ -38,43 +34,42 @@ SET ROLE hafbe_owner;
               $ref: '#/components/schemas/hafbe_types.account'
             example:
               - id: 440
-                name: blocktrades
+                name: "blocktrades"
                 can_vote: true
                 mined: true
-                proxy: 
-                recovery_account: steem
-                last_account_recovery: '1970-01-01T00:00:00'
-                created: '2016-03-30T00:04:33'
-                reputation: 79,
-                json_metadata: ''
-                posting_json_metadata: ''
-                profile_image: ''
-                hbd_balance: 19137472
-                balance: 352144597
-                vesting_shares: 20689331636290595
-                vesting_balance: 11996826266
-                hbd_saving_balance: 108376848
-                savings_balance: 52795
+                proxy: ""
+                recovery_account: "steem"
+                last_account_recovery: "1970-01-01T00:00:00"
+                created: "2016-03-30T00:04:36"
+                reputation: 69,
+                json_metadata: ""
+                posting_json_metadata: ""
+                profile_image: ""
+                hbd_balance: 77246982
+                balance: 29594875
+                vesting_shares: "8172549681941451"
+                vesting_balance: 2720696229
+                hbd_saving_balance: 0
+                savings_balance: 0
                 savings_withdraw_requests: 0
                 reward_hbd_balance: 0
                 reward_hive_balance: 0
-                reward_vesting_balance: 0
+                reward_vesting_balance: "0"
                 reward_vesting_hive: 0
-                posting_rewards: 124692738
-                curation_rewards: 2778463006
-                delegated_vesting_shares: 7002130390740040
-                received_vesting_shares: 93226683463768
+                posting_rewards: "65916519"
+                curation_rewards: "196115157"
+                delegated_vesting_shares: "0"
+                received_vesting_shares: "0"
                 proxied_vsf_votes: >-
-                  [19944304439583785, 0, 0, 0]
-                withdrawn: 0
-                vesting_withdraw_rate: 0
-                to_withdraw: 0
-                withdraw_routes: 3
-                delayed_vests: 0
-                witness_votes: >-
-                  ["blocktrades", "pharesim", "abit"]
-                witnesses_voted_for: 3
-                ops_count: 6558823
+                  [4983403929606734, 0, 0, 0]
+                withdrawn: "804048182205290"
+                vesting_withdraw_rate: "80404818220529"
+                to_withdraw: "8362101094935031"
+                withdraw_routes: 4
+                delayed_vests: "0"
+                witness_votes: ["steempty","blocktrades","datasecuritynode","steemed","silversteem","witness.svk","joseph","smooth.witness","gtg"]
+                witnesses_voted_for: 9
+                ops_count: 219867
                 is_witness: true
       '404':
         description: No such account in the database
@@ -126,7 +121,7 @@ RETURN (
     --balance
     COALESCE(_result_balance.hbd_balance, 0)::BIGINT,
     COALESCE(_result_balance.hive_balance, 0)::BIGINT,
-    COALESCE(_result_balance.vesting_shares, 0)::BIGINT,
+    COALESCE(_result_balance.vesting_shares, '0')::TEXT,
     COALESCE(_result_balance.vesting_balance_hive, 0)::BIGINT,
     --COALESCE(_result_balance.post_voting_power_vests, 0),
 
@@ -138,22 +133,22 @@ RETURN (
     --reward
     COALESCE(_result_rewards.hbd_rewards, 0)::BIGINT,
     COALESCE(_result_rewards.hive_rewards, 0)::BIGINT,
-    COALESCE(_result_rewards.vests_rewards, 0)::BIGINT,
+    COALESCE(_result_rewards.vests_rewards, '0')::TEXT,
     COALESCE(_result_rewards.hive_vesting_rewards, 0)::BIGINT,
-    COALESCE(_result_curation_posting.posting_rewards, 0)::BIGINT,
-    COALESCE(_result_curation_posting.curation_rewards, 0)::BIGINT,
+    COALESCE(_result_curation_posting.posting_rewards, '0')::TEXT,
+    COALESCE(_result_curation_posting.curation_rewards, '0')::TEXT,
 
     --received/delegated/proxied
-    COALESCE(_result_vest_balance.delegated_vests, 0)::BIGINT,
-    COALESCE(_result_vest_balance.received_vests, 0)::BIGINT,
+    COALESCE(_result_vest_balance.delegated_vests, '0')::TEXT,
+    COALESCE(_result_vest_balance.received_vests, '0')::TEXT,
     COALESCE(_result_proxied_votes, '[]'),
 
     --withdraw
-    COALESCE(_result_withdraws.withdrawn, 0)::BIGINT,
-    COALESCE(_result_withdraws.vesting_withdraw_rate, 0)::BIGINT,
-    COALESCE(_result_withdraws.to_withdraw, 0)::BIGINT,
+    COALESCE(_result_withdraws.withdrawn, '0')::TEXT,
+    COALESCE(_result_withdraws.vesting_withdraw_rate, '0')::TEXT,
+    COALESCE(_result_withdraws.to_withdraw, '0')::TEXT,
     COALESCE(_result_withdraws.withdraw_routes, 0)::INT,
-    COALESCE(_result_withdraws.delayed_vests, 0)::BIGINT,
+    COALESCE(_result_withdraws.delayed_vests, '0')::TEXT,
 
     --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
     --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon

@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/blocks/{block-num}/operations/types:
+/blocks/{block-num}/operation-types/count:
   get:
     tags:
       - Blocks
@@ -10,14 +10,10 @@ SET ROLE hafbe_owner;
       List operations that were present in given block
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_op_types(10000);`
-
-      * `SELECT * FROM hafbe_endpoints.get_block_op_types(43000);`
+      * `SELECT * FROM hafbe_endpoints.get_block_op_types(5000000);`
       
-      REST call example
-      * `GET https://{hafbe-host}/hafbe/blocks/10000/operations/types`
-      
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/operations/types`
+      REST call example   
+      * `GET ''https://%1$s/hafbe/blocks/5000000/operation-types/count''`
     operationId: hafbe_endpoints.get_block_op_types
     parameters:
       - in: path
@@ -29,7 +25,7 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          Given block's operation list
+          Operation counts for a given block-num
 
           * Returns array of `hafbe_types.op_types_count`
         content:
@@ -37,13 +33,13 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_op_types_count'
             example:
-              - op_type_id: 72
-                operation_name: effective_comment_vote_operation
-                is_virtual: true
+              - op_type_id: 80
                 count: 1
-              - op_type_id: 0
-                operation_name: vote_operation
-                is_virtual: false
+              - op_type_id: 9
+                count: 1
+              - op_type_id: 5
+                count: 1
+              - op_type_id: 64
                 count: 1
       '404':
         description: No block in the database
@@ -62,29 +58,20 @@ SET from_collapse_limit = 16
 AS
 $$
 BEGIN
+  IF "block-num" <= hive.app_get_irreversible_block() THEN
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+  ELSE
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  END IF;
 
-IF "block-num" <= hive.app_get_irreversible_block() THEN
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
-ELSE
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-END IF;
-
-RETURN QUERY
-WITH get_ops_count AS (
-  SELECT 
-    ov.op_type_id,
-    COUNT(ov.op_type_id) as count 
-  FROM hive.operations_view ov
-  WHERE ov.block_num = "block-num"
-  GROUP BY ov.op_type_id
-)
-SELECT 
-  ov.op_type_id, split_part( hot.name, '::', 3), hot.is_virtual, ov.count
-FROM get_ops_count ov
-JOIN hive.operation_types hot ON hot.id = ov.op_type_id
-ORDER BY ov.op_type_id ASC
-;
-
+  RETURN QUERY (
+    SELECT 
+      ov.op_type_id,
+      COUNT(ov.op_type_id) as count 
+    FROM hive.operations_view ov
+    WHERE ov.block_num = "block-num"
+    GROUP BY ov.op_type_id
+  );
 END
 $$;
 

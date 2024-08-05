@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       time/blockrange and comment related operations
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_comment_operations('blocktrades');`
-
-      * `SELECT * FROM hafbe_endpoints.get_comment_operations('gtg');`
+      * `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations/comments`
-      
-      * `GET https://{hafbe-host}/hafbe/accounts/gtg/operations/comments`
+      * `GET ''https://%1$s/hafbe/accounts/blocktrades/operations/comments?page-size=2&from-block=4000000&to-block=5000000''`
     operationId: hafbe_endpoints.get_comment_operations
     parameters:
       - in: path
@@ -32,10 +28,10 @@ SET ROLE hafbe_owner;
         required: false
         schema:
           type: string
-          x-sql-default-value: "'0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'"
+          default: NULL
         description: |
           List of operations: if the parameter is NULL, all operations will be included
-          example: `18,12`
+          comment related op type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`
       - in: query
         name: page
         required: false
@@ -50,7 +46,7 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: |
-            Unique post identifier containing post's title and generated number
+            Unique post identifier containing post''s title and generated number
       - in: query
         name: page-size
         required: false
@@ -111,33 +107,38 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:  
               - {
-                  "total_operations": 1,
-                  "total_pages": 1,
-                  "operations_result":[
-                      {
-                        "operation_id": 5287104741440,
-                        "block_num": 1231,
-                        "trx_in_block": -1,
-                        "trx_id": null,
-                        "op_pos": 1,
-                        "op_type_id": 64,
-                        "operation": {
-                          "type": "producer_reward_operation",
-                          "value": {
-                            "producer": "root",
-                            "vesting_shares": {
-                              "nai": "@@000000021",
-                              "amount": "1000",
-                              "precision": 3
-                            }
-                          }
-                        },
-                        "virtual_op": true,
-                        "timestamp": "2016-03-24T17:07:15",
-                        "age": "2993 days 16:17:51.591008",
-                        "is_modified": false
+                  "total_operations": 3158,
+                  "total_pages": 31,
+                  "operations_result": [
+                    {
+                      "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s",
+                      "block_num": 4364560,
+                      "operation_id": 18745642461431100,
+                      "created_at": "2016-08-24T15:52:00",
+                      "trx_hash": null,
+                      "operation": {
+                        "type": "comment_payout_update_operation",
+                        "value": {
+                          "author": "blocktrades",
+                          "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s"
+                        }
                       }
-                    ] 
+                    },
+                    {
+                      "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
+                      "block_num": 4347061,
+                      "operation_id": 18670484828720700,
+                      "created_at": "2016-08-24T01:13:48",
+                      "trx_hash": null,
+                      "operation": {
+                        "type": "comment_payout_update_operation",
+                        "value": {
+                          "author": "blocktrades",
+                          "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem"
+                        }
+                      }
+                    }
+                  ]
                 }
       '404':
         description: No such account in the database
@@ -146,7 +147,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_operations;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     "account-name" TEXT,
-    "operation-types" TEXT = '0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73',
+    "operation-types" TEXT = NULL,
     "page" INT = 1,
     "permlink" TEXT = NULL,
     "page-size" INT = 100,
@@ -168,11 +169,17 @@ AS
 $$
 DECLARE
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
-  _operation_types INT[] := (SELECT string_to_array("operation-types", ',')::INT[]);
+  _operation_types INT[];
 BEGIN
 IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
   RAISE EXCEPTION 'Commentsearch indexes are not installed';
 END IF;
+
+IF "operation-types" IS NULL THEN
+  "operation-types" := '0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'::TEXT;
+END IF;
+
+_operation_types := (SELECT string_to_array("operation-types", ',')::INT[]);
 
 IF NOT _operation_types <@ allowed_ids THEN
     RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;

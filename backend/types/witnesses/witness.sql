@@ -15,10 +15,9 @@ hafbe_types.witness:
         blocks each round.
     url:
       type: string
-      description: the witness's home page
+      description: the witness''s home page
     vests:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: >-
         the total weight of votes cast in favor of this witness, expressed
         in VESTS
@@ -29,8 +28,7 @@ hafbe_types.witness:
         the total weight of votes cast in favor of this witness, expressed
         in HIVE power, at the current ratio
     votes_daily_change:
-      type: integer
-      x-sql-datatype: BIGINT
+      type: string
       description: >-
         the increase or decrease in votes for this witness over the last 24
         hours, expressed in vests
@@ -64,13 +62,7 @@ hafbe_types.witness:
         the witness can adjust the feed accordingly. For instance, if HBD is trading at only 0.90 USD on exchanges, the witness might set:
           base: 0.250 HBD
           quote: 1.100 HIVE
-        In this case, the bias is 10%
-    feed_age:
-      type: string
-      x-sql-datatype: INTERVAL
-      description: >-
-        how old the witness price feed is (as a string formatted
-        hh:mm:ss.ssssss)
+        In this case, the bias is 10%%
     feed_updated_at:
       type: string
       format: date-time
@@ -87,7 +79,7 @@ hafbe_types.witness:
     missed_blocks:
       type: integer
       description: >-
-        the number of blocks the witness should have generated but didn't
+        the number of blocks the witness should have generated but didn''t
         (over the entire lifetime of the blockchain)
     hbd_interest_rate:
       type: integer
@@ -99,15 +91,14 @@ CREATE TYPE hafbe_types.witness AS (
     "witness" TEXT,
     "rank" INT,
     "url" TEXT,
-    "vests" BIGINT,
+    "vests" TEXT,
     "vests_hive_power" BIGINT,
-    "votes_daily_change" BIGINT,
+    "votes_daily_change" TEXT,
     "votes_daily_change_hive_power" BIGINT,
     "voters_num" INT,
     "voters_num_daily_change" INT,
     "price_feed" FLOAT,
     "bias" NUMERIC,
-    "feed_age" INTERVAL,
     "feed_updated_at" TIMESTAMP,
     "block_size" INT,
     "signing_key" TEXT,

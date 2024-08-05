@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       The page size determines the number of operations per page
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_ops_by_account('blocktrades');`
-
-      * `SELECT * FROM hafbe_endpoints.get_ops_by_account('gtg');`
+      * `SELECT * FROM hafbe_endpoints.get_ops_by_account(''blocktrades'');`
 
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/operations`
-      
-      * `GET https://{hafbe-host}/hafbe/accounts/gtg/operations`
+      * `GET ''https://%1$s/hafbe/accounts/blocktrades/operations?page-size=3''`
     operationId: hafbe_endpoints.get_ops_by_account
     parameters:
       - in: path
@@ -105,61 +101,76 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example: 
               - {
-                  "total_operations": 4417,
-                  "total_pages": 45,
+                  "total_operations": 219867,
+                  "total_pages": 73289,
                   "operations_result": [
-                      {
-                        "operation_id": 21474759170589000,
-                        "block_num": 4999982,
-                        "trx_in_block": 0,
-                        "trx_id": "fa7c8ac738b4c1fdafd4e20ee6ca6e431b641de3",
-                        "op_pos": 1,
-                        "op_type_id": 72,
-                        "operation": {
-                          "type": "effective_comment_vote_operation",
-                          "value": {
-                            "voter": "gtg",
-                            "author": "skypilot",
-                            "weight": "19804864940707296",
-                            "rshares": 87895502383,
-                            "permlink": "sunset-at-point-sur-california",
-                            "pending_payout": {
-                              "nai": "@@000000013",
-                              "amount": "14120",
-                              "precision": 3
-                            },
-                            "total_vote_weight": "14379148533547713492"
+                    {
+                      "operation_id": "21474823595099394",
+                      "block_num": 4999997,
+                      "trx_in_block": 3,
+                      "trx_id": "e75f833ceb62570c25504b55d0f23d86d9d76423",
+                      "op_pos": 0,
+                      "op_type_id": 2,
+                      "operation": {
+                        "type": "transfer_operation",
+                        "value": {
+                          "to": "blocktrades",
+                          "from": "mrwang",
+                          "memo": "a79c09cd-0084-4cd4-ae63-bf6d2514fef9",
+                          "amount": {
+                            "nai": "@@000000013",
+                            "amount": "1633",
+                            "precision": 3
                           }
-                        },
-                        "virtual_op": true,
-                        "timestamp": "2016-09-15T19:46:21",
-                        "age": "2820 days 02:03:05.095628",
-                        "is_modified": false
+                        }
                       },
-                      {
-                        "operation_id": 21474759170588670,
-                        "block_num": 4999982,
-                        "trx_in_block": 0,
-                        "trx_id": "fa7c8ac738b4c1fdafd4e20ee6ca6e431b641de3",
-                        "op_pos": 0,
-                        "op_type_id": 0,
-                        "operation": {
-                          "type": "vote_operation",
-                          "value": {
-                            "voter": "gtg",
-                            "author": "skypilot",
-                            "weight": 10000,
-                            "permlink": "sunset-at-point-sur-california"
+                      "virtual_op": false,
+                      "timestamp": "2016-09-15T19:47:12"
+                    },
+                    {
+                      "operation_id": "21474802120262208",
+                      "block_num": 4999992,
+                      "trx_in_block": -1,
+                      "trx_id": null,
+                      "op_pos": 1,
+                      "op_type_id": 64,
+                      "operation": {
+                        "type": "producer_reward_operation",
+                        "value": {
+                          "producer": "blocktrades",
+                          "vesting_shares": {
+                            "nai": "@@000000037",
+                            "amount": "3003850165",
+                            "precision": 6
                           }
-                        },
-                        "virtual_op": false,
-                        "timestamp": "2016-09-15T19:46:21",
-                        "age": "2820 days 02:03:05.095628",
-                        "is_modified": false
-                      }
-                    ]
+                        }
+                      },
+                      "virtual_op": true,
+                      "timestamp": "2016-09-15T19:46:57"
+                    },
+                    {
+                      "operation_id": "21474660386343488",
+                      "block_num": 4999959,
+                      "trx_in_block": -1,
+                      "trx_id": null,
+                      "op_pos": 1,
+                      "op_type_id": 64,
+                      "operation": {
+                        "type": "producer_reward_operation",
+                        "value": {
+                          "producer": "blocktrades",
+                          "vesting_shares": {
+                            "nai": "@@000000037",
+                            "amount": "3003868105",
+                            "precision": 6
+                          }
+                        }
+                      },
+                      "virtual_op": true,
+                      "timestamp": "2016-09-15T19:45:12"
+                    }
+                  ]
                 }
-
       '404':
         description: No such account in the database
  */

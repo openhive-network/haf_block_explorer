@@ -85,7 +85,7 @@ BEGIN
   INSERT INTO hafbe_app.witness_votes_history_cache (witness_id, voter_id, approve, timestamp, proxied_vests, account_vests)
     SELECT
       wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
-      ((COALESCE(av.balance, 0) - COALESCE(dv.delayed_vests, 0)))::BIGINT AS account_vests
+      ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
     FROM hafbe_app.witness_votes_history wvh
     LEFT JOIN current_account_balances av
       ON av.account = wvh.voter_id AND av.nai = 37

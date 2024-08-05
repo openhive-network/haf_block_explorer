@@ -7,17 +7,13 @@ SET ROLE hafbe_owner;
       - Accounts
     summary: Get account info
     description: |
-      Get information about account's OWNER, ACTIVE, POSTING, memo and signing authorities
+      Get information about account''s OWNER, ACTIVE, POSTING, memo and signing authorities
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_account_authority('blocktrades');`
-
-      * `SELECT * FROM hafbe_endpoints.get_account_authority('initminer');`
+      * `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`
 
       REST call example
-      * `GET https://{hafbe-host}/hafbe/accounts/blocktrades/authority`
-      
-      * `GET https://{hafbe-host}/hafbe/accounts/initminer/authority`
+      * `GET ''https://%1$s/hafbe/accounts/blocktrades/authority''` 
     operationId: hafbe_endpoints.get_account_authority
     parameters:
       - in: path
@@ -29,7 +25,7 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          List of account's authorities
+          List of account''s authorities
 
           * Returns `hafbe_types.account_authority`
         content:
@@ -38,37 +34,37 @@ SET ROLE hafbe_owner;
               $ref: '#/components/schemas/hafbe_types.account_authority'
             example:
               - owner: {
-                    "key_auth":[
-                        [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
-                          "1"
-                        ]
-                      ],
-                    "account_auth": [],
-                    "weight_threshold": 1
-                  }
+                          "key_auth": [
+                            [
+                              "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
+                              "1"
+                            ]
+                          ],
+                          "account_auth": [],
+                          "weight_threshold": 1
+                        }
                 active: {
-                    "key_auth":[
-                        [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
-                          "1"
-                        ]
-                      ],
-                    "account_auth": [],
-                    "weight_threshold": 1
-                  }
+                          "key_auth": [
+                            [
+                              "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
+                              "1"
+                            ]
+                          ],
+                          "account_auth": [],
+                          "weight_threshold": 1
+                        }
                 posting: {
-                    "key_auth":[
-                        [
-                          "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR",
-                          "1"
-                        ]
-                      ],
-                    "account_auth": [],
-                    "weight_threshold": 1
-                  }
-                memo: STM78Vaf41p9UUMMJvafLTjMurnnnuAiTqChiT5GBph7VDWahQRsz
-                witness_signing: STM776t8h7dXbvM8BYGoLjCr3nYRnmqmvVg9hTrGTn5FQvLkMZKM2
+                            "key_auth": [
+                              [
+                                "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
+                                "1"
+                              ]
+                            ],
+                            "account_auth": [],
+                            "weight_threshold": 1
+                          }
+                memo: "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT"
+                witness_signing: "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
       '404':
         description: No such account in the database
  */

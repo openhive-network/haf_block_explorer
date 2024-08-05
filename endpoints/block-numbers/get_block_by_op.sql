@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       account name and time/block range in specified order
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_by_op(ARRAY[14]);`
-
-      * `SELECT * FROM hafbe_endpoints.get_block_by_op();`
+      * `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,NULL,NULL,''desc'',4999999,5000000);`
 
       REST call example
-      * `GET https://{hafbe-host}/hafbe/block-numbers?operation-types={14}`
-
-      * `GET https://{hafbe-host}/hafbe/block-numbers`
+      * `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`
     operationId: hafbe_endpoints.get_block_by_op
     parameters:
       - in: query
@@ -29,7 +25,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           List of operations: if the parameter is NULL, all operations will be included
-          example: `'18,12'`
+          example: `18,12`
       - in: query
         name: account-name
         required: false
@@ -116,12 +112,8 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_block_by_ops'
             example: 
-              - block_num: 5000000
-                op_type_id: [9,5,64,80]
               - block_num: 4999999
-                op_type_id: [64,30,6,0,85,72,78]
-              - block_num: 4999998
-                op_type_id: [1,64,0,72]
+                op_type_id: [6]
       '404':
         description: No operations in database
  */
@@ -152,9 +144,21 @@ DECLARE
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
 BEGIN
-IF "key-content" IS NOT NULL THEN
+IF "key-content" IS NOT NULL OR "set-of-keys" IS NOT NULL THEN
   IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
     RAISE EXCEPTION 'Blocksearch indexes are not installed';
+  END IF;
+
+  IF "operation-types" IS  NULL THEN
+    RAISE EXCEPTION 'Operation type not specified';
+  END IF;
+
+  IF "key-content" IS NULL THEN
+    RAISE EXCEPTION 'key content not specified';
+  END IF;
+
+  IF "set-of-keys" IS NULL THEN
+    RAISE EXCEPTION 'set of keys not specified';
   END IF;
 
   _operation_types := string_to_array("operation-types", ',')::INT[];
@@ -170,6 +174,10 @@ IF "key-content" IS NOT NULL THEN
 	  RAISE EXCEPTION 'Invalid key %', _set_of_keys->i;
     END IF;
   END LOOP;
+ELSE 
+  IF "operation-types" IS NOT NULL THEN
+    _operation_types := string_to_array("operation-types", ',')::INT[];
+  END IF;
 END IF;
 
 IF _operation_types IS NULL THEN

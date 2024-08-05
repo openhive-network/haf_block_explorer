@@ -262,7 +262,13 @@ BEGIN
     LEFT JOIN hive.transactions_view htv ON htv.block_num = orr.block_num AND htv.trx_in_block = orr.trx_in_block
   )
 -- filter too long operation bodies 
-  SELECT filtered_operations.permlink, filtered_operations.block_num, filtered_operations.id, filtered_operations.timestamp, filtered_operations.trx_hash,  (filtered_operations.composite).body, (filtered_operations.composite).is_modified
+  SELECT 
+    filtered_operations.permlink,
+    filtered_operations.block_num,
+    filtered_operations.id, 
+    filtered_operations.timestamp,
+    filtered_operations.trx_hash,
+    (filtered_operations.composite).body
   FROM (
   SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, hb.created_at timestamp, opr.trx_hash
   FROM add_transactions opr

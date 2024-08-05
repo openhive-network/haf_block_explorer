@@ -5,15 +5,15 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Haf_block_explorer's version
+    summary: Haf_block_explorer''s version
     description: |
-      Get haf_block_explorer's last commit hash that determinates its version
+      Get haf_block_explorer''s last commit hash that determinates its version
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_hafbe_version();`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/version`
+      * `GET ''https://%1$s/hafbe/version''`
     operationId: hafbe_endpoints.get_hafbe_version
     responses:
       '200':
@@ -25,7 +25,7 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               type: string
-            example: 'c2fed8958584511ef1a66dab3dbac8c40f3518f0'
+            example: c2fed8958584511ef1a66dab3dbac8c40f3518f0
       '404':
         description: App not installed
  */

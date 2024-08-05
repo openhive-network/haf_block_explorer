@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_head_block_num();`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/block-numbers/headblock`
+      * `GET ''https://%1$s/hafbe/block-numbers/headblock''`
     operationId: hafbe_endpoints.get_head_block_num
     responses:
       '200':
@@ -25,7 +25,7 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               type: integer
-            example: 3131
+            example: 5000000
       '404':
         description: No blocks in the database
  */

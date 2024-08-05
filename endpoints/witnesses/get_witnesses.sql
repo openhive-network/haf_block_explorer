@@ -11,12 +11,10 @@ SET ROLE hafbe_owner;
       List all witnesses (both active and standby)
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_witnesses();`
-      * `SELECT * FROM hafbe_endpoints.get_witnesses(10);`
+      * `SELECT * FROM hafbe_endpoints.get_witnesses(2);`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/witnesses`
-      * `GET https://{hafbe-host}/hafbe/witnesses?result-limit=10`
+      * `GET ''https://%1$s/hafbe/witnesses?result-limit=2''`
     operationId: hafbe_endpoints.get_witnesses
     parameters:
       - in: query
@@ -42,11 +40,11 @@ SET ROLE hafbe_owner;
         description: |
           Sort key:
 
-           * `witness` - the witness' name
+           * `witness` - the witness name
 
            * `rank` - their current rank (highest weight of votes => lowest rank)
 
-           * `url` - the witness' url
+           * `url` - the witness url
 
            * `votes` - total number of votes
 
@@ -61,13 +59,11 @@ SET ROLE hafbe_owner;
            * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:
                   base: 0.250 HBD
                   quote: 1.100 HIVE
-                In this case, the bias is 10%
+                In this case, the bias is 10%%
 
-           * `feed_age` - how old their feed value is
+           * `block_size` - the block size they''re voting for
 
-           * `block_size` - the block size they're voting for
-
-           * `signing_key` - the witness' block-signing public key
+           * `signing_key` - the witness'' block-signing public key
 
            * `version` - the version of hived the witness is running
       - in: query
@@ -93,41 +89,40 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_witnesses'
             example:
-              - witness: arcange
+              - witnes": "roadscape"
                 rank: 1
-                url: >-
-                  https://peakd.com/witness-category/@arcange/witness-update-202103
-                vests: 141591182132060780
-                votes_hive_power: 81865807173
-                votes_daily_change: 39841911089
-                votes_daily_change_hive_power: 23036
-                voters_num: 4481
-                voters_num_daily_change: 5
-                price_feed: 0.302
+                url: "https://steemit.com/witness-category/@roadscape/witness-roadscape"
+                vests: "94172201023355097"
+                vests_hive_power: 31350553033
+                votes_daily_change: "0"
+                votes_daily_change_hive_power: 0,
+                voters_num: 306
+                voters_num_daily_change: 0
+                price_feed: 0.539
                 bias: 0
-                feed_age: '00:45:20.244402'
+                feed_updated_at: "2016-09-15T16:07:42"
                 block_size: 65536
-                signing_key: STM6wjYfYn728hR5yXNBS5GcMoACfYymKEWW1WFzDGiMaeo9qUKwH
-                version: 1.27.4
-                missed_blocks: 697
-                hbd_interest_rate: 2000
-              - witness: gtg
+                signing_key: "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9"
+                version: "0.13.0"
+                missed_blocks: 129
+                hbd_interest_rate: 1000
+              - witness: "arhag"
                 rank: 2
-                url: https://gtg.openhive.network
-                vests: 141435014237847520
-                votes_hive_power: 81775513339
-                votes_daily_change: 186512763933
-                votes_daily_change_hive_power: 107839
-                voters_num: 3131
-                voters_num_daily_change: 4
-                price_feed: 0.3
+                url: "https://steemit.com/witness-category/@arhag/witness-arhag"
+                vests: "91835048921097725"
+                vests_hive_power: 30572499530
+                votes_daily_change: "0"
+                votes_daily_change_hive_power: 0
+                voters_num: 348
+                voters_num_daily_change: 0
+                price_feed: 0.536
                 bias: 0
-                feed_age: '00:55:26.244402'
+                feed_updated_at: "2016-09-15T19:31:18"
                 block_size: 65536
-                signing_key: STM5dLh5HxjjawY4Gm6o6ugmJUmEXgnfXXXRJPRTxRnvfFBJ24c1M
-                version: 1.27.5
-                missed_blocks: 986
-                hbd_interest_rate: 1500
+                signing_key: "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh"
+                version: "0.13.0"
+                missed_blocks: 61
+                hbd_interest_rate: 1000
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
@@ -160,7 +155,6 @@ RETURN QUERY EXECUTE format(
       cw.url,
       cw.price_feed,
       cw.bias,
-      (NOW() - cw.feed_updated_at)::INTERVAL AS feed_age,
       cw.feed_updated_at,
       cw.block_size, 
       cw.signing_key, 
@@ -197,15 +191,14 @@ get_block_num AS MATERIALIZED
     ls.witness, 
     ls.rank, 
     ls.url,
-    ls.votes,
+    ls.votes::TEXT,
     (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes))::BIGINT, 
-    ls.votes_daily_change,
+    ls.votes_daily_change::TEXT,
     (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes_daily_change))::BIGINT, 
     ls.voters_num,
     ls.voters_num_daily_change,
     ls.price_feed, 
     ls.bias, 
-    ls.feed_age,
     ls.feed_updated_at,
     ls.block_size, 
     ls.signing_key, 

@@ -7,7 +7,7 @@ hafbe_types.comment_history:
     permlink:
       type: string
       description: >-
-        unique post identifier containing post's title and generated number
+        unique post identifier containing post''s title and generated number
     block_num:
       type: integer
       description: operation block number
@@ -28,10 +28,6 @@ hafbe_types.comment_history:
       type: string
       x-sql-datatype: JSONB
       description: operation body
-    is_modified:
-      type: boolean
-      description: >-
-        true if operation body was modified with body placeholder due to its lenght
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.comment_history CASCADE;
@@ -41,8 +37,7 @@ CREATE TYPE hafbe_types.comment_history AS (
     "operation_id" BIGINT,
     "created_at" TIMESTAMP,
     "trx_hash" TEXT,
-    "operation" JSONB,
-    "is_modified" BOOLEAN
+    "operation" JSONB
 );
 -- openapi-generated-code-end
 

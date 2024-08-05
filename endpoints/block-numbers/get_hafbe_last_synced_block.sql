@@ -5,7 +5,7 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Block-numbers
-    summary: Haf_block_explorer's last synced block
+    summary: Haf_block_explorer''s last synced block
     description: |
       Get last block-num synced by haf_block_explorer
 
@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/block-numbers/headblock/hafbe`
+      * `GET ''https://%1$s/hafbe/block-numbers/headblock/hafbe''`
     operationId: hafbe_endpoints.get_hafbe_last_synced_block
     responses:
       '200':
@@ -25,7 +25,7 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               type: integer
-            example: 3131
+            example: 5000000
       '404':
         description: No blocks synced
  */

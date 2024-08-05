@@ -5,12 +5,6 @@ hafbe_types.op_types_count:
     op_type_id:
       type: integer
       description: operation type id
-    operation_name:
-      type: string
-      description: operation type name
-    is_virtual:
-      type: boolean
-      description: true if operation is virtual
     count:
       type: integer
       x-sql-datatype: BIGINT
@@ -20,8 +14,6 @@ hafbe_types.op_types_count:
 DROP TYPE IF EXISTS hafbe_types.op_types_count CASCADE;
 CREATE TYPE hafbe_types.op_types_count AS (
     "op_type_id" INT,
-    "operation_name" TEXT,
-    "is_virtual" BOOLEAN,
     "count" BIGINT
 );
 -- openapi-generated-code-end

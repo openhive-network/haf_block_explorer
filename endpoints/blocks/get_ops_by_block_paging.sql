@@ -11,14 +11,10 @@ SET ROLE hafbe_owner;
       The page size determines the number of operations per page
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(10000);`
-
-      * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(43000,ARRAY[0,1]);`
+      * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`
       
       REST call example
-      * `GET https://{hafbe-host}/hafbe/blocks/10000/operations`
-
-      * `GET https://{hafbe-host}/hafbe/blocks/43000/operations?operation-types=0,1`
+      * `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=5,64''`
     operationId: hafbe_endpoints.get_ops_by_block_paging
     parameters:
       - in: path
@@ -34,8 +30,8 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: |
-          List of operations: if the parameter is empty, all operations will be included
-          example: `'18,12'`
+          List of operations: if the parameter is empty, all operations will be included,
+          example: `18,12`
       - in: query
         name: account-name
         required: false
@@ -65,7 +61,7 @@ SET ROLE hafbe_owner;
           x-sql-datatype: JSON
           default: NULL
         description: |
-          A JSON object detailing the path to the filtered key specified in key-content
+          A JSON object detailing the path to the filtered key specified in key-content,
           example: `[["value", "id"]]`
       - in: query
         name: key-content
@@ -111,12 +107,41 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:
               - {
-                  "total_operations": 1,
+                  "total_operations": 2,
                   "total_pages": 1,
-                  "operations_result":[
+                  "operations_result": [
                     {
-                      "operation_id": 5287104741440,
-                      "block_num": 1231,
+                      "operation_id": "21474836480000517",
+                      "block_num": 5000000,
+                      "trx_in_block": 1,
+                      "trx_id": "973290d26bac31335c000c7a3d3fe058ce3dbb9f",
+                      "op_pos": 0,
+                      "op_type_id": 5,
+                      "operation": {
+                        "type": "limit_order_create_operation",
+                        "value": {
+                          "owner": "cvk",
+                          "orderid": 1473968838,
+                          "expiration": "2035-10-29T06:32:22",
+                          "fill_or_kill": false,
+                          "amount_to_sell": {
+                            "nai": "@@000000021",
+                            "amount": "10324",
+                            "precision": 3
+                          },
+                          "min_to_receive": {
+                            "nai": "@@000000013",
+                            "amount": "6819",
+                            "precision": 3
+                          }
+                        }
+                      },
+                      "virtual_op": false,
+                      "timestamp": "2016-09-15T19:47:21"
+                    },
+                    {
+                      "operation_id": "21474836480000832",
+                      "block_num": 5000000,
                       "trx_in_block": -1,
                       "trx_id": null,
                       "op_pos": 1,
@@ -124,20 +149,18 @@ SET ROLE hafbe_owner;
                       "operation": {
                         "type": "producer_reward_operation",
                         "value": {
-                          "producer": "root",
+                          "producer": "ihashfury",
                           "vesting_shares": {
-                            "nai": "@@000000021",
-                            "amount": "1000",
-                            "precision": 3
+                            "nai": "@@000000037",
+                            "amount": "3003845513",
+                            "precision": 6
                           }
                         }
                       },
                       "virtual_op": true,
-                      "timestamp": "2016-03-24T17:07:15",
-                      "age": "2993 days 16:17:51.591008",
-                      "is_modified": false
+                      "timestamp": "2016-09-15T19:47:21"
                     }
-                  ] 
+                  ]
                 }
       '404':
         description: The result is empty
@@ -169,12 +192,12 @@ DECLARE
   _set_of_keys JSON := NULL;
 BEGIN
 IF "key-content" IS NOT NULL THEN
-  IF "operation-types" IS NOT NULL THEN
-    _operation_types := string_to_array("operation-types", ',')::INT[];
-  END IF;
-
   _key_content := string_to_array("key-content", ',')::TEXT[];
   _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
+END IF;
+
+IF "operation-types" IS NOT NULL THEN
+  _operation_types := string_to_array("operation-types", ',')::INT[];
 END IF;
 
 IF "block-num" <= hive.app_get_irreversible_block() THEN
