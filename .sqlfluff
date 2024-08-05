@@ -1,5 +1,5 @@
 [sqlfluff]
 dialect = postgres
-max_line_length = 150
+max_line_length = 170
 
 warnings = LT01, CP05
