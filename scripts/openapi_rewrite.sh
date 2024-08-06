@@ -40,16 +40,16 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_account_authority.sql
 ../$endpoints/accounts/get_ops_by_account.sql
 ../$endpoints/accounts/get_comment_operations.sql
-../$endpoints/blocks/get_block.sql
 ../$endpoints/blocks/get_ops_by_block_paging.sql
-../$endpoints/blocks/get_block_op_types.sql
 ../$endpoints/block-numbers/get_block_by_op.sql
 ../$endpoints/block-numbers/get_head_block_num.sql
 ../$endpoints/block-numbers/get_hafbe_last_synced_block.sql
 ../$endpoints/block-numbers/get_block_by_time.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_input_type.sql
-../$endpoints/other/get_latest_blocks.sql"
+../$endpoints/other/get_latest_blocks.sql
+../$endpoints/other/get_block.sql"
+
 
 
 # Function to reverse the lines

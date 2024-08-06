@@ -1636,63 +1636,6 @@ declare
         }
       }
     },
-    "/blocks/{block-num}/global-state": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Informations about block",
-        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(5000000);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/blocks/5000000/global-state''`\n",
-        "operationId": "hafbe_endpoints.get_block",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block''s stats\n\n* Returns `hafbe_types.block`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.block"
-                },
-                "example": [
-                  {
-                    "block_num": 5000000,
-                    "hash": "004c4b40245ffb07380a393fb2b3d841b76cdaec",
-                    "prev": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
-                    "producer_account": "ihashfury",
-                    "transaction_merkle_root": "97a8f2b04848b860f1792dc07bf58efcb15aeb8c",
-                    "extensions": [],
-                    "witness_signature": "1f6aa1c6311c768b5225b115eaf5798e5f1d8338af3970d90899cd5ccbe38f6d1f7676c5649bcca18150cbf8f07c0cc7ec3ae40d5936cfc6d5a650e582ba0f8002",
-                    "signing_key": "STM8aUs6SGoEmNYMd3bYjE1UBr6NQPxGWmTqTdBaxJYSx244edSB2",
-                    "hbd_interest_rate": 1000,
-                    "total_vesting_fund_hive": 149190428013,
-                    "total_vesting_shares": 448144916705468350,
-                    "total_reward_fund_hive": 66003975,
-                    "virtual_supply": 161253662237,
-                    "current_supply": 157464400971,
-                    "current_hbd_supply": 2413759427,
-                    "dhf_interval_ledger": 0,
-                    "created_at": "2016-09-15T19:47:21"
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
     "/blocks/{block-num}/operations": {
       "get": {
         "tags": [
@@ -1865,60 +1808,6 @@ declare
           },
           "404": {
             "description": "The result is empty"
-          }
-        }
-      }
-    },
-    "/blocks/{block-num}/operation-types/count": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "List operations that were present in given block",
-        "description": "List operations that were present in given block\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_op_types(5000000);`\n\nREST call example   \n* `GET ''https://%1$s/hafbe/blocks/5000000/operation-types/count''`\n",
-        "operationId": "hafbe_endpoints.get_block_op_types",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation counts for a given block-num\n\n* Returns array of `hafbe_types.op_types_count`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_op_types_count"
-                },
-                "example": [
-                  {
-                    "op_type_id": 80,
-                    "count": 1
-                  },
-                  {
-                    "op_type_id": 9,
-                    "count": 1
-                  },
-                  {
-                    "op_type_id": 5,
-                    "count": 1
-                  },
-                  {
-                    "op_type_id": 64,
-                    "count": 1
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No block in the database"
           }
         }
       }
@@ -2217,15 +2106,25 @@ declare
         }
       }
     },
-    "/operation-types/count": {
+    "/operation-type-counts": {
       "get": {
         "tags": [
           "Other"
         ],
-        "summary": "Informations about operations in latest blocks",
-        "description": "Lists counts of operations in last `result-limit` blocks and its creator\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/blocks?result-limit=1''`\n",
+        "summary": "Informations about operations in blocks",
+        "description": "Lists the counts of operations in result-limit blocks along with their creators. \nIf block-num is not specified, the result includes the counts of operations in the most recent blocks. \n\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/operation-type-counts?result-limit=1''`\n",
         "operationId": "hafbe_endpoints.get_latest_blocks",
         "parameters": [
+          {
+            "in": "query",
+            "name": "block-num",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": null
+            },
+            "description": "Given block number, defaults to `NULL`"
+          },
           {
             "in": "query",
             "name": "result-limit",
@@ -2267,6 +2166,63 @@ declare
                         "op_type_id": 5
                       }
                     ]
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "No blocks in the database"
+          }
+        }
+      }
+    },
+    "/global-state": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "summary": "Informations about block",
+        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(5000000);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/global-state?block-num=5000000''`\n",
+        "operationId": "hafbe_endpoints.get_block",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "block-num",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Given block number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Given block''s stats\n\n* Returns `hafbe_types.block`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_types.block"
+                },
+                "example": [
+                  {
+                    "block_num": 5000000,
+                    "hash": "004c4b40245ffb07380a393fb2b3d841b76cdaec",
+                    "prev": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
+                    "producer_account": "ihashfury",
+                    "transaction_merkle_root": "97a8f2b04848b860f1792dc07bf58efcb15aeb8c",
+                    "extensions": [],
+                    "witness_signature": "1f6aa1c6311c768b5225b115eaf5798e5f1d8338af3970d90899cd5ccbe38f6d1f7676c5649bcca18150cbf8f07c0cc7ec3ae40d5936cfc6d5a650e582ba0f8002",
+                    "signing_key": "STM8aUs6SGoEmNYMd3bYjE1UBr6NQPxGWmTqTdBaxJYSx244edSB2",
+                    "hbd_interest_rate": 1000,
+                    "total_vesting_fund_hive": 149190428013,
+                    "total_vesting_shares": 448144916705468350,
+                    "total_reward_fund_hive": 66003975,
+                    "virtual_supply": 161253662237,
+                    "current_supply": 157464400971,
+                    "current_hbd_supply": 2413759427,
+                    "dhf_interval_ledger": 0,
+                    "created_at": "2016-09-15T19:47:21"
                   }
                 ]
               }
