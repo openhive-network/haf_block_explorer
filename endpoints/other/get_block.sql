@@ -1,10 +1,10 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/blocks/{block-num}/global-state:
+/global-state:
   get:
     tags:
-      - Blocks
+      - Other
     summary: Informations about block
     description: |
       Lists the parameters of the block provided by the user
@@ -13,10 +13,10 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_block(5000000);`
       
       REST call example      
-      * `GET ''https://%1$s/hafbe/blocks/5000000/global-state''`
+      * `GET ''https://%1$s/hafbe/global-state?block-num=5000000''`
     operationId: hafbe_endpoints.get_block
     parameters:
-      - in: path
+      - in: query
         name: block-num
         required: true
         schema:
