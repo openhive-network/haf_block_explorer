@@ -620,18 +620,14 @@ declare
       "hafbe_types.operation": {
         "type": "object",
         "properties": {
-          "operation_id": {
+          "op": {
             "type": "string",
-            "description": "unique operation identifier with an encoded block number and operation type id"
+            "x-sql-datatype": "JSONB",
+            "description": "operation body"
           },
-          "block_num": {
+          "block": {
             "type": "integer",
             "description": "operation block number"
-          },
-          "trx_in_block": {
-            "type": "integer",
-            "x-sql-datatype": "SMALLINT",
-            "description": "transaction identifier that indicates its sequence number in block"
           },
           "trx_id": {
             "type": "string",
@@ -645,19 +641,23 @@ declare
             "type": "integer",
             "description": "operation type identifier"
           },
-          "operation": {
+          "timestamp": {
             "type": "string",
-            "x-sql-datatype": "JSONB",
-            "description": "operation body"
+            "format": "date-time",
+            "description": "creation date"
           },
           "virtual_op": {
             "type": "boolean",
             "description": "true if is a virtual operation"
           },
-          "timestamp": {
+          "operation_id": {
             "type": "string",
-            "format": "date-time",
-            "description": "creation date"
+            "description": "unique operation identifier with an encoded block number and operation type id"
+          },
+          "trx_in_block": {
+            "type": "integer",
+            "x-sql-datatype": "SMALLINT",
+            "description": "transaction identifier that indicates its sequence number in block"
           }
         }
       },
@@ -1315,7 +1315,7 @@ declare
               "type": "integer",
               "default": null
             },
-            "description": "Return page on `page` number, default null due to reversed order of pages\nthe first page is the oldest\n"
+            "description": "Return page on `page` number, default null due to reversed order of pages\nthe first page is the oldest,\nexample: first call returns the newest page and total_pages is 100 - the newest page is number 100, next 99 etc.\n"
           },
           {
             "in": "query",
@@ -1642,7 +1642,7 @@ declare
           "Blocks"
         ],
         "summary": "Get operations in block",
-        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=5,64''`\n",
+        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=80&path-filter=value.creator=steem''`\n",
         "operationId": "hafbe_endpoints.get_ops_by_block_paging",
         "parameters": [
           {
@@ -1696,27 +1696,6 @@ declare
           },
           {
             "in": "query",
-            "name": "set-of-keys",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "x-sql-datatype": "JSON",
-              "default": null
-            },
-            "description": "A JSON object detailing the path to the filtered key specified in key-content,\nexample: `[[\"value\", \"id\"]]`\n"
-          },
-          {
-            "in": "query",
-            "name": "key-content",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nexample: `follow`\n"
-          },
-          {
-            "in": "query",
             "name": "page-order",
             "required": false,
             "schema": {
@@ -1734,6 +1713,20 @@ declare
               "default": 200000
             },
             "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
+          },
+          {
+            "in": "query",
+            "name": "path-filter",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "x-sql-datatype": "TEXT",
+              "default": null
+            },
+            "description": "A parameter specifying the expected value in operation body,\nexample: `value.creator=steem`\n"
           }
         ],
         "responses": {
@@ -1747,52 +1740,29 @@ declare
                 },
                 "example": [
                   {
-                    "total_operations": 2,
+                    "total_operations": 1,
                     "total_pages": 1,
                     "operations_result": [
                       {
-                        "operation_id": "21474836480000517",
+                        "operation_id": "21474836480000336",
                         "block_num": 5000000,
-                        "trx_in_block": 1,
-                        "trx_id": "973290d26bac31335c000c7a3d3fe058ce3dbb9f",
-                        "op_pos": 0,
-                        "op_type_id": 5,
-                        "operation": {
-                          "type": "limit_order_create_operation",
-                          "value": {
-                            "owner": "cvk",
-                            "orderid": 1473968838,
-                            "expiration": "2035-10-29T06:32:22",
-                            "fill_or_kill": false,
-                            "amount_to_sell": {
-                              "nai": "@@000000021",
-                              "amount": "10324",
-                              "precision": 3
-                            },
-                            "min_to_receive": {
-                              "nai": "@@000000013",
-                              "amount": "6819",
-                              "precision": 3
-                            }
-                          }
-                        },
-                        "virtual_op": false,
-                        "timestamp": "2016-09-15T19:47:21"
-                      },
-                      {
-                        "operation_id": "21474836480000832",
-                        "block_num": 5000000,
-                        "trx_in_block": -1,
-                        "trx_id": null,
+                        "trx_in_block": 0,
+                        "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
                         "op_pos": 1,
-                        "op_type_id": 64,
+                        "op_type_id": 80,
                         "operation": {
-                          "type": "producer_reward_operation",
+                          "type": "account_created_operation",
                           "value": {
-                            "producer": "ihashfury",
-                            "vesting_shares": {
+                            "creator": "steem",
+                            "new_account_name": "kefadex",
+                            "initial_delegation": {
                               "nai": "@@000000037",
-                              "amount": "3003845513",
+                              "amount": "0",
+                              "precision": 6
+                            },
+                            "initial_vesting_shares": {
+                              "nai": "@@000000037",
+                              "amount": "30038455132",
                               "precision": 6
                             }
                           }
@@ -1818,7 +1788,7 @@ declare
           "Block-numbers"
         ],
         "summary": "Get block numbers by filters",
-        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,NULL,NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
+        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
         "operationId": "hafbe_endpoints.get_block_by_op",
         "parameters": [
           {
@@ -1840,27 +1810,6 @@ declare
               "default": null
             },
             "description": "Filter operations by the account that created them"
-          },
-          {
-            "in": "query",
-            "name": "set-of-keys",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "x-sql-datatype": "JSON",
-              "default": null
-            },
-            "description": "A JSON object detailing the path to the filtered key specified in key-content\nexample: `[[\"value\", \"id\"]]`\n"
-          },
-          {
-            "in": "query",
-            "name": "key-content",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "A parameter specifying the desired value related to the set-of-keys\nexample: `follow`\n"
           },
           {
             "in": "query",
@@ -1923,6 +1872,20 @@ declare
               "default": 100
             },
             "description": "Limits the result to `result-limit` records"
+          },
+          {
+            "in": "query",
+            "name": "path-filter",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "x-sql-datatype": "TEXT",
+              "default": null
+            },
+            "description": "A parameter specifying the desired value in operation body,\nexample: `value.creator=steem`\n"
           }
         ],
         "responses": {

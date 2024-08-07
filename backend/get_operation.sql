@@ -27,6 +27,40 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_path_filters(params TEXT[])
+RETURNS TABLE(param_json JSONB, param_text TEXT) 
+LANGUAGE 'plpgsql' 
+STABLE
+AS 
+$$
+DECLARE
+  json_list JSONB := '[]'::JSONB;
+  text_list TEXT := '';
+  param TEXT;
+  key_value TEXT[];
+  key_part TEXT[];
+  value_part TEXT;
+BEGIN
+  FOREACH param IN ARRAY params
+  LOOP
+    key_value := string_to_array(param, '=');
+    key_part := string_to_array(key_value[1], '.');
+    value_part := key_value[2];
+
+    -- Append key parts to the JSONB list
+    json_list := json_list || jsonb_build_array(key_part);
+
+    IF text_list = '' THEN
+      text_list := value_part;
+    ELSE
+      text_list := text_list || ',' || value_part;
+    END IF;
+  END LOOP;
+
+  RETURN QUERY SELECT json_list, text_list;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_ops_by_account(
     _account TEXT,
     _page_num INT,
@@ -130,18 +164,17 @@ WITH operation_range AS MATERIALIZED (
   JOIN hive.operation_types hot ON hot.id = ls.op_type_id
   LEFT JOIN hive.transactions_view htv ON htv.block_num = ls.block_num AND htv.trx_in_block = ov.trx_in_block
   )
-
 -- filter too long operation bodies 
   SELECT 
-    filtered_operations.id::TEXT,
+    (filtered_operations.composite).body,
     filtered_operations.block_num,
-    filtered_operations.trx_in_block,
     filtered_operations.trx_hash,
     filtered_operations.op_pos,
     filtered_operations.op_type_id,
-    (filtered_operations.composite).body,
+    filtered_operations.created_at,
     filtered_operations.is_virtual,
-    filtered_operations.created_at
+    filtered_operations.id::TEXT,
+    filtered_operations.trx_in_block::SMALLINT
   FROM (
   SELECT hafbe_backend.operation_body_filter(ov.body, ov.id, _body_limit) as composite, ov.id, ov.block_num, ov.trx_in_block, ov.trx_hash, ov.op_pos, ov.op_type_id, ov.is_virtual, hb.created_at
   FROM operation_range ov 
@@ -291,15 +324,15 @@ IF _account IS NULL THEN
 
   -- filter too long operation bodies 
     SELECT 
-      filtered_operations.id::TEXT,
-      filtered_operations.block_num,
-      filtered_operations.trx_in_block,
-      filtered_operations.trx_hash,
-      filtered_operations.op_pos, 
-      filtered_operations.op_type_id,
       (filtered_operations.composite).body,
+      filtered_operations.block_num,
+      filtered_operations.trx_hash,
+      filtered_operations.op_pos,
+      filtered_operations.op_type_id,
+      filtered_operations.created_at,
       filtered_operations.is_virtual,
-      filtered_operations.created_at
+      filtered_operations.id::TEXT,
+      filtered_operations.trx_in_block::SMALLINT
     FROM (
     SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at
     FROM operation_range opr
@@ -359,8 +392,16 @@ ELSE
       (CASE WHEN _order_is = 'asc' THEN ls.id ELSE NULL END) ASC)
 
   -- filter too long operation bodies 
-    SELECT filtered_operations.id::TEXT, filtered_operations.block_num, filtered_operations.trx_in_block, filtered_operations.trx_hash, filtered_operations.op_pos, filtered_operations.op_type_id,
-    (filtered_operations.composite).body, filtered_operations.is_virtual, filtered_operations.timestamp, filtered_operations.age, (filtered_operations.composite).is_modified
+    SELECT 
+      (filtered_operations.composite).body,
+      filtered_operations.block_num,
+      filtered_operations.trx_hash,
+      filtered_operations.op_pos,
+      filtered_operations.op_type_id,
+      filtered_operations.created_at,
+      filtered_operations.is_virtual,
+      filtered_operations.id::TEXT,
+      filtered_operations.trx_in_block::SMALLINT
     FROM (
     SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.trx_in_block, opr.trx_hash, opr.op_pos, opr.op_type_id, opr.is_virtual, hb.created_at timestamp, NOW() - hb.created_at AS age
     FROM operation_range opr

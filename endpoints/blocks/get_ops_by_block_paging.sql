@@ -14,7 +14,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=5,64''`
+      * `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=80&path-filter=value.creator=steem''`
     operationId: hafbe_endpoints.get_ops_by_block_paging
     parameters:
       - in: path
@@ -54,25 +54,6 @@ SET ROLE hafbe_owner;
           default: 100
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
-        name: set-of-keys
-        required: false
-        schema:
-          type: string
-          x-sql-datatype: JSON
-          default: NULL
-        description: |
-          A JSON object detailing the path to the filtered key specified in key-content,
-          example: `[["value", "id"]]`
-      - in: query
-        name: key-content
-        required: false
-        schema:
-          type: string
-          default: NULL
-        description: |
-          A parameter specifying the desired value related to the set-of-keys
-          example: `follow`
-      - in: query
         name: page-order
         required: false
         schema:
@@ -93,6 +74,18 @@ SET ROLE hafbe_owner;
         description: |
           If the operation length exceeds the data size limit,
           the operation body is replaced with a placeholder, defaults to `200000`
+      - in: query
+        name: path-filter
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          x-sql-datatype: TEXT
+          default: NULL
+        description: |
+          A parameter specifying the expected value in operation body,
+          example: `value.creator=steem`
     responses:
       '200':
         description: |
@@ -107,52 +100,29 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:
               - {
-                  "total_operations": 2,
+                  "total_operations": 1,
                   "total_pages": 1,
                   "operations_result": [
                     {
-                      "operation_id": "21474836480000517",
+                      "operation_id": "21474836480000336",
                       "block_num": 5000000,
-                      "trx_in_block": 1,
-                      "trx_id": "973290d26bac31335c000c7a3d3fe058ce3dbb9f",
-                      "op_pos": 0,
-                      "op_type_id": 5,
-                      "operation": {
-                        "type": "limit_order_create_operation",
-                        "value": {
-                          "owner": "cvk",
-                          "orderid": 1473968838,
-                          "expiration": "2035-10-29T06:32:22",
-                          "fill_or_kill": false,
-                          "amount_to_sell": {
-                            "nai": "@@000000021",
-                            "amount": "10324",
-                            "precision": 3
-                          },
-                          "min_to_receive": {
-                            "nai": "@@000000013",
-                            "amount": "6819",
-                            "precision": 3
-                          }
-                        }
-                      },
-                      "virtual_op": false,
-                      "timestamp": "2016-09-15T19:47:21"
-                    },
-                    {
-                      "operation_id": "21474836480000832",
-                      "block_num": 5000000,
-                      "trx_in_block": -1,
-                      "trx_id": null,
+                      "trx_in_block": 0,
+                      "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
                       "op_pos": 1,
-                      "op_type_id": 64,
+                      "op_type_id": 80,
                       "operation": {
-                        "type": "producer_reward_operation",
+                        "type": "account_created_operation",
                         "value": {
-                          "producer": "ihashfury",
-                          "vesting_shares": {
+                          "creator": "steem",
+                          "new_account_name": "kefadex",
+                          "initial_delegation": {
                             "nai": "@@000000037",
-                            "amount": "3003845513",
+                            "amount": "0",
+                            "precision": 6
+                          },
+                          "initial_vesting_shares": {
+                            "nai": "@@000000037",
+                            "amount": "30038455132",
                             "precision": 6
                           }
                         }
@@ -173,10 +143,9 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_ops_by_block_paging(
     "account-name" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
-    "set-of-keys" JSON = NULL,
-    "key-content" TEXT = NULL,
     "page-order" hafbe_types.sort_direction = 'desc',
-    "data-size-limit" INT = 200000
+    "data-size-limit" INT = 200000,
+    "path-filter" TEXT = NULL
 )
 RETURNS JSON 
 -- openapi-generated-code-end
@@ -190,10 +159,17 @@ DECLARE
   _operation_types INT[] := NULL;
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
+  _path_filter TEXT[] := NULL;
 BEGIN
-IF "key-content" IS NOT NULL THEN
-  _key_content := string_to_array("key-content", ',')::TEXT[];
-  _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
+IF "path-filter" IS NOT NULL OR "path-filter" != '' THEN
+
+  _path_filter := string_to_array("path-filter", ',')::TEXT[];
+
+  SELECT 
+    replace(replace(replace(pvpf.param_json::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON,
+    string_to_array(pvpf.param_text, ',')::TEXT[]
+  INTO _set_of_keys, _key_content
+  FROM hafbe_backend.parse_path_filters(_path_filter) pvpf;
 END IF;
 
 IF "operation-types" IS NOT NULL THEN

@@ -40,7 +40,8 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           Return page on `page` number, default null due to reversed order of pages
-          the first page is the oldest
+          the first page is the oldest,
+          example: first call returns the newest page and total_pages is 100 - the newest page is number 100, next 99 etc.
       - in: query
         name: page-size
         required: false

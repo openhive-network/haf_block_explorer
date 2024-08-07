@@ -2,4 +2,4 @@
 dialect = postgres
 max_line_length = 170
 
-warnings = LT01, CP05
+warnings = LT01, CP05, PRS

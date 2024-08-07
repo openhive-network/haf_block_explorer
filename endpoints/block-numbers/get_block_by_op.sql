@@ -11,7 +11,7 @@ SET ROLE hafbe_owner;
       account name and time/block range in specified order
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,NULL,NULL,''desc'',4999999,5000000);`
+      * `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`
 
       REST call example
       * `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`
@@ -33,25 +33,6 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: Filter operations by the account that created them
-      - in: query
-        name: set-of-keys
-        required: false
-        schema:
-          type: string
-          x-sql-datatype: JSON
-          default: NULL
-        description: |
-          A JSON object detailing the path to the filtered key specified in key-content
-          example: `[["value", "id"]]`
-      - in: query
-        name: key-content
-        required: false
-        schema:
-          type: string
-          default: NULL
-        description: |
-          A parameter specifying the desired value related to the set-of-keys
-          example: `follow`
       - in: query
         name: direction
         required: false
@@ -101,6 +82,18 @@ SET ROLE hafbe_owner;
           type: integer
           default: 100
         description: Limits the result to `result-limit` records
+      - in: query
+        name: path-filter
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          x-sql-datatype: TEXT
+          default: NULL
+        description: |
+          A parameter specifying the desired value in operation body,
+          example: `value.creator=steem`
     responses:
       '200':
         description: |
@@ -122,14 +115,13 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_by_op;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
-    "set-of-keys" JSON = NULL,
-    "key-content" TEXT = NULL,
     "direction" hafbe_types.sort_direction = 'desc',
     "from-block" INT = 0,
     "to-block" INT = 2147483647,
     "start-date" TIMESTAMP = NULL,
     "end-date" TIMESTAMP = NULL,
-    "result-limit" INT = 100
+    "result-limit" INT = 100,
+    "path-filter" TEXT = NULL
 )
 RETURNS SETOF hafbe_types.block_by_ops 
 -- openapi-generated-code-end
@@ -143,27 +135,26 @@ DECLARE
   _operation_types INT[] := NULL;
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
+  _path_filter TEXT[] := NULL;
 BEGIN
-IF "key-content" IS NOT NULL OR "set-of-keys" IS NOT NULL THEN
+IF "path-filter" IS NOT NULL OR "path-filter" != '' THEN
+
   IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
     RAISE EXCEPTION 'Blocksearch indexes are not installed';
   END IF;
 
-  IF "operation-types" IS  NULL THEN
+  IF "operation-types" IS NULL THEN
     RAISE EXCEPTION 'Operation type not specified';
   END IF;
 
-  IF "key-content" IS NULL THEN
-    RAISE EXCEPTION 'key content not specified';
-  END IF;
+  _path_filter := string_to_array("path-filter", ',')::TEXT[];
 
-  IF "set-of-keys" IS NULL THEN
-    RAISE EXCEPTION 'set of keys not specified';
-  END IF;
-
-  _operation_types := string_to_array("operation-types", ',')::INT[];
-  _key_content := string_to_array("key-content", ',')::TEXT[];
-  _set_of_keys := replace(replace(replace("set-of-keys"::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON;
+  SELECT 
+    replace(replace(replace(pvpf.param_json::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON,
+    string_to_array(pvpf.param_text, ',')::TEXT[],
+    string_to_array("operation-types", ',')::INT[]
+  INTO _set_of_keys, _key_content, _operation_types
+  FROM hafbe_backend.parse_path_filters(_path_filter) pvpf;
 
   IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
