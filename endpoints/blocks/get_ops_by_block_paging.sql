@@ -104,13 +104,7 @@ SET ROLE hafbe_owner;
                   "total_pages": 1,
                   "operations_result": [
                     {
-                      "operation_id": "21474836480000336",
-                      "block_num": 5000000,
-                      "trx_in_block": 0,
-                      "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
-                      "op_pos": 1,
-                      "op_type_id": 80,
-                      "operation": {
+                      "op": {
                         "type": "account_created_operation",
                         "value": {
                           "creator": "steem",
@@ -127,8 +121,14 @@ SET ROLE hafbe_owner;
                           }
                         }
                       },
+                      "block": 5000000,
+                      "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
+                      "op_pos": 1,
+                      "op_type_id": 80,
+                      "timestamp": "2016-09-15T19:47:21",
                       "virtual_op": true,
-                      "timestamp": "2016-09-15T19:47:21"
+                      "operation_id": "21474836480000336",
+                      "trx_in_block": 0
                     }
                   ]
                 }

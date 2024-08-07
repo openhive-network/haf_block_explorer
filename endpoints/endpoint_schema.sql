@@ -1395,13 +1395,7 @@ declare
                     "total_pages": 73289,
                     "operations_result": [
                       {
-                        "operation_id": "21474823595099394",
-                        "block_num": 4999997,
-                        "trx_in_block": 3,
-                        "trx_id": "e75f833ceb62570c25504b55d0f23d86d9d76423",
-                        "op_pos": 0,
-                        "op_type_id": 2,
-                        "operation": {
+                        "op": {
                           "type": "transfer_operation",
                           "value": {
                             "to": "blocktrades",
@@ -1414,17 +1408,17 @@ declare
                             }
                           }
                         },
+                        "block": 4999997,
+                        "trx_id": "e75f833ceb62570c25504b55d0f23d86d9d76423",
+                        "op_pos": 0,
+                        "op_type_id": 2,
+                        "timestamp": "2016-09-15T19:47:12",
                         "virtual_op": false,
-                        "timestamp": "2016-09-15T19:47:12"
+                        "operation_id": "21474823595099394",
+                        "trx_in_block": 3
                       },
                       {
-                        "operation_id": "21474802120262208",
-                        "block_num": 4999992,
-                        "trx_in_block": -1,
-                        "trx_id": null,
-                        "op_pos": 1,
-                        "op_type_id": 64,
-                        "operation": {
+                        "op": {
                           "type": "producer_reward_operation",
                           "value": {
                             "producer": "blocktrades",
@@ -1435,17 +1429,17 @@ declare
                             }
                           }
                         },
-                        "virtual_op": true,
-                        "timestamp": "2016-09-15T19:46:57"
-                      },
-                      {
-                        "operation_id": "21474660386343488",
-                        "block_num": 4999959,
-                        "trx_in_block": -1,
+                        "block": 4999992,
                         "trx_id": null,
                         "op_pos": 1,
                         "op_type_id": 64,
-                        "operation": {
+                        "timestamp": "2016-09-15T19:46:57",
+                        "virtual_op": true,
+                        "operation_id": "21474802120262208",
+                        "trx_in_block": -1
+                      },
+                      {
+                        "op": {
                           "type": "producer_reward_operation",
                           "value": {
                             "producer": "blocktrades",
@@ -1456,8 +1450,14 @@ declare
                             }
                           }
                         },
+                        "block": 4999959,
+                        "trx_id": null,
+                        "op_pos": 1,
+                        "op_type_id": 64,
+                        "timestamp": "2016-09-15T19:45:12",
                         "virtual_op": true,
-                        "timestamp": "2016-09-15T19:45:12"
+                        "operation_id": "21474660386343488",
+                        "trx_in_block": -1
                       }
                     ]
                   }
@@ -1744,13 +1744,7 @@ declare
                     "total_pages": 1,
                     "operations_result": [
                       {
-                        "operation_id": "21474836480000336",
-                        "block_num": 5000000,
-                        "trx_in_block": 0,
-                        "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
-                        "op_pos": 1,
-                        "op_type_id": 80,
-                        "operation": {
+                        "op": {
                           "type": "account_created_operation",
                           "value": {
                             "creator": "steem",
@@ -1767,8 +1761,14 @@ declare
                             }
                           }
                         },
+                        "block": 5000000,
+                        "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
+                        "op_pos": 1,
+                        "op_type_id": 80,
+                        "timestamp": "2016-09-15T19:47:21",
                         "virtual_op": true,
-                        "timestamp": "2016-09-15T19:47:21"
+                        "operation_id": "21474836480000336",
+                        "trx_in_block": 0
                       }
                     ]
                   }
