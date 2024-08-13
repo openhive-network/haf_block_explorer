@@ -89,7 +89,7 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_witnesses'
             example:
-              - witnes": "roadscape"
+              - witnes: "roadscape"
                 rank: 1
                 url: "https://steemit.com/witness-category/@roadscape/witness-roadscape"
                 vests: "94172201023355097"

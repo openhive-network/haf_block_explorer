@@ -509,89 +509,6 @@ declare
           "$ref": "#/components/schemas/hafbe_types.latest_blocks"
         }
       },
-      "hafbe_types.block": {
-        "type": "object",
-        "properties": {
-          "block_num": {
-            "type": "integer",
-            "description": "block number"
-          },
-          "hash": {
-            "type": "string",
-            "description": "block hash in a blockchain is a unique, fixed-length string generated  by applying a cryptographic hash function to a block''s contents"
-          },
-          "prev": {
-            "type": "string",
-            "description": "hash of a previous block"
-          },
-          "producer_account": {
-            "type": "string",
-            "description": "account name of block''s producer"
-          },
-          "transaction_merkle_root": {
-            "type": "string",
-            "description": "single hash representing the combined hashes of all transactions in a block"
-          },
-          "extensions": {
-            "type": "string",
-            "x-sql-datatype": "JSONB",
-            "description": "various additional data/parameters related to the subject at hand. Most often, there''s nothing specific, but it''s a mechanism for extending various functionalities where something might appear in the future."
-          },
-          "witness_signature": {
-            "type": "string",
-            "description": "witness signature"
-          },
-          "signing_key": {
-            "type": "string",
-            "description": "it refers to the public key of the witness used for signing blocks and other witness operations"
-          },
-          "hbd_interest_rate": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the interest rate on HBD in savings, expressed in basis points (previously for each HBD), is one of the values determined by the witnesses"
-          },
-          "total_vesting_fund_hive": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the balance of the \"counterweight\" for these VESTS (total_vesting_shares) in the form of HIVE  (the price of VESTS is derived from these two values). A portion of the inflation is added to the balance, ensuring that each block corresponds to more HIVE for the VESTS"
-          },
-          "total_vesting_shares": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the total amount of VEST present in the system"
-          },
-          "total_reward_fund_hive": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "deprecated after HF17"
-          },
-          "virtual_supply": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the total amount of HIVE, including the HIVE that would be generated from converting HBD to HIVE at the current price"
-          },
-          "current_supply": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the total amount of HIVE present in the system"
-          },
-          "current_hbd_supply": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the total amount of HBD present in the system, including what is in the treasury"
-          },
-          "dhf_interval_ledger": {
-            "type": "number",
-            "x-sql-datatype": "numeric",
-            "description": "the dhf_interval_ledger is a temporary HBD balance. Each block allocates a portion of inflation for proposal payouts, but these payouts occur every hour. To avoid cluttering the history with small amounts each block,  the new funds are first accumulated in the dhf_interval_ledger. Then, every HIVE_PROPOSAL_MAINTENANCE_PERIOD, the accumulated funds are transferred to the treasury account (this operation generates the virtual operation dhf_funding_operation), from where they are subsequently paid out to the approved proposals"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "the timestamp when the block was created"
-          }
-        }
-      },
       "hafbe_types.block_by_ops": {
         "type": "object",
         "properties": {
@@ -779,7 +696,7 @@ declare
                 },
                 "example": [
                   {
-                    "witnes\"": "roadscape",
+                    "witnes": "roadscape",
                     "rank": 1,
                     "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
                     "vests": "94172201023355097",
@@ -1231,33 +1148,33 @@ declare
                 "example": [
                   {
                     "owner": {
-                      "key_auth": [
+                      "key_auths": [
                         [
                           "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
                           "1"
                         ]
                       ],
-                      "account_auth": [],
+                      "account_auths": [],
                       "weight_threshold": 1
                     },
                     "active": {
-                      "key_auth": [
+                      "key_auths": [
                         [
                           "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
                           "1"
                         ]
                       ],
-                      "account_auth": [],
+                      "account_auths": [],
                       "weight_threshold": 1
                     },
                     "posting": {
-                      "key_auth": [
+                      "key_auths": [
                         [
                           "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
                           "1"
                         ]
                       ],
-                      "account_auth": [],
+                      "account_auths": [],
                       "weight_threshold": 1
                     },
                     "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
@@ -1569,93 +1486,6 @@ declare
         }
       }
     },
-    "/block-numbers/headblock": {
-      "get": {
-        "tags": [
-          "Block-numbers"
-        ],
-        "summary": "HAF last synced block",
-        "description": "Get last block-num in HAF database\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_head_block_num();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/headblock''`\n",
-        "operationId": "hafbe_endpoints.get_head_block_num",
-        "responses": {
-          "200": {
-            "description": "Last HAF block\n\n* Returns `INT`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "integer"
-                },
-                "example": 5000000
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
-    "/block-numbers/headblock/hafbe": {
-      "get": {
-        "tags": [
-          "Block-numbers"
-        ],
-        "summary": "Haf_block_explorer''s last synced block",
-        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/headblock/hafbe''`\n",
-        "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
-        "responses": {
-          "200": {
-            "description": "Last synced block\n\n* Returns `INT`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "integer"
-                },
-                "example": 5000000
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks synced"
-          }
-        }
-      }
-    },
-    "/block-numbers/by-creation-date/{timestamp}": {
-      "get": {
-        "tags": [
-          "Block-numbers"
-        ],
-        "summary": "Search for last created block for given date",
-        "description": "Returns last created block number for given date\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_time(''2016-06-24T16:05:00'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers/by-creation-date/2016-06-24T16:05:00''`\n",
-        "operationId": "hafbe_endpoints.get_block_by_time",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "timestamp",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "description": "Given date"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "No blocks created at that time",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "integer"
-                },
-                "example": 2621429
-              }
-            }
-          }
-        }
-      }
-    },
     "/version": {
       "get": {
         "tags": [
@@ -1678,6 +1508,32 @@ declare
           },
           "404": {
             "description": "App not installed"
+          }
+        }
+      }
+    },
+    "/last-synced-block": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "summary": "Haf_block_explorer''s last synced block",
+        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/last-synced-block''`\n",
+        "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
+        "responses": {
+          "200": {
+            "description": "Last synced block by Haf_block_explorer\n\n* Returns `INT`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                },
+                "example": 5000000
+              }
+            }
+          },
+          "404": {
+            "description": "No blocks synced"
           }
         }
       }
@@ -1785,63 +1641,6 @@ declare
                         "op_type_id": 5
                       }
                     ]
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No blocks in the database"
-          }
-        }
-      }
-    },
-    "/global-state": {
-      "get": {
-        "tags": [
-          "Other"
-        ],
-        "summary": "Informations about block",
-        "description": "Lists the parameters of the block provided by the user\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block(5000000);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/global-state?block-num=5000000''`\n",
-        "operationId": "hafbe_endpoints.get_block",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Given block number"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Given block''s stats\n\n* Returns `hafbe_types.block`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.block"
-                },
-                "example": [
-                  {
-                    "block_num": 5000000,
-                    "hash": "004c4b40245ffb07380a393fb2b3d841b76cdaec",
-                    "prev": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
-                    "producer_account": "ihashfury",
-                    "transaction_merkle_root": "97a8f2b04848b860f1792dc07bf58efcb15aeb8c",
-                    "extensions": [],
-                    "witness_signature": "1f6aa1c6311c768b5225b115eaf5798e5f1d8338af3970d90899cd5ccbe38f6d1f7676c5649bcca18150cbf8f07c0cc7ec3ae40d5936cfc6d5a650e582ba0f8002",
-                    "signing_key": "STM8aUs6SGoEmNYMd3bYjE1UBr6NQPxGWmTqTdBaxJYSx244edSB2",
-                    "hbd_interest_rate": 1000,
-                    "total_vesting_fund_hive": 149190428013,
-                    "total_vesting_shares": 448144916705468350,
-                    "total_reward_fund_hive": 66003975,
-                    "virtual_supply": 161253662237,
-                    "current_supply": 157464400971,
-                    "current_hbd_supply": 2413759427,
-                    "dhf_interval_ledger": 0,
-                    "created_at": "2016-09-15T19:47:21"
                   }
                 ]
               }

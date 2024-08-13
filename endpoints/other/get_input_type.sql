@@ -75,7 +75,7 @@ BEGIN
 
   -- second, positive digit and not name is assumed to be block number
   IF "input-value" SIMILAR TO '(\d+)' THEN
-    SELECT hafbe_endpoints.get_head_block_num() INTO __head_block_num;
+    SELECT bv.num INTO __head_block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1;
     IF "input-value"::NUMERIC > __head_block_num THEN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);

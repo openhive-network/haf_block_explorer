@@ -1,10 +1,10 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/block-numbers/headblock/hafbe:
+/last-synced-block:
   get:
     tags:
-      - Block-numbers
+      - Other
     summary: Haf_block_explorer''s last synced block
     description: |
       Get last block-num synced by haf_block_explorer
@@ -13,12 +13,12 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/block-numbers/headblock/hafbe''`
+      * `GET ''https://%1$s/hafbe/last-synced-block''`
     operationId: hafbe_endpoints.get_hafbe_last_synced_block
     responses:
       '200':
         description: |
-          Last synced block
+          Last synced block by Haf_block_explorer
           
           * Returns `INT`
         content:

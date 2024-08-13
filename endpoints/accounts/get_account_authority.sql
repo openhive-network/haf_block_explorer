@@ -34,33 +34,33 @@ SET ROLE hafbe_owner;
               $ref: '#/components/schemas/hafbe_types.account_authority'
             example:
               - owner: {
-                          "key_auth": [
+                          "key_auths": [
                             [
                               "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
                               "1"
                             ]
                           ],
-                          "account_auth": [],
+                          "account_auths": [],
                           "weight_threshold": 1
                         }
                 active: {
-                          "key_auth": [
+                          "key_auths": [
                             [
                               "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
                               "1"
                             ]
                           ],
-                          "account_auth": [],
+                          "account_auths": [],
                           "weight_threshold": 1
                         }
                 posting: {
-                            "key_auth": [
+                            "key_auths": [
                               [
                                 "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
                                 "1"
                               ]
                             ],
-                            "account_auth": [],
+                            "account_auths": [],
                             "weight_threshold": 1
                           }
                 memo: "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT"

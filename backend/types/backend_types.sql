@@ -126,8 +126,8 @@ CREATE TYPE hafbe_backend.json_metadata AS
 
 DROP TYPE IF EXISTS hafbe_backend.account_authority CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_authority AS (
-    key_auth TEXT[],
-    account_auth TEXT[],
+    key_auths TEXT[],
+    account_auths TEXT[],
     weight_threshold INT
 );
 

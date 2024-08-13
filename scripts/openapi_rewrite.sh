@@ -24,7 +24,6 @@ DEFAULT_TYPES="
 ../$types/accounts/account_authority.sql
 ../$types/accounts/comment_history.sql
 ../$types/blocks/latest_blocks.sql
-../$types/blocks/block.sql
 ../$types/blocks/block_by_ops.sql
 ../$types/operations/operation.sql
 ../$types/operations/op_types_count.sql"
@@ -40,13 +39,10 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_account_authority.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/block-numbers/get_block_by_op.sql
-../$endpoints/block-numbers/get_head_block_num.sql
-../$endpoints/block-numbers/get_hafbe_last_synced_block.sql
-../$endpoints/block-numbers/get_block_by_time.sql
 ../$endpoints/other/get_hafbe_version.sql
+../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql
-../$endpoints/other/get_latest_blocks.sql
-../$endpoints/other/get_block.sql"
+../$endpoints/other/get_latest_blocks.sql"
 
 
 
