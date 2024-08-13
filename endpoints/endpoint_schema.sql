@@ -16,8 +16,6 @@ externalDocs:
   description: HAF Block Explorer gitlab repository
   url: https://gitlab.syncad.com/hive/haf_block_explorer
 tags:
-  - name: Blocks
-    description: Informations about blocks
   - name: Block-numbers
     description: Informations about block numbers
   - name: Accounts
@@ -699,10 +697,6 @@ declare
   },
   "tags": [
     {
-      "name": "Blocks",
-      "description": "Informations about blocks"
-    },
-    {
       "name": "Block-numbers",
       "description": "Informations about block numbers"
     },
@@ -1279,205 +1273,13 @@ declare
         }
       }
     },
-    "/accounts/{account-name}/operations": {
-      "get": {
-        "tags": [
-          "Accounts"
-        ],
-        "summary": "Get operations for an account",
-        "description": "List the operations in the reversed  order (first page is the oldest) for given account. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/operations?page-size=3''`\n",
-        "operationId": "hafbe_endpoints.get_ops_by_account",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "account-name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter operations by the account that created them"
-          },
-          {
-            "in": "query",
-            "name": "operation-types",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "List of operations: if the parameter is empty, all operations will be included\nexample: `18,12`\n"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": null
-            },
-            "description": "Return page on `page` number, default null due to reversed order of pages\nthe first page is the oldest,\nexample: first call returns the newest page and total_pages is 100 - the newest page is number 100, next 99 etc.\n"
-          },
-          {
-            "in": "query",
-            "name": "page-size",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100
-            },
-            "description": "Return max `page-size` operations per page, defaults to `100`"
-          },
-          {
-            "in": "query",
-            "name": "data-size-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 200000
-            },
-            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
-          },
-          {
-            "in": "query",
-            "name": "from-block",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": null
-            },
-            "description": "Lower limit of the block range"
-          },
-          {
-            "in": "query",
-            "name": "to-block",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": null
-            },
-            "description": "Upper limit of the block range"
-          },
-          {
-            "in": "query",
-            "name": "start-date",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time",
-              "default": null
-            },
-            "description": "Lower limit of the time range"
-          },
-          {
-            "in": "query",
-            "name": "end-date",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time",
-              "default": null
-            },
-            "description": "Upper limit of the time range"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `JSON`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
-                },
-                "example": [
-                  {
-                    "total_operations": 219867,
-                    "total_pages": 73289,
-                    "operations_result": [
-                      {
-                        "op": {
-                          "type": "transfer_operation",
-                          "value": {
-                            "to": "blocktrades",
-                            "from": "mrwang",
-                            "memo": "a79c09cd-0084-4cd4-ae63-bf6d2514fef9",
-                            "amount": {
-                              "nai": "@@000000013",
-                              "amount": "1633",
-                              "precision": 3
-                            }
-                          }
-                        },
-                        "block": 4999997,
-                        "trx_id": "e75f833ceb62570c25504b55d0f23d86d9d76423",
-                        "op_pos": 0,
-                        "op_type_id": 2,
-                        "timestamp": "2016-09-15T19:47:12",
-                        "virtual_op": false,
-                        "operation_id": "21474823595099394",
-                        "trx_in_block": 3
-                      },
-                      {
-                        "op": {
-                          "type": "producer_reward_operation",
-                          "value": {
-                            "producer": "blocktrades",
-                            "vesting_shares": {
-                              "nai": "@@000000037",
-                              "amount": "3003850165",
-                              "precision": 6
-                            }
-                          }
-                        },
-                        "block": 4999992,
-                        "trx_id": null,
-                        "op_pos": 1,
-                        "op_type_id": 64,
-                        "timestamp": "2016-09-15T19:46:57",
-                        "virtual_op": true,
-                        "operation_id": "21474802120262208",
-                        "trx_in_block": -1
-                      },
-                      {
-                        "op": {
-                          "type": "producer_reward_operation",
-                          "value": {
-                            "producer": "blocktrades",
-                            "vesting_shares": {
-                              "nai": "@@000000037",
-                              "amount": "3003868105",
-                              "precision": 6
-                            }
-                          }
-                        },
-                        "block": 4999959,
-                        "trx_id": null,
-                        "op_pos": 1,
-                        "op_type_id": 64,
-                        "timestamp": "2016-09-15T19:45:12",
-                        "virtual_op": true,
-                        "operation_id": "21474660386343488",
-                        "trx_in_block": -1
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "No such account in the database"
-          }
-        }
-      }
-    },
-    "/accounts/{account-name}/operations/comments": {
+    "/accounts/{account-name}/comment-operations": {
       "get": {
         "tags": [
           "Accounts"
         ],
         "summary": "Get comment related operations",
-        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/operations/comments?page-size=2&from-block=4000000&to-block=5000000''`\n",
+        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
         "operationId": "hafbe_endpoints.get_comment_operations",
         "parameters": [
           {
@@ -1636,152 +1438,6 @@ declare
         }
       }
     },
-    "/blocks/{block-num}/operations": {
-      "get": {
-        "tags": [
-          "Blocks"
-        ],
-        "summary": "Get operations in block",
-        "description": "List the operations in the specified order that are within the given block number. \nThe page size determines the number of operations per page\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_ops_by_block_paging(5000000,''5,64'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/blocks/5000000/operations?operation-types=80&path-filter=value.creator=steem''`\n",
-        "operationId": "hafbe_endpoints.get_ops_by_block_paging",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "block-num",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "List operations from given block number"
-          },
-          {
-            "in": "query",
-            "name": "operation-types",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "List of operations: if the parameter is empty, all operations will be included,\nexample: `18,12`\n"
-          },
-          {
-            "in": "query",
-            "name": "account-name",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "Filter operations by the account that created them"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Return page on `page` number, defaults to `1`"
-          },
-          {
-            "in": "query",
-            "name": "page-size",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100
-            },
-            "description": "Return max `page-size` operations per page, defaults to `100`"
-          },
-          {
-            "in": "query",
-            "name": "page-order",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
-              "default": "desc"
-            },
-            "description": "page order:\n\n * `asc` - Ascending, from oldest to newest page\n \n * `desc` - Descending, from newest to oldest page\n"
-          },
-          {
-            "in": "query",
-            "name": "data-size-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 200000
-            },
-            "description": "If the operation length exceeds the data size limit,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
-          },
-          {
-            "in": "query",
-            "name": "path-filter",
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "x-sql-datatype": "TEXT",
-              "default": null
-            },
-            "description": "A parameter specifying the expected value in operation body,\nexample: `value.creator=steem`\n"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `JSON`\n",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
-                },
-                "example": [
-                  {
-                    "total_operations": 1,
-                    "total_pages": 1,
-                    "operations_result": [
-                      {
-                        "op": {
-                          "type": "account_created_operation",
-                          "value": {
-                            "creator": "steem",
-                            "new_account_name": "kefadex",
-                            "initial_delegation": {
-                              "nai": "@@000000037",
-                              "amount": "0",
-                              "precision": 6
-                            },
-                            "initial_vesting_shares": {
-                              "nai": "@@000000037",
-                              "amount": "30038455132",
-                              "precision": 6
-                            }
-                          }
-                        },
-                        "block": 5000000,
-                        "trx_id": "6707feb450da66dc223ab5cb3e259937b2fef6bf",
-                        "op_pos": 1,
-                        "op_type_id": 80,
-                        "timestamp": "2016-09-15T19:47:21",
-                        "virtual_op": true,
-                        "operation_id": "21474836480000336",
-                        "trx_in_block": 0
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "404": {
-            "description": "The result is empty"
-          }
-        }
-      }
-    },
     "/block-numbers": {
       "get": {
         "tags": [
@@ -1882,7 +1538,7 @@ declare
               "items": {
                 "type": "string"
               },
-              "x-sql-datatype": "TEXT",
+              "x-sql-datatype": "TEXT[]",
               "default": null
             },
             "description": "A parameter specifying the desired value in operation body,\nexample: `value.creator=steem`\n"

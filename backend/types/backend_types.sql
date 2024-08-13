@@ -124,15 +124,6 @@ CREATE TYPE hafbe_backend.json_metadata AS
 
 ----------------------------------------------------------------------
 
-DROP TYPE IF EXISTS hafbe_backend.operation_body_filter_result CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_backend.operation_body_filter_result AS (
-    body JSONB,
-    id TEXT,
-    is_modified BOOLEAN
-);
-
-----------------------------------------------------------------------
-
 DROP TYPE IF EXISTS hafbe_backend.account_authority CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_authority AS (
     key_auth TEXT[],

@@ -34,6 +34,10 @@ GRANT USAGE ON SCHEMA hafah_python TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafah_python TO hafbe_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_python TO hafbe_user;
 
+GRANT USAGE ON SCHEMA hafah_backend TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafah_backend TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_backend TO hafbe_user;
+
 GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hafbe_app TO hafbe_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;

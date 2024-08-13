@@ -89,7 +89,7 @@ SET ROLE hafbe_owner;
           type: array
           items:
             type: string
-          x-sql-datatype: TEXT
+          x-sql-datatype: TEXT[]
           default: NULL
         description: |
           A parameter specifying the desired value in operation body,
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "start-date" TIMESTAMP = NULL,
     "end-date" TIMESTAMP = NULL,
     "result-limit" INT = 100,
-    "path-filter" TEXT = NULL
+    "path-filter" TEXT[] = NULL
 )
 RETURNS SETOF hafbe_types.block_by_ops 
 -- openapi-generated-code-end
@@ -135,9 +135,8 @@ DECLARE
   _operation_types INT[] := NULL;
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
-  _path_filter TEXT[] := NULL;
 BEGIN
-IF "path-filter" IS NOT NULL OR "path-filter" != '' THEN
+IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
 
   IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
     RAISE EXCEPTION 'Blocksearch indexes are not installed';
@@ -147,14 +146,12 @@ IF "path-filter" IS NOT NULL OR "path-filter" != '' THEN
     RAISE EXCEPTION 'Operation type not specified';
   END IF;
 
-  _path_filter := string_to_array("path-filter", ',')::TEXT[];
-
   SELECT 
-    replace(replace(replace(pvpf.param_json::TEXT, '"[', '['), ']"', ']'), '\"', '"')::JSON,
-    string_to_array(pvpf.param_text, ',')::TEXT[],
+    pvpf.param_json::JSON,
+    pvpf.param_text::TEXT[],
     string_to_array("operation-types", ',')::INT[]
   INTO _set_of_keys, _key_content, _operation_types
-  FROM hafbe_backend.parse_path_filters(_path_filter) pvpf;
+  FROM hafah_backend.parse_path_filters("path-filter") pvpf;
 
   IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';

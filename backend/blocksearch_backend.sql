@@ -270,7 +270,7 @@ BEGIN
     filtered_operations.trx_hash,
     (filtered_operations.composite).body
   FROM (
-  SELECT hafbe_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, hb.created_at timestamp, opr.trx_hash
+  SELECT hafah_backend.operation_body_filter(opr.body, opr.id, _body_limit) as composite, opr.id, opr.block_num, opr.permlink, opr.author, hb.created_at timestamp, opr.trx_hash
   FROM add_transactions opr
   JOIN hive.blocks_view hb ON hb.num = opr.block_num
   ) filtered_operations
