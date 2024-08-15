@@ -8,7 +8,7 @@ hafbe_types.op_types_count:
     count:
       type: integer
       x-sql-datatype: BIGINT
-      description: number of the operations in block
+      description: number of operations in the block
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.op_types_count CASCADE;

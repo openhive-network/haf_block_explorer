@@ -24,7 +24,7 @@ hafbe_types.operation:
     timestamp:
       type: string
       format: date-time
-      description: creation date
+      description: the time operation was included in the blockchain
     virtual_op:
       type: boolean
       description: true if is a virtual operation

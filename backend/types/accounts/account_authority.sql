@@ -26,11 +26,11 @@ hafbe_types.account_authority:
         and follow or mute other accounts
     memo:
       type: string
-      description: currently the memo key is not used
+      description: default key to be used for memo encryption
     witness_signing:
       type: string
       description: >-
-        key used to sign block by witness
+        key used by a witness to sign blocks
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.account_authority CASCADE;

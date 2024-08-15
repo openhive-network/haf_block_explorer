@@ -18,10 +18,10 @@ hafbe_types.account:
       description: information whether made a prove of work
     proxy:
       type: string
-      description: the username to which the account has designated as its proxy
+      description: an account to which the account has designated as its proxy
     recovery_account:
       type: string
-      description: the username to which the account has designated as its recovery account
+      description: an account to which the account has designated as its recovery account
     last_account_recovery:
       type: string
       format: date-time

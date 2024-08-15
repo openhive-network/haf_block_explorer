@@ -6,12 +6,12 @@ hafbe_types.witness:
   properties:
     witness:
       type: string
-      description: the name of the witness account
+      description: witness''s account name
     rank:
       type: integer
       description: >-
         the current rank of the witness according to the votes cast on
-        the    blockchain.  The top 20 witnesses (ranks 1 - 20) will produce
+        the blockchain. The top 20 witnesses (ranks 1 - 20) will produce
         blocks each round.
     url:
       type: string
@@ -40,7 +40,7 @@ hafbe_types.witness:
         hours, expressed in HIVE power, at the current ratio
     voters_num:
       type: integer
-      description: the number of voters supporting this witness
+      description: the number of voters for this witness
     voters_num_daily_change:
       type: integer
       description: >-
@@ -66,7 +66,7 @@ hafbe_types.witness:
     feed_updated_at:
       type: string
       format: date-time
-      description: the timestamp when feed was updated
+      description: timestamp when feed was updated
     block_size:
       type: integer
       description: the maximum block size the witness is currently voting for, in bytes
