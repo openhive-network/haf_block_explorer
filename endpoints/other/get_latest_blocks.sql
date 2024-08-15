@@ -5,10 +5,10 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Informations about operations in blocks
+    summary: Returns histogram of operation types in blocks.
     description: |
       Lists the counts of operations in result-limit blocks along with their creators. 
-      If block-num is not specified, the result includes the counts of operations in the most recent blocks. 
+      If block-num is not specified, the result includes the counts of operations in the most recent blocks.
       
 
       SQL example

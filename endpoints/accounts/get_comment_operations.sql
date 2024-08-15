@@ -5,10 +5,10 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Accounts
-    summary: Get comment related operations
+    summary: Get comment-related operations for an account.
     description: |
-      List operations related to account and optionally filtered by permlink,
-      time/blockrange and comment related operations
+      List operations related to account. Optionally filtered by permlink,
+      time/blockrange, and specific comment-related operations.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`
@@ -22,7 +22,7 @@ SET ROLE hafbe_owner;
         required: true
         schema:
           type: string
-        description: Filter operations by the account that created them
+        description: Account to get operations for
       - in: query
         name: operation-types
         required: false
@@ -30,8 +30,8 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: |
-          List of operations: if the parameter is NULL, all operations will be included
-          comment related op type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`
+          List of operation types to include. If NULL, all comment operation types will be included.
+          comment-related operation type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`
       - in: query
         name: page
         required: false
@@ -62,7 +62,7 @@ SET ROLE hafbe_owner;
           default: 200000
         description: |
           If the operation length exceeds the `data-size-limit`,
-          the operation body is replaced with a placeholder, defaults to `200000`
+          the operation body is replaced with a placeholder (defaults to `200000`).
       - in: query
         name: from-block
         required: false
@@ -96,8 +96,8 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          Result contains total operations number,
-          total pages and the list of operations
+          Result contains total number of operations,
+          total pages, and the list of operations.
 
           * Returns `JSON`
         content:

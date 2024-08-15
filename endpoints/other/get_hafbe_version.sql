@@ -5,9 +5,9 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Haf_block_explorer''s version
+    summary: Get Haf_block_explorer''s version
     description: |
-      Get haf_block_explorer''s last commit hash that determinates its version
+      Get haf_block_explorer''s last commit hash (versions set by by hash value).
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_hafbe_version();`

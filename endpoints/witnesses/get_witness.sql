@@ -6,9 +6,9 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Witnesses
-    summary: Get a single witness
+    summary: Returns information about a witness.
     description: |
-      Return a single witness given their account name
+      Returns information about a witness given their account name.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`
@@ -22,11 +22,11 @@ SET ROLE hafbe_owner;
         required: true
         schema:
           type: string
-        description: The witness account name
+        description: witness account name
     responses:
       '200':
         description: |
-          The witness stats
+          Various witness statistics
 
           * Returns `hafbe_types.witness`
         content:

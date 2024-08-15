@@ -22,7 +22,7 @@ SET ROLE hafbe_owner;
         required: true
         schema:
           type: string
-        description: The witness account name
+        description: witness account name
       - in: query
         name: sort
         required: false

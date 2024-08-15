@@ -5,9 +5,9 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Accounts
-    summary: Get account info
+    summary: Get account''s owner, active, posting, memo and witness signing authorities
     description: |
-      Get information about account''s OWNER, ACTIVE, POSTING, memo and signing authorities
+      Get information about account''s owner, active, posting, memo and witness signing authorities.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`

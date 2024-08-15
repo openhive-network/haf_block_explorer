@@ -5,9 +5,9 @@ openapi: 3.1.0
 info:
   title: HAF Block Explorer
   description: >-
-    HAF block explorer is an API for querying information about
-    transactions/operations included in Hive blocks, as well as block producer
-    (i.e. witness) information.
+    HAF block explorer is an API for getting information about
+    transactions/operations included in Hive blocks, as well as block producer (witness)
+    information.
   license:
     name: MIT License
     url: https://opensource.org/license/mit
@@ -17,13 +17,13 @@ externalDocs:
   url: https://gitlab.syncad.com/hive/haf_block_explorer
 tags:
   - name: Block-numbers
-    description: Informations about block numbers
+    description: Information about blocks
   - name: Accounts
-    description: Informations about accounts
+    description: Information about accounts
   - name: Witnesses
-    description: Informations about witnesses
+    description: Information about witnesses
   - name: Other
-    description: General API informations
+    description: General API information
 servers:
   - url: /hafbe
  */
@@ -88,7 +88,7 @@ declare
           },
           "rank": {
             "type": "integer",
-            "description": "the current rank of the witness according to the votes cast on the    blockchain.  The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
+            "description": "the current rank of the witness according to the votes cast on the blockchain.  The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
           },
           "url": {
             "type": "string",
@@ -330,7 +330,7 @@ declare
           "vesting_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "the VEST balance, presented in HIVE,  is calculated based on the current HIVE price"
+            "description": "the VEST balance, presented in HIVE, is calculated based on the current HIVE price"
           },
           "hbd_saving_balance": {
             "type": "integer",
@@ -344,26 +344,26 @@ declare
           },
           "savings_withdraw_requests": {
             "type": "integer",
-            "description": "number representing how many payouts are pending  from user''s saving balance "
+            "description": "number representing how many payouts are pending from user''s saving balance "
           },
           "reward_hbd_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "not yet claimed HIVE backed dollars  stored in hbd reward balance"
+            "description": "not yet claimed HIVE backed dollars stored in hbd reward balance"
           },
           "reward_hive_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "not yet claimed HIVE  stored in hive reward balance"
+            "description": "not yet claimed HIVE stored in hive reward balance"
           },
           "reward_vesting_balance": {
             "type": "string",
-            "description": "not yet claimed VESTS  stored in vest reward balance"
+            "description": "not yet claimed VESTS stored in vest reward balance"
           },
           "reward_vesting_hive": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "the reward vesting balance, denominated in HIVE,  is determined by the prevailing HIVE price at the time of reward reception"
+            "description": "the reward vesting balance, denominated in HIVE, is determined by the prevailing HIVE price at the time of reward reception"
           },
           "posting_rewards": {
             "type": "string",
@@ -375,11 +375,11 @@ declare
           },
           "delegated_vesting_shares": {
             "type": "string",
-            "description": "VESTS delegated to another user,  account''s power is lowered by delegated VESTS"
+            "description": "VESTS delegated to another user, account''s power is lowered by delegated VESTS"
           },
           "received_vesting_shares": {
             "type": "string",
-            "description": "VESTS received from another user,  account''s power is increased by received VESTS"
+            "description": "VESTS received from another user, account''s power is increased by received VESTS"
           },
           "proxied_vsf_votes": {
             "type": "string",
@@ -392,7 +392,7 @@ declare
           },
           "vesting_withdraw_rate": {
             "type": "string",
-            "description": "received until the withdrawal is complete,  with each installment amounting to 1/13 of the withdrawn total"
+            "description": "received until the withdrawal is complete, with each installment amounting to 1/13 of the withdrawn total"
           },
           "to_withdraw": {
             "type": "string",
@@ -445,11 +445,11 @@ declare
           },
           "memo": {
             "type": "string",
-            "description": "currently the memo key is not used"
+            "description": "default key to be used for memo encryption"
           },
           "witness_signing": {
             "type": "string",
-            "description": "key used to sign block by witness"
+            "description": "key used by a witness to sign a block"
           }
         }
       },
@@ -586,7 +586,7 @@ declare
           "count": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "number of the operations in block"
+            "description": "number of operations of this type in block"
           }
         }
       },
@@ -615,19 +615,19 @@ declare
   "tags": [
     {
       "name": "Block-numbers",
-      "description": "Informations about block numbers"
+      "description": "Information about block numbers"
     },
     {
       "name": "Accounts",
-      "description": "Informations about accounts"
+      "description": "Information about accounts"
     },
     {
       "name": "Witnesses",
-      "description": "Informations about witnesses"
+      "description": "Information about witnesses"
     },
     {
       "name": "Other",
-      "description": "General API informations"
+      "description": "General API information"
     }
   ],
   "servers": [

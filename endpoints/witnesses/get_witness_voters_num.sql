@@ -7,7 +7,7 @@ SET ROLE hafbe_owner;
       - Witnesses
     summary: Get the number of voters for a witness
     description: |
-      Get the number of voters for a witness given their account name
+      Get the number of voters for a witness
 
       SQL example      
       * `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`

@@ -61,7 +61,7 @@ SET ROLE hafbe_owner;
                   quote: 1.100 HIVE
                 In this case, the bias is 10%%
 
-           * `block_size` - the block size they''re voting for
+           * `block_size` - the block size they are voting for
 
            * `signing_key` - the witness'' block-signing public key
 

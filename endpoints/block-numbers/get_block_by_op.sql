@@ -5,7 +5,7 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Block-numbers
-    summary: Get block numbers by filters
+    summary: List block numbers that match operation type filter, account name, and time/block range.
     description: |
       List the block numbers that match given operation type filter,
       account name and time/block range in specified order
@@ -24,7 +24,7 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: |
-          List of operations: if the parameter is NULL, all operations will be included
+          List of operations: if the parameter is NULL, all operations will be included.
           example: `18,12`
       - in: query
         name: account-name
@@ -32,7 +32,7 @@ SET ROLE hafbe_owner;
         schema:
           type: string
           default: NULL
-        description: Filter operations by the account that created them
+        description: Filter operations by the account that created them.
       - in: query
         name: direction
         required: false
@@ -93,7 +93,7 @@ SET ROLE hafbe_owner;
           default: NULL
         description: |
           A parameter specifying the desired value in operation body,
-          example: `value.creator=steem`
+          example: `value.creator=alpha`
     responses:
       '200':
         description: |

@@ -5,10 +5,11 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Get input type
+    summary: Determines object type of input-value.
     description: |
       Determines whether the entered value is a block,
-      block hash, transaction hash, or account name
+      block hash, transaction hash, or account name.
+      This method is very specific to block explorer UIs.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`
@@ -22,7 +23,7 @@ SET ROLE hafbe_owner;
         required: true
         schema:
           type: string
-        description: Given value
+        description: Object type to be identified.
     responses:
       '200':
         description: |

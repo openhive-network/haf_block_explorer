@@ -5,9 +5,9 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Accounts
-    summary: Get account info
+    summary: Get information about an account including Hive token balances.
     description: |
-      Get information about account''s balances and parameters
+      Get account''s balances and parameters
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`

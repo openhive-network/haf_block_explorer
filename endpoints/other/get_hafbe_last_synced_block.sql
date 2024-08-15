@@ -5,9 +5,9 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Haf_block_explorer''s last synced block
+    summary: Get last block number synced by haf_block_explorer
     description: |
-      Get last block-num synced by haf_block_explorer
+      Get the block number of the last block synced by haf_block_explorer.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`
