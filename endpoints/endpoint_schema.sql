@@ -88,7 +88,7 @@ declare
           },
           "rank": {
             "type": "integer",
-            "description": "the current rank of the witness according to the votes cast on the blockchain.  The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
+            "description": "the current rank of the witness according to the votes cast on the    blockchain.  The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
           },
           "url": {
             "type": "string",
@@ -330,7 +330,7 @@ declare
           "vesting_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "the VEST balance, presented in HIVE, is calculated based on the current HIVE price"
+            "description": "the VEST balance, presented in HIVE,  is calculated based on the current HIVE price"
           },
           "hbd_saving_balance": {
             "type": "integer",
@@ -344,26 +344,26 @@ declare
           },
           "savings_withdraw_requests": {
             "type": "integer",
-            "description": "number representing how many payouts are pending from user''s saving balance "
+            "description": "number representing how many payouts are pending  from user''s saving balance "
           },
           "reward_hbd_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "not yet claimed HIVE backed dollars stored in hbd reward balance"
+            "description": "not yet claimed HIVE backed dollars  stored in hbd reward balance"
           },
           "reward_hive_balance": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "not yet claimed HIVE stored in hive reward balance"
+            "description": "not yet claimed HIVE  stored in hive reward balance"
           },
           "reward_vesting_balance": {
             "type": "string",
-            "description": "not yet claimed VESTS stored in vest reward balance"
+            "description": "not yet claimed VESTS  stored in vest reward balance"
           },
           "reward_vesting_hive": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "the reward vesting balance, denominated in HIVE, is determined by the prevailing HIVE price at the time of reward reception"
+            "description": "the reward vesting balance, denominated in HIVE,  is determined by the prevailing HIVE price at the time of reward reception"
           },
           "posting_rewards": {
             "type": "string",
@@ -375,11 +375,11 @@ declare
           },
           "delegated_vesting_shares": {
             "type": "string",
-            "description": "VESTS delegated to another user, account''s power is lowered by delegated VESTS"
+            "description": "VESTS delegated to another user,  account''s power is lowered by delegated VESTS"
           },
           "received_vesting_shares": {
             "type": "string",
-            "description": "VESTS received from another user, account''s power is increased by received VESTS"
+            "description": "VESTS received from another user,  account''s power is increased by received VESTS"
           },
           "proxied_vsf_votes": {
             "type": "string",
@@ -392,7 +392,7 @@ declare
           },
           "vesting_withdraw_rate": {
             "type": "string",
-            "description": "received until the withdrawal is complete, with each installment amounting to 1/13 of the withdrawn total"
+            "description": "received until the withdrawal is complete,  with each installment amounting to 1/13 of the withdrawn total"
           },
           "to_withdraw": {
             "type": "string",
@@ -445,11 +445,11 @@ declare
           },
           "memo": {
             "type": "string",
-            "description": "default key to be used for memo encryption"
+            "description": "currently the memo key is not used"
           },
           "witness_signing": {
             "type": "string",
-            "description": "key used by a witness to sign a block"
+            "description": "key used to sign block by witness"
           }
         }
       },
@@ -586,7 +586,7 @@ declare
           "count": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "number of operations of this type in block"
+            "description": "number of the operations in block"
           }
         }
       },
@@ -601,7 +601,7 @@ declare
   "openapi": "3.1.0",
   "info": {
     "title": "HAF Block Explorer",
-    "description": "HAF block explorer is an API for querying information about transactions/operations included in Hive blocks, as well as block producer (i.e. witness) information.",
+    "description": "HAF block explorer is an API for getting information about transactions/operations included in Hive blocks, as well as block producer (witness) information.",
     "license": {
       "name": "MIT License",
       "url": "https://opensource.org/license/mit"
@@ -615,7 +615,7 @@ declare
   "tags": [
     {
       "name": "Block-numbers",
-      "description": "Information about block numbers"
+      "description": "Information about blocks"
     },
     {
       "name": "Accounts",
@@ -673,7 +673,7 @@ declare
               "$ref": "#/components/schemas/hafbe_types.order_by_witness",
               "default": "votes"
             },
-            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they''re voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
+            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
           },
           {
             "in": "query",
@@ -745,8 +745,8 @@ declare
         "tags": [
           "Witnesses"
         ],
-        "summary": "Get a single witness",
-        "description": "Return a single witness given their account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades''`\n",
+        "summary": "Returns information about a witness.",
+        "description": "Returns information about a witness given their account name.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_witness",
         "parameters": [
           {
@@ -756,12 +756,12 @@ declare
             "schema": {
               "type": "string"
             },
-            "description": "The witness account name"
+            "description": "witness account name"
           }
         ],
         "responses": {
           "200": {
-            "description": "The witness stats\n\n* Returns `hafbe_types.witness`\n",
+            "description": "Various witness statistics\n\n* Returns `hafbe_types.witness`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -811,7 +811,7 @@ declare
             "schema": {
               "type": "string"
             },
-            "description": "The witness account name"
+            "description": "witness account name"
           },
           {
             "in": "query",
@@ -889,7 +889,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the number of voters for a witness",
-        "description": "Get the number of voters for a witness given their account name\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`\n",
+        "description": "Get the number of voters for a witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters_num",
         "parameters": [
           {
@@ -925,7 +925,7 @@ declare
         "tags": [
           "Witnesses"
         ],
-        "summary": "Get the history of votes for this witness",
+        "summary": "Get the history of votes for this witness.",
         "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/votes/history?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_votes_history",
         "parameters": [
@@ -936,7 +936,7 @@ declare
             "schema": {
               "type": "string"
             },
-            "description": "The witness account name"
+            "description": "witness account name"
           },
           {
             "in": "query",
@@ -1036,8 +1036,8 @@ declare
         "tags": [
           "Accounts"
         ],
-        "summary": "Get account info",
-        "description": "Get information about account''s balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades''`\n",
+        "summary": "Get information about an account including Hive token balances.",
+        "description": "Get account''s balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_account",
         "parameters": [
           {
@@ -1123,8 +1123,8 @@ declare
         "tags": [
           "Accounts"
         ],
-        "summary": "Get account info",
-        "description": "Get information about account''s OWNER, ACTIVE, POSTING, memo and signing authorities\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/authority''` \n",
+        "summary": "Get account''s owner, active, posting, memo and witness signing authorities",
+        "description": "Get information about account''s owner, active, posting, memo and witness signing authorities.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/authority''` \n",
         "operationId": "hafbe_endpoints.get_account_authority",
         "parameters": [
           {
@@ -1195,8 +1195,8 @@ declare
         "tags": [
           "Accounts"
         ],
-        "summary": "Get comment related operations",
-        "description": "List operations related to account and optionally filtered by permlink,\ntime/blockrange and comment related operations\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
+        "summary": "Get comment-related operations for an account.",
+        "description": "List operations related to account. Optionally filtered by permlink,\ntime/blockrange, and specific comment-related operations.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
         "operationId": "hafbe_endpoints.get_comment_operations",
         "parameters": [
           {
@@ -1206,7 +1206,7 @@ declare
             "schema": {
               "type": "string"
             },
-            "description": "Filter operations by the account that created them"
+            "description": "Account to get operations for"
           },
           {
             "in": "query",
@@ -1216,7 +1216,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\ncomment related op type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`\n"
+            "description": "List of operation types to include. If NULL, all comment operation types will be included.\ncomment-related operation type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`\n"
           },
           {
             "in": "query",
@@ -1256,7 +1256,7 @@ declare
               "type": "integer",
               "default": 200000
             },
-            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder, defaults to `200000`\n"
+            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder (defaults to `200000`).\n"
           },
           {
             "in": "query",
@@ -1303,7 +1303,7 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `JSON`\n",
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1360,7 +1360,7 @@ declare
         "tags": [
           "Block-numbers"
         ],
-        "summary": "Get block numbers by filters",
+        "summary": "List block numbers that match operation type filter, account name, and time/block range.",
         "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
         "operationId": "hafbe_endpoints.get_block_by_op",
         "parameters": [
@@ -1372,7 +1372,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "List of operations: if the parameter is NULL, all operations will be included\nexample: `18,12`\n"
+            "description": "List of operations: if the parameter is NULL, all operations will be included.\nexample: `18,12`\n"
           },
           {
             "in": "query",
@@ -1382,7 +1382,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "Filter operations by the account that created them"
+            "description": "Filter operations by the account that created them."
           },
           {
             "in": "query",
@@ -1458,7 +1458,7 @@ declare
               "x-sql-datatype": "TEXT[]",
               "default": null
             },
-            "description": "A parameter specifying the desired value in operation body,\nexample: `value.creator=steem`\n"
+            "description": "A parameter specifying the desired value in operation body,\nexample: `value.creator=alpha`\n"
           }
         ],
         "responses": {
@@ -1491,8 +1491,8 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Haf_block_explorer''s version",
-        "description": "Get haf_block_explorer''s last commit hash that determinates its version\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/version''`\n",
+        "summary": "Get Haf_block_explorer''s version",
+        "description": "Get haf_block_explorer''s last commit hash (versions set by by hash value).\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/version''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_version",
         "responses": {
           "200": {
@@ -1517,8 +1517,8 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Haf_block_explorer''s last synced block",
-        "description": "Get last block-num synced by haf_block_explorer\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/last-synced-block''`\n",
+        "summary": "Get last block number synced by haf_block_explorer",
+        "description": "Get the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/last-synced-block''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "responses": {
           "200": {
@@ -1543,8 +1543,8 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Get input type",
-        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`\n      \nREST call example\n* `GET ''https://%1$s/hafbe/input-type/blocktrades''`\n",
+        "summary": "Determines object type of input-value.",
+        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name.\nThis method is very specific to block explorer UIs.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`\n      \nREST call example\n* `GET ''https://%1$s/hafbe/input-type/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_input_type",
         "parameters": [
           {
@@ -1554,7 +1554,7 @@ declare
             "schema": {
               "type": "string"
             },
-            "description": "Given value"
+            "description": "Object type to be identified."
           }
         ],
         "responses": {
@@ -1586,8 +1586,8 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Informations about operations in blocks",
-        "description": "Lists the counts of operations in result-limit blocks along with their creators. \nIf block-num is not specified, the result includes the counts of operations in the most recent blocks. \n\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/operation-type-counts?result-limit=1''`\n",
+        "summary": "Returns histogram of operation types in blocks.",
+        "description": "Lists the counts of operations in result-limit blocks along with their creators. \nIf block-num is not specified, the result includes the counts of operations in the most recent blocks.\n\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/operation-type-counts?result-limit=1''`\n",
         "operationId": "hafbe_endpoints.get_latest_blocks",
         "parameters": [
           {
