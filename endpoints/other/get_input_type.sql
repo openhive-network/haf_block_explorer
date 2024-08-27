@@ -143,7 +143,7 @@ BEGIN
     FROM
       hive.accounts_view ha
     WHERE
-      ha.name LIKE "input-value"
+      ha.name LIKE "input-value" || '%'
     ORDER BY
       accounts,
       name_lengths
