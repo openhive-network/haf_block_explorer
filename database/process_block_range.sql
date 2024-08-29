@@ -376,6 +376,65 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
+  -- parse witness account_creation_fee
+  WITH select_ops_with_account_creation_fee AS (
+    SELECT witness, value, op_type_id, operation_id
+    FROM hafbe_views.witness_prop_op_view
+    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+  ),
+
+  select_account_creation_fee_from_set_witness_properties AS (
+    SELECT ex_prop.account_creation_fee, operation_id, witness
+    FROM select_ops_with_account_creation_fee sowu
+
+    JOIN LATERAL (
+      SELECT (prop_value->>'amount')::INT AS account_creation_fee
+      FROM hive.extract_set_witness_properties(sowu.value->>'props')
+      WHERE prop_name = 'account_creation_fee'
+    ) ex_prop ON TRUE
+    WHERE op_type_id = 42
+  ),
+
+  select_account_creation_fee_from_witness_update_op AS (
+    SELECT (value->'props'->'account_creation_fee'->>'amount')::INT AS account_creation_fee, operation_id, witness
+    FROM select_ops_with_account_creation_fee
+    WHERE op_type_id = 11
+  )
+
+  UPDATE hafbe_app.current_witnesses cw SET account_creation_fee = ops.account_creation_fee FROM (
+    SELECT 
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      account_creation_fee
+    FROM (
+      SELECT
+        account_creation_fee, witness,
+        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
+      FROM (
+        SELECT account_creation_fee, operation_id, witness
+        FROM select_account_creation_fee_from_set_witness_properties
+
+        UNION
+
+        SELECT account_creation_fee, operation_id, witness
+        FROM select_account_creation_fee_from_witness_update_op
+      ) sp
+      WHERE account_creation_fee IS NOT NULL
+    ) prop
+    WHERE row_n = 1
+  ) ops
+  WHERE cw.witness_id = ops.witness_id;
+
+  -- parse last_created_block_num
+  UPDATE hafbe_app.current_witnesses cw SET last_created_block_num = blocks.last_created_block_num FROM (
+    SELECT 
+      bv.producer_account_id AS witness_id, 
+      MAX(bv.num) AS last_created_block_num 
+    FROM hafbe_app.blocks_view bv
+    WHERE num BETWEEN _from AND _to
+    GROUP BY bv.producer_account_id
+  ) blocks
+  WHERE cw.witness_id = blocks.witness_id;
+
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE

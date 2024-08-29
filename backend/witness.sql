@@ -118,4 +118,171 @@ RETURN QUERY EXECUTE format(
 END
 $$;
 
+DROP FUNCTION IF EXISTS hafbe_backend.get_witnesses;
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
+    "result-limit" INT,
+    "offset" INT,
+    "sort" hafbe_types.order_by_witness,
+    "direction" hafbe_types.sort_direction
+)
+RETURNS SETOF hafbe_types.witness 
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $query$
+
+    WITH limited_set AS 
+    (
+      SELECT
+        cw.witness_id, 
+        (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
+        cw.url,
+        cw.price_feed,
+        cw.bias,
+        cw.feed_updated_at,
+        cw.block_size, 
+        cw.signing_key, 
+        cw.version, 
+        b.rank, 
+        COALESCE(b.votes,0) AS votes, 
+        COALESCE(b.voters_num,0) AS voters_num, 
+        COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
+        COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
+        COALESCE(
+        (
+          SELECT count(*) as missed
+          FROM hive.account_operations_view aov
+          WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
+        )::INT
+        ,0) AS missed_blocks,
+        COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
+        cw.last_created_block_num,
+        cw.account_creation_fee
+      FROM hafbe_app.current_witnesses cw
+      LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
+      LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
+    ),
+    limited_set_order AS MATERIALIZED (
+      SELECT * FROM limited_set
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      OFFSET %L
+      LIMIT %L
+    ),
+    add_last_produced_account AS 
+    (
+      SELECT 
+        bv.producer_account_id, 
+        MAX(bv.num) AS last_created_block_num 
+      FROM hive.blocks_view bv
+      JOIN limited_set_order lso ON lso.witness_id = bv.producer_account_id
+      GROUP BY bv.producer_account_id
+    ),
+    get_block_num AS MATERIALIZED
+    (
+    SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
+    )
+
+    SELECT
+      ls.witness, 
+      ls.rank, 
+      ls.url,
+      ls.votes::TEXT,
+      (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes))::BIGINT, 
+      ls.votes_daily_change::TEXT,
+      (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes_daily_change))::BIGINT, 
+      ls.voters_num,
+      ls.voters_num_daily_change,
+      ls.price_feed, 
+      ls.bias, 
+      ls.feed_updated_at,
+      ls.block_size, 
+      ls.signing_key, 
+      ls.version,
+      ls.missed_blocks,
+      ls.hbd_interest_rate,
+      ls.last_created_block_num,
+      ls.account_creation_fee
+    FROM limited_set_order ls
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+
+    $query$,
+    "direction", "sort", "direction", "sort", "offset","result-limit",
+    "direction", "sort", "direction", "sort"
+  );
+
+END
+$$;
+
+
+DROP FUNCTION IF EXISTS hafbe_backend.get_witness;
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
+    "account-name" TEXT
+)
+RETURNS hafbe_types.witness 
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+  RETURN (
+    WITH limited_set AS (
+    SELECT
+      cw.witness_id, av.name::TEXT AS witness,
+      cw.url, cw.price_feed, cw.bias,
+      cw.feed_updated_at,
+      cw.block_size, cw.signing_key, cw.version,
+      COALESCE(
+      (
+          SELECT count(*) as missed
+          FROM hive.account_operations_view aov
+          WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
+      )::INT
+      ,0) AS missed_blocks,
+      COALESCE(cw.hbd_interest_rate, 0) AS hbd_interest_rate,
+      cw.last_created_block_num,
+      cw.account_creation_fee
+    FROM hive.accounts_view av
+    JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
+    WHERE av.name = "account-name"
+    ),
+    get_block_num AS MATERIALIZED
+    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+
+    SELECT ROW(
+    ls.witness, 
+    all_votes.rank, 
+    ls.url,
+    COALESCE(all_votes.votes::TEXT, '0'),
+    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(all_votes.votes, 0)))::BIGINT, 
+    COALESCE(wvcc.votes_daily_change::TEXT, '0'),
+    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(wvcc.votes_daily_change, 0)))::BIGINT, 
+    COALESCE(all_votes.voters_num, 0),
+    COALESCE(wvcc.voters_num_daily_change, 0),
+    ls.price_feed, 
+    ls.bias, 
+    ls.feed_updated_at,
+    ls.block_size, 
+    ls.signing_key, 
+    ls.version,
+    ls.missed_blocks, 
+    ls.hbd_interest_rate,
+    ls.last_created_block_num,
+    ls.account_creation_fee
+    )
+    FROM limited_set ls
+    LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
+    LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id
+  );
+
+END
+$$;
+
+
 RESET ROLE;

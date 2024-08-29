@@ -4,7 +4,7 @@ SET ROLE hafbe_owner;
 hafbe_types.witness:
   type: object
   properties:
-    witness:
+    witness_name:
       type: string
       description: witness''s account name
     rank:
@@ -84,11 +84,17 @@ hafbe_types.witness:
     hbd_interest_rate:
       type: integer
       description: the interest rate the witness is voting for
+    last_confirmed_block_num:
+      type: integer
+      description: the last block number created by the witness
+    account_creation_fee:
+      type: integer
+      description: the cost of creating an account. 
 */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.witness CASCADE;
 CREATE TYPE hafbe_types.witness AS (
-    "witness" TEXT,
+    "witness_name" TEXT,
     "rank" INT,
     "url" TEXT,
     "vests" TEXT,
@@ -104,7 +110,9 @@ CREATE TYPE hafbe_types.witness AS (
     "signing_key" TEXT,
     "version" TEXT,
     "missed_blocks" INT,
-    "hbd_interest_rate" INT
+    "hbd_interest_rate" INT,
+    "last_confirmed_block_num" INT,
+    "account_creation_fee" INT
 );
 -- openapi-generated-code-end
 

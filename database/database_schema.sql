@@ -125,6 +125,8 @@ BEGIN
     signing_key TEXT,
     version TEXT, 
     hbd_interest_rate INT,
+    last_created_block_num INT,
+    account_creation_fee INT,
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   );
@@ -200,8 +202,6 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
 ------------------------------------------
-
-GRANT ALL ON SCHEMA hafbe_bal TO hafbe_owner;
 
 GRANT ALL ON SCHEMA btracker_endpoints TO hafbe_owner;
 

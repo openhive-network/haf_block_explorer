@@ -82,13 +82,13 @@ declare
       "hafbe_types.witness": {
         "type": "object",
         "properties": {
-          "witness": {
+          "witness_name": {
             "type": "string",
-            "description": "the name of the witness account"
+            "description": "witness''s account name"
           },
           "rank": {
             "type": "integer",
-            "description": "the current rank of the witness according to the votes cast on the    blockchain.  The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
+            "description": "the current rank of the witness according to the votes cast on the blockchain. The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
           },
           "url": {
             "type": "string",
@@ -114,7 +114,7 @@ declare
           },
           "voters_num": {
             "type": "integer",
-            "description": "the number of voters supporting this witness"
+            "description": "the number of voters for this witness"
           },
           "voters_num_daily_change": {
             "type": "integer",
@@ -132,7 +132,7 @@ declare
           "feed_updated_at": {
             "type": "string",
             "format": "date-time",
-            "description": "the timestamp when feed was updated"
+            "description": "timestamp when feed was updated"
           },
           "block_size": {
             "type": "integer",
@@ -153,6 +153,14 @@ declare
           "hbd_interest_rate": {
             "type": "integer",
             "description": "the interest rate the witness is voting for"
+          },
+          "last_confirmed_block_num": {
+            "type": "integer",
+            "description": "the last block number created by the witness"
+          },
+          "account_creation_fee": {
+            "type": "integer",
+            "description": "the cost of creating an account."
           }
         }
       },
@@ -165,7 +173,7 @@ declare
       "hafbe_types.witness_voter": {
         "type": "object",
         "properties": {
-          "voter": {
+          "voter_name": {
             "type": "string",
             "description": "account name of the voter"
           },
@@ -212,7 +220,7 @@ declare
       "hafbe_types.witness_votes_history_record": {
         "type": "object",
         "properties": {
-          "voter": {
+          "voter_name": {
             "type": "string",
             "description": "account name of the voter"
           },
@@ -281,11 +289,11 @@ declare
           },
           "proxy": {
             "type": "string",
-            "description": "the username to which the account has designated as its proxy"
+            "description": "an account to which the account has designated as its proxy"
           },
           "recovery_account": {
             "type": "string",
-            "description": "the username to which the account has designated as its recovery account"
+            "description": "an account to which the account has designated as its recovery account"
           },
           "last_account_recovery": {
             "type": "string",
@@ -445,11 +453,11 @@ declare
           },
           "memo": {
             "type": "string",
-            "description": "currently the memo key is not used"
+            "description": "default key to be used for memo encryption"
           },
           "witness_signing": {
             "type": "string",
-            "description": "key used to sign block by witness"
+            "description": "key used by a witness to sign blocks"
           }
         }
       },
@@ -559,7 +567,7 @@ declare
           "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "creation date"
+            "description": "the time operation was included in the blockchain"
           },
           "virtual_op": {
             "type": "boolean",
@@ -586,7 +594,7 @@ declare
           "count": {
             "type": "integer",
             "x-sql-datatype": "BIGINT",
-            "description": "number of the operations in block"
+            "description": "number of operations in the block"
           }
         }
       },
@@ -688,11 +696,12 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The list of witnesses\n\n* Returns array of `hafbe_types.witness`\n",
+            "description": "The list of witnesses\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_witnesses"
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
                 },
                 "example": [
                   {
@@ -712,25 +721,6 @@ declare
                     "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
                     "version": "0.13.0",
                     "missed_blocks": 129,
-                    "hbd_interest_rate": 1000
-                  },
-                  {
-                    "witness": "arhag",
-                    "rank": 2,
-                    "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
-                    "vests": "91835048921097725",
-                    "vests_hive_power": 30572499530,
-                    "votes_daily_change": "0",
-                    "votes_daily_change_hive_power": 0,
-                    "voters_num": 348,
-                    "voters_num_daily_change": 0,
-                    "price_feed": 0.536,
-                    "bias": 0,
-                    "feed_updated_at": "2016-09-15T19:31:18",
-                    "block_size": 65536,
-                    "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
-                    "version": "0.13.0",
-                    "missed_blocks": 61,
                     "hbd_interest_rate": 1000
                   }
                 ]
@@ -761,11 +751,12 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Various witness statistics\n\n* Returns `hafbe_types.witness`\n",
+            "description": "Various witness statistics\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witness"
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
                 },
                 "example": {
                   "witness": "blocktrades",
@@ -846,11 +837,12 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns array of `hafbe_types.witness_voter`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_witness_voters"
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
                 },
                 "example": [
                   {
@@ -992,11 +984,12 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns array of `hafbe_types.witness_vote_history_record`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_witness_vote_history_records"
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
                 },
                 "example": [
                   {
