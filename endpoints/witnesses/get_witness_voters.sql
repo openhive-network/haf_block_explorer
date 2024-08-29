@@ -72,22 +72,31 @@ SET ROLE hafbe_owner;
               type: string
               x-sql-datatype: JSON
             example:
-              - voter: "blocktrades"
-                vests: "13155953611548185"
-                votes_hive_power: 4379704593
-                account_vests: "8172549681941451"
-                account_hive_power: 2720696229
-                proxied_vests: "4983403929606734"
-                proxied_hive_power: 1659008364
-                timestamp: "2016-04-15T02:19:57"
-              - voter: "dan"
-                vests: "9928811304950768"
-                votes_hive_power: 3305367423
-                account_vests: "9928811304950768"
-                account_hive_power: 3305367423
-                proxied_vests: "0"
-                proxied_hive_power: 0
-                timestamp: "2016-06-27T12:41:42"
+              - {
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "voters": [
+                    {
+                      "voter_name": "blocktrades",
+                      "vests": "13155953611548185",
+                      "votes_hive_power": 4379704593,
+                      "account_vests": "8172549681941451",
+                      "account_hive_power": 2720696229,
+                      "proxied_vests": "4983403929606734",
+                      "proxied_hive_power": 1659008364,
+                      "timestamp": "2016-04-15T02:19:57"
+                    },
+                    {
+                      "voter_name": "dan",
+                      "vests": "9928811304950768",
+                      "votes_hive_power": 3305367423,
+                      "account_vests": "9928811304950768",
+                      "account_hive_power": 3305367423,
+                      "proxied_vests": "0",
+                      "proxied_hive_power": 0,
+                      "timestamp": "2016-06-27T12:41:42"
+                    }
+                  ]
+                }
       '404':
         description: No such witness
  */
@@ -116,7 +125,7 @@ BEGIN
       'votes_updated_at', (SELECT last_updated_at 
           FROM hafbe_app.witnesses_cache_config
           ),
-      'votes', 
+      'voters', 
         (SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witness_voters(
             "account-name",

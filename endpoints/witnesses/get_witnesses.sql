@@ -90,23 +90,53 @@ SET ROLE hafbe_owner;
               type: string
               x-sql-datatype: JSON
             example:
-              - witnes: "roadscape"
-                rank: 1
-                url: "https://steemit.com/witness-category/@roadscape/witness-roadscape"
-                vests: "94172201023355097"
-                vests_hive_power: 31350553033
-                votes_daily_change: "0"
-                votes_daily_change_hive_power: 0,
-                voters_num: 306
-                voters_num_daily_change: 0
-                price_feed: 0.539
-                bias: 0
-                feed_updated_at: "2016-09-15T16:07:42"
-                block_size: 65536
-                signing_key: "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9"
-                version: "0.13.0"
-                missed_blocks: 129
-                hbd_interest_rate: 1000
+              - {
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "witnesses": [
+                    {
+                      "witness_name": "roadscape",
+                      "rank": 1,
+                      "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
+                      "vests": "94172201023355097",
+                      "vests_hive_power": 31350553033,
+                      "votes_daily_change": "0",
+                      "votes_daily_change_hive_power": 0,
+                      "voters_num": 306,
+                      "voters_num_daily_change": 0,
+                      "price_feed": 0.539,
+                      "bias": 0,
+                      "feed_updated_at": "2016-09-15T16:07:42",
+                      "block_size": 65536,
+                      "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
+                      "version": "0.13.0",
+                      "missed_blocks": 129,
+                      "hbd_interest_rate": 1000,
+                      "last_confirmed_block_num": 4999986,
+                      "account_creation_fee": 2000
+                    },
+                    {
+                      "witness_name": "arhag",
+                      "rank": 2,
+                      "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
+                      "vests": "91835048921097725",
+                      "vests_hive_power": 30572499530,
+                      "votes_daily_change": "0",
+                      "votes_daily_change_hive_power": 0,
+                      "voters_num": 348,
+                      "voters_num_daily_change": 0,
+                      "price_feed": 0.536,
+                      "bias": 0,
+                      "feed_updated_at": "2016-09-15T19:31:18",
+                      "block_size": 65536,
+                      "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
+                      "version": "0.13.0",
+                      "missed_blocks": 61,
+                      "hbd_interest_rate": 1000,
+                      "last_confirmed_block_num": 4999993,
+                      "account_creation_fee": 7000
+                    }
+                  ]
+                }
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;

@@ -705,23 +705,51 @@ declare
                 },
                 "example": [
                   {
-                    "witnes": "roadscape",
-                    "rank": 1,
-                    "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
-                    "vests": "94172201023355097",
-                    "vests_hive_power": 31350553033,
-                    "votes_daily_change": "0",
-                    "votes_daily_change_hive_power": "0,",
-                    "voters_num": 306,
-                    "voters_num_daily_change": 0,
-                    "price_feed": 0.539,
-                    "bias": 0,
-                    "feed_updated_at": "2016-09-15T16:07:42",
-                    "block_size": 65536,
-                    "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
-                    "version": "0.13.0",
-                    "missed_blocks": 129,
-                    "hbd_interest_rate": 1000
+                    "votes_updated_at": "2024-08-29T12:05:08.097875",
+                    "witnesses": [
+                      {
+                        "witness_name": "roadscape",
+                        "rank": 1,
+                        "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
+                        "vests": "94172201023355097",
+                        "vests_hive_power": 31350553033,
+                        "votes_daily_change": "0",
+                        "votes_daily_change_hive_power": 0,
+                        "voters_num": 306,
+                        "voters_num_daily_change": 0,
+                        "price_feed": 0.539,
+                        "bias": 0,
+                        "feed_updated_at": "2016-09-15T16:07:42",
+                        "block_size": 65536,
+                        "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
+                        "version": "0.13.0",
+                        "missed_blocks": 129,
+                        "hbd_interest_rate": 1000,
+                        "last_confirmed_block_num": 4999986,
+                        "account_creation_fee": 2000
+                      },
+                      {
+                        "witness_name": "arhag",
+                        "rank": 2,
+                        "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
+                        "vests": "91835048921097725",
+                        "vests_hive_power": 30572499530,
+                        "votes_daily_change": "0",
+                        "votes_daily_change_hive_power": 0,
+                        "voters_num": 348,
+                        "voters_num_daily_change": 0,
+                        "price_feed": 0.536,
+                        "bias": 0,
+                        "feed_updated_at": "2016-09-15T19:31:18",
+                        "block_size": 65536,
+                        "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
+                        "version": "0.13.0",
+                        "missed_blocks": 61,
+                        "hbd_interest_rate": 1000,
+                        "last_confirmed_block_num": 4999993,
+                        "account_creation_fee": 7000
+                      }
+                    ]
                   }
                 ]
               }
@@ -758,25 +786,32 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": {
-                  "witness": "blocktrades",
-                  "rank": 8,
-                  "url": "https://blocktrades.us",
-                  "vests": "82373419958692803",
-                  "vests_hive_power": 27422660221,
-                  "votes_daily_change": "0",
-                  "votes_daily_change_hive_power": 0,
-                  "voters_num": 263,
-                  "voters_num_daily_change": 0,
-                  "price_feed": 0.545,
-                  "bias": 0,
-                  "feed_updated_at": "2016-09-15T16:02:21",
-                  "block_size": 65536,
-                  "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
-                  "version": "0.13.0",
-                  "missed_blocks": 935,
-                  "hbd_interest_rate": 1000
-                }
+                "example": [
+                  {
+                    "votes_updated_at": "2024-08-29T12:05:08.097875",
+                    "witness": {
+                      "witness_name": "blocktrades",
+                      "rank": 8,
+                      "url": "https://blocktrades.us",
+                      "vests": "82373419958692803",
+                      "vests_hive_power": 27422660221,
+                      "votes_daily_change": "0",
+                      "votes_daily_change_hive_power": 0,
+                      "voters_num": 263,
+                      "voters_num_daily_change": 0,
+                      "price_feed": 0.545,
+                      "bias": 0,
+                      "feed_updated_at": "2016-09-15T16:02:21",
+                      "block_size": 65536,
+                      "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
+                      "version": "0.13.0",
+                      "missed_blocks": 935,
+                      "hbd_interest_rate": 1000,
+                      "last_confirmed_block_num": 4999992,
+                      "account_creation_fee": 9000
+                    }
+                  }
+                ]
               }
             }
           },
@@ -846,24 +881,29 @@ declare
                 },
                 "example": [
                   {
-                    "voter": "blocktrades",
-                    "vests": "13155953611548185",
-                    "votes_hive_power": 4379704593,
-                    "account_vests": "8172549681941451",
-                    "account_hive_power": 2720696229,
-                    "proxied_vests": "4983403929606734",
-                    "proxied_hive_power": 1659008364,
-                    "timestamp": "2016-04-15T02:19:57"
-                  },
-                  {
-                    "voter": "dan",
-                    "vests": "9928811304950768",
-                    "votes_hive_power": 3305367423,
-                    "account_vests": "9928811304950768",
-                    "account_hive_power": 3305367423,
-                    "proxied_vests": "0",
-                    "proxied_hive_power": 0,
-                    "timestamp": "2016-06-27T12:41:42"
+                    "votes_updated_at": "2024-08-29T12:05:08.097875",
+                    "voters": [
+                      {
+                        "voter_name": "blocktrades",
+                        "vests": "13155953611548185",
+                        "votes_hive_power": 4379704593,
+                        "account_vests": "8172549681941451",
+                        "account_hive_power": 2720696229,
+                        "proxied_vests": "4983403929606734",
+                        "proxied_hive_power": 1659008364,
+                        "timestamp": "2016-04-15T02:19:57"
+                      },
+                      {
+                        "voter_name": "dan",
+                        "vests": "9928811304950768",
+                        "votes_hive_power": 3305367423,
+                        "account_vests": "9928811304950768",
+                        "account_hive_power": 3305367423,
+                        "proxied_vests": "0",
+                        "proxied_hive_power": 0,
+                        "timestamp": "2016-06-27T12:41:42"
+                      }
+                    ]
                   }
                 ]
               }
@@ -993,26 +1033,31 @@ declare
                 },
                 "example": [
                   {
-                    "voter": "jeremyfromwi",
-                    "approve": true,
-                    "vests": "441156952466",
-                    "votes_hive_power": 146864,
-                    "account_vests": "441156952466",
-                    "account_hive_power": 146864,
-                    "proxied_vests": "0",
-                    "proxied_hive_power": 0,
-                    "timestamp": "2016-09-15T07:07:15"
-                  },
-                  {
-                    "voter": "cryptomental",
-                    "approve": true,
-                    "vests": "686005633844",
-                    "votes_hive_power": 228376,
-                    "account_vests": "686005633844",
-                    "account_hive_power": 228376,
-                    "proxied_vests": "0",
-                    "proxied_hive_power": 0,
-                    "timestamp": "2016-09-15T07:00:51"
+                    "votes_updated_at": "2024-08-29T12:05:08.097875",
+                    "votes_history": [
+                      {
+                        "voter_name": "jeremyfromwi",
+                        "approve": true,
+                        "vests": "441156952466",
+                        "votes_hive_power": 146864,
+                        "account_vests": "441156952466",
+                        "account_hive_power": 146864,
+                        "proxied_vests": "0",
+                        "proxied_hive_power": 0,
+                        "timestamp": "2016-09-15T07:07:15"
+                      },
+                      {
+                        "voter_name": "cryptomental",
+                        "approve": true,
+                        "vests": "686005633844",
+                        "votes_hive_power": 228376,
+                        "account_vests": "686005633844",
+                        "account_hive_power": 228376,
+                        "proxied_vests": "0",
+                        "proxied_hive_power": 0,
+                        "timestamp": "2016-09-15T07:00:51"
+                      }
+                    ]
                   }
                 ]
               }
