@@ -83,11 +83,12 @@ SET ROLE hafbe_owner;
         description: |
           The list of witnesses
 
-          * Returns array of `hafbe_types.witness`
+          * Returns `JSON`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_witnesses'
+              type: string
+              x-sql-datatype: JSON
             example:
               - witnes: "roadscape"
                 rank: 1
@@ -106,23 +107,6 @@ SET ROLE hafbe_owner;
                 version: "0.13.0"
                 missed_blocks: 129
                 hbd_interest_rate: 1000
-              - witness: "arhag"
-                rank: 2
-                url: "https://steemit.com/witness-category/@arhag/witness-arhag"
-                vests: "91835048921097725"
-                vests_hive_power: 30572499530
-                votes_daily_change: "0"
-                votes_daily_change_hive_power: 0
-                voters_num: 348
-                voters_num_daily_change: 0
-                price_feed: 0.536
-                bias: 0
-                feed_updated_at: "2016-09-15T19:31:18"
-                block_size: 65536
-                signing_key: "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh"
-                version: "0.13.0"
-                missed_blocks: 61
-                hbd_interest_rate: 1000
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
@@ -132,7 +116,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
     "sort" hafbe_types.order_by_witness = 'votes',
     "direction" hafbe_types.sort_direction = 'desc'
 )
-RETURNS SETOF hafbe_types.witness 
+RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -142,80 +126,23 @@ SET jit = OFF
 AS
 $$
 BEGIN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-
-RETURN QUERY EXECUTE format(
-  $query$
-
-  WITH limited_set AS (
-    SELECT
-      cw.witness_id, 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
-      cw.url,
-      cw.price_feed,
-      cw.bias,
-      cw.feed_updated_at,
-      cw.block_size, 
-      cw.signing_key, 
-      cw.version, 
-      b.rank, 
-      COALESCE(b.votes,0) AS votes, 
-      COALESCE(b.voters_num,0) AS voters_num, 
-      COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
-      COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
-      COALESCE(
-      (
-        SELECT count(*) as missed
-        FROM hive.account_operations_view aov
-        WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
-      )::INT
-      ,0) AS missed_blocks,
-      COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate
-    FROM hafbe_app.current_witnesses cw
-    LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
-    LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-  ),
-  limited_set_order AS MATERIALIZED (
-    SELECT * FROM limited_set
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-    OFFSET %L
-    LIMIT %L
-  ),
-get_block_num AS MATERIALIZED
-(SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
-
-  SELECT
-    ls.witness, 
-    ls.rank, 
-    ls.url,
-    ls.votes::TEXT,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes))::BIGINT, 
-    ls.votes_daily_change::TEXT,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes_daily_change))::BIGINT, 
-    ls.voters_num,
-    ls.voters_num_daily_change,
-    ls.price_feed, 
-    ls.bias, 
-    ls.feed_updated_at,
-    ls.block_size, 
-    ls.signing_key, 
-    ls.version,
-    ls.missed_blocks,
-    ls.hbd_interest_rate
-  FROM limited_set_order ls
-  ORDER BY
-    (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-
-  $query$,
-  "direction", "sort", "direction", "sort", "offset","result-limit",
-  "direction", "sort", "direction", "sort"
-)
-;
-
+  RETURN (
+    SELECT json_build_object(
+      'votes_updated_at', (SELECT last_updated_at 
+          FROM hafbe_app.witnesses_cache_config
+          ),
+      'witnesses', 
+        (SELECT to_json(array_agg(row)) FROM (
+          SELECT * FROM hafbe_backend.get_witnesses(
+            "result-limit",
+            "offset",
+            "sort",
+            "direction")
+      ) row)
+    )
+  );
 END
 $$;
 

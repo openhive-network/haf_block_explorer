@@ -4,7 +4,7 @@ SET ROLE hafbe_owner;
 hafbe_types.witness_voter:
   type: object
   properties:
-    voter:
+    voter_name:
       type: string
       description: account name of the voter
     vests:
@@ -45,7 +45,7 @@ hafbe_types.witness_voter:
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.witness_voter CASCADE;
 CREATE TYPE hafbe_types.witness_voter AS (
-    "voter" TEXT,
+    "voter_name" TEXT,
     "vests" TEXT,
     "votes_hive_power" BIGINT,
     "account_vests" TEXT,

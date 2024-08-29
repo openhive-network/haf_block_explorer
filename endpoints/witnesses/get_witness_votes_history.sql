@@ -81,11 +81,12 @@ SET ROLE hafbe_owner;
         description: |
           The number of voters currently voting for this witness
 
-          * Returns array of `hafbe_types.witness_vote_history_record`
+          * Returns `JSON`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_witness_vote_history_records'
+              type: string
+              x-sql-datatype: JSON
             example:
               - voter: "jeremyfromwi"
                 approve: true
@@ -118,7 +119,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "start-date" TIMESTAMP = NULL,
     "end-date" TIMESTAMP = now()
 )
-RETURNS SETOF hafbe_types.witness_votes_history_record 
+RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -127,51 +128,26 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
-DECLARE
-_witness_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-IF "start-date" IS NULL THEN 
-  "start-date" := '1970-01-01T00:00:00'::TIMESTAMP;
-END IF;
-
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-
-RETURN QUERY EXECUTE format(
-  $query$
-
-  WITH select_range AS MATERIALIZED (
-    SELECT 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
-      * 
-    FROM hafbe_app.witness_votes_history_cache wvh
-    WHERE wvh.witness_id = %L
-    AND wvh.timestamp BETWEEN  %L AND  %L
-    ORDER BY wvh.timestamp DESC
-    LIMIT %L
-  ),
-  get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1),
-  select_votes_history AS (
-  SELECT
-    wvh.voter, wvh.approve, 
-    (wvh.account_vests + wvh.proxied_vests )::TEXT AS vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), (wvh.account_vests + wvh.proxied_vests) ))::BIGINT AS vests_hive_power,
-    wvh.account_vests::TEXT AS account_vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.account_vests))::BIGINT AS account_hive_power,
-    wvh.proxied_vests::TEXT AS proxied_vests,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.proxied_vests))::BIGINT AS proxied_hive_power,
-    wvh.timestamp AS timestamp
-  FROM select_range wvh
-  )
-  SELECT * FROM select_votes_history
-  ORDER BY
-    (CASE WHEN %L = 'desc' THEN  %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-  ;
-  $query$,
-  _witness_id,"start-date", "end-date", "result-limit", "direction", "sort", "direction", "sort"
-) res;
+  RETURN (
+    SELECT json_build_object(
+      'votes_updated_at', (SELECT last_updated_at 
+          FROM hafbe_app.witnesses_cache_config
+          ),
+      'votes_history', 
+        (SELECT to_json(array_agg(row)) FROM (
+          SELECT * FROM hafbe_backend.get_witness_votes_history(
+            "account-name",
+            "sort",
+            "direction",
+            "result-limit",
+            "start-date",
+            "end-date")
+      ) row)
+    )
+  );
 END
 $$;
 

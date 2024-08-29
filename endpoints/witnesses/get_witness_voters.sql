@@ -65,11 +65,12 @@ SET ROLE hafbe_owner;
         description: |
           The number of voters currently voting for this witness
 
-          * Returns array of `hafbe_types.witness_voter`
+          * Returns `JSON`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_witness_voters'
+              type: string
+              x-sql-datatype: JSON
             example:
               - voter: "blocktrades"
                 vests: "13155953611548185"
@@ -98,7 +99,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     "direction" hafbe_types.sort_direction = 'desc',
     "result-limit" INT = 2147483647
 )
-RETURNS SETOF hafbe_types.witness_voter 
+RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -107,51 +108,24 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
-DECLARE
-_witness_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-
-RETURN QUERY EXECUTE format(
-  $query$
-
-  WITH limited_set AS (
-    SELECT 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
-      wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
-    FROM hafbe_app.witness_voters_stats_cache wvsc
-    WHERE witness_id = %L   
-  ),
-  limited_set_order AS MATERIALIZED (
-    SELECT * FROM limited_set
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC  
-    LIMIT %L
-  ),
-  get_block_num AS MATERIALIZED
-  (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
-
-  SELECT ls.voter, 
-  ls.vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.vests))::BIGINT,
-  ls.account_vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.account_vests))::BIGINT,
-  ls.proxied_vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.proxied_vests))::BIGINT,
-  ls.timestamp
-  FROM limited_set_order ls
-  ORDER BY
-    (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-  ;
-
-  $query$,
-  _witness_id, "direction", "sort", "direction", "sort", "result-limit",
-  "direction", "sort", "direction", "sort"
-) res;
-
+  RETURN (
+    SELECT json_build_object(
+      'votes_updated_at', (SELECT last_updated_at 
+          FROM hafbe_app.witnesses_cache_config
+          ),
+      'votes', 
+        (SELECT to_json(array_agg(row)) FROM (
+          SELECT * FROM hafbe_backend.get_witness_voters(
+            "account-name",
+            "sort",
+            "direction",
+            "result-limit")
+      ) row)
+    )
+  );
 END
 $$;
 
