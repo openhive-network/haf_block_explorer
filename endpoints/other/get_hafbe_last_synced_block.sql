@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/last-synced-block''`
+      * `GET ''https://%1$s/hafbe-api/last-synced-block''`
     operationId: hafbe_endpoints.get_hafbe_last_synced_block
     responses:
       '200':

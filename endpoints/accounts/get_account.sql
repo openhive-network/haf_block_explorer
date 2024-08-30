@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/accounts/blocktrades''`
+      * `GET ''https://%1$s/hafbe-api/accounts/blocktrades''`
     operationId: hafbe_endpoints.get_account
     parameters:
       - in: path

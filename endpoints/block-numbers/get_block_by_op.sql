@@ -14,7 +14,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`
 
       REST call example
-      * `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`
+      * `GET ''https://%1$s/hafbe-api/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`
     operationId: hafbe_endpoints.get_block_by_op
     parameters:
       - in: query

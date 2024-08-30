@@ -15,7 +15,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`
             
       REST call example
-      * `GET ''https://%1$s/hafbe/input-type/blocktrades''`
+      * `GET ''https://%1$s/hafbe-api/input-type/blocktrades''`
     operationId: hafbe_endpoints.get_input_type
     parameters:
       - in: path

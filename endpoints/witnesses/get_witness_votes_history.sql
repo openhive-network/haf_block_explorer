@@ -14,7 +14,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/witnesses/blocktrades/votes/history?result-limit=2''`
+      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?result-limit=2''`
     operationId: hafbe_endpoints.get_witness_votes_history
     parameters:
       - in: path

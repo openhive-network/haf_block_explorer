@@ -15,7 +15,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`
       
       REST call example      
-      * `GET ''https://%1$s/hafbe/operation-type-counts?result-limit=1''`
+      * `GET ''https://%1$s/hafbe-api/operation-type-counts?result-limit=1''`
     operationId: hafbe_endpoints.get_latest_blocks
     parameters:
       - in: query

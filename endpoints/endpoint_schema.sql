@@ -25,7 +25,7 @@ tags:
   - name: Other
     description: General API information
 servers:
-  - url: /hafbe
+  - url: /hafbe-api
  */
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
@@ -640,7 +640,7 @@ declare
   ],
   "servers": [
     {
-      "url": "/hafbe"
+      "url": "/hafbe-api"
     }
   ],
   "paths": {
@@ -650,7 +650,7 @@ declare
           "Witnesses"
         ],
         "summary": "List witnesses",
-        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses?result-limit=2''`\n",
+        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witnesses",
         "parameters": [
           {
@@ -764,7 +764,7 @@ declare
           "Witnesses"
         ],
         "summary": "Returns information about a witness.",
-        "description": "Returns information about a witness given their account name.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades''`\n",
+        "description": "Returns information about a witness given their account name.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_witness",
         "parameters": [
           {
@@ -827,7 +827,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get information about the voters for a witness",
-        "description": "Get information about the voters voting for a given witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters?result-limit=2''`\n",
+        "description": "Get information about the voters voting for a given witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters",
         "parameters": [
           {
@@ -921,7 +921,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the number of voters for a witness",
-        "description": "Get the number of voters for a witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`\n",
+        "description": "Get the number of voters for a witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters/count''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters_num",
         "parameters": [
           {
@@ -958,7 +958,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the history of votes for this witness.",
-        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/witnesses/blocktrades/votes/history?result-limit=2''`\n",
+        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?result-limit=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_votes_history",
         "parameters": [
           {
@@ -1075,7 +1075,7 @@ declare
           "Accounts"
         ],
         "summary": "Get information about an account including Hive token balances.",
-        "description": "Get account''s balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades''`\n",
+        "description": "Get account''s balances and parameters\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_account",
         "parameters": [
           {
@@ -1162,7 +1162,7 @@ declare
           "Accounts"
         ],
         "summary": "Get account''s owner, active, posting, memo and witness signing authorities",
-        "description": "Get information about account''s owner, active, posting, memo and witness signing authorities.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/authority''` \n",
+        "description": "Get information about account''s owner, active, posting, memo and witness signing authorities.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_account_authority(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades/authority''` \n",
         "operationId": "hafbe_endpoints.get_account_authority",
         "parameters": [
           {
@@ -1234,7 +1234,7 @@ declare
           "Accounts"
         ],
         "summary": "Get comment-related operations for an account.",
-        "description": "List operations related to account. Optionally filtered by permlink,\ntime/blockrange, and specific comment-related operations.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
+        "description": "List operations related to account. Optionally filtered by permlink,\ntime/blockrange, and specific comment-related operations.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
         "operationId": "hafbe_endpoints.get_comment_operations",
         "parameters": [
           {
@@ -1399,7 +1399,7 @@ declare
           "Block-numbers"
         ],
         "summary": "List block numbers that match operation type filter, account name, and time/block range.",
-        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
+        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
         "operationId": "hafbe_endpoints.get_block_by_op",
         "parameters": [
           {
@@ -1530,7 +1530,7 @@ declare
           "Other"
         ],
         "summary": "Get Haf_block_explorer''s version",
-        "description": "Get haf_block_explorer''s last commit hash (versions set by by hash value).\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/version''`\n",
+        "description": "Get haf_block_explorer''s last commit hash (versions set by by hash value).\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_version();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/version''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_version",
         "responses": {
           "200": {
@@ -1556,7 +1556,7 @@ declare
           "Other"
         ],
         "summary": "Get last block number synced by haf_block_explorer",
-        "description": "Get the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe/last-synced-block''`\n",
+        "description": "Get the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/last-synced-block''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "responses": {
           "200": {
@@ -1582,7 +1582,7 @@ declare
           "Other"
         ],
         "summary": "Determines object type of input-value.",
-        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name.\nThis method is very specific to block explorer UIs.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`\n      \nREST call example\n* `GET ''https://%1$s/hafbe/input-type/blocktrades''`\n",
+        "description": "Determines whether the entered value is a block,\nblock hash, transaction hash, or account name.\nThis method is very specific to block explorer UIs.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_input_type(''blocktrades'');`\n      \nREST call example\n* `GET ''https://%1$s/hafbe-api/input-type/blocktrades''`\n",
         "operationId": "hafbe_endpoints.get_input_type",
         "parameters": [
           {
@@ -1625,7 +1625,7 @@ declare
           "Other"
         ],
         "summary": "Returns histogram of operation types in blocks.",
-        "description": "Lists the counts of operations in result-limit blocks along with their creators. \nIf block-num is not specified, the result includes the counts of operations in the most recent blocks.\n\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe/operation-type-counts?result-limit=1''`\n",
+        "description": "Lists the counts of operations in result-limit blocks along with their creators. \nIf block-num is not specified, the result includes the counts of operations in the most recent blocks.\n\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_latest_blocks(1);`\n\nREST call example      \n* `GET ''https://%1$s/hafbe-api/operation-type-counts?result-limit=1''`\n",
         "operationId": "hafbe_endpoints.get_latest_blocks",
         "parameters": [
           {

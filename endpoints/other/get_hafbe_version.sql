@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_hafbe_version();`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/version''`
+      * `GET ''https://%1$s/hafbe-api/version''`
     operationId: hafbe_endpoints.get_hafbe_version
     responses:
       '200':

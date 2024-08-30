@@ -13,7 +13,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_witness_voters_num(''blocktrades'');`
       
       REST call example
-      * `GET ''https://%1$s/hafbe/witnesses/blocktrades/voters/count''`
+      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters/count''`
     operationId: hafbe_endpoints.get_witness_voters_num
     parameters:
       - in: path
