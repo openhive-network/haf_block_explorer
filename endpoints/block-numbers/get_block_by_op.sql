@@ -135,6 +135,8 @@ DECLARE
   _operation_types INT[] := NULL;
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
+  _is_key_incorrect BOOLEAN := FALSE;
+  _invalid_key TEXT := NULL;
 BEGIN
 IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
 
@@ -157,11 +159,27 @@ IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
-  FOR i IN 0 .. json_array_length(_set_of_keys)-1 LOOP
-	  IF NOT ARRAY(SELECT json_array_elements_text(_set_of_keys->i)) = ANY(SELECT * FROM hafbe_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) THEN
-	  RAISE EXCEPTION 'Invalid key %', _set_of_keys->i;
-    END IF;
-  END LOOP;
+	WITH user_provided_keys AS
+	(
+		SELECT json_array_elements_text(_set_of_keys) AS given_key
+	),
+	haf_keys AS
+	(
+		SELECT jsonb_array_elements_text(hafah_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) AS keys
+	),
+	check_if_given_keys_are_correct AS
+	(
+		SELECT up.given_key, hk.keys IS NULL AS incorrect_key
+		FROM user_provided_keys up
+		LEFT JOIN haf_keys hk ON replace(replace(hk.keys, ' ', ''),'\','') = replace(replace(up.given_key, ' ', ''),'\','')
+	)
+	SELECT given_key, incorrect_key INTO _invalid_key, _is_key_incorrect
+	FROM check_if_given_keys_are_correct
+	WHERE incorrect_key LIMIT 1;
+	
+	IF _is_key_incorrect THEN
+	  RAISE EXCEPTION 'Invalid key %', _invalid_key;
+	END IF;
 ELSE 
   IF "operation-types" IS NOT NULL THEN
     _operation_types := string_to_array("operation-types", ',')::INT[];
