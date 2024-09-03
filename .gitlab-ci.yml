@@ -26,8 +26,10 @@ include:
     ref: f2cec24d714fe31444313e151662a7220ac2b2ee # develop
     file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   - project: 'hive/common-ci-configuration'
-    ref: d4e29410ea168096e1a822f77c7ce741d9cfb57a
-    file: /templates/cache_cleanup.gitlab-ci.yml
+    ref: 12db226cfde2df929bb8bcb0c7c51d04c8900d32
+    file:
+      - '/templates/cache_cleanup.gitlab-ci.yml'
+      - '/templates/npm_projects.gitlab-ci.yml'
 
 .lint_job:
   extends: .job-defaults
@@ -159,6 +161,28 @@ docker-setup-docker-image-build:
     BASE_TAG: "$CI_COMMIT_SHORT_SHA"
     NAME: ""
     TARGET: "full-ci"
+
+extract-swagger-json:
+  extends: .filter_out_swagger_json
+  stage: build
+  variables:
+    INPUT_SQL_SWAGGER_FILE: "${CI_PROJECT_DIR}/endpoints/endpoint_schema.sql"
+  tags:
+    - public-runner-docker
+
+generate-wax-spec:
+  extends: .generate_swagger_package
+  stage: build
+  variables:
+    INPUT_JSON_SWAGGER_FILE: "${BUILT_JSON_SWAGGER_FILE}"
+    NAMESPACE: "hafbe"
+    NPM_PACKAGE_SCOPE: "@hiveio"
+    NPM_PACKAGE_NAME: "wax-api-hafbe"
+  needs:
+    - job: extract-swagger-json
+      artifacts: true
+  tags:
+    - public-runner-docker
 
 .test-template:
   extends: .docker_image_builder_job_template
@@ -373,3 +397,30 @@ build_and_publish_image:
   tags:
     - public-runner-docker
     - hived-for-tests
+
+deploy-wax-spec-dev-package:
+  extends: .npm_deploy_package_template
+  stage: publish
+  variables:
+    SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
+    PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
+    NPM_PACKAGE_SCOPE: "@hiveio"
+  needs:
+    - job: generate-wax-spec
+      artifacts: true
+  tags:
+    - public-runner-docker
+
+deploy-wax-spec-production-public-npm:
+  extends: .registry_npmjs_org_deploy_package_template
+  stage: publish
+  variables:
+    NPM_PUBLISH_TOKEN: "$INTERNAL_HIDDEN_PUBLISH_TOKEN"
+    NPM_PACKAGE_NAME: "wax-api-hafbe"
+    SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
+    PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
+  needs:
+    - job: generate-wax-spec
+      artifacts: true
+  tags:
+    - public-runner-docker
