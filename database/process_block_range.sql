@@ -74,7 +74,7 @@ BEGIN
   (
     SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
     FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id IN (12,42,11,7) 
+    WHERE ov.op_type_id IN (12,42,11,7,14,30) 
     AND ov.block_num BETWEEN _from AND _to
   ),
   select_witness_names AS MATERIALIZED ( 
@@ -328,11 +328,53 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
+  -- parse witness signing_key
+  WITH select_ops_with_signing_key AS (
+    SELECT witness, value, op_type_id, operation_id
+    FROM hafbe_views.witness_prop_op_view
+    WHERE op_type_id = ANY('{14,30}') AND block_num BETWEEN _from AND _to
+  ),
+
+  select_signing_key_from_pow AS (
+    SELECT value->'work'->>'worker' AS signing_key, operation_id, witness
+    FROM select_ops_with_signing_key
+    WHERE op_type_id = 14
+  ),
+
+  select_signing_key_from_pow_two AS (
+    SELECT value->>'new_owner_key' AS signing_key, operation_id, witness
+    FROM select_ops_with_signing_key
+    WHERE op_type_id = 30
+  )
+
+  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
+    SELECT 
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
+      signing_key
+    FROM (
+      SELECT
+        signing_key, witness,
+        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id ASC) AS row_n
+      FROM (
+        SELECT signing_key, operation_id, witness
+        FROM select_signing_key_from_pow
+
+        UNION
+
+        SELECT signing_key, operation_id, witness
+        FROM select_signing_key_from_pow_two
+      ) sp
+      WHERE signing_key IS NOT NULL
+    ) prop
+    WHERE row_n = 1
+  ) ops
+  WHERE cw.witness_id = ops.witness_id AND cw.signing_key IS NULL;
+
       -- parse witness hbd_interest_rate
   WITH select_ops_with_hbd_interest_rate AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
   ),
 
   select_hbd_interest_rate_from_set_witness_properties AS (
@@ -350,7 +392,7 @@ BEGIN
   select_hbd_interest_rate_from_witness_update_op AS (
     SELECT (value->'props'->>'hbd_interest_rate')::INT AS hbd_interest_rate, operation_id, witness
     FROM select_ops_with_hbd_interest_rate
-    WHERE op_type_id = 11
+    WHERE op_type_id != 42
   )
 
   UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
@@ -380,7 +422,7 @@ BEGIN
   WITH select_ops_with_account_creation_fee AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_views.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
   ),
 
   select_account_creation_fee_from_set_witness_properties AS (
@@ -398,7 +440,7 @@ BEGIN
   select_account_creation_fee_from_witness_update_op AS (
     SELECT (value->'props'->'account_creation_fee'->>'amount')::INT AS account_creation_fee, operation_id, witness
     FROM select_ops_with_account_creation_fee
-    WHERE op_type_id = 11
+    WHERE op_type_id != 42
   )
 
   UPDATE hafbe_app.current_witnesses cw SET account_creation_fee = ops.account_creation_fee FROM (
