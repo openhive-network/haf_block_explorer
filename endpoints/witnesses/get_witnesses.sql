@@ -56,6 +56,8 @@ SET ROLE hafbe_owner;
 
            * `price_feed` - their current published value for the HIVE/HBD price feed
 
+           * `feed_updated_at` - feed update timestamp
+
            * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:
                   base: 0.250 HBD
                   quote: 1.100 HIVE

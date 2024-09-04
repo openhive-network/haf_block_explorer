@@ -62,6 +62,7 @@ hafbe_types.order_by_witness:
     - block_size
     - signing_key
     - version
+    - feed_updated_at
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.order_by_witness CASCADE;
@@ -77,7 +78,8 @@ CREATE TYPE hafbe_types.order_by_witness AS ENUM (
     'bias',
     'block_size',
     'signing_key',
-    'version'
+    'version',
+    'feed_updated_at'
 );
 -- openapi-generated-code-end
 
