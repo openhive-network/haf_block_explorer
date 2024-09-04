@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--user", default="haf_admin", help="PostgreSQL user (default: haf_admin)")
     parser.add_argument("--password", default="", help="PostgreSQL password (default: empty)")
     parser.add_argument("--debug", action="store_true", help="Run in debug mode (default: false)")
+    parser.add_argument("--type", default="account", help="Which test is running (account or witness, default: account)")
 
     args = parser.parse_args()
     
@@ -22,7 +23,10 @@ def main():
     with open(json_file_path) as file:
         data = json.load(file)
 
-    accounts = data["result"]["accounts"]
+    if args.type == "account":
+        accounts = data["result"]["accounts"]
+    else:
+        accounts = data["result"]
 
     try:
         if args.debug:
@@ -48,12 +52,18 @@ def main():
 
         cursor = connection.cursor()
 
-        query = "SELECT hafbe_backend.dump_current_account_stats(%s)"
+        if args.type == "account":
+            query = "SELECT hafbe_backend.dump_current_account_stats(%s)"
+        else:
+            query = "SELECT hafbe_backend.dump_current_witness_props(%s)"
 
         # Iterate over objects inside 'accounts[]'
         for account in accounts:
-            if args.debug:
-                print("Processing account '{name}'".format(name=account["name"]))
+            if args.debug: 
+                if args.type == "account":
+                    print("Processing account '{name}'".format(name=account["name"]))
+                else:
+                    print("Processing account '{name}'".format(name=account["owner"]))
             object_value = json.dumps(account)
             cursor.execute(query, (object_value,))
 

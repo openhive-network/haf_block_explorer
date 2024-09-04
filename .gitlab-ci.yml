@@ -308,6 +308,9 @@ psql-client-regression-test:
       cd tests/account_parameters
       ./accounts_dump_test.sh --host=docker
 
+      cd ../witness_parameters
+      ./witnesses_dump_test.sh --host=docker
+
       echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
