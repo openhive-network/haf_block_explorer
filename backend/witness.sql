@@ -139,12 +139,12 @@ BEGIN
       SELECT
         cw.witness_id, 
         (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
-        cw.url,
-        cw.price_feed,
+        COALESCE(cw.url, '') AS url,
+        COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
         cw.bias,
-        cw.feed_updated_at,
+        COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
         cw.block_size, 
-        cw.signing_key, 
+        COALESCE(cw.signing_key, '') AS signing_key, 
         cw.version, 
         b.rank, 
         COALESCE(b.votes,0) AS votes, 
@@ -158,9 +158,9 @@ BEGIN
           WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
         )::INT
         ,0) AS missed_blocks,
-        COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
+        cw.hbd_interest_rate,
         cw.last_created_block_num,
-        cw.account_creation_fee
+        cw.account_creation_fee 
       FROM hafbe_app.current_witnesses cw
       LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
@@ -173,20 +173,10 @@ BEGIN
       OFFSET %L
       LIMIT %L
     ),
-    add_last_produced_account AS 
-    (
-      SELECT 
-        bv.producer_account_id, 
-        MAX(bv.num) AS last_created_block_num 
-      FROM hive.blocks_view bv
-      JOIN limited_set_order lso ON lso.witness_id = bv.producer_account_id
-      GROUP BY bv.producer_account_id
-    ),
     get_block_num AS MATERIALIZED
     (
-    SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
+      SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
     )
-
     SELECT
       ls.witness, 
       ls.rank, 
@@ -235,9 +225,13 @@ BEGIN
     WITH limited_set AS (
     SELECT
       cw.witness_id, av.name::TEXT AS witness,
-      cw.url, cw.price_feed, cw.bias,
-      cw.feed_updated_at,
-      cw.block_size, cw.signing_key, cw.version,
+      COALESCE(cw.url, '') AS url,
+      COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
+      cw.bias,
+      COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
+      cw.block_size, 
+      COALESCE(cw.signing_key, '') AS signing_key, 
+      cw.version,
       COALESCE(
       (
           SELECT count(*) as missed
@@ -245,7 +239,7 @@ BEGIN
           WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
       )::INT
       ,0) AS missed_blocks,
-      COALESCE(cw.hbd_interest_rate, 0) AS hbd_interest_rate,
+      cw.hbd_interest_rate,
       cw.last_created_block_num,
       cw.account_creation_fee
     FROM hive.accounts_view av
