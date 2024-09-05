@@ -141,11 +141,11 @@ BEGIN
         (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
         COALESCE(cw.url, '') AS url,
         COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
-        cw.bias,
+        COALESCE(cw.bias, 0) AS bias,
         COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
-        cw.block_size, 
+        COALESCE(cw.block_size, 0) AS block_size,
         COALESCE(cw.signing_key, '') AS signing_key, 
-        cw.version, 
+        COALESCE(cw.version, '0.0.0') AS version,
         b.rank, 
         COALESCE(b.votes,0) AS votes, 
         COALESCE(b.voters_num,0) AS voters_num, 
@@ -158,9 +158,9 @@ BEGIN
           WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
         )::INT
         ,0) AS missed_blocks,
-        cw.hbd_interest_rate,
-        cw.last_created_block_num,
-        cw.account_creation_fee 
+        COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
+        COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
+        COALESCE(cw.account_creation_fee,0) AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
       LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
@@ -224,14 +224,15 @@ BEGIN
   RETURN (
     WITH limited_set AS (
     SELECT
-      cw.witness_id, av.name::TEXT AS witness,
+      cw.witness_id,
+      av.name::TEXT AS witness,
       COALESCE(cw.url, '') AS url,
       COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
-      cw.bias,
+      COALESCE(cw.bias, 0) AS bias,
       COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
-      cw.block_size, 
+      COALESCE(cw.block_size, 0) AS block_size,
       COALESCE(cw.signing_key, '') AS signing_key, 
-      cw.version,
+      COALESCE(cw.version, '0.0.0') AS version,
       COALESCE(
       (
           SELECT count(*) as missed
@@ -239,9 +240,9 @@ BEGIN
           WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
       )::INT
       ,0) AS missed_blocks,
-      cw.hbd_interest_rate,
-      cw.last_created_block_num,
-      cw.account_creation_fee
+      COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
+      COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
+      COALESCE(cw.account_creation_fee,0) AS account_creation_fee
     FROM hive.accounts_view av
     JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
     WHERE av.name = "account-name"
