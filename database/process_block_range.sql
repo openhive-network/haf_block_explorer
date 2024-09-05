@@ -95,22 +95,30 @@ BEGIN
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   -- insert witness node version
-  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM (
-    SELECT witness_id, version
+  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM 
+  (
+    SELECT witness_id, version, row_n
     FROM (
-      SELECT
-        cw.witness_id,
-        CASE WHEN extensions->0->>'type' = 'version' THEN
-          extensions->0->>'value'
-        ELSE
-          extensions->1->>'value'
-        END AS version,
-        ROW_NUMBER() OVER (PARTITION BY cw.witness_id ORDER BY num DESC) AS row_n
-      FROM hafbe_app.blocks_view hbv
-      JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
-      WHERE num BETWEEN _from AND _to AND extensions IS NOT NULL
+      WITH get_version AS
+      (
+        SELECT
+          cw.witness_id,
+          CASE WHEN hbv.extensions->0->>'type' = 'version' THEN
+            hbv.extensions->0->>'value'
+          ELSE
+            hbv.extensions->1->>'value'
+          END AS version,
+          hbv.num
+        FROM hafbe_app.blocks_view hbv
+        JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
+        WHERE hbv.num BETWEEN _from AND _to AND hbv.extensions IS NOT NULL
+      )
+      SELECT gv.witness_id, gv.version,
+      ROW_NUMBER() OVER (PARTITION BY gv.witness_id ORDER BY gv.num DESC) AS row_n
+      FROM get_version gv
+      WHERE gv.version IS NOT NULL
     ) row_count
-    WHERE row_n = 1 AND version IS NOT NULL
+    WHERE row_n = 1
   ) w_node
   WHERE cw.witness_id = w_node.witness_id;
 
