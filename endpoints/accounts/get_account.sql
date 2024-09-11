@@ -126,29 +126,29 @@ RETURN (
     --COALESCE(_result_balance.post_voting_power_vests, 0),
 
     --saving
-    COALESCE(_result_savings.hbd_savings, 0)::BIGINT,
-    COALESCE(_result_savings.hive_savings, 0)::BIGINT,
-    COALESCE(_result_savings.savings_withdraw_requests, 0),
+    COALESCE(_result_balance.hbd_savings, 0)::BIGINT,
+    COALESCE(_result_balance.hive_savings, 0)::BIGINT,
+    COALESCE(_result_balance.savings_withdraw_requests, 0),
 
     --reward
-    COALESCE(_result_rewards.hbd_rewards, 0)::BIGINT,
-    COALESCE(_result_rewards.hive_rewards, 0)::BIGINT,
-    COALESCE(_result_rewards.vests_rewards, '0')::TEXT,
-    COALESCE(_result_rewards.hive_vesting_rewards, 0)::BIGINT,
-    COALESCE(_result_curation_posting.posting_rewards, '0')::TEXT,
-    COALESCE(_result_curation_posting.curation_rewards, '0')::TEXT,
+    COALESCE(_result_balance.hbd_rewards, 0)::BIGINT,
+    COALESCE(_result_balance.hive_rewards, 0)::BIGINT,
+    COALESCE(_result_balance.vests_rewards, '0')::TEXT,
+    COALESCE(_result_balance.hive_vesting_rewards, 0)::BIGINT,
+    COALESCE(_result_balance.posting_rewards, '0')::TEXT,
+    COALESCE(_result_balance.curation_rewards, '0')::TEXT,
 
     --received/delegated/proxied
-    COALESCE(_result_vest_balance.delegated_vests, '0')::TEXT,
-    COALESCE(_result_vest_balance.received_vests, '0')::TEXT,
+    COALESCE(_result_balance.delegated_vests, '0')::TEXT,
+    COALESCE(_result_balance.received_vests, '0')::TEXT,
     COALESCE(_result_proxied_votes, '[]'),
 
     --withdraw
-    COALESCE(_result_withdraws.withdrawn, '0')::TEXT,
-    COALESCE(_result_withdraws.vesting_withdraw_rate, '0')::TEXT,
-    COALESCE(_result_withdraws.to_withdraw, '0')::TEXT,
-    COALESCE(_result_withdraws.withdraw_routes, 0)::INT,
-    COALESCE(_result_withdraws.delayed_vests, '0')::TEXT,
+    COALESCE(_result_balance.withdrawn, '0')::TEXT,
+    COALESCE(_result_balance.vesting_withdraw_rate, '0')::TEXT,
+    COALESCE(_result_balance.to_withdraw, '0')::TEXT,
+    COALESCE(_result_balance.withdraw_routes, 0)::INT,
+    COALESCE(_result_balance.delayed_vests, '0')::TEXT,
 
     --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
     --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
@@ -164,11 +164,6 @@ RETURN (
   )
   FROM 
     btracker_endpoints.get_account_balances("account-name")      _result_balance,
-    btracker_endpoints.get_account_withdraws("account-name")     _result_withdraws,
-    btracker_endpoints.get_account_delegations("account-name")   _result_vest_balance,
-    btracker_endpoints.get_account_rewards("account-name")       _result_rewards,
-    btracker_endpoints.get_account_savings("account-name")       _result_savings,
-    btracker_endpoints.get_account_info_rewards("account-name")  _result_curation_posting,
     reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
     hafbe_backend.get_json_metadata(_account_id)              _result_json_metadata,
     hafbe_backend.get_account_parameters(_account_id)         _result_parameters,
