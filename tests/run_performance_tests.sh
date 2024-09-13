@@ -141,6 +141,11 @@ run_jmeter() {
         --jmeterproperty "summary.report.path=$result_dir/result.xml"
 }
 
+postgres_access="postgresql://$POSTGRESQL_USER@$POSTGRESQL_HOST:$POSTGRESQL_PORT/haf_block_log"
+
+psql "$postgres_access" -v "ON_ERROR_STOP=on" -f "$TEST_ROOT_DIRECTORY/../backend/hafbe_blocksearch_indexes.sql"
+psql "$postgres_access" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = TRUE;"
+
 cleanup
 generate_db "$POSTGRESQL_PORT" "$POSTGRESQL_HOST" "$POSTGRESQL_USER" "$POSTGRESQL_PASSWORD" "$POSTGRESQL_DATABASE" "$DATABASE_SIZE"
 run_jmeter "$POSTGREST_PORT" "$POSTGREST_HOST" "$TEST_THREAD_COUNT" "$TEST_LOOP_COUNT"
