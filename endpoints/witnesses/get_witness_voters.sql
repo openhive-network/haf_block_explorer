@@ -11,10 +11,10 @@ SET ROLE hafbe_owner;
       Get information about the voters voting for a given witness
 
       SQL example      
-      * `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`
+      * `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'',1,2);`
       
       REST call example
-      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters?result-limit=2''`
+      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters?page-size=2''`
     operationId: hafbe_endpoints.get_witness_voters
     parameters:
       - in: path
@@ -81,6 +81,8 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:
               - {
+                  "total_operations": 263,
+                  "total_pages": 132,
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "voters": [
                     {

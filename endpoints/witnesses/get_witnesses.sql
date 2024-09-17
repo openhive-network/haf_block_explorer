@@ -11,10 +11,10 @@ SET ROLE hafbe_owner;
       List all witnesses (both active and standby)
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_witnesses(2);`
+      * `SELECT * FROM hafbe_endpoints.get_witnesses(1,2);`
       
       REST call example
-      * `GET ''https://%1$s/hafbe-api/witnesses?result-limit=2''`
+      * `GET ''https://%1$s/hafbe-api/witnesses?page-size=2''`
     operationId: hafbe_endpoints.get_witnesses
     parameters:
       - in: query
@@ -94,6 +94,8 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:
               - {
+                  "total_operations": 731,
+                  "total_pages": 366,
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "witnesses": [
                     {

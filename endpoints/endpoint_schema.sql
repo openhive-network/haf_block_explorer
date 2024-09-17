@@ -611,7 +611,7 @@ declare
           "Witnesses"
         ],
         "summary": "List witnesses",
-        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses?result-limit=2''`\n",
+        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(1,2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_witnesses",
         "parameters": [
           {
@@ -666,6 +666,8 @@ declare
                 },
                 "example": [
                   {
+                    "total_operations": 731,
+                    "total_pages": 366,
                     "votes_updated_at": "2024-08-29T12:05:08.097875",
                     "witnesses": [
                       {
@@ -782,7 +784,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get information about the voters for a witness",
-        "description": "Get information about the voters voting for a given witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters?result-limit=2''`\n",
+        "description": "Get information about the voters voting for a given witness\n\nSQL example      \n* `SELECT * FROM hafbe_endpoints.get_witness_voters(''blocktrades'',1,2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/voters?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_voters",
         "parameters": [
           {
@@ -846,6 +848,8 @@ declare
                 },
                 "example": [
                   {
+                    "total_operations": 263,
+                    "total_pages": 132,
                     "votes_updated_at": "2024-08-29T12:05:08.097875",
                     "voters": [
                       {
