@@ -24,6 +24,21 @@ SET ROLE hafbe_owner;
           type: string
         description: witness account name
       - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: |
+          Return page on `page` number, defaults to `1`
+      - in: query
+        name: page-size
+        required: false
+        schema:
+          type: integer
+          default: 100
+        description: Return max `page-size` operations per page, defaults to `100`
+      - in: query
         name: sort
         required: false
         schema:
@@ -53,13 +68,6 @@ SET ROLE hafbe_owner;
            * `asc` - Ascending, from A to Z or smallest to largest
 
            * `desc` - Descending, from Z to A or largest to smallest
-      - in: query
-        name: result-limit
-        required: false
-        schema:
-          type: integer
-          default: 2147483647
-        description: Return at most `result-limit` voters
     responses:
       '200':
         description: |
@@ -98,9 +106,10 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     "account-name" TEXT,
+    "page" INT = 1,
+    "page-size" INT = 100,
     "sort" hafbe_types.order_by_votes = 'vests',
-    "direction" hafbe_types.sort_direction = 'desc',
-    "result-limit" INT = 2147483647
+    "direction" hafbe_types.sort_direction = 'desc'
 )
 RETURNS JSON 
 -- openapi-generated-code-end
@@ -111,21 +120,42 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
+DECLARE
+  _witness_id INT = hafbe_backend.get_account_id("account-name");
+  _ops_count INT;
+  _calculate_total_pages INT;
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
+    --count for given parameters 
+  SELECT COUNT(*) INTO _ops_count
+  FROM hafbe_app.witness_voters_stats_cache 
+  WHERE witness_id = _witness_id;
+
+  --amount of pages
+  SELECT 
+    (
+      CASE WHEN (_ops_count % "page-size") = 0 THEN 
+        _ops_count/"page-size" 
+      ELSE ((_ops_count/"page-size") + 1) 
+      END
+    )::INT INTO _calculate_total_pages;
+
   RETURN (
     SELECT json_build_object(
+      'total_operations', _ops_count,
+      'total_pages', _calculate_total_pages,
       'votes_updated_at', (SELECT last_updated_at 
           FROM hafbe_app.witnesses_cache_config
           ),
       'voters', 
         (SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witness_voters(
-            "account-name",
+            _witness_id,
+            "page",
+            "page-size",
             "sort",
-            "direction",
-            "result-limit")
+            "direction")
       ) row)
     )
   );

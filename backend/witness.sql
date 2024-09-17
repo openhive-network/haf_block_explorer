@@ -2,10 +2,11 @@ SET ROLE hafbe_owner;
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(
-    "account-name" TEXT,
+    "account_id" INT,
+    "page" INT,
+    "page-size" INT,
     "sort" hafbe_types.order_by_votes,
-    "direction" hafbe_types.sort_direction,
-    "result-limit" INT
+    "direction" hafbe_types.sort_direction
 )
 RETURNS SETOF hafbe_types.witness_voter 
 -- openapi-generated-code-end
@@ -14,43 +15,45 @@ STABLE
 AS
 $$
 DECLARE
-_witness_id INT = hafbe_backend.get_account_id("account-name");
+  _offset INT := ((("page" - 1) * "page-size"));
 BEGIN
-RETURN QUERY EXECUTE format(
-  $query$
+  RETURN QUERY EXECUTE format(
+    $query$
 
-  WITH limited_set AS (
+    WITH limited_set AS (
+      SELECT 
+        (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
+        wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
+      FROM hafbe_app.witness_voters_stats_cache wvsc
+      WHERE witness_id = %L   
+    ),
+    limited_set_order AS MATERIALIZED (
+      SELECT * FROM limited_set
+      ORDER BY
+        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      OFFSET %L  
+      LIMIT %L
+    ),
+    get_block_num AS MATERIALIZED
+    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+
     SELECT 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
-      wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
-    FROM hafbe_app.witness_voters_stats_cache wvsc
-    WHERE witness_id = %L   
-  ),
-  limited_set_order AS MATERIALIZED (
-    SELECT * FROM limited_set
+      ls.voter, 
+      ls.vests::TEXT,
+      ls.account_vests::TEXT,
+      ls.proxied_vests::TEXT,
+      ls.timestamp
+    FROM limited_set_order ls
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC  
-    LIMIT %L
-  ),
-  get_block_num AS MATERIALIZED
-  (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    ;
 
-  SELECT ls.voter, 
-  ls.vests::TEXT,
-  ls.account_vests::TEXT,
-  ls.proxied_vests::TEXT,
-  ls.timestamp
-  FROM limited_set_order ls
-  ORDER BY
-    (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
-  ;
-
-  $query$,
-  _witness_id, "direction", "sort", "direction", "sort", "result-limit",
-  "direction", "sort", "direction", "sort"
-) res;
+    $query$,
+    "account_id", "direction", "sort", "direction", "sort", _offset, "page-size",
+    "direction", "sort", "direction", "sort"
+  ) res;
 
 END
 $$;
@@ -114,8 +117,8 @@ $$;
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
-    "result-limit" INT,
-    "offset" INT,
+    "page" INT,
+    "page-size" INT,
     "sort" hafbe_types.order_by_witness,
     "direction" hafbe_types.sort_direction
 )
@@ -124,6 +127,8 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
+DECLARE
+  _offset INT := ((("page" - 1) * "page-size"));
 BEGIN
   RETURN QUERY EXECUTE format(
     $query$
@@ -195,7 +200,7 @@ BEGIN
       (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
 
     $query$,
-    "direction", "sort", "direction", "sort", "offset","result-limit",
+    "direction", "sort", "direction", "sort", _offset,"page-size",
     "direction", "sort", "direction", "sort"
   );
 

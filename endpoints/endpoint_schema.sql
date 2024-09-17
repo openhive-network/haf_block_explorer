@@ -616,23 +616,23 @@ declare
         "parameters": [
           {
             "in": "query",
-            "name": "result-limit",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
             "required": false,
             "schema": {
               "type": "integer",
               "default": 100
             },
-            "description": "For pagination, return at most `result-limit` witnesses"
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0
-            },
-            "description": "For pagination, start at the `offset` witness"
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -796,6 +796,26 @@ declare
           },
           {
             "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` operations per page, defaults to `100`"
+          },
+          {
+            "in": "query",
             "name": "sort",
             "required": false,
             "schema": {
@@ -813,16 +833,6 @@ declare
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
-          },
-          {
-            "in": "query",
-            "name": "result-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 2147483647
-            },
-            "description": "Return at most `result-limit` voters"
           }
         ],
         "responses": {

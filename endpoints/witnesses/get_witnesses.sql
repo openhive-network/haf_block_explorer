@@ -18,19 +18,20 @@ SET ROLE hafbe_owner;
     operationId: hafbe_endpoints.get_witnesses
     parameters:
       - in: query
-        name: result-limit
+        name: page
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: |
+          Return page on `page` number, defaults to `1`
+      - in: query
+        name: page-size
         required: false
         schema:
           type: integer
           default: 100
-        description: For pagination, return at most `result-limit` witnesses
-      - in: query
-        name: offset
-        required: false
-        schema:
-          type: integer
-          default: 0
-        description: For pagination, start at the `offset` witness
+        description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: sort
         required: false
@@ -139,8 +140,8 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
-    "result-limit" INT = 100,
-    "offset" INT = 0,
+    "page" INT = 1,
+    "page-size" INT = 100,
     "sort" hafbe_types.order_by_witness = 'votes',
     "direction" hafbe_types.sort_direction = 'desc'
 )
@@ -153,19 +154,37 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
+DECLARE
+  _ops_count INT;
+  _calculate_total_pages INT;
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
+  --count for given parameters 
+  SELECT COUNT(*) INTO _ops_count
+  FROM hafbe_app.current_witnesses;
+
+  --amount of pages
+  SELECT 
+    (
+      CASE WHEN (_ops_count % "page-size") = 0 THEN 
+        _ops_count/"page-size" 
+      ELSE ((_ops_count/"page-size") + 1) 
+      END
+    )::INT INTO _calculate_total_pages;
+
   RETURN (
     SELECT json_build_object(
+      'total_operations', _ops_count,
+      'total_pages', _calculate_total_pages,
       'votes_updated_at', (SELECT last_updated_at 
           FROM hafbe_app.witnesses_cache_config
           ),
       'witnesses', 
         (SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witnesses(
-            "result-limit",
-            "offset",
+            "page",
+            "page-size",
             "sort",
             "direction")
       ) row)
