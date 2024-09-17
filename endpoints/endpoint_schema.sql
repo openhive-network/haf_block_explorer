@@ -99,19 +99,9 @@ declare
             "type": "string",
             "description": "the total weight of votes cast in favor of this witness, expressed in VESTS"
           },
-          "vests_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "the total weight of votes cast in favor of this witness, expressed in HIVE power, at the current ratio"
-          },
           "votes_daily_change": {
             "type": "string",
             "description": "the increase or decrease in votes for this witness over the last 24 hours, expressed in vests"
-          },
-          "votes_daily_change_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "the increase or decrease in votes for this witness over the last 24 hours, expressed in HIVE power, at the current ratio"
           },
           "voters_num": {
             "type": "integer",
@@ -182,28 +172,13 @@ declare
             "type": "string",
             "description": "number of vests this voter is directly voting with"
           },
-          "votes_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests this voter is directly voting with, expressed in HIVE power, at the current ratio"
-          },
           "account_vests": {
             "type": "string",
             "description": "number of vests in the voter''s account.  if some vests are delegated, they will not be counted in voting"
           },
-          "account_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter''s account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
-          },
           "proxied_vests": {
             "type": "string",
             "description": "the number of vests proxied to this account"
-          },
-          "proxied_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "the number of vests proxied to this account expressed in HIVE power, at the current ratio"
           },
           "timestamp": {
             "type": "string",
@@ -233,28 +208,13 @@ declare
             "type": "string",
             "description": "number of vests this voter is directly voting with"
           },
-          "votes_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests this voter is directly voting with, expressed in HIVE power, at the current ratio"
-          },
           "account_vests": {
             "type": "string",
             "description": "number of vests in the voter''s account.  if some vests are delegated, they will not be counted in voting"
           },
-          "account_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of vests in the voter''s account, expressed in HIVE power, at the current ratio.  if some vests are delegated, they will not be counted in voting"
-          },
           "proxied_vests": {
             "type": "string",
             "description": "the number of vests proxied to this account"
-          },
-          "proxied_hive_power": {
-            "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "the number of vests proxied to this account expressed in HIVE power, at the current ratio"
           },
           "timestamp": {
             "type": "string",
@@ -713,9 +673,7 @@ declare
                         "rank": 1,
                         "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
                         "vests": "94172201023355097",
-                        "vests_hive_power": 31350553033,
                         "votes_daily_change": "0",
-                        "votes_daily_change_hive_power": 0,
                         "voters_num": 306,
                         "voters_num_daily_change": 0,
                         "price_feed": 0.539,
@@ -734,9 +692,7 @@ declare
                         "rank": 2,
                         "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
                         "vests": "91835048921097725",
-                        "vests_hive_power": 30572499530,
                         "votes_daily_change": "0",
-                        "votes_daily_change_hive_power": 0,
                         "voters_num": 348,
                         "voters_num_daily_change": 0,
                         "price_feed": 0.536,
@@ -795,9 +751,7 @@ declare
                       "rank": 8,
                       "url": "https://blocktrades.us",
                       "vests": "82373419958692803",
-                      "vests_hive_power": 27422660221,
                       "votes_daily_change": "0",
-                      "votes_daily_change_hive_power": 0,
                       "voters_num": 263,
                       "voters_num_daily_change": 0,
                       "price_feed": 0.545,
@@ -887,21 +841,15 @@ declare
                       {
                         "voter_name": "blocktrades",
                         "vests": "13155953611548185",
-                        "votes_hive_power": 4379704593,
                         "account_vests": "8172549681941451",
-                        "account_hive_power": 2720696229,
                         "proxied_vests": "4983403929606734",
-                        "proxied_hive_power": 1659008364,
                         "timestamp": "2016-04-15T02:19:57"
                       },
                       {
                         "voter_name": "dan",
                         "vests": "9928811304950768",
-                        "votes_hive_power": 3305367423,
                         "account_vests": "9928811304950768",
-                        "account_hive_power": 3305367423,
                         "proxied_vests": "0",
-                        "proxied_hive_power": 0,
                         "timestamp": "2016-06-27T12:41:42"
                       }
                     ]
@@ -1040,22 +988,16 @@ declare
                         "voter_name": "jeremyfromwi",
                         "approve": true,
                         "vests": "441156952466",
-                        "votes_hive_power": 146864,
                         "account_vests": "441156952466",
-                        "account_hive_power": 146864,
                         "proxied_vests": "0",
-                        "proxied_hive_power": 0,
                         "timestamp": "2016-09-15T07:07:15"
                       },
                       {
                         "voter_name": "cryptomental",
                         "approve": true,
                         "vests": "686005633844",
-                        "votes_hive_power": 228376,
                         "account_vests": "686005633844",
-                        "account_hive_power": 228376,
                         "proxied_vests": "0",
-                        "proxied_hive_power": 0,
                         "timestamp": "2016-09-15T07:00:51"
                       }
                     ]

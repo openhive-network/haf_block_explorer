@@ -13,33 +13,14 @@ hafbe_types.witness_votes_history_record:
     vests:
       type: string
       description: number of vests this voter is directly voting with
-    votes_hive_power:
-      type: integer
-      x-sql-datatype: BIGINT
-      description: >-
-        number of vests this voter is directly voting with, expressed in
-        HIVE power, at the current ratio
     account_vests:
       type: string
       description: >-
         number of vests in the voter''s account.  if some vests are
         delegated, they will not be counted in voting
-    account_hive_power:
-      type: integer
-      x-sql-datatype: BIGINT
-      description: >-
-        number of vests in the voter''s account, expressed in HIVE power, at
-        the current ratio.  if some vests are delegated, they will not be
-        counted in voting
     proxied_vests:
       type: string
       description: the number of vests proxied to this account
-    proxied_hive_power:
-      type: integer
-      x-sql-datatype: BIGINT
-      description: >-
-        the number of vests proxied to this account expressed in HIVE power,
-        at the current ratio
     timestamp:
       type: string
       format: date-time
@@ -51,11 +32,8 @@ CREATE TYPE hafbe_types.witness_votes_history_record AS (
     "voter_name" TEXT,
     "approve" BOOLEAN,
     "vests" TEXT,
-    "votes_hive_power" BIGINT,
     "account_vests" TEXT,
-    "account_hive_power" BIGINT,
     "proxied_vests" TEXT,
-    "proxied_hive_power" BIGINT,
     "timestamp" TIMESTAMP
 );
 -- openapi-generated-code-end

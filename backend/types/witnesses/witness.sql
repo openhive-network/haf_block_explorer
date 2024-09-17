@@ -21,23 +21,11 @@ hafbe_types.witness:
       description: >-
         the total weight of votes cast in favor of this witness, expressed
         in VESTS
-    vests_hive_power:
-      type: integer
-      x-sql-datatype: BIGINT
-      description: >-
-        the total weight of votes cast in favor of this witness, expressed
-        in HIVE power, at the current ratio
     votes_daily_change:
       type: string
       description: >-
         the increase or decrease in votes for this witness over the last 24
         hours, expressed in vests
-    votes_daily_change_hive_power:
-      type: integer
-      x-sql-datatype: BIGINT
-      description: >-
-        the increase or decrease in votes for this witness over the last 24
-        hours, expressed in HIVE power, at the current ratio
     voters_num:
       type: integer
       description: the number of voters for this witness
@@ -98,9 +86,7 @@ CREATE TYPE hafbe_types.witness AS (
     "rank" INT,
     "url" TEXT,
     "vests" TEXT,
-    "vests_hive_power" BIGINT,
     "votes_daily_change" TEXT,
-    "votes_daily_change_hive_power" BIGINT,
     "voters_num" INT,
     "voters_num_daily_change" INT,
     "price_feed" FLOAT,

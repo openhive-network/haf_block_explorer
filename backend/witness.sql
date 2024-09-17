@@ -38,11 +38,8 @@ RETURN QUERY EXECUTE format(
 
   SELECT ls.voter, 
   ls.vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.vests))::BIGINT,
   ls.account_vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.account_vests))::BIGINT,
   ls.proxied_vests::TEXT,
-  (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.proxied_vests))::BIGINT,
   ls.timestamp
   FROM limited_set_order ls
   ORDER BY
@@ -99,11 +96,8 @@ RETURN QUERY EXECUTE format(
   SELECT
     wvh.voter, wvh.approve, 
     (wvh.account_vests + wvh.proxied_vests )::TEXT AS vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), (wvh.account_vests + wvh.proxied_vests) ))::BIGINT AS vests_hive_power,
     wvh.account_vests::TEXT AS account_vests, 
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.account_vests))::BIGINT AS account_hive_power,
     wvh.proxied_vests::TEXT AS proxied_vests,
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), wvh.proxied_vests))::BIGINT AS proxied_hive_power,
     wvh.timestamp AS timestamp
   FROM select_range wvh
   )
@@ -182,9 +176,7 @@ BEGIN
       ls.rank, 
       ls.url,
       ls.votes::TEXT,
-      (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes))::BIGINT, 
       ls.votes_daily_change::TEXT,
-      (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), ls.votes_daily_change))::BIGINT, 
       ls.voters_num,
       ls.voters_num_daily_change,
       ls.price_feed, 
@@ -255,9 +247,7 @@ BEGIN
     all_votes.rank, 
     ls.url,
     COALESCE(all_votes.votes::TEXT, '0'),
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(all_votes.votes, 0)))::BIGINT, 
     COALESCE(wvcc.votes_daily_change::TEXT, '0'),
-    (SELECT hive.get_vesting_balance((SELECT gbn.block_num FROM get_block_num gbn), COALESCE(wvcc.votes_daily_change, 0)))::BIGINT, 
     COALESCE(all_votes.voters_num, 0),
     COALESCE(wvcc.voters_num_daily_change, 0),
     ls.price_feed, 
