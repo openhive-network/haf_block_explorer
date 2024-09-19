@@ -35,7 +35,6 @@ BEGIN
     _name =>'hafbe_app',
     _schema => 'hafbe_app',
     _is_forking => TRUE,
-    _is_attached => FALSE,
     _stages => synchronization_stages
   );
 
