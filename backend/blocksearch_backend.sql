@@ -14,6 +14,8 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
+  __no_start_date BOOLEAN := (_from IS NULL);
+  __no_end_date BOOLEAN := (_to IS NULL);
   _first_key BOOLEAN = (_key_content[1] IS NULL);
   _second_key BOOLEAN = (_key_content[2] IS NULL);
   _third_key BOOLEAN = (_key_content[3] IS NULL);
@@ -26,7 +28,8 @@ IF _account IS NULL THEN
     SELECT DISTINCT ov.block_num FROM hive.operations_view ov
     WHERE 
       ov.op_type_id = %L AND 
-      ov.block_num BETWEEN %L AND %L AND 
+      (%L OR ov.block_num >= %L) AND
+	    (%L OR ov.block_num <= %L) AND
       (%L OR jsonb_extract_path_text(ov.body, variadic %L) = %L) AND 
       (%L OR jsonb_extract_path_text(ov.body, variadic %L) = %L) AND 
       (%L OR jsonb_extract_path_text(ov.body, variadic %L) = %L)
@@ -38,7 +41,8 @@ IF _account IS NULL THEN
     $query$, 
 
   _operations,
-  _from, _to, 
+  __no_start_date, _from,
+  __no_end_date, _to, 
   _first_key,
   ARRAY(SELECT json_array_elements_text(_setof_keys->0)), _key_content[1],
   _second_key,
@@ -64,7 +68,8 @@ ELSE
       WHERE 
         aov.op_type_id = %L AND 
         aov.account_id = (SELECT id FROM source_account_id) AND 
-        aov.block_num BETWEEN %L AND %L
+        (%L OR aov.block_num >= %L) AND
+	      (%L OR aov.block_num <= %L)
       GROUP BY aov.block_num
       ORDER BY aov.block_num %s),  
 
@@ -90,7 +95,8 @@ ELSE
 
     _account, 
     _operations, 
-    _from, _to, 
+    __no_start_date, _from,
+    __no_end_date, _to, 
     _order_is, 
     _operations, 
     _first_key,
@@ -121,6 +127,9 @@ RETURNS SETOF hafbe_types.block_by_ops -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
+DECLARE
+  __no_start_date BOOLEAN := (_from IS NULL);
+  __no_end_date BOOLEAN := (_to IS NULL);
 BEGIN
 IF _account IS NULL THEN
 
@@ -132,8 +141,9 @@ IF _account IS NULL THEN
       WITH disc_num AS (
       SELECT DISTINCT ov.block_num 
       FROM hive.operations_view ov
-      WHERE ov.op_type_id = unnested_op_types.op_type_id
-      AND ov.block_num BETWEEN %L AND %L
+      WHERE ov.op_type_id = unnested_op_types.op_type_id AND
+        (%L OR ov.block_num >= %L) AND
+	      (%L OR ov.block_num <= %L)
       GROUP BY ov.block_num
       ORDER BY ov.block_num %s
       LIMIT %L)
@@ -157,7 +167,8 @@ IF _account IS NULL THEN
 
     $query$, 
 
-  _from, _to, 
+  __no_start_date, _from,
+  __no_end_date, _to, 
   _order_is, 
   _limit, 
   _operations,
@@ -177,8 +188,9 @@ ELSE
       WITH disc_num AS (
       SELECT DISTINCT aov.block_num 
       FROM hive.account_operations_view aov
-      WHERE aov.op_type_id = unnested_op_types.op_type_id
-      AND aov.block_num BETWEEN %L AND %L 
+      WHERE aov.op_type_id = unnested_op_types.op_type_id AND
+        (%L OR aov.block_num >= %L) AND
+	      (%L OR aov.block_num <= %L)
       AND aov.account_id = (SELECT id FROM source_account_id)
       GROUP BY aov.block_num
       ORDER BY aov.block_num %s
@@ -203,7 +215,8 @@ ELSE
     $query$, 
 
   _account,  
-  _from, _to, 
+  __no_start_date, _from,
+  __no_end_date, _to, 
   _order_is,  
   _limit,
   _operations,
@@ -233,6 +246,8 @@ $$
 DECLARE
   _offset INT := (_page_num - 1) * _page_size;
   _second_key BOOLEAN = (_permlink IS NULL);
+  __no_start_date BOOLEAN := (_from IS NULL);
+  __no_end_date BOOLEAN := (_to IS NULL);
 BEGIN
   RETURN QUERY
   WITH operation_range AS MATERIALIZED (
@@ -242,7 +257,8 @@ BEGIN
     ov.block_num, ov.id, ov.body_binary::jsonb as body, ov.trx_in_block
   FROM hive.operations_view ov
   WHERE 
-    ov.block_num BETWEEN _from AND _to AND
+    (__no_start_date OR ov.block_num >= _from) AND
+	  (__no_end_date OR ov.block_num <= _to) AND
     ov.op_type_id = ANY(_operation_types) AND 
     ov.body_binary::jsonb->'value'->>'author' = _author AND
     (_second_key OR ov.body_binary::jsonb->'value'->>'permlink' = _permlink)
@@ -293,13 +309,16 @@ SET enable_hashjoin = OFF
 AS
 $$
 DECLARE
+  __no_start_date BOOLEAN := (_from IS NULL);
+  __no_end_date BOOLEAN := (_to IS NULL);
   _second_key BOOLEAN = (_permlink IS NULL);
 BEGIN
   RETURN (
   SELECT COUNT(*) as count
   FROM hive.operations_view ov
   WHERE 
-    ov.block_num BETWEEN _from AND _to AND 
+    (__no_start_date OR ov.block_num >= _from) AND
+	  (__no_end_date OR ov.block_num <= _to) AND
     ov.op_type_id = ANY(_operation_types) AND 
     ov.body_binary::jsonb->'value'->>'author' = _author AND
     (_second_key OR ov.body_binary::jsonb->'value'->>'permlink' = _permlink)

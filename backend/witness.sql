@@ -64,8 +64,8 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history(
     "sort" hafbe_types.order_by_votes,
     "direction" hafbe_types.sort_direction,
     "result-limit" INT,
-    "start-date" TIMESTAMP,
-    "end-date" TIMESTAMP 
+    "from-block" INT,
+    "to-block" INT 
 )
 RETURNS SETOF hafbe_types.witness_votes_history_record 
 LANGUAGE 'plpgsql'
@@ -73,12 +73,12 @@ STABLE
 AS
 $$
 DECLARE
-_witness_id INT = hafbe_backend.get_account_id("account-name");
+  __no_start_date BOOLEAN := ("from-block" IS NULL);
+  __no_end_date BOOLEAN := ("to-block" IS NULL);
+  _start_date TIMESTAMP;
+  _end_date TIMESTAMP;
+  _witness_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
-
-IF "start-date" IS NULL THEN 
-  "start-date" := '1970-01-01T00:00:00'::TIMESTAMP;
-END IF;
 
 RETURN QUERY EXECUTE format(
   $query$
@@ -88,8 +88,9 @@ RETURN QUERY EXECUTE format(
       (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
       * 
     FROM hafbe_app.witness_votes_history_cache wvh
-    WHERE wvh.witness_id = %L
-    AND wvh.timestamp BETWEEN  %L AND  %L
+    WHERE wvh.witness_id = %L AND
+      (%L OR wvh.timestamp >= %L) AND
+	    (%L OR wvh.timestamp <= %L)
     ORDER BY wvh.timestamp DESC
     LIMIT %L
   ),
@@ -110,7 +111,16 @@ RETURN QUERY EXECUTE format(
     (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
   ;
   $query$,
-  _witness_id,"start-date", "end-date", "result-limit", "direction", "sort", "direction", "sort"
+  _witness_id,
+  __no_start_date, 
+  (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "from-block"),
+  __no_end_date,
+  (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "to-block"), 
+  "result-limit", 
+  "direction", 
+  "sort", 
+  "direction", 
+  "sort"
 ) res;
 END
 $$;

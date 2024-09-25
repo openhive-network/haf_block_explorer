@@ -22,9 +22,19 @@ SET ROLE hafbe_owner;
         name: block-num
         required: false
         schema:
-          type: integer
+          type: string
           default: NULL
-        description: Given block number, defaults to `NULL`
+        description: |
+          Given block, can be represented either by a `block-num` (integer) or a `timestamp` (in the format `YYYY-MM-DD HH:MI:SS`),
+
+          The provided `timestamp` will be converted to a `block-num` by finding the first block 
+          where the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`). 
+        
+          The function will interpret and convert the input based on its format, example input:
+
+          * `2016-09-15 19:47:21`
+
+          * `5000000`
       - in: query
         name: result-limit
         required: false
@@ -58,7 +68,7 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_latest_blocks;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(
-    "block-num" INT = NULL,
+    "block-num" TEXT = NULL,
     "result-limit" INT = 20
 )
 RETURNS SETOF hafbe_types.latest_blocks 
@@ -69,10 +79,13 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
-DECLARE 
-  _is_block_filter BOOLEAN := ("block-num" IS NULL);
+DECLARE
+  __block INT := hive.convert_to_block("block-num");
+  _is_block_filter BOOLEAN;
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
+  _is_block_filter := (__block IS NULL);
 
   RETURN QUERY
     WITH select_block_range AS MATERIALIZED (
@@ -80,7 +93,7 @@ BEGIN
         bv.num as block_num,
         (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
       FROM hive.blocks_view bv
-      WHERE _is_block_filter OR bv.num <= "block-num"
+      WHERE _is_block_filter OR bv.num <= __block
       ORDER BY bv.num DESC LIMIT "result-limit"
     ),
     join_operations AS MATERIALIZED (

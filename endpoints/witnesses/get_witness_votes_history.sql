@@ -61,21 +61,39 @@ SET ROLE hafbe_owner;
 
            * `desc` - Descending, from Z to A or largest to smallest
       - in: query
-        name: start-date
+        name: from-block
         required: false
         schema:
           type: string
-          format: date-time
           default: NULL
-        description: Return only votes newer than `start-date`
+        description: |
+          Lower limit of the block range, can be represented either by a block-number (integer) or a timestamp (in the format YYYY-MM-DD HH:MI:SS).
+
+          The provided `timestamp` will be converted to a `block-num` by finding the first block 
+          where the block''s `created_at` is more than or equal to the given `timestamp` (i.e. `block''s created_at >= timestamp`).
+
+          The function will interpret and convert the input based on its format, example input:
+
+          * `2016-09-15 19:47:21`
+
+          * `5000000`
       - in: query
-        name: end-date
+        name: to-block
         required: false
         schema:
           type: string
-          format: date-time
-          x-sql-default-value: now()
-        description: Return only votes older than `end-date`
+          default: NULL
+        description: | 
+          Similar to the from-block parameter, can either be a block-number (integer) or a timestamp (formatted as YYYY-MM-DD HH:MI:SS). 
+
+          The provided `timestamp` will be converted to a `block-num` by finding the first block 
+          where the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`).
+          
+          The function will convert the value depending on its format, example input:
+
+          * `2016-09-15 19:47:21`
+
+          * `5000000`
     responses:
       '200':
         description: |
@@ -119,8 +137,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "sort" hafbe_types.order_by_votes = 'timestamp',
     "direction" hafbe_types.sort_direction = 'desc',
     "result-limit" INT = 100,
-    "start-date" TIMESTAMP = NULL,
-    "end-date" TIMESTAMP = now()
+    "from-block" TEXT = NULL,
+    "to-block" TEXT = NULL
 )
 RETURNS JSON 
 -- openapi-generated-code-end
@@ -131,6 +149,8 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
+DECLARE 
+  _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
@@ -140,15 +160,15 @@ BEGIN
           FROM hafbe_app.witnesses_cache_config
           ),
       'votes_history', 
-        (SELECT to_json(array_agg(row)) FROM (
+        COALESCE((SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witness_votes_history(
             "account-name",
             "sort",
             "direction",
             "result-limit",
-            "start-date",
-            "end-date")
-      ) row)
+            _block_range.first_block,
+            _block_range.last_block)
+      ) row),'[]')
     )
   );
 END

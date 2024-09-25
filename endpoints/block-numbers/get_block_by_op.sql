@@ -49,32 +49,36 @@ SET ROLE hafbe_owner;
         name: from-block
         required: false
         schema:
-          type: integer
-          default: 0
-        description: Lower limit of the block range
+          type: string
+          default: NULL
+        description: |
+          Lower limit of the block range, can be represented either by a block-number (integer) or a timestamp (in the format YYYY-MM-DD HH:MI:SS).
+
+          The provided `timestamp` will be converted to a `block-num` by finding the first block 
+          where the block''s `created_at` is more than or equal to the given `timestamp` (i.e. `block''s created_at >= timestamp`).
+
+          The function will interpret and convert the input based on its format, example input:
+
+          * `2016-09-15 19:47:21`
+
+          * `5000000`
       - in: query
         name: to-block
         required: false
         schema:
-          type: integer
-          default: 2147483647
-        description: Upper limit of the block range
-      - in: query
-        name: start-date
-        required: false
-        schema:
           type: string
-          format: date-time
           default: NULL
-        description: Lower limit of the time range
-      - in: query
-        name: end-date
-        required: false
-        schema:
-          type: string
-          format: date-time
-          default: NULL
-        description: Upper limit of the time range
+        description: | 
+          Similar to the from-block parameter, can either be a block-number (integer) or a timestamp (formatted as YYYY-MM-DD HH:MI:SS). 
+
+          The provided `timestamp` will be converted to a `block-num` by finding the first block 
+          where the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`).
+          
+          The function will convert the value depending on its format, example input:
+
+          * `2016-09-15 19:47:21`
+
+          * `5000000`
       - in: query
         name: result-limit
         required: false
@@ -116,10 +120,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
     "direction" hafbe_types.sort_direction = 'desc',
-    "from-block" INT = 0,
-    "to-block" INT = 2147483647,
-    "start-date" TIMESTAMP = NULL,
-    "end-date" TIMESTAMP = NULL,
+    "from-block" TEXT = NULL,
+    "to-block" TEXT = NULL,
     "result-limit" INT = 100,
     "path-filter" TEXT[] = NULL
 )
@@ -132,6 +134,7 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
+  _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _operation_types INT[] := NULL;
   _key_content TEXT[] := NULL;
   _set_of_keys JSON := NULL;
@@ -190,16 +193,7 @@ IF _operation_types IS NULL THEN
   SELECT array_agg(id) FROM hive.operation_types INTO _operation_types;
 END IF;
 
-IF "start-date" IS NOT NULL THEN
-  "from-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at >= "start-date" ORDER BY created_at ASC LIMIT 1);
-  ASSERT "from-block" IS NOT NULL, 'No block found for the given start-date';
-END IF;
-IF "end-date" IS NOT NULL THEN  
-  "to-block" := (SELECT num FROM hive.blocks_view bv WHERE bv.created_at < "end-date" ORDER BY created_at DESC LIMIT 1);
-  ASSERT "to-block" IS NOT NULL, 'No block found for the given end-date';
-END IF;
-
-IF "to-block" <= hive.app_get_irreversible_block() THEN
+IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
@@ -208,14 +202,14 @@ END IF;
 IF array_length(_operation_types, 1) = 1 THEN
   RETURN QUERY 
       SELECT * FROM hafbe_backend.get_block_by_single_op(
-        _operation_types[1], "account-name", "direction", "from-block", "to-block", "result-limit", _key_content, _set_of_keys
+        _operation_types[1], "account-name", "direction", _block_range.first_block, _block_range.last_block, "result-limit", _key_content, _set_of_keys
       )
   ;
 
 ELSE
   RETURN QUERY
       SELECT * FROM hafbe_backend.get_block_by_ops_group_by_block_num(
-        _operation_types, "account-name", "direction", "from-block", "to-block", "result-limit"
+        _operation_types, "account-name", "direction", _block_range.first_block, _block_range.last_block, "result-limit"
       )
   ;
 
