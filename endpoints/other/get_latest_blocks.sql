@@ -80,7 +80,7 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  __block INT := hive.convert_to_block("block-num");
+  __block INT := hive.convert_to_block_num("block-num");
   _is_block_filter BOOLEAN;
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
