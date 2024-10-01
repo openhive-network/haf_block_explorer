@@ -38,7 +38,7 @@ services:
     user: $SETUP_UID
     environment:
       POSTGRES_HOST: haf
-      SETUP_OPTIONS:
+      SETUP_OPTIONS: --blocksearch-indexes=true
     volumes:
       - ../account_dump:/app/account_dump
       - ../endpoints:/app/endpoints

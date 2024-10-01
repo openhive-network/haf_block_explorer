@@ -329,6 +329,8 @@ psql-client-regression-test:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests[collapsed=true]\r\e[0KRunning tests..."
 
+      psql "$POSTGRES_ACCESS" -c "SET search_path to 'btracker_app','reptracker_app'; CALL hafbe_app.update_witnesses_cache();"
+
       cd tests/account_parameters
       ./accounts_dump_test.sh --host=docker
 
