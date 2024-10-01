@@ -1,0 +1,28 @@
+{
+  "total_operations": 263,
+  "total_pages": 88,
+  "votes_updated_at": "2024-09-30T08:51:51.565199",
+  "voters": [
+    {
+      "voter_name": "dele-puppy",
+      "vests": "6054155831959173",
+      "account_vests": "826872509260086",
+      "proxied_vests": "5227283322699087",
+      "timestamp": "2016-04-25T18:30:12"
+    },
+    {
+      "voter_name": "blocktrades",
+      "vests": "13155953611548185",
+      "account_vests": "8172549681941451",
+      "proxied_vests": "4983403929606734",
+      "timestamp": "2016-04-15T02:19:57"
+    },
+    {
+      "voter_name": "steemed",
+      "vests": "7393832621153166",
+      "account_vests": "3570622043459002",
+      "proxied_vests": "3823210577694164",
+      "timestamp": "2016-07-01T01:32:39"
+    }
+  ]
+}

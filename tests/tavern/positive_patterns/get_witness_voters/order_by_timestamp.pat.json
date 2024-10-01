@@ -1,0 +1,28 @@
+{
+  "total_operations": 263,
+  "total_pages": 88,
+  "votes_updated_at": "2024-09-30T08:51:51.565199",
+  "voters": [
+    {
+      "voter_name": "jeremyfromwi",
+      "vests": "441156952466",
+      "account_vests": "441156952466",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-15T07:07:15"
+    },
+    {
+      "voter_name": "cryptomental",
+      "vests": "686005633844",
+      "account_vests": "686005633844",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-15T07:00:51"
+    },
+    {
+      "voter_name": "therajmahal",
+      "vests": "122297302803",
+      "account_vests": "122297302803",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-15T04:50:09"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "total_operations": 263,
+  "total_pages": 88,
+  "votes_updated_at": "2024-09-30T08:51:51.565199",
+  "voters": [
+    {
+      "voter_name": "buckland",
+      "vests": "9934257245",
+      "account_vests": "9934257245",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-07T13:36:27"
+    },
+    {
+      "voter_name": "b0atman",
+      "vests": "9832568110",
+      "account_vests": "9832568110",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-31T02:38:54"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "total_operations": 263,
+  "total_pages": 88,
+  "votes_updated_at": "2024-09-30T08:51:51.565199",
+  "voters": [
+    {
+      "voter_name": "dan",
+      "vests": "9928811304950768",
+      "account_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-27T12:41:42"
+    },
+    {
+      "voter_name": "blocktrades",
+      "vests": "13155953611548185",
+      "account_vests": "8172549681941451",
+      "proxied_vests": "4983403929606734",
+      "timestamp": "2016-04-15T02:19:57"
+    },
+    {
+      "voter_name": "smooth",
+      "vests": "7569191004562434",
+      "account_vests": "6261692171889459",
+      "proxied_vests": "1307498832672975",
+      "timestamp": "2016-07-03T19:25:39"
+    }
+  ]
+}

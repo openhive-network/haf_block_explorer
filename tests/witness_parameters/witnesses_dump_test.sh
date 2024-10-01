@@ -88,7 +88,6 @@ else
     timestamper="cat"
 fi
 
-psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA}; CALL hafbe_app.update_witnesses_cache();"
 psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA}; SELECT hafbe_backend.compare_witnesses();" 2>&1 | tee -i >(eval "$timestamper" > "witness_dump_test.log")
 
 DIFFERING_ACCOUNTS=$(psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -t -A  -c "SELECT * FROM hafbe_backend.differing_witnesses;")
