@@ -82,11 +82,11 @@ BEGIN
       'votes_updated_at', (SELECT last_updated_at 
         FROM hafbe_app.witnesses_cache_config
         ),
-      'witness', (SELECT to_json(
+      'witness', COALESCE((SELECT to_json(
         hafbe_backend.get_witness(
           "account-name")
         )
-      )    
+      ), '{}')
     )
   );
 
