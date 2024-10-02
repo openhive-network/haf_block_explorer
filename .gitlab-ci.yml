@@ -19,17 +19,21 @@ variables:
   # HAF configuration
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  BUILDER_IMAGE_TAG: "@sha256:834e666ee84fb78d66a695b274b87f75535f96fda98e51726a23eab60812813b"
+  BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
 
 include:
   - template: Workflows/Branch-Pipelines.gitlab-ci.yml
   - project: hive/haf
-    ref: 34e9093286c922151468ffe5488aacb9318b9fe0 # develop
+    ref: 5dcfa256b5ddd8e01ff09d425500400b90edfd63 # develop
     file: /scripts/ci-helpers/prepare_data_image_job.yml # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   - project: 'hive/common-ci-configuration'
     ref: 12db226cfde2df929bb8bcb0c7c51d04c8900d32
     file:
+      - '/templates/test_jobs.gitlab-ci.yml'
       - '/templates/cache_cleanup.gitlab-ci.yml'
       - '/templates/npm_projects.gitlab-ci.yml'
+      - '/templates/python_projects.gitlab-ci.yml'
 
 .lint_job:
   extends: .job-defaults
@@ -227,6 +231,8 @@ generate-wax-spec:
         echo "SETUP_UID=$(id -u)"
       } > .env.local
       cat .env.local
+
+      
       echo "Docker Compose options string: $COMPOSE_OPTIONS_STRING"
       IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
       echo "Docker Compose options: ${COMPOSE_OPTIONS[@]}"
@@ -260,38 +266,7 @@ generate-wax-spec:
   tags:
     - data-cache-storage
 
-.psql-client-test-template:
-  extends: .test-template
-  needs:
-    - prepare_haf_image
-    - prepare_haf_data
-    - docker-psql-client-build
-    - docker-ci-runner-build
-  variables:
-    PGHERO_USERNAME: unused
-    PGHERO_PASSWORD: unused
-    COMPOSE_OPTIONS_STRING: --env-file .env.local --file docker-compose.yml --file ci/docker-compose.yml --ansi never
-  after_script:
-    - |
-      echo -e "\e[0Ksection_start:$(date +%s):compose2[collapsed=true]\r\e[0KStopping test environment..."
-
-      pushd docker
-      IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
-      docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
-      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
-      docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
-      popd
-
-      tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
-
-      # Manually remove the copy of the replay data to preserve disk space on the replay server
-      sudo rm -rf ${CI_PROJECT_DIR}/${CI_JOB_ID}
-
-      echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
-
-.full-image-test-template:
+prepare_hafbe_data:
   extends: .test-template
   needs:
     - prepare_haf_image
@@ -317,6 +292,11 @@ generate-wax-spec:
 
       tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
 
+      export DATA_SOURCE=$DATADIR
+      export DATADIR=${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
+
+      "${CI_PROJECT_DIR}/submodules/haf/scripts/copy_datadir.sh"
+
       # Manually remove the copy of the replay data to preserve disk space on the replay server
       sudo rm -rf ${CI_PROJECT_DIR}/${CI_JOB_ID}
 
@@ -329,7 +309,7 @@ psql-client-regression-test:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests[collapsed=true]\r\e[0KRunning tests..."
 
-      psql "$POSTGRES_ACCESS" -c "SET search_path to 'btracker_app','reptracker_app'; CALL hafbe_app.update_witnesses_cache();"
+      psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; CALL hafbe_app.update_witnesses_cache();"
 
       cd tests/account_parameters
       ./accounts_dump_test.sh --host=docker
@@ -383,6 +363,80 @@ full-image-performance-test:
       !reference [psql-client-performance-test, artifacts, paths]
     reports:
       junit: !reference [psql-client-performance-test, artifacts, reports, junit]
+
+.hfm-only-service: &hfm-only-service
+  name: $HAF_IMAGE_NAME
+  alias: hfm-only-instance
+  variables:
+    # Allow access from any network to eliminate CI IP addressing problems when hfm runs as service
+    PG_ACCESS: |
+                "host    all              haf_admin        0.0.0.0/0    trust"
+                "host    all              hived            0.0.0.0/0    trust"
+                "host    all              hafbe_user       0.0.0.0/0    trust"
+                "host    all              all              0.0.0.0/0    scram-sha-256"
+  command: ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
+
+pytest_pattern_tests:
+  extends: .pytest_based_template
+  stage: test
+  needs:
+    - job: prepare_hafbe_data
+      artifacts: true
+
+  services:
+    - *hfm-only-service
+    - name: ${HAF_APP_IMAGE}
+      alias: app-setup
+      variables:
+        # intentionally use setup way chosed in haf_api_node compose scripts
+        POSTGRES_URL: "postgresql://haf_admin@hfm-only-instance/haf_block_log"
+      command: ["install_app"]
+      entrypoint:
+        - '/bin/bash'
+        - '-c'
+        - |
+          set -xeuo pipefail
+          echo "Attempting to perform application setup..."
+          # pass control to the default image entrypoint
+          "./scripts/docker_entrypoint.sh" "$@"
+          postgrest
+          echo "Application setup completed, starting to listed app port to satisfy Gitlab health checker..."
+          # Once setup completed, just listen on container/app port to satisfy GitlabCI HealthChecker
+          nc -v -l -p $(echo "${HAF_APP_PORT}")
+        # arg $0 should be explicitly passed when using 'bash -c' entrypoints
+        - '/bin/bash'
+
+    - name: ${HAF_APP_IMAGE}
+      alias: app
+      command: ["--postgres-url=postgresql://hafah_user@hfm-only-instance/haf_block_log"]
+      entrypoint:
+        - '/bin/bash'
+        - '-c'
+        - |
+          set -xeuo pipefail
+          # since Gitlab services startup order is undefined, we need to wait for app setup completion
+          "/home/hafah_user/app/scripts/wait_for_setup_completed.sh" "$@"
+          echo "Application setup finished - continue app-service spawn..."
+          # pass control to the default image entrypoint
+          /home/hafah_user/docker_entrypoint.sh "$@"
+        # arg $0 should be explicitly passed when using 'bash -c' entrypoints
+        - '/bin/bash'
+  variables:
+    JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
+    PYTEST_BASED_IMAGE_NAME: $BUILDER_IMAGE_PATH
+    POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
+    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
+
+    HAF_APP_IMAGE: $HAFAH_IMAGE_NAME # !!! $CI_REGISTRY_IMAGE/instance:$HAFAH_IMAGE_TAG
+    HAFBE_ADDRESS: 
+    HAFBE_PORT: ${APP_PORT}
+  script:
+    - echo "HAFBE image name $HAF_APP_IMAGE"
+    # run tests
+    - cd $CI_PROJECT_DIR/tests/tavern
+    - pytest -n auto --junitxml report.xml .
+  tags:
+    - public-runner-docker
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual_template

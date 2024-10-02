@@ -11,8 +11,11 @@ elif [ "$1" = "process_blocks" ]; then
 elif [ "$1" = "uninstall_app" ]; then
   shift
   exec ./uninstall_app.sh --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT:-5432}" --user="${POSTGRES_USER:-haf_admin}" "$@"
+elif [ "$1" = "start_postgrest" ]; then
+  shift
+  exec ../scripts/start_postgrest.sh --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT:-5432}"  "$@"
 else
-  echo "usage: $0 install_app|process_blocks|uninstall_app"
+  echo "usage: $0 install_app|process_blocks|uninstall_app|start_postgrest"
   exit 1
 fi
 
