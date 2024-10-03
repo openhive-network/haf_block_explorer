@@ -46,7 +46,6 @@ services:
       - ../database:/app/database
       - ../submodules/hafah:/app/submodules/hafah
       - ../submodules/btracker:/app/submodules/btracker
-      - ../submodules/reptracker:/app/submodules/reptracker
       - ../scripts:/app/scripts
       - ../.git:/app/.git
     networks:
@@ -90,7 +89,7 @@ services:
       PGRST_DB_POOL: 20
       PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
       PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3000
-      PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, hafbe_rep
+      PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal
     networks:
       haf-network:
     depends_on:

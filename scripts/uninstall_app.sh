@@ -3,8 +3,6 @@
 set -e
 set -o pipefail
 
-SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
-
 print_help () {
 cat <<EOF
   Usage: $0 [OPTION[=VALUE]]...
@@ -14,7 +12,6 @@ cat <<EOF
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
     --skip-btracker          Allows to skip cleanup of Balance Tracker application
-    --skip-reptracker        Allows to skip cleanup of Balance Tracker application
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
 EOF
 }
@@ -22,10 +19,6 @@ EOF
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
-CLEAN_BTRACKER=1
-CLEAN_REPTRACKER=1
-BTRACKER_SCHEMA=hafbe_bal
-REPTRACKER_SCHEMA=hafbe_rep
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -37,18 +30,6 @@ while [ $# -gt 0 ]; do
         ;;
     --user=*)
         POSTGRES_USER="${1#*=}"
-        ;;
-    --skip-btracker)
-        CLEAN_BTRACKER=0
-        ;;
-    --skip-reptracker)
-        CLEAN_REPTRACKER=0
-        ;;
-    --btracker-schema=*)
-        BTRACKER_SCHEMA="${1#*=}"
-        ;;
-    --reptracker-schema=*)
-        REPTRACKER_SCHEMA="${1#*=}"
         ;;
     --help|-h|-?)
         print_help
@@ -89,14 +70,6 @@ uninstall_app() {
 
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user CASCADE" || true
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
-
-    if [ "${CLEAN_BTRACKER}" -eq 1 ]; then
-      "${SCRIPT_DIR}/../submodules/btracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}" --schema="${BTRACKER_SCHEMA}"
-    fi
-
-    if [ "${CLEAN_REPTRACKER}" -eq 1 ]; then
-      "${SCRIPT_DIR}/../submodules/reptracker/scripts/uninstall_app.sh" --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --user="${POSTGRES_USER}" --schema="${REPTRACKER_SCHEMA}"
-    fi
 }
 
 uninstall_app

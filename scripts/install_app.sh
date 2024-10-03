@@ -7,7 +7,6 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 BLOCKSEARCH_INDEXES=false
 BTRACKER_SCHEMA=hafbe_bal
-REPTRACKER_SCHEMA=hafbe_rep
 SWAGGER_URL="{hafbe-host}"
 
 
@@ -19,8 +18,8 @@ cat <<EOF
   OPTIONS:
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
-    --only-apps              Set up only HAfAH, Balance Tracker and Reputation Tracker, without HAF Block Explorer
-    --only-hafbe             Don't set up HAfAH, Balance Tracker and Reputation Tracker, just HAF Block Explorer
+    --only-apps              Set up only HAfAH and Balance Tracker without HAF Block Explorer
+    --only-hafbe             Don't set up HAfAH and Balance Tracker just HAF Block Explorer
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
     --swagger-url=URL        Allows to specify a server URL
 
@@ -43,9 +42,6 @@ while [ $# -gt 0 ]; do
         ;;
     --btracker-schema=*)
         BTRACKER_SCHEMA="${1#*=}"
-        ;;
-    --reptracker-schema=*)
-        REPTRACKER_SCHEMA="${1#*=}"
         ;;
     --swagger-url=*)
         SWAGGER_URL="${1#*=}"
@@ -112,10 +108,6 @@ setup_apps() {
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$BTRACKER_SCHEMA"
   popd
 
-  pushd "$reptracker_dir"
-  ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$REPTRACKER_SCHEMA"
-  popd
-
   pushd "$hafbe_dir"
   ./scripts/generate_version_sql.sh "$hafbe_dir"
   popd
@@ -126,7 +118,7 @@ setup_api() {
 
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/builtin_roles.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/database_schema.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/hafbe_app_indexes.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/main_loop.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_blocks.sql"
@@ -156,7 +148,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_votes_history_record.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness.sql"
 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA};" -f "$backend/hafbe_views.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$backend/hafbe_views.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/witness.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
@@ -192,7 +184,7 @@ create_haf_indexes() {
     # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
     # want to add our own indexes, which would slow down massive sync, so we just wait.
     echo "Waiting for HAF to be out of massive sync"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal', 'hafbe_rep'], interval '3 days');"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal'], interval '3 days');"
 
     echo "Creating indexes, this might take a while."
     # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time
@@ -227,7 +219,6 @@ backend_types="$SCRIPT_DIR/../backend/types"
 db_dir="$SCRIPT_DIR/../database"
 hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
-reptracker_dir="$SCRIPT_DIR/../submodules/reptracker"
 hafbe_dir="$SCRIPT_DIR/.."
 
 if [ "$ONLY_HAFBE" -eq 0 ]; then

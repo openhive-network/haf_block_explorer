@@ -30,11 +30,6 @@ hafbe_types.account:
       type: string
       format: date-time
       description: date of account creation
-    reputation:
-      type: integer
-      description: >-
-        numerical rating of the user 
-        based on upvotes and downvotes on user''s posts
     json_metadata:
       type: string
       description: parameter encompasses personalized profile information
@@ -160,7 +155,6 @@ CREATE TYPE hafbe_types.account AS (
     "recovery_account" TEXT,
     "last_account_recovery" TIMESTAMP,
     "created" TIMESTAMP,
-    "reputation" INT,
     "json_metadata" TEXT,
     "posting_json_metadata" TEXT,
     "profile_image" TEXT,

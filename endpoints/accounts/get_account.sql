@@ -41,7 +41,6 @@ SET ROLE hafbe_owner;
                 recovery_account: "steem"
                 last_account_recovery: "1970-01-01T00:00:00"
                 created: "2016-03-30T00:04:36"
-                reputation: 69,
                 json_metadata: ""
                 posting_json_metadata: ""
                 profile_image: ""
@@ -111,7 +110,6 @@ RETURN (
     COALESCE(_result_parameters.recovery_account, ''),
     COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00'),
     COALESCE(_result_parameters.created,'1970-01-01T00:00:00'), 
-    COALESCE(_result_reputation, 0)::INT,
 
     --metadata
     COALESCE(_result_json_metadata.json_metadata,''),
@@ -164,7 +162,6 @@ RETURN (
   )
   FROM 
     btracker_endpoints.get_account_balances("account-name")      _result_balance,
-    reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
     hafbe_backend.get_json_metadata(_account_id)              _result_json_metadata,
     hafbe_backend.get_account_parameters(_account_id)         _result_parameters,
     hafbe_backend.get_account_witness_votes(_account_id)      _result_votes,

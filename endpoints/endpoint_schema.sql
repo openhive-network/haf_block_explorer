@@ -266,10 +266,6 @@ declare
             "format": "date-time",
             "description": "date of account creation"
           },
-          "reputation": {
-            "type": "integer",
-            "description": "numerical rating of the user  based on upvotes and downvotes on user''s posts"
-          },
           "json_metadata": {
             "type": "string",
             "description": "parameter encompasses personalized profile information"
@@ -1061,7 +1057,6 @@ declare
                     "recovery_account": "steem",
                     "last_account_recovery": "1970-01-01T00:00:00",
                     "created": "2016-03-30T00:04:36",
-                    "reputation": "69,",
                     "json_metadata": "",
                     "posting_json_metadata": "",
                     "profile_image": "",
