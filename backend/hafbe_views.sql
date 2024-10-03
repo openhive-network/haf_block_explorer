@@ -250,7 +250,6 @@ CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
   SELECT
     block_num,
     (time_json->>'hafbe')::NUMERIC AS hafbe,
-  	(time_json->>'reptracker')::NUMERIC AS reptracker,
     (time_json->>'btracker')::NUMERIC AS btracker,
   	(time_json->>'state_provider')::NUMERIC AS state_provider
   FROM

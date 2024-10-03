@@ -86,7 +86,6 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_app.log_and_process_blocks(
     _context_hafbe hive.context_name,
     _context_btracker hive.context_name,
-    _context_reptracker hive.context_name,
     _block_range hive.blocks_range
 )
 RETURNS VOID
@@ -111,10 +110,6 @@ BEGIN
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM btracker_process_blocks(_context_btracker, _block_range, false);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM reptracker_process_blocks(_context_reptracker, _block_range, false);
-  SELECT hafbe_backend.get_sync_time(_time, 'reptracker') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hive.app_state_providers_update(_block_range.first_block, _block_range.last_block, _context_hafbe);

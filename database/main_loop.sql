@@ -9,7 +9,6 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE PROCEDURE hafbe_app.main(
     IN _appContext hive.context_name,
     IN _appContext_btracker hive.context_name,
-    IN _appContext_reptracker hive.context_name,
     IN _maxBlockLimit INT = NULL
 )
 LANGUAGE 'plpgsql'
@@ -35,7 +34,7 @@ BEGIN
 
   LOOP
     CALL hive.app_next_iteration(
-      ARRAY[_appContext, _appContext_btracker, _appContext_reptracker],
+      ARRAY[_appContext, _appContext_btracker],
       _blocks_range, 
       _override_max_batch => NULL, 
       _limit => _maxBlockLimit);
@@ -51,7 +50,7 @@ BEGIN
       CONTINUE;
     END IF;
 
-    PERFORM hafbe_app.log_and_process_blocks(_appContext, _appContext_btracker, _appContext_reptracker, _blocks_range);
+    PERFORM hafbe_app.log_and_process_blocks(_appContext, _appContext_btracker, _blocks_range);
   END LOOP;
 
   ASSERT FALSE, 'Cannot reach this point';
