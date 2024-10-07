@@ -101,7 +101,7 @@ services:
       retries: 20
       start_period: 72h #time for sync to finish
     depends_on:
-      backend-rep-block-processing:
+      backend-setup:
         condition: service_completed_successfully
   backend-postgrest:
     image: postgrest/postgrest:latest
