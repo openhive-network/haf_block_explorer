@@ -279,6 +279,7 @@ generate-wax-spec:
       IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
       docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
+      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-rep-block-processing > backend-rep-block-processing.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
       docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
@@ -310,6 +311,7 @@ generate-wax-spec:
       docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs app-setup > app-setup.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
+      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-rep-block-processing > backend-rep-block-processing.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
       docker compose "${COMPOSE_OPTIONS[@]}" down --volumes

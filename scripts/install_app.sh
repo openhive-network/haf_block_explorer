@@ -7,7 +7,7 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
 BLOCKSEARCH_INDEXES=false
 BTRACKER_SCHEMA=hafbe_bal
-REPTRACKER_SCHEMA=hafbe_rep
+REPTRACKER_SCHEMA=reptracker_app
 SWAGGER_URL="{hafbe-host}"
 
 
@@ -126,7 +126,7 @@ setup_api() {
 
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/builtin_roles.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/database_schema.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/hafbe_app_indexes.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/main_loop.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_blocks.sql"
@@ -156,7 +156,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_votes_history_record.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness.sql"
 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA},${REPTRACKER_SCHEMA};" -f "$backend/hafbe_views.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$backend/hafbe_views.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/witness.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
@@ -192,7 +192,7 @@ create_haf_indexes() {
     # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
     # want to add our own indexes, which would slow down massive sync, so we just wait.
     echo "Waiting for HAF to be out of massive sync"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal', 'hafbe_rep'], interval '3 days');"
+    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal'], interval '3 days');"
 
     echo "Creating indexes, this might take a while."
     # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time

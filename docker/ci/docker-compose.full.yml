@@ -60,6 +60,30 @@ services:
     depends_on:
       app-setup:
         condition: service_completed_successfully
+  backend-rep-block-processing:
+    image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
+    working_dir: /home/haf_admin/haf_block_explorer
+    entrypoint: 
+      - "/bin/bash"
+      - "-c"
+      - "./submodules/reptracker/scripts/process_blocks.sh --stop-at-block=5000000"
+    environment:
+      POSTGRES_HOST: haf
+      POSTGRES_USER: reptracker_owner
+    volumes:
+      - ../../submodules/reptracker/scripts:/home/haf_admin/haf_block_explorer/submodules/reptracker/scripts
+      - ../scripts/block-processing-healthcheck.sh:/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh
+    networks:
+      haf-network:
+    healthcheck:
+      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh reptracker_app"]
+      interval: 60s
+      timeout: 5s
+      retries: 20
+      start_period: 72h #time for sync to finish
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
   backend-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
     command: "process_blocks"
@@ -71,13 +95,13 @@ services:
     networks:
       haf-network:
     healthcheck:
-      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh"]
+      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh hafbe_app"]
       interval: 60s
       timeout: 5s
       retries: 20
       start_period: 72h #time for sync to finish
     depends_on:
-      backend-setup:
+      backend-rep-block-processing:
         condition: service_completed_successfully
   backend-postgrest:
     image: postgrest/postgrest:latest
