@@ -1,0 +1,6 @@
+{
+  "code": "2201X",
+  "details": null,
+  "hint": null,
+  "message": "LIMIT must not be negative"
+}

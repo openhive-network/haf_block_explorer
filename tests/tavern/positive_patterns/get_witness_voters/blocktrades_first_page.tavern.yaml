@@ -1,0 +1,27 @@
+---
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/get_witness_voters"
+        method: POST  
+        headers:
+          content-type: application/json
+          accept: application/json  
+        json:
+          account-name: "blocktrades"
+          page: 1
+          page-size: 3
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern
+          extra_kwargs:
+            ignore_tags: "<hafbe cache_update>"
