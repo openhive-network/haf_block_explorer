@@ -55,10 +55,11 @@ services:
         condition: service_healthy
   backend-setup:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
-    command: install_app ${SETUP_OPTIONS:-}
+    command: 
+      - install_app
+      - --blocksearch-indexes=true
     environment:
       POSTGRES_HOST: haf
-      SETUP_OPTIONS:
     networks:
       haf-network:
     depends_on:
