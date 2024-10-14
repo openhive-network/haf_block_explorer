@@ -1,0 +1,147 @@
+{
+  "total_operations": 263,
+  "total_pages": 14,
+  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "voters": [
+    {
+      "voter_name": "dan",
+      "vests": "9928811304950768",
+      "account_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-27T12:41:42"
+    },
+    {
+      "voter_name": "blocktrades",
+      "vests": "13155953611548185",
+      "account_vests": "8172549681941451",
+      "proxied_vests": "4983403929606734",
+      "timestamp": "2016-04-15T02:19:57"
+    },
+    {
+      "voter_name": "smooth",
+      "vests": "7569191004562434",
+      "account_vests": "6261692171889459",
+      "proxied_vests": "1307498832672975",
+      "timestamp": "2016-07-03T19:25:39"
+    },
+    {
+      "voter_name": "dantheman",
+      "vests": "5562852785102706",
+      "account_vests": "5562852785102706",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-22T19:41:51"
+    },
+    {
+      "voter_name": "steemed",
+      "vests": "7393832621153166",
+      "account_vests": "3570622043459002",
+      "proxied_vests": "3823210577694164",
+      "timestamp": "2016-07-01T01:32:39"
+    },
+    {
+      "voter_name": "rainman",
+      "vests": "4509577334775777",
+      "account_vests": "3305193401659370",
+      "proxied_vests": "1204383933116407",
+      "timestamp": "2016-05-11T09:57:36"
+    },
+    {
+      "voter_name": "summon",
+      "vests": "2832851042360618",
+      "account_vests": "2832851042360618",
+      "proxied_vests": "0",
+      "timestamp": "2016-05-11T10:55:03"
+    },
+    {
+      "voter_name": "steempty",
+      "vests": "1554803057970004",
+      "account_vests": "1542348380078057",
+      "proxied_vests": "12454677891947",
+      "timestamp": "2016-06-30T14:49:06"
+    },
+    {
+      "voter_name": "riverhead",
+      "vests": "1532057760496385",
+      "account_vests": "1531430451867542",
+      "proxied_vests": "627308628843",
+      "timestamp": "2016-07-05T13:57:45"
+    },
+    {
+      "voter_name": "wackou",
+      "vests": "1379749881653787",
+      "account_vests": "1379749881653787",
+      "proxied_vests": "0",
+      "timestamp": "2016-07-06T09:01:54"
+    },
+    {
+      "voter_name": "arhag",
+      "vests": "1373362993749295",
+      "account_vests": "1373362993749295",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-30T14:32:54"
+    },
+    {
+      "voter_name": "clayop",
+      "vests": "1259752473038911",
+      "account_vests": "1259752473038911",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-23T05:34:57"
+    },
+    {
+      "voter_name": "silversteem",
+      "vests": "1016649038434566",
+      "account_vests": "1016649038434566",
+      "proxied_vests": "0",
+      "timestamp": "2016-05-11T14:57:45"
+    },
+    {
+      "voter_name": "au1nethyb1",
+      "vests": "2766864804439375",
+      "account_vests": "950952503023807",
+      "proxied_vests": "1815912301415568",
+      "timestamp": "2016-07-18T23:43:39"
+    },
+    {
+      "voter_name": "bitcube",
+      "vests": "856245895517984",
+      "account_vests": "856245895517984",
+      "proxied_vests": "0",
+      "timestamp": "2016-05-08T04:01:12"
+    },
+    {
+      "voter_name": "dele-puppy",
+      "vests": "6054155831959173",
+      "account_vests": "826872509260086",
+      "proxied_vests": "5227283322699087",
+      "timestamp": "2016-04-25T18:30:12"
+    },
+    {
+      "voter_name": "satoshifund",
+      "vests": "769739404711068",
+      "account_vests": "769739404711068",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-30T06:40:24"
+    },
+    {
+      "voter_name": "onceuponatime",
+      "vests": "625336060715937",
+      "account_vests": "625336060715937",
+      "proxied_vests": "0",
+      "timestamp": "2016-05-11T19:22:12"
+    },
+    {
+      "voter_name": "donkeypong",
+      "vests": "549431136143347",
+      "account_vests": "549431136143347",
+      "proxied_vests": "0",
+      "timestamp": "2016-06-25T04:52:45"
+    },
+    {
+      "voter_name": "steemstermon",
+      "vests": "520900802963943",
+      "account_vests": "520900802963943",
+      "proxied_vests": "0",
+      "timestamp": "2016-07-03T17:43:51"
+    }
+  ]
+}

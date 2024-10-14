@@ -1,0 +1,165 @@
+{
+  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "votes_history": [
+    {
+      "voter_name": "gtg",
+      "approve": true,
+      "vests": "48426226672214",
+      "account_vests": "17579100476774",
+      "proxied_vests": "30847126195440",
+      "timestamp": "2016-07-03T17:35:06"
+    },
+    {
+      "voter_name": "anyx",
+      "approve": true,
+      "vests": "70193209868308",
+      "account_vests": "37817782673251",
+      "proxied_vests": "32375427195057",
+      "timestamp": "2016-07-12T22:23:36"
+    },
+    {
+      "voter_name": "blocktrades",
+      "approve": true,
+      "vests": "13155953611548185",
+      "account_vests": "8172549681941451",
+      "proxied_vests": "4983403929606734",
+      "timestamp": "2016-08-05T15:28:03"
+    },
+    {
+      "voter_name": "inertia",
+      "approve": true,
+      "vests": "18758459852198",
+      "account_vests": "18758459852198",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-05T16:50:27"
+    },
+    {
+      "voter_name": "felixxx",
+      "approve": true,
+      "vests": "3279632347882",
+      "account_vests": "3279632347882",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-05T18:00:51"
+    },
+    {
+      "voter_name": "chitty",
+      "approve": true,
+      "vests": "63201787839311",
+      "account_vests": "63201787839311",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-05T21:29:57"
+    },
+    {
+      "voter_name": "dave-mohican",
+      "approve": true,
+      "vests": "83917894524",
+      "account_vests": "83917894524",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T13:11:09"
+    },
+    {
+      "voter_name": "keung0109",
+      "approve": true,
+      "vests": "11541779719",
+      "account_vests": "11541779719",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T16:12:06"
+    },
+    {
+      "voter_name": "thebluepanda",
+      "approve": true,
+      "vests": "4497613578719",
+      "account_vests": "4497613578719",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T16:50:18"
+    },
+    {
+      "voter_name": "fydel",
+      "approve": true,
+      "vests": "28902840081400",
+      "account_vests": "586820362495",
+      "proxied_vests": "28316019718905",
+      "timestamp": "2016-08-06T19:29:48"
+    },
+    {
+      "voter_name": "heimindanger",
+      "approve": true,
+      "vests": "3822489985610",
+      "account_vests": "3822489985610",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T20:28:12"
+    },
+    {
+      "voter_name": "geoffrey",
+      "approve": true,
+      "vests": "30847126195440",
+      "account_vests": "30348411941678",
+      "proxied_vests": "498714253762",
+      "timestamp": "2016-08-06T22:45:48"
+    },
+    {
+      "voter_name": "steems",
+      "approve": true,
+      "vests": "153297548326929",
+      "account_vests": "153297548326929",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-07T06:25:24"
+    },
+    {
+      "voter_name": "jesus2",
+      "approve": true,
+      "vests": "11969890395",
+      "account_vests": "11969890395",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-08T03:38:54"
+    },
+    {
+      "voter_name": "myheadhurts",
+      "approve": true,
+      "vests": "11818428644",
+      "account_vests": "11818428644",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-08T04:42:12"
+    },
+    {
+      "voter_name": "spaninv",
+      "approve": true,
+      "vests": "1226498142000",
+      "account_vests": "1226498142000",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-08T12:02:09"
+    },
+    {
+      "voter_name": "dave-hughes",
+      "approve": true,
+      "vests": "2293850525738",
+      "account_vests": "2293850525738",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T17:21:12"
+    },
+    {
+      "voter_name": "dan",
+      "approve": true,
+      "vests": "9928811304950768",
+      "account_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T20:29:33"
+    },
+    {
+      "voter_name": "dantheman",
+      "approve": true,
+      "vests": "5562852785102706",
+      "account_vests": "5562852785102706",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T20:29:39"
+    },
+    {
+      "voter_name": "dashpaymag",
+      "approve": true,
+      "vests": "32250429178469",
+      "account_vests": "32250429178469",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T20:51:51"
+    }
+  ]
+}

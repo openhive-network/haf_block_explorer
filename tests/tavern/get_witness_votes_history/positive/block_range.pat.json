@@ -1,0 +1,165 @@
+{
+  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "votes_history": [
+    {
+      "voter_name": "tzrq7z",
+      "approve": true,
+      "vests": "9966718858",
+      "account_vests": "9966718858",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-28T19:38:51"
+    },
+    {
+      "voter_name": "betamusic",
+      "approve": true,
+      "vests": "1528809594522",
+      "account_vests": "1528809594522",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-27T19:23:39"
+    },
+    {
+      "voter_name": "mnviking",
+      "approve": true,
+      "vests": "12653928450",
+      "account_vests": "12653928450",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-27T17:07:00"
+    },
+    {
+      "voter_name": "estefani4",
+      "approve": true,
+      "vests": "12229182954",
+      "account_vests": "12229182954",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-27T01:42:42"
+    },
+    {
+      "voter_name": "felixxx",
+      "approve": false,
+      "vests": "3279632347882",
+      "account_vests": "3279632347882",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-26T11:27:42"
+    },
+    {
+      "voter_name": "razvanelulmarin",
+      "approve": true,
+      "vests": "17612901128418",
+      "account_vests": "17612901128418",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-26T00:27:15"
+    },
+    {
+      "voter_name": "okay",
+      "approve": true,
+      "vests": "18264673273",
+      "account_vests": "18264673273",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T21:42:51"
+    },
+    {
+      "voter_name": "pegasus",
+      "approve": true,
+      "vests": "10432589438",
+      "account_vests": "10432589438",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T17:02:45"
+    },
+    {
+      "voter_name": "hcf27",
+      "approve": true,
+      "vests": "4144102892412",
+      "account_vests": "4144102892412",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T14:52:18"
+    },
+    {
+      "voter_name": "okay",
+      "approve": false,
+      "vests": "18264673273",
+      "account_vests": "18264673273",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T14:14:21"
+    },
+    {
+      "voter_name": "agussudaryanto",
+      "approve": true,
+      "vests": "31521371671",
+      "account_vests": "31521371671",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T05:04:21"
+    },
+    {
+      "voter_name": "proctologic",
+      "approve": true,
+      "vests": "9514011953176",
+      "account_vests": "8852214895049",
+      "proxied_vests": "661797058127",
+      "timestamp": "2016-08-25T01:13:30"
+    },
+    {
+      "voter_name": "cryptocurrency1",
+      "approve": true,
+      "vests": "297006487903",
+      "account_vests": "297006487903",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-24T18:21:03"
+    },
+    {
+      "voter_name": "nixonnox",
+      "approve": true,
+      "vests": "4264805035864",
+      "account_vests": "4264805035864",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-24T12:19:36"
+    },
+    {
+      "voter_name": "johnerfx",
+      "approve": true,
+      "vests": "2651262183918",
+      "account_vests": "2651262183918",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T17:12:21"
+    },
+    {
+      "voter_name": "johnerminer",
+      "approve": true,
+      "vests": "235466494299",
+      "account_vests": "235466494299",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T17:11:21"
+    },
+    {
+      "voter_name": "jhonione",
+      "approve": true,
+      "vests": "11003984576",
+      "account_vests": "11003984576",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T04:48:15"
+    },
+    {
+      "voter_name": "jhonione",
+      "approve": false,
+      "vests": "11003984576",
+      "account_vests": "11003984576",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T04:48:03"
+    },
+    {
+      "voter_name": "jhonione",
+      "approve": true,
+      "vests": "11003984576",
+      "account_vests": "11003984576",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T04:47:57"
+    },
+    {
+      "voter_name": "jhonione",
+      "approve": false,
+      "vests": "11003984576",
+      "account_vests": "11003984576",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T04:47:18"
+    }
+  ]
+}

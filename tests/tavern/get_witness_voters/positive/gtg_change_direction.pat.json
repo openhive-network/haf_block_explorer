@@ -1,0 +1,147 @@
+{
+  "total_operations": 66,
+  "total_pages": 4,
+  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "voters": [
+    {
+      "voter_name": "b0atman",
+      "vests": "9832568110",
+      "account_vests": "9832568110",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-31T02:41:15"
+    },
+    {
+      "voter_name": "tzrq7z",
+      "vests": "9966718858",
+      "account_vests": "9966718858",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-28T19:38:51"
+    },
+    {
+      "voter_name": "pegasus",
+      "vests": "10432589438",
+      "account_vests": "10432589438",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T17:02:45"
+    },
+    {
+      "voter_name": "reza9090",
+      "vests": "10988715510",
+      "account_vests": "10988715510",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-14T22:45:45"
+    },
+    {
+      "voter_name": "jhonione",
+      "vests": "11003984576",
+      "account_vests": "11003984576",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T04:48:15"
+    },
+    {
+      "voter_name": "keung0109",
+      "vests": "11541779719",
+      "account_vests": "11541779719",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T16:12:06"
+    },
+    {
+      "voter_name": "myheadhurts",
+      "vests": "11818428644",
+      "account_vests": "11818428644",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-08T04:42:12"
+    },
+    {
+      "voter_name": "estefani4",
+      "vests": "12229182954",
+      "account_vests": "12229182954",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-27T01:42:42"
+    },
+    {
+      "voter_name": "mnviking",
+      "vests": "12653928450",
+      "account_vests": "12653928450",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-27T17:07:00"
+    },
+    {
+      "voter_name": "vasilii",
+      "vests": "14072244974",
+      "account_vests": "14072244974",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-02T13:32:00"
+    },
+    {
+      "voter_name": "okay",
+      "vests": "18264673273",
+      "account_vests": "18264673273",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T21:42:51"
+    },
+    {
+      "voter_name": "daedalusbuilt",
+      "vests": "30766235842",
+      "account_vests": "30766235842",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-13T17:38:57"
+    },
+    {
+      "voter_name": "primordialviper",
+      "vests": "31111900703",
+      "account_vests": "31111900703",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-09T09:27:18"
+    },
+    {
+      "voter_name": "agussudaryanto",
+      "vests": "31521371671",
+      "account_vests": "31521371671",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-25T05:04:21"
+    },
+    {
+      "voter_name": "mefisto",
+      "vests": "45880853794",
+      "account_vests": "45880853794",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-13T18:00:18"
+    },
+    {
+      "voter_name": "jesse5th",
+      "vests": "47102536963",
+      "account_vests": "47102536963",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-29T21:12:57"
+    },
+    {
+      "voter_name": "dave-mohican",
+      "vests": "83917894524",
+      "account_vests": "83917894524",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-06T13:11:09"
+    },
+    {
+      "voter_name": "johnerminer",
+      "vests": "235466494299",
+      "account_vests": "235466494299",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-21T17:11:21"
+    },
+    {
+      "voter_name": "cryptocurrency1",
+      "vests": "297006487903",
+      "account_vests": "297006487903",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-24T18:21:03"
+    },
+    {
+      "voter_name": "gandalf",
+      "vests": "870762056310",
+      "account_vests": "18204194296",
+      "proxied_vests": "852557862014",
+      "timestamp": "2016-09-04T11:40:39"
+    }
+  ]
+}

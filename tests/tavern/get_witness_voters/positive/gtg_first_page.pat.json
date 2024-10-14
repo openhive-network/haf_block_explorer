@@ -1,0 +1,147 @@
+{
+  "total_operations": 66,
+  "total_pages": 4,
+  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "voters": [
+    {
+      "voter_name": "pumpkin",
+      "vests": "14854070105316640",
+      "account_vests": "45792881467188",
+      "proxied_vests": "14808277223849452",
+      "timestamp": "2016-08-11T16:48:06"
+    },
+    {
+      "voter_name": "blocktrades",
+      "vests": "13155953611548185",
+      "account_vests": "8172549681941451",
+      "proxied_vests": "4983403929606734",
+      "timestamp": "2016-08-05T15:28:03"
+    },
+    {
+      "voter_name": "dan",
+      "vests": "9928811304950768",
+      "account_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T20:29:33"
+    },
+    {
+      "voter_name": "steemed",
+      "vests": "7393832621153166",
+      "account_vests": "3570622043459002",
+      "proxied_vests": "3823210577694164",
+      "timestamp": "2016-08-09T20:51:57"
+    },
+    {
+      "voter_name": "dantheman",
+      "vests": "5562852785102706",
+      "account_vests": "5562852785102706",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-09T20:29:39"
+    },
+    {
+      "voter_name": "complexring",
+      "vests": "1519415852955562",
+      "account_vests": "1518196670031370",
+      "proxied_vests": "1219182924192",
+      "timestamp": "2016-08-29T23:01:18"
+    },
+    {
+      "voter_name": "roadscape",
+      "vests": "1454126499317527",
+      "account_vests": "1454126499317527",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-15T15:17:24"
+    },
+    {
+      "voter_name": "arhag",
+      "vests": "1373362993749295",
+      "account_vests": "1373362993749295",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-16T00:32:18"
+    },
+    {
+      "voter_name": "newyo",
+      "vests": "625293142486525",
+      "account_vests": "276128820159575",
+      "proxied_vests": "349164322326950",
+      "timestamp": "2016-08-14T05:11:24"
+    },
+    {
+      "voter_name": "joseph",
+      "vests": "440784706511158",
+      "account_vests": "438727757370386",
+      "proxied_vests": "2056949140772",
+      "timestamp": "2016-09-10T01:57:30"
+    },
+    {
+      "voter_name": "nanzo-scoop",
+      "vests": "157919447843114",
+      "account_vests": "157919447843114",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-13T17:54:03"
+    },
+    {
+      "voter_name": "masteryoda",
+      "vests": "155265557739137",
+      "account_vests": "155265557739137",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-30T19:49:36"
+    },
+    {
+      "voter_name": "steems",
+      "vests": "153297548326929",
+      "account_vests": "153297548326929",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-07T06:25:24"
+    },
+    {
+      "voter_name": "neoxian",
+      "vests": "115113016527379",
+      "account_vests": "115113016527379",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-14T07:10:51"
+    },
+    {
+      "voter_name": "berkah",
+      "vests": "77658182701827",
+      "account_vests": "77658182701827",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-03T05:47:03"
+    },
+    {
+      "voter_name": "nabilov",
+      "vests": "76171837096370",
+      "account_vests": "76171837096370",
+      "proxied_vests": "0",
+      "timestamp": "2016-09-01T00:13:57"
+    },
+    {
+      "voter_name": "anyx",
+      "vests": "70193209868308",
+      "account_vests": "37817782673251",
+      "proxied_vests": "32375427195057",
+      "timestamp": "2016-07-12T22:23:36"
+    },
+    {
+      "voter_name": "jesta",
+      "vests": "67805785116892",
+      "account_vests": "67644967455270",
+      "proxied_vests": "160817661622",
+      "timestamp": "2016-08-16T19:03:57"
+    },
+    {
+      "voter_name": "chitty",
+      "vests": "63201787839311",
+      "account_vests": "63201787839311",
+      "proxied_vests": "0",
+      "timestamp": "2016-08-05T21:29:57"
+    },
+    {
+      "voter_name": "gtg",
+      "vests": "48426226672214",
+      "account_vests": "17579100476774",
+      "proxied_vests": "30847126195440",
+      "timestamp": "2016-07-03T17:35:06"
+    }
+  ]
+}
