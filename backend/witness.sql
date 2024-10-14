@@ -22,8 +22,16 @@ BEGIN
 
     WITH limited_set AS (
       SELECT 
-        (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvsc.voter_id)::TEXT AS voter,
-        wvsc.voter_id, wvsc.vests, wvsc.account_vests, wvsc.proxied_vests, wvsc.timestamp
+        (
+          SELECT av.name 
+          FROM hive.accounts_view av 
+          WHERE av.id = wvsc.voter_id
+        )::TEXT AS voter,
+        wvsc.voter_id, 
+        wvsc.vests, 
+        wvsc.account_vests,
+        wvsc.proxied_vests, 
+        wvsc.timestamp
       FROM hafbe_app.witness_voters_stats_cache wvsc
       WHERE witness_id = %L   
     ),
@@ -31,13 +39,12 @@ BEGIN
       SELECT * FROM limited_set
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
+        (CASE WHEN %L = 'desc' THEN voter_id ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
       OFFSET %L  
       LIMIT %L
-    ),
-    get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
-
+    )
     SELECT 
       ls.voter, 
       ls.vests::TEXT,
@@ -47,12 +54,14 @@ BEGIN
     FROM limited_set_order ls
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
+      (CASE WHEN %L = 'desc' THEN voter_id ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
     ;
 
     $query$,
-    "account_id", "direction", "sort", "direction", "sort", _offset, "page-size",
-    "direction", "sort", "direction", "sort"
+    "account_id", "direction", "sort", "direction", "sort", "direction", "direction", _offset, "page-size",
+    "direction", "sort", "direction", "sort", "direction", "direction"
   ) res;
 
 END
@@ -85,30 +94,39 @@ RETURN QUERY EXECUTE format(
 
   WITH select_range AS MATERIALIZED (
     SELECT 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id)::TEXT AS voter,
+      (SELECT av.name FROM hive.accounts_view av WHERE av.id = voter_id)::TEXT AS voter,
       * 
-    FROM hafbe_app.witness_votes_history_cache wvh
-    WHERE wvh.witness_id = %L AND
-      (%L OR wvh.timestamp >= %L) AND
-	    (%L OR wvh.timestamp <= %L)
-    ORDER BY wvh.timestamp DESC
+    FROM hafbe_app.witness_votes_history_cache 
+    WHERE witness_id = %L AND
+      (%L OR timestamp >= %L) AND
+	    (%L OR timestamp <= %L)
+    ORDER BY
+      (CASE WHEN %L = 'desc' THEN timestamp ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN timestamp ELSE NULL END) ASC
     LIMIT %L
   ),
-  get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1),
   select_votes_history AS (
   SELECT
-    wvh.voter, wvh.approve, 
-    (wvh.account_vests + wvh.proxied_vests )::TEXT AS vests, 
-    wvh.account_vests::TEXT AS account_vests, 
-    wvh.proxied_vests::TEXT AS proxied_vests,
+    wvh.voter, wvh.voter_id, wvh.approve, 
+    (wvh.account_vests + wvh.proxied_vests) AS vests, 
+    wvh.account_vests AS account_vests, 
+    wvh.proxied_vests AS proxied_vests,
     wvh.timestamp AS timestamp
   FROM select_range wvh
   )
-  SELECT * FROM select_votes_history
+  SELECT 
+    voter,
+    approve,
+    vests::TEXT,
+    account_vests::TEXT,
+    proxied_vests::TEXT,
+    timestamp
+  FROM select_votes_history
   ORDER BY
     (CASE WHEN %L = 'desc' THEN  %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
+    (CASE WHEN %L = 'desc' THEN  voter_id ELSE NULL END) DESC,
+    (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
   ;
   $query$,
   _witness_id,
@@ -116,11 +134,16 @@ RETURN QUERY EXECUTE format(
   (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "from-block"),
   __no_end_date,
   (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "to-block"), 
-  "result-limit", 
+  "direction", 
+  "direction", 
+  "result-limit",
   "direction", 
   "sort", 
   "direction", 
-  "sort"
+  "sort",
+  "direction", 
+  "direction"
+
 ) res;
 END
 $$;
@@ -178,13 +201,11 @@ BEGIN
       SELECT * FROM limited_set
       ORDER BY
         (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
+        (CASE WHEN %L = 'desc' THEN witness_id ELSE NULL END) DESC,
+        (CASE WHEN %L = 'asc' THEN witness_id ELSE NULL END) ASC
       OFFSET %L
       LIMIT %L
-    ),
-    get_block_num AS MATERIALIZED
-    (
-      SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1
     )
     SELECT
       ls.witness, 
@@ -207,11 +228,13 @@ BEGIN
     FROM limited_set_order ls
     ORDER BY
       (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC
+      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
+      (CASE WHEN %L = 'desc' THEN witness_id ELSE NULL END) DESC,
+      (CASE WHEN %L = 'asc' THEN witness_id ELSE NULL END) ASC
 
     $query$,
-    "direction", "sort", "direction", "sort", _offset,"page-size",
-    "direction", "sort", "direction", "sort"
+    "direction", "sort", "direction", "sort", "direction", "direction", _offset,"page-size",
+    "direction", "sort", "direction", "sort", "direction", "direction"
   );
 
 END
@@ -230,51 +253,48 @@ $$
 BEGIN
   RETURN (
     WITH limited_set AS (
-    SELECT
-      cw.witness_id,
-      av.name::TEXT AS witness,
-      COALESCE(cw.url, '') AS url,
-      COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
-      COALESCE(cw.bias, 0) AS bias,
-      COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
-      COALESCE(cw.block_size, 0) AS block_size,
-      COALESCE(cw.signing_key, '') AS signing_key, 
-      COALESCE(cw.version, '0.0.0') AS version,
-      COALESCE(
-      (
-          SELECT count(*) as missed
-          FROM hive.account_operations_view aov
-          WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
-      )::INT
-      ,0) AS missed_blocks,
-      COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
-      COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
-      COALESCE(cw.account_creation_fee,0) AS account_creation_fee
-    FROM hive.accounts_view av
-    JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
-    WHERE av.name = "account-name"
-    ),
-    get_block_num AS MATERIALIZED
-    (SELECT bv.num AS block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1)
-
+      SELECT
+        cw.witness_id,
+        av.name::TEXT AS witness,
+        COALESCE(cw.url, '') AS url,
+        COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
+        COALESCE(cw.bias, 0) AS bias,
+        COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
+        COALESCE(cw.block_size, 0) AS block_size,
+        COALESCE(cw.signing_key, '') AS signing_key, 
+        COALESCE(cw.version, '0.0.0') AS version,
+        COALESCE(
+        (
+            SELECT count(*) as missed
+            FROM hive.account_operations_view aov
+            WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
+        )::INT
+        ,0) AS missed_blocks,
+        COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
+        COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
+        COALESCE(cw.account_creation_fee,0) AS account_creation_fee
+      FROM hive.accounts_view av
+      JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
+      WHERE av.name = "account-name"
+    )
     SELECT ROW(
-    ls.witness, 
-    all_votes.rank, 
-    ls.url,
-    COALESCE(all_votes.votes::TEXT, '0'),
-    COALESCE(wvcc.votes_daily_change::TEXT, '0'),
-    COALESCE(all_votes.voters_num, 0),
-    COALESCE(wvcc.voters_num_daily_change, 0),
-    ls.price_feed, 
-    ls.bias, 
-    ls.feed_updated_at,
-    ls.block_size, 
-    ls.signing_key, 
-    ls.version,
-    ls.missed_blocks, 
-    ls.hbd_interest_rate,
-    ls.last_created_block_num,
-    ls.account_creation_fee
+      ls.witness, 
+      all_votes.rank, 
+      ls.url,
+      COALESCE(all_votes.votes::TEXT, '0'),
+      COALESCE(wvcc.votes_daily_change::TEXT, '0'),
+      COALESCE(all_votes.voters_num, 0),
+      COALESCE(wvcc.voters_num_daily_change, 0),
+      ls.price_feed, 
+      ls.bias, 
+      ls.feed_updated_at,
+      ls.block_size, 
+      ls.signing_key, 
+      ls.version,
+      ls.missed_blocks, 
+      ls.hbd_interest_rate,
+      ls.last_created_block_num,
+      ls.account_creation_fee
     )
     FROM limited_set ls
     LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
