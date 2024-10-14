@@ -151,14 +151,14 @@ BEGIN
           FROM hafbe_app.witnesses_cache_config
           ),
       'voters', 
-        (SELECT to_json(array_agg(row)) FROM (
+        COALESCE((SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witness_voters(
             _witness_id,
             "page",
             "page-size",
             "sort",
             "direction")
-      ) row)
+      ) row), '[]')
     )
   );
 END

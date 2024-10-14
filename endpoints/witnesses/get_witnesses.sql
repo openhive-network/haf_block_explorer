@@ -183,13 +183,13 @@ BEGIN
           FROM hafbe_app.witnesses_cache_config
           ),
       'witnesses', 
-        (SELECT to_json(array_agg(row)) FROM (
+        COALESCE((SELECT to_json(array_agg(row)) FROM (
           SELECT * FROM hafbe_backend.get_witnesses(
             "page",
             "page-size",
             "sort",
             "direction")
-      ) row)
+      ) row),'[]')
     )
   );
 END
