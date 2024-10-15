@@ -173,6 +173,8 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
   _operation_types INT[];
+  _calculate_total_pages INT;
+  _ops_count INT;
 BEGIN
 IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
   RAISE EXCEPTION 'Commentsearch indexes are not installed';
@@ -194,14 +196,28 @@ ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
-RETURN (
-  WITH ops_count AS MATERIALIZED (
-    SELECT * FROM hafbe_backend.get_comment_operations_count("account-name", "permlink", _operation_types, _block_range.first_block, _block_range.last_block)
-  )
+  --count for given parameters 
+  SELECT hafbe_backend.get_comment_operations_count(
+    "account-name",
+    "permlink",
+    _operation_types,
+    _block_range.first_block,
+    _block_range.last_block
+  ) INTO _ops_count;
 
+  --amount of pages
+  SELECT 
+    (
+      CASE WHEN (_ops_count % "page-size") = 0 THEN 
+        _ops_count/"page-size" 
+      ELSE ((_ops_count/"page-size") + 1) 
+      END
+    )::INT INTO _calculate_total_pages;
+
+RETURN (
   SELECT json_build_object(
-    'total_operations', (SELECT * FROM ops_count),
-    'total_pages', (SELECT * FROM ops_count)/100,
+    'total_operations', _ops_count,
+    'total_pages', _calculate_total_pages,
     'operations_result', 
     (SELECT to_json(array_agg(row)) FROM (
       SELECT * FROM hafbe_backend.get_comment_operations("account-name", "permlink", "page", "page-size", _operation_types, _block_range.first_block, _block_range.last_block, "data-size-limit")
