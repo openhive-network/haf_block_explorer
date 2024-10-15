@@ -1,0 +1,34 @@
+{
+  "owner": {
+    "key_auths": [
+      [
+        "STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh",
+        "1"
+      ]
+    ],
+    "account_auths": [],
+    "weight_threshold": 1
+  },
+  "active": {
+    "key_auths": [
+      [
+        "STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX",
+        "1"
+      ]
+    ],
+    "account_auths": [],
+    "weight_threshold": 1
+  },
+  "posting": {
+    "key_auths": [
+      [
+        "STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC",
+        "1"
+      ]
+    ],
+    "account_auths": [],
+    "weight_threshold": 1
+  },
+  "memo": "STM4uD3dfLvbz7Tkd7of4K9VYGnkgrY5BHSQt52vE52CBL5qBfKHN",
+  "witness_signing": "STM6GmnhcBN9DxmFcj1e423Q2RkFYStUgSotviptAMSdy74eHQSYM"
+}
