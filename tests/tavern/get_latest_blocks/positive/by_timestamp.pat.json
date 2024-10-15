@@ -1,0 +1,266 @@
+[
+  {
+    "block_num": 4112014,
+    "witness": "witness.svk",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 61
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 4,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      }
+    ]
+  },
+  {
+    "block_num": 4112013,
+    "witness": "riverhead",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 2,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 4112012,
+    "witness": "arhag",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      }
+    ]
+  },
+  {
+    "block_num": 4112011,
+    "witness": "wackou",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 11,
+        "op_type_id": 52
+      },
+      {
+        "count": 2,
+        "op_type_id": 0
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 51
+      },
+      {
+        "count": 1,
+        "op_type_id": 6
+      },
+      {
+        "count": 1,
+        "op_type_id": 53
+      },
+      {
+        "count": 1,
+        "op_type_id": 85
+      }
+    ]
+  },
+  {
+    "block_num": 4112010,
+    "witness": "bitcube",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 61
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 80
+      },
+      {
+        "count": 1,
+        "op_type_id": 9
+      },
+      {
+        "count": 1,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 4112009,
+    "witness": "wackou",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 1,
+        "op_type_id": 6
+      },
+      {
+        "count": 1,
+        "op_type_id": 85
+      },
+      {
+        "count": 1,
+        "op_type_id": 72
+      }
+    ]
+  },
+  {
+    "block_num": 4112008,
+    "witness": "boatymcboatface",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      },
+      {
+        "count": 4,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 4112007,
+    "witness": "clayop",
+    "ops_count": [
+      {
+        "count": 13,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 13,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 4112006,
+    "witness": "steemed",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 3,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      }
+    ]
+  },
+  {
+    "block_num": 4112005,
+    "witness": "xeldal",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 4,
+        "op_type_id": 0
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      }
+    ]
+  }
+]

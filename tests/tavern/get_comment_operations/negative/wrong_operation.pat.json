@@ -1,0 +1,6 @@
+{
+  "code": "P0001",
+  "details": null,
+  "hint": null,
+  "message": "Invalid operation ID detected. Allowed IDs are: {0,1,17,19,51,52,53,61,63,72,73}"
+}

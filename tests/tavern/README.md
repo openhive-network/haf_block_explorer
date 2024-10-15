@@ -5,7 +5,7 @@ Block-numbers
 Accounts
     get_account_authority
     get_account
-    get_comment_operations
+    get_comment_operations +
 Witnesses
     get_witness_voters_num +
     get_witness_voters +
@@ -13,10 +13,10 @@ Witnesses
     get_witness +
     get_witnesses +
 Other
-    get_hafbe_last_synced_block
-    get_hafbe_version
-    get_input_type
-    get_latest_blocks
+    get_hafbe_last_synced_block +
+    get_hafbe_version -
+    get_input_type +
+    get_latest_blocks +
 
 NEGATIVE    
 
@@ -25,7 +25,7 @@ Block-numbers
 Accounts
     get_account_authority
     get_account
-    get_comment_operations
+    get_comment_operations +
 Witnesses
     get_witness_voters_num +
     get_witness_voters +
@@ -33,9 +33,9 @@ Witnesses
     get_witness +
     get_witnesses +
 Other
-    get_hafbe_last_synced_block
-    get_hafbe_version
-    get_input_type
-    get_latest_blocks
+    get_hafbe_last_synced_block +
+    get_hafbe_version -
+    get_input_type +
+    get_latest_blocks +
 
 

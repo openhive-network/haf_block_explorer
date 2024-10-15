@@ -1,0 +1,270 @@
+[
+  {
+    "block_num": 4000000,
+    "witness": "silversteem",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 10
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 11
+      },
+      {
+        "count": 4,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 3999999,
+    "witness": "datasecuritynode",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 78
+      },
+      {
+        "count": 1,
+        "op_type_id": 53
+      },
+      {
+        "count": 3,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 10
+      },
+      {
+        "count": 3,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 14
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 3,
+        "op_type_id": 52
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 1,
+        "op_type_id": 51
+      }
+    ]
+  },
+  {
+    "block_num": 3999998,
+    "witness": "complexring",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 2
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 2,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 3999997,
+    "witness": "smooth.witness",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 1
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 9
+      },
+      {
+        "count": 1,
+        "op_type_id": 61
+      },
+      {
+        "count": 1,
+        "op_type_id": 2
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 80
+      },
+      {
+        "count": 4,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 3999996,
+    "witness": "complexring",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 53
+      },
+      {
+        "count": 11,
+        "op_type_id": 52
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 2,
+        "op_type_id": 51
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      }
+    ]
+  },
+  {
+    "block_num": 3999995,
+    "witness": "riverhead",
+    "ops_count": [
+      {
+        "count": 2,
+        "op_type_id": 0
+      },
+      {
+        "count": 2,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      }
+    ]
+  },
+  {
+    "block_num": 3999994,
+    "witness": "roadscape",
+    "ops_count": [
+      {
+        "count": 3,
+        "op_type_id": 72
+      },
+      {
+        "count": 3,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      }
+    ]
+  },
+  {
+    "block_num": 3999993,
+    "witness": "silversteem",
+    "ops_count": [
+      {
+        "count": 4,
+        "op_type_id": 0
+      },
+      {
+        "count": 1,
+        "op_type_id": 1
+      },
+      {
+        "count": 1,
+        "op_type_id": 4
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 4,
+        "op_type_id": 72
+      }
+    ]
+  },
+  {
+    "block_num": 3999992,
+    "witness": "datasecuritynode",
+    "ops_count": [
+      {
+        "count": 3,
+        "op_type_id": 72
+      },
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 3,
+        "op_type_id": 0
+      }
+    ]
+  },
+  {
+    "block_num": 3999991,
+    "witness": "witness.svk",
+    "ops_count": [
+      {
+        "count": 1,
+        "op_type_id": 64
+      },
+      {
+        "count": 1,
+        "op_type_id": 18
+      },
+      {
+        "count": 2,
+        "op_type_id": 61
+      }
+    ]
+  }
+]
