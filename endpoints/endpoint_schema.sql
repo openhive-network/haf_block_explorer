@@ -435,7 +435,7 @@ declare
           },
           "operation_id": {
             "type": "integer",
-            "x-sql-datatype": "BIGINT",
+            "x-sql-datatype": "TEXT",
             "description": "unique operation identifier with an encoded block number and operation type id"
           },
           "created_at": {

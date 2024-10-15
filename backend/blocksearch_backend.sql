@@ -281,7 +281,7 @@ BEGIN
   SELECT 
     filtered_operations.permlink,
     filtered_operations.block_num,
-    filtered_operations.id, 
+    filtered_operations.id::TEXT, 
     filtered_operations.timestamp,
     filtered_operations.trx_hash,
     (filtered_operations.composite).body

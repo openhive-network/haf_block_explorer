@@ -13,7 +13,7 @@ hafbe_types.comment_history:
       description: operation block number
     operation_id:
       type: integer
-      x-sql-datatype: BIGINT
+      x-sql-datatype: TEXT
       description: >-
         unique operation identifier with
         an encoded block number and operation type id
@@ -34,7 +34,7 @@ DROP TYPE IF EXISTS hafbe_types.comment_history CASCADE;
 CREATE TYPE hafbe_types.comment_history AS (
     "permlink" TEXT,
     "block_num" INT,
-    "operation_id" BIGINT,
+    "operation_id" TEXT,
     "created_at" TIMESTAMP,
     "trx_hash" TEXT,
     "operation" JSONB
