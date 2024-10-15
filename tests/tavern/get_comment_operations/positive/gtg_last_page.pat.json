@@ -5,7 +5,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4281331,
-      "operation_id": 18388176628352256,
+      "operation_id": "18388176628352256",
       "created_at": "2016-08-21T17:53:27",
       "trx_hash": "2f53102a9e612ae4ddcf05404bf02ad4b84a883b",
       "operation": {
@@ -21,7 +21,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4281331,
-      "operation_id": 18388176628352584,
+      "operation_id": "18388176628352584",
       "created_at": "2016-08-21T17:53:27",
       "trx_hash": "2f53102a9e612ae4ddcf05404bf02ad4b84a883b",
       "operation": {
@@ -44,7 +44,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4282612,
-      "operation_id": 18393678481458690,
+      "operation_id": "18393678481458688",
       "created_at": "2016-08-21T18:57:54",
       "trx_hash": "e518bc8727ff51a558d024764a53b1f11d73f66c",
       "operation": {
@@ -60,7 +60,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4282612,
-      "operation_id": 18393678481459016,
+      "operation_id": "18393678481459016",
       "created_at": "2016-08-21T18:57:54",
       "trx_hash": "e518bc8727ff51a558d024764a53b1f11d73f66c",
       "operation": {
@@ -83,7 +83,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4380632,
-      "operation_id": 18814671175811584,
+      "operation_id": "18814671175811584",
       "created_at": "2016-08-25T05:21:18",
       "trx_hash": "5bb92ae53e3b45beb8f57e2929672eaee9998444",
       "operation": {
@@ -99,7 +99,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4380632,
-      "operation_id": 18814671175811910,
+      "operation_id": "18814671175811912",
       "created_at": "2016-08-25T05:21:18",
       "trx_hash": "5bb92ae53e3b45beb8f57e2929672eaee9998444",
       "operation": {
@@ -122,7 +122,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4409087,
-      "operation_id": 18936884470221824,
+      "operation_id": "18936884470221824",
       "created_at": "2016-08-26T05:26:03",
       "trx_hash": "961a7c114ee44e548aa8eab7ee996eb1736951d4",
       "operation": {
@@ -138,7 +138,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4409087,
-      "operation_id": 18936884470222150,
+      "operation_id": "18936884470222152",
       "created_at": "2016-08-26T05:26:03",
       "trx_hash": "961a7c114ee44e548aa8eab7ee996eb1736951d4",
       "operation": {
@@ -161,7 +161,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4566280,
-      "operation_id": 19612023264378880,
+      "operation_id": "19612023264378880",
       "created_at": "2016-08-31T16:59:06",
       "trx_hash": "62e93543f0b99f72702f2ebf6ce930080564ecfe",
       "operation": {
@@ -177,7 +177,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4566280,
-      "operation_id": 19612023264379210,
+      "operation_id": "19612023264379208",
       "created_at": "2016-08-31T16:59:06",
       "trx_hash": "62e93543f0b99f72702f2ebf6ce930080564ecfe",
       "operation": {
@@ -200,7 +200,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4569740,
-      "operation_id": 19626883851223040,
+      "operation_id": "19626883851223040",
       "created_at": "2016-08-31T19:52:18",
       "trx_hash": "e8555837917dd03bf19816e0ea4a45bc76255c50",
       "operation": {
@@ -216,7 +216,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4569740,
-      "operation_id": 19626883851223370,
+      "operation_id": "19626883851223368",
       "created_at": "2016-08-31T19:52:18",
       "trx_hash": "e8555837917dd03bf19816e0ea4a45bc76255c50",
       "operation": {
@@ -239,7 +239,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4695861,
-      "operation_id": 20168569421564724,
+      "operation_id": "20168569421564723",
       "created_at": "2016-09-05T05:17:57",
       "trx_hash": null,
       "operation": {
@@ -274,7 +274,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4695861,
-      "operation_id": 20168569421564980,
+      "operation_id": "20168569421564981",
       "created_at": "2016-09-05T05:17:57",
       "trx_hash": null,
       "operation": {
@@ -309,7 +309,7 @@
     {
       "permlink": "witness-gtg",
       "block_num": 4695861,
-      "operation_id": 20168569421565244,
+      "operation_id": "20168569421565245",
       "created_at": "2016-09-05T05:17:57",
       "trx_hash": null,
       "operation": {

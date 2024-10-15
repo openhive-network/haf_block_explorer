@@ -5,7 +5,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138768,
-      "operation_id": 17775873205731584,
+      "operation_id": "17775873205731585",
       "created_at": "2016-08-16T18:11:06",
       "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
       "operation": {
@@ -24,7 +24,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138768,
-      "operation_id": 17775873205731840,
+      "operation_id": "17775873205731840",
       "created_at": "2016-08-16T18:11:06",
       "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
       "operation": {
@@ -40,7 +40,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138768,
-      "operation_id": 17775873205732168,
+      "operation_id": "17775873205732168",
       "created_at": "2016-08-16T18:11:06",
       "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
       "operation": {
@@ -63,7 +63,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138783,
-      "operation_id": 17775937630240768,
+      "operation_id": "17775937630240768",
       "created_at": "2016-08-16T18:11:51",
       "trx_hash": "c66cb0a4971b23c635b6c81f42bb5f144fd8713b",
       "operation": {
@@ -79,7 +79,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138783,
-      "operation_id": 17775937630241096,
+      "operation_id": "17775937630241096",
       "created_at": "2016-08-16T18:11:51",
       "trx_hash": "c66cb0a4971b23c635b6c81f42bb5f144fd8713b",
       "operation": {
@@ -102,7 +102,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138799,
-      "operation_id": 17776006349721088,
+      "operation_id": "17776006349721088",
       "created_at": "2016-08-16T18:12:39",
       "trx_hash": "6d682f6ad63de01a1932c6a4a3e937fa6975d01a",
       "operation": {
@@ -118,7 +118,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138799,
-      "operation_id": 17776006349721416,
+      "operation_id": "17776006349721416",
       "created_at": "2016-08-16T18:12:39",
       "trx_hash": "6d682f6ad63de01a1932c6a4a3e937fa6975d01a",
       "operation": {
@@ -141,7 +141,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138900,
-      "operation_id": 17776440141414912,
+      "operation_id": "17776440141414912",
       "created_at": "2016-08-16T18:17:45",
       "trx_hash": "b26fd7a6ca8159b60ef25e09793d4104d669bdc5",
       "operation": {
@@ -157,7 +157,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138900,
-      "operation_id": 17776440141415240,
+      "operation_id": "17776440141415240",
       "created_at": "2016-08-16T18:17:45",
       "trx_hash": "b26fd7a6ca8159b60ef25e09793d4104d669bdc5",
       "operation": {
@@ -180,7 +180,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138938,
-      "operation_id": 17776603350172672,
+      "operation_id": "17776603350172672",
       "created_at": "2016-08-16T18:19:42",
       "trx_hash": "7d268fc333dfc16a2c1b44338191b2d23827f3a4",
       "operation": {
@@ -196,7 +196,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138938,
-      "operation_id": 17776603350173000,
+      "operation_id": "17776603350173000",
       "created_at": "2016-08-16T18:19:42",
       "trx_hash": "7d268fc333dfc16a2c1b44338191b2d23827f3a4",
       "operation": {
@@ -219,7 +219,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138939,
-      "operation_id": 17776607645139456,
+      "operation_id": "17776607645139456",
       "created_at": "2016-08-16T18:19:45",
       "trx_hash": "33784ddd75892754df1426b2eecf4c112c7d4d08",
       "operation": {
@@ -235,7 +235,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138939,
-      "operation_id": 17776607645139784,
+      "operation_id": "17776607645139784",
       "created_at": "2016-08-16T18:19:45",
       "trx_hash": "33784ddd75892754df1426b2eecf4c112c7d4d08",
       "operation": {
@@ -258,7 +258,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138940,
-      "operation_id": 17776611940106240,
+      "operation_id": "17776611940106240",
       "created_at": "2016-08-16T18:19:48",
       "trx_hash": "10832691576033edb9c4d1cf19f9bc999813c580",
       "operation": {
@@ -274,7 +274,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138940,
-      "operation_id": 17776611940106568,
+      "operation_id": "17776611940106568",
       "created_at": "2016-08-16T18:19:48",
       "trx_hash": "10832691576033edb9c4d1cf19f9bc999813c580",
       "operation": {
@@ -297,7 +297,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138984,
-      "operation_id": 17776800918667264,
+      "operation_id": "17776800918667264",
       "created_at": "2016-08-16T18:22:00",
       "trx_hash": "9a433941f2da1ff9a3dd16266349d6df04cfb400",
       "operation": {
@@ -313,7 +313,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4138984,
-      "operation_id": 17776800918667592,
+      "operation_id": "17776800918667592",
       "created_at": "2016-08-16T18:22:00",
       "trx_hash": "9a433941f2da1ff9a3dd16266349d6df04cfb400",
       "operation": {
@@ -336,7 +336,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4139004,
-      "operation_id": 17776886818013696,
+      "operation_id": "17776886818013696",
       "created_at": "2016-08-16T18:23:00",
       "trx_hash": "649d78c8b71a35e96c664b9792f6c76b99e5f04f",
       "operation": {
@@ -352,7 +352,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4139004,
-      "operation_id": 17776886818014024,
+      "operation_id": "17776886818014024",
       "created_at": "2016-08-16T18:23:00",
       "trx_hash": "649d78c8b71a35e96c664b9792f6c76b99e5f04f",
       "operation": {
@@ -375,7 +375,7 @@
     {
       "permlink": "heavy-duty-witness-node-infrastructure",
       "block_num": 4139056,
-      "operation_id": 17777110156313088,
+      "operation_id": "17777110156313088",
       "created_at": "2016-08-16T18:25:36",
       "trx_hash": "6af588d776b88143aed76873738bafe4c03e1866",
       "operation": {

@@ -5,7 +5,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 4347061,
-      "operation_id": 18670484828720700,
+      "operation_id": "18670484828720701",
       "created_at": "2016-08-24T01:13:48",
       "trx_hash": null,
       "operation": {
@@ -19,7 +19,7 @@
     {
       "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s",
       "block_num": 4364560,
-      "operation_id": 18745642461431100,
+      "operation_id": "18745642461431101",
       "created_at": "2016-08-24T15:52:00",
       "trx_hash": null,
       "operation": {
@@ -33,7 +33,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252695,
-      "operation_id": 18265185944864256,
+      "operation_id": "18265185944864256",
       "created_at": "2016-08-20T17:51:30",
       "trx_hash": "225e1d113b64a950adc432445780ca4b10d8f52f",
       "operation": {
@@ -49,7 +49,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252695,
-      "operation_id": 18265185944864584,
+      "operation_id": "18265185944864584",
       "created_at": "2016-08-20T17:51:30",
       "trx_hash": "225e1d113b64a950adc432445780ca4b10d8f52f",
       "operation": {
@@ -72,7 +72,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252706,
-      "operation_id": 18265233189503744,
+      "operation_id": "18265233189503744",
       "created_at": "2016-08-20T17:52:03",
       "trx_hash": "72a4d3b9e7c9ff72260274b81c302f86982be095",
       "operation": {
@@ -88,7 +88,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252706,
-      "operation_id": 18265233189504070,
+      "operation_id": "18265233189504072",
       "created_at": "2016-08-20T17:52:03",
       "trx_hash": "72a4d3b9e7c9ff72260274b81c302f86982be095",
       "operation": {
@@ -111,7 +111,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252707,
-      "operation_id": 18265237484470784,
+      "operation_id": "18265237484470784",
       "created_at": "2016-08-20T17:52:06",
       "trx_hash": "30cf914f630d1a21af85ea82a3cce13e8b74ff9a",
       "operation": {
@@ -127,7 +127,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252707,
-      "operation_id": 18265237484471110,
+      "operation_id": "18265237484471112",
       "created_at": "2016-08-20T17:52:06",
       "trx_hash": "30cf914f630d1a21af85ea82a3cce13e8b74ff9a",
       "operation": {
@@ -150,7 +150,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252707,
-      "operation_id": 18265237484472830,
+      "operation_id": "18265237484472832",
       "created_at": "2016-08-20T17:52:06",
       "trx_hash": "c345202114476424dbde5a1189d2c18b86122ef6",
       "operation": {
@@ -166,7 +166,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4252707,
-      "operation_id": 18265237484473160,
+      "operation_id": "18265237484473160",
       "created_at": "2016-08-20T17:52:06",
       "trx_hash": "c345202114476424dbde5a1189d2c18b86122ef6",
       "operation": {
@@ -189,7 +189,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4364759,
-      "operation_id": 18746497159923508,
+      "operation_id": "18746497159923507",
       "created_at": "2016-08-24T16:01:57",
       "trx_hash": null,
       "operation": {
@@ -224,7 +224,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4364759,
-      "operation_id": 18746497159923764,
+      "operation_id": "18746497159923765",
       "created_at": "2016-08-24T16:01:57",
       "trx_hash": null,
       "operation": {
@@ -259,7 +259,7 @@
     {
       "permlink": "blocktrades-adds-support-for-steem-dollars-greater-than-bitcoin-and-more",
       "block_num": 4364759,
-      "operation_id": 18746497159924028,
+      "operation_id": "18746497159924029",
       "created_at": "2016-08-24T16:01:57",
       "trx_hash": null,
       "operation": {
@@ -273,7 +273,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4288107,
-      "operation_id": 18417279326749696,
+      "operation_id": "18417279326749696",
       "created_at": "2016-08-21T23:35:33",
       "trx_hash": "12d9ca24123a7bfa6b2bbbb5c6c9e11dc9aed58d",
       "operation": {
@@ -289,7 +289,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4288107,
-      "operation_id": 18417279326750024,
+      "operation_id": "18417279326750024",
       "created_at": "2016-08-21T23:35:33",
       "trx_hash": "12d9ca24123a7bfa6b2bbbb5c6c9e11dc9aed58d",
       "operation": {
@@ -312,7 +312,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4339004,
-      "operation_id": 18635880277215028,
+      "operation_id": "18635880277215027",
       "created_at": "2016-08-23T18:27:42",
       "trx_hash": null,
       "operation": {
@@ -347,7 +347,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4339004,
-      "operation_id": 18635880277215284,
+      "operation_id": "18635880277215285",
       "created_at": "2016-08-23T18:27:42",
       "trx_hash": null,
       "operation": {
@@ -382,7 +382,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4339004,
-      "operation_id": 18635880277215548,
+      "operation_id": "18635880277215549",
       "created_at": "2016-08-23T18:27:42",
       "trx_hash": null,
       "operation": {
@@ -396,7 +396,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4452104,
-      "operation_id": 19121641078391040,
+      "operation_id": "19121641078391040",
       "created_at": "2016-08-27T17:34:48",
       "trx_hash": "7f3314de71b863b266108a79cb8ceae76d3d4c85",
       "operation": {
@@ -412,7 +412,7 @@
     {
       "permlink": "blocktrades-has-re-enabled-steem-dollars-to-bitcoin-pair",
       "block_num": 4473710,
-      "operation_id": 19214438141788416,
+      "operation_id": "19214438141788416",
       "created_at": "2016-08-28T11:39:27",
       "trx_hash": "728a57bef7d32f76b228c05676e0e929a5c9da0e",
       "operation": {

@@ -5,7 +5,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106036,
-      "operation_id": 4750388448198984,
+      "operation_id": "4750388448198984",
       "created_at": "2016-05-02T20:58:54",
       "trx_hash": "1670bd665bb2e0041e71959e70d8d7bd35c89265",
       "operation": {
@@ -28,7 +28,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106160,
-      "operation_id": 4750921024143688,
+      "operation_id": "4750921024143688",
       "created_at": "2016-05-02T21:05:06",
       "trx_hash": "3ed2b333612c0216d21a87b8211fe9a275773059",
       "operation": {
@@ -51,7 +51,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106187,
-      "operation_id": 4751036988260680,
+      "operation_id": "4751036988260680",
       "created_at": "2016-05-02T21:06:27",
       "trx_hash": "5e51094727df747497c30b2fe80104afa79d7f2d",
       "operation": {
@@ -74,7 +74,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106215,
-      "operation_id": 4751157247344968,
+      "operation_id": "4751157247344968",
       "created_at": "2016-05-02T21:07:51",
       "trx_hash": "446edda666f2d049f4858193449dbdf1ddb43da4",
       "operation": {
@@ -97,7 +97,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106376,
-      "operation_id": 4751848737079624,
+      "operation_id": "4751848737079624",
       "created_at": "2016-05-02T21:15:54",
       "trx_hash": "e9ab6e3f9d5011b6d2382e1c33fd9e7870d676a5",
       "operation": {
@@ -120,7 +120,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106466,
-      "operation_id": 4752235284136264,
+      "operation_id": "4752235284136264",
       "created_at": "2016-05-02T21:20:24",
       "trx_hash": "de3215cb992130fec51697c44d9250c237e71ebd",
       "operation": {
@@ -143,7 +143,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106472,
-      "operation_id": 4752261053940040,
+      "operation_id": "4752261053940040",
       "created_at": "2016-05-02T21:20:42",
       "trx_hash": "ab4af0d313585a79aa026aa60942acbc5b3ac93b",
       "operation": {
@@ -166,7 +166,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1106624,
-      "operation_id": 4752913888969032,
+      "operation_id": "4752913888969032",
       "created_at": "2016-05-02T21:28:18",
       "trx_hash": "1de6565c735a4eb790681c9ffa15757f22b98d1d",
       "operation": {
@@ -189,7 +189,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1107029,
-      "operation_id": 4754653350723912,
+      "operation_id": "4754653350723912",
       "created_at": "2016-05-02T21:48:39",
       "trx_hash": "1607327428aea96e5364ea15991195eaca98ca32",
       "operation": {
@@ -212,7 +212,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1107046,
-      "operation_id": 4754726365167944,
+      "operation_id": "4754726365167944",
       "created_at": "2016-05-02T21:49:33",
       "trx_hash": "186a5516d83763bdaaa7ff6f3922aecf4e678bd7",
       "operation": {
@@ -235,7 +235,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1107061,
-      "operation_id": 4754790789677384,
+      "operation_id": "4754790789677384",
       "created_at": "2016-05-02T21:50:18",
       "trx_hash": "23fdf1da7ad2977b54f7c8d34f1ac20f44258e23",
       "operation": {
@@ -258,7 +258,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1107464,
-      "operation_id": 4756521661497672,
+      "operation_id": "4756521661497672",
       "created_at": "2016-05-02T22:10:27",
       "trx_hash": "7897128de3ab473ca5371eebdeb7cafcdbea6ab9",
       "operation": {
@@ -281,7 +281,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1108184,
-      "operation_id": 4759614037950792,
+      "operation_id": "4759614037950792",
       "created_at": "2016-05-02T22:46:33",
       "trx_hash": "fc3293c3756501f577a1292375bc8156d12139ba",
       "operation": {
@@ -304,7 +304,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1108312,
-      "operation_id": 4760163793764680,
+      "operation_id": "4760163793764680",
       "created_at": "2016-05-02T22:53:03",
       "trx_hash": "5adf64a02904090723c65f8e3666e3c5b022b9dd",
       "operation": {
@@ -327,7 +327,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1108459,
-      "operation_id": 4760795153957704,
+      "operation_id": "4760795153957704",
       "created_at": "2016-05-02T23:00:24",
       "trx_hash": "8ae468dbc6da1f5014c1d8ff5c014ec3447faec1",
       "operation": {
@@ -350,7 +350,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1108478,
-      "operation_id": 4760876758335816,
+      "operation_id": "4760876758335816",
       "created_at": "2016-05-02T23:01:21",
       "trx_hash": "74b880cf898975042e9c4e91946cf982e69b96ee",
       "operation": {
@@ -373,7 +373,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1110749,
-      "operation_id": 4770630629065032,
+      "operation_id": "4770630629065032",
       "created_at": "2016-05-03T00:54:57",
       "trx_hash": "ffffce844dbde0ca7284224215be4d554b35d6d0",
       "operation": {
@@ -396,7 +396,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1110893,
-      "operation_id": 4771249104355656,
+      "operation_id": "4771249104355656",
       "created_at": "2016-05-03T01:02:09",
       "trx_hash": "840dee2630ab7dcda4db72eb3751ba40cb3393e8",
       "operation": {
@@ -419,7 +419,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1111022,
-      "operation_id": 4771803155136840,
+      "operation_id": "4771803155136840",
       "created_at": "2016-05-03T01:08:39",
       "trx_hash": "079826bcb830630406c466014a3c35161bdb9563",
       "operation": {
@@ -442,7 +442,7 @@
     {
       "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
       "block_num": 1111079,
-      "operation_id": 4772047968272712,
+      "operation_id": "4772047968272712",
       "created_at": "2016-05-03T01:11:30",
       "trx_hash": "b5c4cc5b31b1b253baa549e8d3d12c7498be8c8f",
       "operation": {
