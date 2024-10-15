@@ -219,7 +219,7 @@ RETURN (
     'total_operations', _ops_count,
     'total_pages', _calculate_total_pages,
     'operations_result', 
-    (SELECT to_json(array_agg(row)) FROM (
+    (SELECT COALESCE(to_json(array_agg(row)), '[]') FROM (
       SELECT * FROM hafbe_backend.get_comment_operations("account-name", "permlink", "page", "page-size", _operation_types, _block_range.first_block, _block_range.last_block, "data-size-limit")
     ) row)
   ));
