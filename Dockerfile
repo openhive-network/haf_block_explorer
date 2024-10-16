@@ -46,6 +46,18 @@ RUN mkdir -p /home/haf_admin/haf_block_explorer/queries
 RUN mkdir -p /home/haf_admin/haf_block_explorer/postgrest
 RUN mkdir -p /home/haf_admin/haf_block_explorer/haf/scripts
 
+USER root
+
+RUN <<EOF
+  set -e
+  mkdir /app
+  chown haf_admin /app
+EOF
+
+USER haf_admin
+
+COPY --chown=haf_admin:users docker/scripts/block-processing-healthcheck.sh /app/
+
 COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh
 COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend 
 COPY --chown=haf_admin:users endpoints /home/haf_admin/haf_block_explorer/endpoints 
