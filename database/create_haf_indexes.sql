@@ -22,11 +22,11 @@ DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'example_idx')) THEN
       RAISE NOTICE 'Dropping invalid index example_idx, it will be recreated';
-      DROP INDEX example_idx;
+      DROP INDEX hive.example_idx;
     END IF;
   END
 $$;
---CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS example_idx ON example_table USING btree (example_column);
+--CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS example_idx ON hive.example_table USING btree (example_column);
 
 -- When you create expression indexes, you need to call ANALYZE to force postgresql to generate statistics on those expressions
---ANALYZE VERBOSE example_table;
+--ANALYZE VERBOSE hive.example_table;
