@@ -3,8 +3,8 @@ POSITIVE
 Block-numbers
     get_block_by_op
 Accounts
-    get_account_authority
-    get_account
+    get_account_authority +
+    get_account +
     get_comment_operations +
 Witnesses
     get_witness_voters_num +
@@ -23,8 +23,8 @@ NEGATIVE
 Block-numbers
     get_block_by_op
 Accounts
-    get_account_authority
-    get_account
+    get_account_authority +
+    get_account +
     get_comment_operations +
 Witnesses
     get_witness_voters_num +

@@ -1,0 +1,324 @@
+{
+  "total_operations": 1015,
+  "total_pages": 51,
+  "operations_result": [
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4281331,
+      "operation_id": "18388176628352256",
+      "created_at": "2016-08-21T17:53:27",
+      "trx_hash": "2f53102a9e612ae4ddcf05404bf02ad4b84a883b",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "johnerfx",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4281331,
+      "operation_id": "18388176628352584",
+      "created_at": "2016-08-21T17:53:27",
+      "trx_hash": "2f53102a9e612ae4ddcf05404bf02ad4b84a883b",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "johnerfx",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 9975325205,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "367",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4282612,
+      "operation_id": "18393678481458688",
+      "created_at": "2016-08-21T18:57:54",
+      "trx_hash": "e518bc8727ff51a558d024764a53b1f11d73f66c",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "johnerminer",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4282612,
+      "operation_id": "18393678481459016",
+      "created_at": "2016-08-21T18:57:54",
+      "trx_hash": "e518bc8727ff51a558d024764a53b1f11d73f66c",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "johnerminer",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 867610016,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "370",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4380632,
+      "operation_id": "18814671175811584",
+      "created_at": "2016-08-25T05:21:18",
+      "trx_hash": "5bb92ae53e3b45beb8f57e2929672eaee9998444",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "agussudaryanto",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4380632,
+      "operation_id": "18814671175811912",
+      "created_at": "2016-08-25T05:21:18",
+      "trx_hash": "5bb92ae53e3b45beb8f57e2929672eaee9998444",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "agussudaryanto",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 151302584,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "328",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4409087,
+      "operation_id": "18936884470221824",
+      "created_at": "2016-08-26T05:26:03",
+      "trx_hash": "961a7c114ee44e548aa8eab7ee996eb1736951d4",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "mammasitta",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4409087,
+      "operation_id": "18936884470222152",
+      "created_at": "2016-08-26T05:26:03",
+      "trx_hash": "961a7c114ee44e548aa8eab7ee996eb1736951d4",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "mammasitta",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 1953019618,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "326",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4566280,
+      "operation_id": "19612023264378880",
+      "created_at": "2016-08-31T16:59:06",
+      "trx_hash": "62e93543f0b99f72702f2ebf6ce930080564ecfe",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "itay",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4566280,
+      "operation_id": "19612023264379208",
+      "created_at": "2016-08-31T16:59:06",
+      "trx_hash": "62e93543f0b99f72702f2ebf6ce930080564ecfe",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "itay",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 98699236,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "267",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4569740,
+      "operation_id": "19626883851223040",
+      "created_at": "2016-08-31T19:52:18",
+      "trx_hash": "e8555837917dd03bf19816e0ea4a45bc76255c50",
+      "operation": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "picokernel",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "witness-gtg"
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4569740,
+      "operation_id": "19626883851223368",
+      "created_at": "2016-08-31T19:52:18",
+      "trx_hash": "e8555837917dd03bf19816e0ea4a45bc76255c50",
+      "operation": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "picokernel",
+          "author": "gtg",
+          "weight": 0,
+          "rshares": 16250564070,
+          "permlink": "witness-gtg",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "276",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4695861,
+      "operation_id": "20168569421564723",
+      "created_at": "2016-09-05T05:17:57",
+      "trx_hash": null,
+      "operation": {
+        "type": "author_reward_operation",
+        "value": {
+          "author": "gtg",
+          "permlink": "witness-gtg",
+          "hbd_payout": {
+            "nai": "@@000000013",
+            "amount": "129",
+            "precision": 3
+          },
+          "hive_payout": {
+            "nai": "@@000000021",
+            "amount": "0",
+            "precision": 3
+          },
+          "vesting_payout": {
+            "nai": "@@000000037",
+            "amount": "487059208",
+            "precision": 6
+          },
+          "payout_must_be_claimed": false,
+          "curators_vesting_payout": {
+            "nai": "@@000000037",
+            "amount": "0",
+            "precision": 6
+          }
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4695861,
+      "operation_id": "20168569421564981",
+      "created_at": "2016-09-05T05:17:57",
+      "trx_hash": null,
+      "operation": {
+        "type": "comment_reward_operation",
+        "value": {
+          "author": "gtg",
+          "payout": {
+            "nai": "@@000000013",
+            "amount": "259",
+            "precision": 3
+          },
+          "permlink": "witness-gtg",
+          "author_rewards": 306,
+          "total_payout_value": {
+            "nai": "@@000000013",
+            "amount": "703088",
+            "precision": 3
+          },
+          "curator_payout_value": {
+            "nai": "@@000000013",
+            "amount": "231879",
+            "precision": 3
+          },
+          "beneficiary_payout_value": {
+            "nai": "@@000000013",
+            "amount": "0",
+            "precision": 3
+          }
+        }
+      }
+    },
+    {
+      "permlink": "witness-gtg",
+      "block_num": 4695861,
+      "operation_id": "20168569421565245",
+      "created_at": "2016-09-05T05:17:57",
+      "trx_hash": null,
+      "operation": {
+        "type": "comment_payout_update_operation",
+        "value": {
+          "author": "gtg",
+          "permlink": "witness-gtg"
+        }
+      }
+    }
+  ]
+}

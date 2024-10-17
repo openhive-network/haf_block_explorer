@@ -142,15 +142,17 @@ DECLARE
   _invalid_key TEXT := NULL;
 BEGIN
 IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
-
+  --using path-filter requires indexes on hive.operations
   IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
     RAISE EXCEPTION 'Blocksearch indexes are not installed';
   END IF;
 
+  --ensure operation-type is provided when key-value is used
   IF "operation-types" IS NULL THEN
     RAISE EXCEPTION 'Operation type not specified';
   END IF;
 
+  --decode key-value
   SELECT 
     pvpf.param_json::JSON,
     pvpf.param_text::TEXT[],
@@ -158,10 +160,12 @@ IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
   INTO _set_of_keys, _key_content, _operation_types
   FROM hafah_backend.parse_path_filters("path-filter") pvpf;
 
+  --ensure that one operation is selected when keys are used
   IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
+  --check if provided keys are correct
 	WITH user_provided_keys AS
 	(
 		SELECT json_array_elements_text(_set_of_keys) AS given_key
@@ -189,6 +193,7 @@ ELSE
   END IF;
 END IF;
 
+--if no path-filter and operation-types are used - use operation-type
 IF _operation_types IS NULL THEN
   SELECT array_agg(id) FROM hive.operation_types INTO _operation_types;
 END IF;

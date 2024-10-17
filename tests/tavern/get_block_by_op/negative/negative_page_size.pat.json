@@ -1,0 +1,6 @@
+{
+  "code": "2201W",
+  "details": null,
+  "hint": null,
+  "message": "LIMIT must not be negative"
+}

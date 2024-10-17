@@ -135,36 +135,48 @@ IF _account IS NULL THEN
 
   RETURN QUERY EXECUTE format(
     $query$
-    WITH block_num_array AS (
-    SELECT unnested_op_types.op_type_id, 
+    WITH block_num_array AS
     (
-      WITH disc_num AS (
-      SELECT DISTINCT ov.block_num 
-      FROM hive.operations_view ov
-      WHERE ov.op_type_id = unnested_op_types.op_type_id AND
-        (%L OR ov.block_num >= %L) AND
-	      (%L OR ov.block_num <= %L)
-      GROUP BY ov.block_num
-      ORDER BY ov.block_num %s
-      LIMIT %L)
-      SELECT array_agg(dn.block_num) as block_nums
-      FROM disc_num dn
-    ) AS block_nums
-    FROM UNNEST(%L::INT[]) AS unnested_op_types(op_type_id)),
-
-    unnest_block_nums AS (
-    SELECT bna.op_type_id, unnest(bna.block_nums) AS block_num 
-    FROM block_num_array bna),
-
-    array_op_type_id AS MATERIALIZED (
-    SELECT ubn.block_num, array_agg(ubn.op_type_id) as op_type_id 
-    FROM unnest_block_nums ubn
-    GROUP BY ubn.block_num
-    ORDER BY ubn.block_num %s)
-
-    SELECT aoti.block_num, array(SELECT DISTINCT unnest(aoti.op_type_id)) 
+      SELECT 
+        unnested_op_types.op_type_id, 
+        (
+          WITH disc_num AS 
+          (
+            SELECT 
+              DISTINCT ov.block_num 
+            FROM hive.operations_view ov
+            WHERE ov.op_type_id = unnested_op_types.op_type_id AND
+              (%L OR ov.block_num >= %L) AND
+              (%L OR ov.block_num <= %L)
+            GROUP BY ov.block_num
+            ORDER BY ov.block_num %s
+            LIMIT %L
+          )
+          SELECT array_agg(dn.block_num) AS block_nums
+          FROM disc_num dn
+        ) AS block_nums
+      FROM UNNEST(%L::INT[]) AS unnested_op_types(op_type_id)
+    ),
+    unnest_block_nums AS 
+    (
+      SELECT 
+        bna.op_type_id, 
+        unnest(bna.block_nums) AS block_num 
+      FROM block_num_array bna
+    ),
+    array_op_type_id AS MATERIALIZED 
+    (
+      SELECT 
+        ubn.block_num, 
+        array_agg(ubn.op_type_id) AS op_type_id 
+      FROM unnest_block_nums ubn
+      GROUP BY ubn.block_num
+      ORDER BY ubn.block_num %s
+    )
+    SELECT 
+      aoti.block_num, 
+      array(SELECT DISTINCT unnest(aoti.op_type_id)) 
     FROM array_op_type_id aoti
-
     $query$, 
 
   __no_start_date, _from,
