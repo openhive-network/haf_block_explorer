@@ -21,6 +21,7 @@ variables:
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
+  PYTEST_NUMBER_OF_PROCESSES: 8
   BUILDER_IMAGE_TAG: "@sha256:834e666ee84fb78d66a695b274b87f75535f96fda98e51726a23eab60812813b"
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
 
@@ -394,7 +395,7 @@ pattern-test:
   script:
     - |
       cd $CI_PROJECT_DIR/tests/tavern
-      pytest -n auto --junitxml report.xml .
+      pytest -n $PYTEST_NUMBER_OF_PROCESSES --junitxml report.xml .
   artifacts:
     paths:
     - "**/*.out.json"
