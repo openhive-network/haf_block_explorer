@@ -141,7 +141,7 @@ BEGIN
 -- Updated by hafbe_app.update_witnesses_cache
   INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_ids_arr)
   SELECT array_agg(hot.id)
-  FROM hive.operation_types hot
+  FROM hafd.operation_types hot
   JOIN (
     SELECT get_balance_impacting_operations AS name
     FROM hive.get_balance_impacting_operations()
