@@ -147,9 +147,8 @@ setup_api() {
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/account_authority.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/account.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/comment_history.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/permlink_history.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks/latest_blocks.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks/block_by_ops.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/operations/operation.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/operations/op_types_count.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_voters.sql"
@@ -160,7 +159,10 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/witness.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch_backend.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/block_search.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/comment_operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/comment_permlinks.sql"
+
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/account_stats_hafbe.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/compare_accounts.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$account_dump/compare_witnesses.sql"
@@ -170,6 +172,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_account_authority.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_account.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_comment_operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_comment_permlinks.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/block-numbers/get_block_by_op.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/other/get_hafbe_version.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/other/get_input_type.sql"
@@ -206,15 +209,15 @@ create_haf_indexes() {
 
 create_blocksearch_indexes() {
 if [ "$BLOCKSEARCH_INDEXES" = "true" ] && [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_blocksearch_indexes_exist();")" = f ]; then
-  echo 'Creating blocksearch indexes...'
+  echo 'Creating block search indexes...'
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = TRUE;"
-elif [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_blocksearch_indexes_exist();")" = t ]; then
-  echo "blocksearch indexes already exist, skipping creation"
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = TRUE;"
-else 
-  echo "blocksearch indexes do not exist, disabling block/comment search APIs"
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = FALSE;"
+fi
+}
+
+create_commentsearch_indexes() {
+if [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_commentsearch_indexes_exist();")" = f ]; then
+  echo 'Creating comment search indexes...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$backend/hafbe_indexes.sql"
 fi
 }
 
@@ -238,5 +241,6 @@ if [ "$ONLY_APPS" -eq 0 ]; then
   setup_api
   create_haf_indexes
   create_blocksearch_indexes
+  create_commentsearch_indexes
 fi
 
