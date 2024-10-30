@@ -11,10 +11,10 @@ SET ROLE hafbe_owner;
       account name and time/block range in specified order
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`
+      * `SELECT * FROM hafbe_endpoints.get_block_by_op(NULL,NULL,1,5);`
 
       REST call example
-      * `GET ''https://%1$s/hafbe-api/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`
+      * `GET ''https://%1$s/hafbe-api/block-numbers?page-size=5''`
     operationId: hafbe_endpoints.get_block_by_op
     parameters:
       - in: query
@@ -33,6 +33,20 @@ SET ROLE hafbe_owner;
           type: string
           default: NULL
         description: Filter operations by the account that created them.
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Return page on `page` number, defaults to `1`
+      - in: query
+        name: page-size
+        required: false
+        schema:
+          type: integer
+          default: 100
+        description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: direction
         required: false
@@ -80,13 +94,6 @@ SET ROLE hafbe_owner;
 
           * `5000000`
       - in: query
-        name: result-limit
-        required: false
-        schema:
-          type: integer
-          default: 100
-        description: Limits the result to `result-limit` records
-      - in: query
         name: path-filter
         required: false
         schema:
@@ -103,14 +110,68 @@ SET ROLE hafbe_owner;
         description: |
           Block number with filtered operations
 
-          * Returns array of `hafbe_types.block_by_ops`
+          * Returns `JSON`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_block_by_ops'
+              type: string
+              x-sql-datatype: JSON
             example: 
-              - block_num: 4999999
-                op_type_id: [6]
+              - {
+                  "total_blocks": 160,
+                  "total_pages": 32,
+                  "blocks_result": [
+                    {
+                      "block_num": 5000000,
+                      "op_type_ids": [
+                        9,
+                        5,
+                        64,
+                        80
+                      ]
+                    },
+                    {
+                      "block_num": 4999999,
+                      "op_type_ids": [
+                        64,
+                        30,
+                        6,
+                        0,
+                        85,
+                        72,
+                        78
+                      ]
+                    },
+                    {
+                      "block_num": 4999998,
+                      "op_type_ids": [
+                        1,
+                        64,
+                        0,
+                        72
+                      ]
+                    },
+                    {
+                      "block_num": 4999997,
+                      "op_type_ids": [
+                        61,
+                        5,
+                        64,
+                        2,
+                        0,
+                        72
+                      ]
+                    },
+                    {
+                      "block_num": 4999996,
+                      "op_type_ids": [
+                        64,
+                        6,
+                        85
+                      ]
+                    }
+                  ]
+                }
       '404':
         description: No operations in database
  */
@@ -119,13 +180,14 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_by_op;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
+    "page" INT = 1,
+    "page-size" INT = 100,
     "direction" hafbe_types.sort_direction = 'desc',
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL,
-    "result-limit" INT = 100,
     "path-filter" TEXT[] = NULL
 )
-RETURNS SETOF hafbe_types.block_by_ops 
+RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
@@ -142,15 +204,17 @@ DECLARE
   _invalid_key TEXT := NULL;
 BEGIN
 IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
-
-  IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
-    RAISE EXCEPTION 'Blocksearch indexes are not installed';
+  --using path-filter requires indexes on hive.operations
+  IF NOT isBlockSearchIndexesCreated() THEN
+    RAISE EXCEPTION 'Block search indexes are not installed';
   END IF;
 
+  --ensure operation-type is provided when key-value is used
   IF "operation-types" IS NULL THEN
     RAISE EXCEPTION 'Operation type not specified';
   END IF;
 
+  --decode key-value
   SELECT 
     pvpf.param_json::JSON,
     pvpf.param_text::TEXT[],
@@ -158,10 +222,12 @@ IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
   INTO _set_of_keys, _key_content, _operation_types
   FROM hafah_backend.parse_path_filters("path-filter") pvpf;
 
+  --ensure that one operation is selected when keys are used
   IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
   
+  --check if provided keys are correct
 	WITH user_provided_keys AS
 	(
 		SELECT json_array_elements_text(_set_of_keys) AS given_key
@@ -189,31 +255,24 @@ ELSE
   END IF;
 END IF;
 
-IF _operation_types IS NULL THEN
-  SELECT array_agg(id) FROM hive.operation_types INTO _operation_types;
-END IF;
-
 IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
-IF array_length(_operation_types, 1) = 1 THEN
-  RETURN QUERY 
-      SELECT * FROM hafbe_backend.get_block_by_single_op(
-        _operation_types[1], "account-name", "direction", _block_range.first_block, _block_range.last_block, "result-limit", _key_content, _set_of_keys
-      )
-  ;
+RETURN hafbe_backend.get_block_by_op(
+  _operation_types,
+  "account-name",
+  "direction",
+  _block_range.first_block,
+  _block_range.last_block,
+  "page",
+  "page-size",
+  _key_content,
+  _set_of_keys
+);
 
-ELSE
-  RETURN QUERY
-      SELECT * FROM hafbe_backend.get_block_by_ops_group_by_block_num(
-        _operation_types, "account-name", "direction", _block_range.first_block, _block_range.last_block, "result-limit"
-      )
-  ;
-
-END IF;
 END
 $$;
 
