@@ -1,20 +1,20 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/accounts/{account-name}/comment-operations:
+/accounts/{account-name}/operations/comments/{permlink}:
   get:
     tags:
       - Accounts
-    summary: Get comment-related operations for an account.
+    summary: Get comment-related operations for an author-permlink.
     description: |
       List operations related to account. Optionally filtered by permlink,
       time/blockrange, and specific comment-related operations.
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`
+      * `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'',''blocktrades-witness-report-for-3rd-week-of-august'',''0'',1,3);`
       
       REST call example
-      * `GET ''https://%1$s/hafbe-api/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`
+      * `GET ''https://%1$s/hafbe-api/accounts/blocktrades/operations/comments/blocktrades-witness-report-for-3rd-week-of-august?page-size=3&operation-types=0''`
     operationId: hafbe_endpoints.get_comment_operations
     parameters:
       - in: path
@@ -23,6 +23,13 @@ SET ROLE hafbe_owner;
         schema:
           type: string
         description: Account to get operations for
+      - in: path
+        name: permlink
+        required: true
+        schema:
+          type: string
+        description: |
+          Unique post identifier containing post''s title and generated number
       - in: query
         name: operation-types
         required: false
@@ -40,20 +47,24 @@ SET ROLE hafbe_owner;
           default: 1
         description: Return page on `page` number, defaults to `1`
       - in: query
-        name: permlink
-        required: false
-        schema:
-          type: string
-          default: NULL
-        description: |
-            Unique post identifier containing post''s title and generated number
-      - in: query
         name: page-size
         required: false
         schema:
           type: integer
           default: 100
         description: Return max `page-size` operations per page, defaults to `100`
+      - in: query
+        name: direction
+        required: false
+        schema:
+          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          default: asc
+        description: |
+          Sort order:
+          
+           * `asc` - Ascending, from A to Z or smallest to largest
+
+           * `desc` - Descending, from Z to A or largest to smallest
       - in: query
         name: data-size-limit
         required: false
@@ -63,40 +74,6 @@ SET ROLE hafbe_owner;
         description: |
           If the operation length exceeds the `data-size-limit`,
           the operation body is replaced with a placeholder (defaults to `200000`).
-      - in: query
-        name: from-block
-        required: false
-        schema:
-          type: string
-          default: NULL
-        description: |
-          Lower limit of the block range, can be represented either by a block-number (integer) or a timestamp (in the format YYYY-MM-DD HH:MI:SS).
-
-          The provided `timestamp` will be converted to a `block-num` by finding the first block 
-          where the block''s `created_at` is more than or equal to the given `timestamp` (i.e. `block''s created_at >= timestamp`).
-
-          The function will interpret and convert the input based on its format, example input:
-
-          * `2016-09-15 19:47:21`
-
-          * `5000000`
-      - in: query
-        name: to-block
-        required: false
-        schema:
-          type: string
-          default: NULL
-        description: | 
-          Similar to the from-block parameter, can either be a block-number (integer) or a timestamp (formatted as YYYY-MM-DD HH:MI:SS). 
-
-          The provided `timestamp` will be converted to a `block-num` by finding the first block 
-          where the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`).
-          
-          The function will convert the value depending on its format, example input:
-
-          * `2016-09-15 19:47:21`
-
-          * `5000000`
     responses:
       '200':
         description: |
@@ -111,36 +88,65 @@ SET ROLE hafbe_owner;
               x-sql-datatype: JSON
             example:  
               - {
-                  "total_operations": 3158,
-                  "total_pages": 31,
+                  "total_operations": 350,
+                  "total_pages": 117,
                   "operations_result": [
                     {
-                      "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s",
-                      "block_num": 4364560,
-                      "operation_id": 18745642461431100,
-                      "created_at": "2016-08-24T15:52:00",
-                      "trx_hash": null,
-                      "operation": {
-                        "type": "comment_payout_update_operation",
+                      "op": {
+                        "type": "vote_operation",
                         "value": {
+                          "voter": "blocktrades",
                           "author": "blocktrades",
-                          "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s"
+                          "weight": 10000,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
                         }
-                      }
+                      },
+                      "block": 4228228,
+                      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+                      "op_pos": 1,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:03",
+                      "virtual_op": false,
+                      "operation_id": "18160100980032256",
+                      "trx_in_block": 1
                     },
                     {
-                      "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
-                      "block_num": 4347061,
-                      "operation_id": 18670484828720700,
-                      "created_at": "2016-08-24T01:13:48",
-                      "trx_hash": null,
-                      "operation": {
-                        "type": "comment_payout_update_operation",
+                      "op": {
+                        "type": "vote_operation",
                         "value": {
+                          "voter": "murh",
                           "author": "blocktrades",
-                          "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem"
+                          "weight": 3301,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
                         }
-                      }
+                      },
+                      "block": 4228239,
+                      "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+                      "op_pos": 0,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:36",
+                      "virtual_op": false,
+                      "operation_id": "18160148224672256",
+                      "trx_in_block": 1
+                    },
+                    {
+                      "op": {
+                        "type": "vote_operation",
+                        "value": {
+                          "voter": "weenis",
+                          "author": "blocktrades",
+                          "weight": 10000,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                        }
+                      },
+                      "block": 4228240,
+                      "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+                      "op_pos": 0,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:39",
+                      "virtual_op": false,
+                      "operation_id": "18160152519641600",
+                      "trx_in_block": 5
                     }
                   ]
                 }
@@ -151,13 +157,12 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_operations;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     "account-name" TEXT,
+    "permlink" TEXT,
     "operation-types" TEXT = NULL,
     "page" INT = 1,
-    "permlink" TEXT = NULL,
     "page-size" INT = 100,
-    "data-size-limit" INT = 200000,
-    "from-block" TEXT = NULL,
-    "to-block" TEXT = NULL
+    "direction" hafbe_types.sort_direction = 'asc',
+    "data-size-limit" INT = 200000
 )
 RETURNS JSON 
 -- openapi-generated-code-end
@@ -170,14 +175,13 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
   _operation_types INT[];
   _calculate_total_pages INT;
   _ops_count INT;
 BEGIN
-IF NOT (SELECT blocksearch_indexes FROM hafbe_app.app_status LIMIT 1) THEN
-  RAISE EXCEPTION 'Commentsearch indexes are not installed';
+IF NOT isCommentSearchIndexesCreated() THEN
+  RAISE EXCEPTION 'Comment search indexes are not installed';
 END IF;
 
 IF "operation-types" IS NULL THEN
@@ -187,32 +191,25 @@ END IF;
 _operation_types := (SELECT string_to_array("operation-types", ',')::INT[]);
 
 IF NOT _operation_types <@ allowed_ids THEN
-    RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
+  RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
 END IF;
 
-IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
-ELSE
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-END IF;
+PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  --count for given parameters 
-  SELECT hafbe_backend.get_comment_operations_count(
-    "account-name",
-    "permlink",
-    _operation_types,
-    _block_range.first_block,
-    _block_range.last_block
-  ) INTO _ops_count;
+--count for given parameters 
+SELECT hafbe_backend.get_comment_operations_count(
+  "account-name",
+  "permlink",
+  _operation_types
+) INTO _ops_count;
 
-  --amount of pages
-  SELECT 
-    (
-      CASE WHEN (_ops_count % "page-size") = 0 THEN 
-        _ops_count/"page-size" 
-      ELSE ((_ops_count/"page-size") + 1) 
-      END
-    )::INT INTO _calculate_total_pages;
+--amount of pages
+SELECT (
+    CASE WHEN (_ops_count % "page-size") = 0 THEN 
+      _ops_count/"page-size" 
+    ELSE ((_ops_count/"page-size") + 1) 
+    END
+  )::INT INTO _calculate_total_pages;
 
 RETURN (
   SELECT json_build_object(
@@ -220,7 +217,15 @@ RETURN (
     'total_pages', _calculate_total_pages,
     'operations_result', 
     (SELECT COALESCE(to_json(array_agg(row)), '[]') FROM (
-      SELECT * FROM hafbe_backend.get_comment_operations("account-name", "permlink", "page", "page-size", _operation_types, _block_range.first_block, _block_range.last_block, "data-size-limit")
+      SELECT * FROM hafbe_backend.get_comment_operations(
+        "account-name",
+        "permlink",
+        _operation_types,
+        "page",
+        "page-size",
+        "direction",
+        "data-size-limit"
+      )
     ) row)
   ));
 
