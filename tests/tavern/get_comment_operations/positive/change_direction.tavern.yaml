@@ -16,8 +16,10 @@
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "themarkymark"
-          permlink: "non-existing-permlink"
+          account-name: "blocktrades"
+          permlink: "blocktrades-witness-report-for-3rd-week-of-august"
+          page-size: 20
+          direction: "desc"
       response:
         status_code: 200
         verify_response_with:

@@ -10,16 +10,16 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_operations"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_block_by_op"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "blocktrades"
+          account-name: "gtg"
           page-size: 20
-          from-block: 4000000
-          to-block: 4500000
+          from-block: "3000000"
+          to-block: "4000000"
       response:
         status_code: 200
         verify_response_with:

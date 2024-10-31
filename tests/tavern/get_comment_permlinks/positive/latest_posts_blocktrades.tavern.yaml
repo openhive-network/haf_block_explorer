@@ -10,14 +10,15 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_operations"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_permlinks"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "themarkymark"
-          permlink: "non-existing-permlink"
+          account-name: "blocktrades"
+          comment-type: "post"
+          page-size: 20
       response:
         status_code: 200
         verify_response_with:

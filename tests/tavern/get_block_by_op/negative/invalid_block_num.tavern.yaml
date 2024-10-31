@@ -3,6 +3,7 @@
 
   marks:
     - patterntest
+    - negative
 
   includes:
     - !include ../../common.yaml
@@ -10,15 +11,17 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_operations"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_block_by_op"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
           account-name: "blocktrades"
-          permlink: "-blocktrades-adds-support-for-directl"
+          from-block: "d400000"
       response:
-        status_code: 200
+        status_code: 400
         verify_response_with:
           function: validate_response:compare_rest_response_with_pattern
+          extra_kwargs:
+            error_response: true

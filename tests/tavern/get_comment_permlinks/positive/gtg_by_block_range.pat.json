@@ -1,0 +1,55 @@
+{
+  "total_permlinks": 7,
+  "total_pages": 1,
+  "permlinks_result": [
+    {
+      "permlink": "re-wackou-btstools-development-bounties-20160811t173426180z",
+      "block": 3994822,
+      "trx_id": "97be0ae220643dc8aff2633140c65ea750f77c41",
+      "timestamp": "2016-08-11T17:34:36",
+      "operation_id": "17157629843342593"
+    },
+    {
+      "permlink": "re-heretickitten-re-cheetah-cheetah-bot-explained-20160811t093103978z",
+      "block": 3985180,
+      "trx_id": "f8d0ac4efa8b392935b82eed25678170853e98ff",
+      "timestamp": "2016-08-11T09:31:12",
+      "operation_id": "17116217768675073"
+    },
+    {
+      "permlink": "re-mefisto-pl-czy-polska-spolecznosc-powinna-miec-swojego-delegata-witness-20160805t184622691z",
+      "block": 3824218,
+      "trx_id": "9c5197bcd87f4207c122ed47e1be9fb2102c0226",
+      "timestamp": "2016-08-05T18:46:30",
+      "operation_id": "16424891242778113"
+    },
+    {
+      "permlink": "witness-gtg",
+      "block": 3818561,
+      "trx_id": "bf5e83b7ddc4efcaf101f5260653a3588e411f36",
+      "timestamp": "2016-08-05T14:02:27",
+      "operation_id": "16400594612784129"
+    },
+    {
+      "permlink": "re-mefisto-pl-czy-polska-spolecznosc-powinna-miec-swojego-delegata-witness-20160803t123936611z",
+      "block": 3759799,
+      "trx_id": "8325110ddfa8b352975e6fd3bff448c3468efc87",
+      "timestamp": "2016-08-03T12:39:45",
+      "operation_id": "16148213744533505"
+    },
+    {
+      "permlink": "hello-world",
+      "block": 3075654,
+      "trx_id": "a04aa61579b65412036b6e1f79967006b54c508e",
+      "timestamp": "2016-07-10T12:39:45",
+      "operation_id": "13209833343811585"
+    },
+    {
+      "permlink": "re-pfunk-bear-with-me-while-i-bitch-about-losing-usd1000-on-a-post-due-to-the-july-4th-payout-and-fork-20160710t093728262z",
+      "block": 3072023,
+      "trx_id": "722393fcc1264595dd131aa5f12a8e69054ef957",
+      "timestamp": "2016-07-10T09:37:33",
+      "operation_id": "13194238317560065"
+    }
+  ]
+}

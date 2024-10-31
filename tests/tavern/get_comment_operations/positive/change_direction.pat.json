@@ -1,0 +1,456 @@
+{
+  "total_operations": 808,
+  "total_pages": 41,
+  "operations_result": [
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "indayiyay",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 148377230,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "62",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4842276,
+      "trx_id": "8729534965b9213c07c39ac5a6d7be81ca30667f",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-10T07:38:30",
+      "virtual_op": true,
+      "operation_id": "20797417058206024",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "indayiyay",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4842276,
+      "trx_id": "8729534965b9213c07c39ac5a6d7be81ca30667f",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-10T07:38:30",
+      "virtual_op": false,
+      "operation_id": "20797417058205696",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "makgorn",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 963717768,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "63",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4837800,
+      "trx_id": "8392cd78b16ccaf891ab031f1d18be722b6786ae",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-10T03:53:39",
+      "virtual_op": true,
+      "operation_id": "20778192784589128",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "makgorn",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4837800,
+      "trx_id": "8392cd78b16ccaf891ab031f1d18be722b6786ae",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-10T03:53:39",
+      "virtual_op": false,
+      "operation_id": "20778192784588800",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "sergey44",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 103484220,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "65",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4825003,
+      "trx_id": "c660be9857df8663af88b58cc747109504919cac",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-09T17:08:36",
+      "virtual_op": true,
+      "operation_id": "20723230088102216",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "sergey44",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4825003,
+      "trx_id": "c660be9857df8663af88b58cc747109504919cac",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-09T17:08:36",
+      "virtual_op": false,
+      "operation_id": "20723230088101888",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "gavicrane",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 1359710881,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "64",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4810607,
+      "trx_id": "c06e981c57592c31ba75170996bdf23a2771b14f",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-09T05:06:54",
+      "virtual_op": true,
+      "operation_id": "20661399738909512",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "gavicrane",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4810607,
+      "trx_id": "c06e981c57592c31ba75170996bdf23a2771b14f",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-09T05:06:54",
+      "virtual_op": false,
+      "operation_id": "20661399738909184",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "timalex",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 75952648,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "59",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4791257,
+      "trx_id": "d2cdd8487992cecdfcf289b97e64c69c99a9e780",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-08T12:55:33",
+      "virtual_op": true,
+      "operation_id": "20578292121731912",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "timalex",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4791257,
+      "trx_id": "d2cdd8487992cecdfcf289b97e64c69c99a9e780",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-08T12:55:33",
+      "virtual_op": false,
+      "operation_id": "20578292121731584",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "kental",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 25371398685,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "58",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4786648,
+      "trx_id": "dbb01668355014ce1543b8ca1762184c264b4615",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-08T09:04:39",
+      "virtual_op": true,
+      "operation_id": "20558496617468744",
+      "trx_in_block": 9
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "kental",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4786648,
+      "trx_id": "dbb01668355014ce1543b8ca1762184c264b4615",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-08T09:04:39",
+      "virtual_op": false,
+      "operation_id": "20558496617468416",
+      "trx_in_block": 9
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "brainup",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 81556444,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "53",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4739630,
+      "trx_id": "d9434a7256be982b9f2534185c65ea348174758b",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-06T17:49:45",
+      "virtual_op": true,
+      "operation_id": "20356555845143368",
+      "trx_in_block": 5
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "brainup",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4739630,
+      "trx_id": "d9434a7256be982b9f2534185c65ea348174758b",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-06T17:49:45",
+      "virtual_op": false,
+      "operation_id": "20356555845143040",
+      "trx_in_block": 5
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "elsi",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 129628407,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "57",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4734228,
+      "trx_id": "b04d4f88359e9885cb5cbad041ff723988bec90f",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-06T13:19:30",
+      "virtual_op": true,
+      "operation_id": "20333354431808328",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "elsi",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4734228,
+      "trx_id": "b04d4f88359e9885cb5cbad041ff723988bec90f",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-06T13:19:30",
+      "virtual_op": false,
+      "operation_id": "20333354431808000",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "igorphoto",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 64035836,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "57",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4652315,
+      "trx_id": "0e30dbef510cec974e4d5b97fe630b234364cc27",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-03T16:52:39",
+      "virtual_op": true,
+      "operation_id": "19981540775691080",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "igorphoto",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4652315,
+      "trx_id": "0e30dbef510cec974e4d5b97fe630b234364cc27",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-03T16:52:39",
+      "virtual_op": false,
+      "operation_id": "19981540775690752",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "mbroek1983",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 998189412,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "58",
+            "precision": 3
+          },
+          "total_vote_weight": 0
+        }
+      },
+      "block": 4646641,
+      "trx_id": "3567de9d410e0d0bd6b1c45d5c0d4538e4101eed",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-09-03T12:08:33",
+      "virtual_op": true,
+      "operation_id": "19957171131254856",
+      "trx_in_block": 3
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "mbroek1983",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4646641,
+      "trx_id": "3567de9d410e0d0bd6b1c45d5c0d4538e4101eed",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-09-03T12:08:33",
+      "virtual_op": false,
+      "operation_id": "19957171131254528",
+      "trx_in_block": 3
+    }
+  ]
+}
