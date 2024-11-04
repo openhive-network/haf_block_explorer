@@ -17,14 +17,20 @@ DO $$
     END IF;
   END
 $$;
+
+SELECT pg_advisory_lock(hafbe_app.generate_lock_key('hive_operations_comment_search_permlink'));
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_search_permlink ON hive.operations USING btree
 (
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'parent_author'),
-	  (body_binary::jsonb -> 'value' ->> 'permlink'),
+    (body_binary::jsonb -> 'value' ->> 'permlink'),
     hive.operation_id_to_block_num(id)
 )
 WHERE hive.operation_id_to_type_id(id) = 1;
+
+-- Release the advisory lock
+SELECT pg_advisory_unlock(hafbe_app.generate_lock_key('hive_operations_comment_search_permlink'));
 
 DO $$
   BEGIN
@@ -34,12 +40,18 @@ DO $$
     END IF;
   END
 $$;
+
+SELECT pg_advisory_lock(hafbe_app.generate_lock_key('hive_operations_comment_search_permlink_author'));
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_search_permlink_author ON hive.operations USING btree
 (
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
 )
 WHERE hive.operation_id_to_type_id(id) = any(ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]);
+
+-- Release the advisory lock
+SELECT pg_advisory_unlock(hafbe_app.generate_lock_key('hive_operations_comment_search_permlink_author'));
 
 /*
 DO $$

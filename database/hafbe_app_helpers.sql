@@ -80,6 +80,15 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_app.generate_lock_key( _index_name TEXT)
+RETURNS BIGINT
+LANGUAGE 'plpgsql' IMMUTABLE
+AS
+$$
+BEGIN
+    RETURN ('x' || substring(md5(_index_name), 1, 16))::BIT(64)::BIGINT % 2147483647;
+END
+$$;
 
 CREATE OR REPLACE PROCEDURE hafbe_app.create_context_if_not_exists(_appContext VARCHAR)
 LANGUAGE 'plpgsql'
