@@ -50,7 +50,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION isCommentSearchIndexesCreated()
+CREATE OR REPLACE FUNCTION hafbe_app.isCommentSearchIndexesCreated()
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -65,7 +65,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION isBlockSearchIndexesCreated()
+CREATE OR REPLACE FUNCTION hafbe_app.isBlockSearchIndexesCreated()
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql' STABLE
 AS

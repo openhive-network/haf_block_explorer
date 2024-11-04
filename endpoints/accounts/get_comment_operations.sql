@@ -180,7 +180,7 @@ DECLARE
   _calculate_total_pages INT;
   _ops_count INT;
 BEGIN
-IF NOT isCommentSearchIndexesCreated() THEN
+IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
   RAISE EXCEPTION 'Comment search indexes are not installed';
 END IF;
 

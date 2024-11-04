@@ -205,7 +205,7 @@ DECLARE
 BEGIN
 IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
   --using path-filter requires indexes on hive.operations
-  IF NOT isBlockSearchIndexesCreated() THEN
+  IF NOT hafbe_app.isBlockSearchIndexesCreated() THEN
     RAISE EXCEPTION 'Block search indexes are not installed';
   END IF;
 
