@@ -18,6 +18,7 @@ EOF
 POSTGRES_HOST="localhost"
 POSTGRES_PORT=5432
 POSTGRES_USER="haf_admin"
+DROP_INDEXES=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +30,9 @@ while [ $# -gt 0 ]; do
         ;;
     --user=*)
         POSTGRES_USER="${1#*=}"
+        ;;
+    --drop-indexes*)
+        DROP_INDEXES=1
         ;;
     --help|-h|-\?)
         print_help
@@ -69,6 +73,16 @@ uninstall_app() {
 
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP OWNED BY hafbe_user CASCADE" || true
     psql "$POSTGRES_ACCESS_ADMIN" -c "DROP ROLE IF EXISTS hafbe_user" || true
+
+    if [ "${DROP_INDEXES}" -eq 1 ]; then
+      echo "Attempting to drop indexes built by application"
+      # WIP
+      #psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.effective_comment_vote_idx;'
+
+    else
+      echo "Indexes created by application have been preserved"
+    fi
+
 }
 
 uninstall_app
