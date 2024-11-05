@@ -212,6 +212,7 @@ RETURN (
     WHERE active_key_auths.account_id = _account_id 
     AND active_key_auths.key_kind = _key_kind
     AND (active_key_auths.key_kind != 'MEMO' OR active_key_auths.key_kind != 'WITNESS_SIGNING')
+    ORDER BY hive.public_key_to_string(keys.key) ASC
   ),
   get_account_auth AS 
   (
@@ -220,6 +221,7 @@ RETURN (
     JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
     WHERE active_account_auths.account_id = _account_id
     AND active_account_auths.key_kind = _key_kind
+    ORDER BY av.name ASC
   )
   SELECT ROW(
       COALESCE(
