@@ -136,7 +136,17 @@ prepare_haf_data:
       else
         echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} image..."
         git config --global --add safe.directory $(pwd)
-        scripts/ci-helpers/build_docker_image.sh "$CI_PROJECT_DIR"
+
+        pushd "$CI_PROJECT_DIR"
+        case ${TARGET:-} in
+          default|full|full-ci)
+            scripts/ci-helpers/build_instance.sh "$BASE_TAG" "$CI_PROJECT_DIR" "$CI_REGISTRY_IMAGE" --progress="$PROGRESS_DISPLAY"
+            ;;
+          ci-runner|ci-runner-ci)
+            scripts/ci-helpers/build_ci_runner_image.sh "$CI_PROJECT_DIR" --registry="$CI_REGISTRY_IMAGE" --tag="$BASE_TAG" --progress="$PROGRESS_DISPLAY" --target="$TARGET"
+            ;;
+        esac
+        popd
       fi
       echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:

@@ -49,13 +49,7 @@ To build a given target run `docker buildx bake [target-name]`. If no target nam
 
 On Linux, you can also use convenience scripts.
 
-Command `scripts/ci-helpers/build_docker_image.sh [src_dir] --target=[target-name]` can build any of the targets. If no target name is provided the *default* target will be built. Run `scripts/ci-helpers/build_docker_image.sh --help` to see all the options.
-
-There's also `scripts/ci-helpers/build_instance.sh`, which can be used to build the *full* target. Running `scripts/ci-helpers/build_instance.sh [image_tag] [src_dir] [registry_url]` is functionally identical to running `scripts/build_docker_image.sh [src_dir] --registry=[registry_url] --target=full --tag=[image_tag]`.
-
-Using `build_docker_image.sh` or `build_instance.sh` scripts to build the *full* target will result in a Docker image with properly set labels. Otherwise most of the labels will be set to `[unknown]`.
-
-Finally `scripts/build_ci-runner_image.sh [src_dir]` will build *ci-runner* image. Run `scripts/build_ci-runner_image.sh --help` to see all available options.
+`scripts/build_ci_runner_image.sh [src_dir]` will build *ci-runner* image. Run `scripts/build_ci_runner_image.sh --help` to see all available options.
 
 ## Running HAF Block Explorer with Docker Compose
 
