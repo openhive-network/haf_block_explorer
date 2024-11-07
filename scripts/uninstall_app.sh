@@ -76,9 +76,18 @@ uninstall_app() {
 
     if [ "${DROP_INDEXES}" -eq 1 ]; then
       echo "Attempting to drop indexes built by application"
-      # WIP
-      #psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.effective_comment_vote_idx;'
-
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_search_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_search_permlink_author;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_vote_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_delete_comment_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_options_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_author_reward_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_curation_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_benefactor_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_payout_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_comment_reward_author_permlink;'
+      psql -aw "$POSTGRES_ACCESS_ADMIN" -v ON_ERROR_STOP=on -c 'DROP INDEX IF EXISTS hafd.hive_operations_effective_vote_author_permlink;'
     else
       echo "Indexes created by application have been preserved"
     fi

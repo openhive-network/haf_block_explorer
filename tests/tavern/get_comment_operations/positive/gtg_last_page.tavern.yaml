@@ -17,7 +17,8 @@
           accept: application/json  
         json:
           account-name: "gtg"
-          page: 51
+          permlink: "missing-rewards-while-mining"
+          page: 4
           page-size: 20
       response:
         status_code: 200

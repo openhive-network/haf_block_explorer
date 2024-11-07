@@ -3,7 +3,6 @@
 
   marks:
     - patterntest
-    - negative
 
   includes:
     - !include ../../common.yaml
@@ -11,17 +10,15 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_operations"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_block_by_op"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "blocktrades"
-          from-block: "d400000"
+          direction: "asc"
+          page-size: 20
       response:
-        status_code: 400
+        status_code: 200
         verify_response_with:
           function: validate_response:compare_rest_response_with_pattern
-          extra_kwargs:
-            error_response: true

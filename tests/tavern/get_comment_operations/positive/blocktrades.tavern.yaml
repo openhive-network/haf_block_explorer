@@ -17,6 +17,7 @@
           accept: application/json  
         json:
           account-name: "blocktrades"
+          permlink: "blocktrades-witness-report-for-3rd-week-of-august"
           page-size: 20
       response:
         status_code: 200

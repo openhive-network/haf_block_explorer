@@ -46,12 +46,11 @@ BEGIN
     continue_processing BOOLEAN, 
     started_processing_at TIMESTAMP,
     last_reported_at TIMESTAMP,
-    if_hf11 BOOLEAN,
-    blocksearch_indexes BOOLEAN
+    if_hf11 BOOLEAN
   );
   
-  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11, blocksearch_indexes)
-  VALUES (TRUE, NULL, NULL, FALSE, FALSE);
+  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11)
+  VALUES (TRUE, NULL, NULL, FALSE);
 
   CREATE TABLE IF NOT EXISTS hafbe_app.version(
   git_hash TEXT

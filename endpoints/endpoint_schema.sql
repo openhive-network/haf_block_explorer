@@ -45,6 +45,14 @@ declare
 {
   "components": {
     "schemas": {
+      "hafbe_types.comment_type": {
+        "type": "string",
+        "enum": [
+          "post",
+          "comment",
+          "all"
+        ]
+      },
       "hafbe_types.sort_direction": {
         "type": "string",
         "enum": [
@@ -422,35 +430,30 @@ declare
           }
         }
       },
-      "hafbe_types.comment_history": {
+      "hafbe_types.permlink_history": {
         "type": "object",
         "properties": {
           "permlink": {
             "type": "string",
             "description": "unique post identifier containing post''s title and generated number"
           },
-          "block_num": {
+          "block": {
             "type": "integer",
             "description": "operation block number"
+          },
+          "trx_id": {
+            "type": "string",
+            "description": "hash of the transaction"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "creation date"
           },
           "operation_id": {
             "type": "integer",
             "x-sql-datatype": "TEXT",
             "description": "unique operation identifier with an encoded block number and operation type id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "creation date"
-          },
-          "trx_hash": {
-            "type": "string",
-            "description": "hash of the transaction"
-          },
-          "operation": {
-            "type": "string",
-            "x-sql-datatype": "JSONB",
-            "description": "operation body"
           }
         }
       },
@@ -476,29 +479,6 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_types.latest_blocks"
-        }
-      },
-      "hafbe_types.block_by_ops": {
-        "type": "object",
-        "properties": {
-          "block_num": {
-            "type": "integer",
-            "description": "block number"
-          },
-          "op_type_id": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            },
-            "x-sql-datatype": "INT[]",
-            "description": "list of operation types"
-          }
-        }
-      },
-      "hafbe_types.array_of_block_by_ops": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.block_by_ops"
         }
       },
       "hafbe_types.operation": {
@@ -1183,14 +1163,14 @@ declare
         }
       }
     },
-    "/accounts/{account-name}/comment-operations": {
+    "/accounts/{account-name}/comment-permlinks": {
       "get": {
         "tags": [
           "Accounts"
         ],
-        "summary": "Get comment-related operations for an account.",
-        "description": "List operations related to account. Optionally filtered by permlink,\ntime/blockrange, and specific comment-related operations.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades/comment-operations?page-size=2&from-block=4000000&to-block=5000000''`\n",
-        "operationId": "hafbe_endpoints.get_comment_operations",
+        "summary": "Get comment permlinks for an account.",
+        "description": "List comment permlinks of root posts or comments for an account.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_permlinks(''blocktrades'',''post'',1,2,''4000000'',''4800000'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades/comment-permlinks?comment-type=post&page-size=2&from-block=4000000&to-block=4800000''`\n",
+        "operationId": "hafbe_endpoints.get_comment_permlinks",
         "parameters": [
           {
             "in": "path",
@@ -1203,13 +1183,13 @@ declare
           },
           {
             "in": "query",
-            "name": "operation-types",
+            "name": "comment-type",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": null
+              "$ref": "#/components/schemas/hafbe_types.comment_type",
+              "default": "all"
             },
-            "description": "List of operation types to include. If NULL, all comment operation types will be included.\ncomment-related operation type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`\n"
+            "description": "Sort order:\n\n * `post`    - permlinks related to root posts\n\n * `comment` - permlinks related to comments \n\n * `all`     - both, posts and comments\n"
           },
           {
             "in": "query",
@@ -1223,16 +1203,6 @@ declare
           },
           {
             "in": "query",
-            "name": "permlink",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": null
-            },
-            "description": "Unique post identifier containing post''s title and generated number\n"
-          },
-          {
-            "in": "query",
             "name": "page-size",
             "required": false,
             "schema": {
@@ -1240,16 +1210,6 @@ declare
               "default": 100
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
-          },
-          {
-            "in": "query",
-            "name": "data-size-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 200000
-            },
-            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder (defaults to `200000`).\n"
           },
           {
             "in": "query",
@@ -1283,36 +1243,183 @@ declare
                 },
                 "example": [
                   {
-                    "total_operations": 3158,
-                    "total_pages": 31,
+                    "total_operations": 3,
+                    "total_pages": 2,
                     "operations_result": [
                       {
-                        "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s",
-                        "block_num": 4364560,
-                        "operation_id": 18745642461431100,
-                        "created_at": "2016-08-24T15:52:00",
-                        "trx_hash": null,
-                        "operation": {
-                          "type": "comment_payout_update_operation",
-                          "value": {
-                            "author": "blocktrades",
-                            "permlink": "bitcoin-payments-accepted-in-20s-soon-to-be-6s"
-                          }
-                        }
+                        "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+                        "block": 4228346,
+                        "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
+                        "timestamp": "2016-08-19T21:27:00",
+                        "operation_id": "18160607786173953"
                       },
                       {
-                        "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem",
-                        "block_num": 4347061,
-                        "operation_id": 18670484828720700,
-                        "created_at": "2016-08-24T01:13:48",
-                        "trx_hash": null,
-                        "operation": {
-                          "type": "comment_payout_update_operation",
+                        "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
+                        "block": 4024774,
+                        "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
+                        "timestamp": "2016-08-12T18:40:42",
+                        "operation_id": "17286272703793409"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "No such account in the database"
+          }
+        }
+      }
+    },
+    "/accounts/{account-name}/operations/comments/{permlink}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get comment-related operations for an author-permlink.",
+        "description": "List operations related to account. Optionally filtered by permlink,\ntime/blockrange, and specific comment-related operations.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_comment_operations(''blocktrades'',''blocktrades-witness-report-for-3rd-week-of-august'',''0'',1,3);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/accounts/blocktrades/operations/comments/blocktrades-witness-report-for-3rd-week-of-august?page-size=3&operation-types=0''`\n",
+        "operationId": "hafbe_endpoints.get_comment_operations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account-name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Account to get operations for"
+          },
+          {
+            "in": "path",
+            "name": "permlink",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique post identifier containing post''s title and generated number\n"
+          },
+          {
+            "in": "query",
+            "name": "operation-types",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "List of operation types to include. If NULL, all comment operation types will be included.\ncomment-related operation type ids: `0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73`\n"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` operations per page, defaults to `100`"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "default": "asc"
+            },
+            "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
+          },
+          {
+            "in": "query",
+            "name": "data-size-limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200000
+            },
+            "description": "If the operation length exceeds the `data-size-limit`,\nthe operation body is replaced with a placeholder (defaults to `200000`).\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `JSON`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
+                },
+                "example": [
+                  {
+                    "total_operations": 350,
+                    "total_pages": 117,
+                    "operations_result": [
+                      {
+                        "op": {
+                          "type": "vote_operation",
                           "value": {
+                            "voter": "blocktrades",
                             "author": "blocktrades",
-                            "permlink": "-blocktrades-adds-support-for-directly-buyingselling-steem"
+                            "weight": 10000,
+                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
                           }
-                        }
+                        },
+                        "block": 4228228,
+                        "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+                        "op_pos": 1,
+                        "op_type_id": 0,
+                        "timestamp": "2016-08-19T21:21:03",
+                        "virtual_op": false,
+                        "operation_id": "18160100980032256",
+                        "trx_in_block": 1
+                      },
+                      {
+                        "op": {
+                          "type": "vote_operation",
+                          "value": {
+                            "voter": "murh",
+                            "author": "blocktrades",
+                            "weight": 3301,
+                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                          }
+                        },
+                        "block": 4228239,
+                        "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+                        "op_pos": 0,
+                        "op_type_id": 0,
+                        "timestamp": "2016-08-19T21:21:36",
+                        "virtual_op": false,
+                        "operation_id": "18160148224672256",
+                        "trx_in_block": 1
+                      },
+                      {
+                        "op": {
+                          "type": "vote_operation",
+                          "value": {
+                            "voter": "weenis",
+                            "author": "blocktrades",
+                            "weight": 10000,
+                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                          }
+                        },
+                        "block": 4228240,
+                        "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+                        "op_pos": 0,
+                        "op_type_id": 0,
+                        "timestamp": "2016-08-19T21:21:39",
+                        "virtual_op": false,
+                        "operation_id": "18160152519641600",
+                        "trx_in_block": 5
                       }
                     ]
                   }
@@ -1332,7 +1439,7 @@ declare
           "Block-numbers"
         ],
         "summary": "List block numbers that match operation type filter, account name, and time/block range.",
-        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(''6'',NULL,''desc'',4999999,5000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/block-numbers?operation-types=6&from-block=4999999&to-block5000000''`\n",
+        "description": "List the block numbers that match given operation type filter,\naccount name and time/block range in specified order\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_block_by_op(NULL,NULL,1,5);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/block-numbers?page-size=5''`\n",
         "operationId": "hafbe_endpoints.get_block_by_op",
         "parameters": [
           {
@@ -1354,6 +1461,26 @@ declare
               "default": null
             },
             "description": "Filter operations by the account that created them."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -1387,16 +1514,6 @@ declare
           },
           {
             "in": "query",
-            "name": "result-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100
-            },
-            "description": "Limits the result to `result-limit` records"
-          },
-          {
-            "in": "query",
             "name": "path-filter",
             "required": false,
             "schema": {
@@ -1412,17 +1529,67 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Block number with filtered operations\n\n* Returns array of `hafbe_types.block_by_ops`\n",
+            "description": "Block number with filtered operations\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_block_by_ops"
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
                 },
                 "example": [
                   {
-                    "block_num": 4999999,
-                    "op_type_id": [
-                      6
+                    "total_blocks": 160,
+                    "total_pages": 32,
+                    "blocks_result": [
+                      {
+                        "block_num": 5000000,
+                        "op_type_ids": [
+                          9,
+                          5,
+                          64,
+                          80
+                        ]
+                      },
+                      {
+                        "block_num": 4999999,
+                        "op_type_ids": [
+                          64,
+                          30,
+                          6,
+                          0,
+                          85,
+                          72,
+                          78
+                        ]
+                      },
+                      {
+                        "block_num": 4999998,
+                        "op_type_ids": [
+                          1,
+                          64,
+                          0,
+                          72
+                        ]
+                      },
+                      {
+                        "block_num": 4999997,
+                        "op_type_ids": [
+                          61,
+                          5,
+                          64,
+                          2,
+                          0,
+                          72
+                        ]
+                      },
+                      {
+                        "block_num": 4999996,
+                        "op_type_ids": [
+                          64,
+                          6,
+                          85
+                        ]
+                      }
                     ]
                   }
                 ]

@@ -1,392 +1,452 @@
 {
-  "total_operations": 1015,
-  "total_pages": 51,
+  "total_operations": 65,
+  "total_pages": 4,
   "operations_result": [
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138768,
-      "operation_id": "17775873205731585",
-      "created_at": "2016-08-16T18:11:06",
-      "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
-      "operation": {
+      "op": {
         "type": "comment_operation",
         "value": {
-          "body": "As you know, witness nodes are an essential part of the STEEM universe.\n\nIf I have a witness node with as much as (or as little as) 3% of witness approval, I can choose the right time to shut it down, listen to my favourite music album, walk my cat, and then start it up again, most probably without missing a block.\nA full-time witness, or one of the top19 witnesses, needs to produce blocks 1600 times more frequently.\nMaintaining such a server in the long run is not an easy task.\n\nWitnesses are vulnerable to DDoS attacks. An attacker who knows the network location of your witness node can saturate your uplink to a level that makes you unable to produce blocks on time. Effectively, this means **voting the witness out using a network-level attack**. Finding the IP address of your witness node is easier than you might think. Even if you follow the guidelines for setting up your public seed node on a different machine than the one you used to get your witness running, your witness still needs to connect to other nodes in the network.\nSo what does this mean? Take a look at: http://seeds.quisquis.de/steem.html\n(service provided by cyrano.witness)\n\nDoes any of these IP addresses look familiar?\nThe attacker still doesn't know which of them is yours, right?\n\nAn attack that makes the target IP unavailable for 3 seconds? Not exactly a difficult thing to do, right? So the attacker needs to make a guess by choosing from a set of suspected IP addresses he has obtained. Guessing doesn't cost him much. Neither does a high volume, short period DDoS attack. After that, he can see that your `total_missed` count increases, and he knows he guessed correctly. And then you are out.\n\n![witness](https://grey.house/img/witness2.jpg)\n\n## A concept of infrastructure: ##\n\n2 witness nodes (primary and backup)\n4 dedicated seed nodes\n\nOne witness node has your current signing key and does its job. The other is for failover, backup purposes. For example, whenever you need to upgrade your witness binary, you do that on the backup witness node, then change your signing key, so the backup node and the primary node switch their roles.  \n**(Never leave your current signing key on two nodes at the same time!)**\n\nThese 4 seed nodes mentioned here only work on behalf of your witness i.e. they don’t provide seed service on public network interfaces. \n_Your public seed node is not within the scope of this document._\n\nYour witness node connects **ONLY** to your seed nodes using VLAN or another private, low latency network solution of your choice. All other incoming/outgoing connections should be blocked except for the secure shell, preferably limited to access only from your IPs.\n\nEach seed node should be in a separate datacenter, ideally in a different part of the world, never in the same location as any of your (primary/backup) witness nodes. The purpose is to minimize the effects of a successful DDoS attack.\n\n_Please note that setting up all seed nodes in a single data center won’t help. A DDoS attack targeted at that particular network will bring all your nodes down anyway._\n\n```\n                      +---+\n         +  +----+    |   |\n         |  |    |<-->| B |\n         +--+ S1 |<-->| i |\n         |  |    |<-->| g |\n         |  +----+    |   |\n+------+ |            | B |\n|      +-+  +----+    | a |\n| W(p) | |  |    |<-->| d |\n|      | +--+ S2 |<-->|   |\n+------+ |  |    |<-->| U |\n         |  +----+    | g |\n     VLAN|            | l |\n         |  +----+    | y |\n+------+ |  |    |<-->|   |\n|      | +--+ S3 |<-->| I |\n| W(b) | |  |    |<-->| n |\n|      +-+  +----+    | t |\n+------+ |            | e |\n         |  +----+    | r |\n         |  |    |<-->| n |\n         +--+ S4 |<-->| e |\n         |  |    |<-->| t |\n         +  +----+    |   |\n                      +---+\n```\n```\nW(p) - primary witness\nW(b) - backup witness\nS1-4 - seed nodes\n```\nOf course, you need to keep your seed nodes (at least one of them) running all the time, otherwise your witness will not be able to sync the blockchain.\nBut if you do the math, you will see that the odds that all your seed nodes stop working at the same time are much lower than the chances that this happens to your witness node. \n\n\nIf one of your seed nodes falls victim to a DDoS attack, you can, depending on the features offered by your infrastructure provider:\n- do nothing (until most of them are targeted at the same time)\n- change its external interface IP address, routing the old one to a black hole\n- set up a new, additional, temporary seed node somewhere else\n- replace that seed node with a new one in another location\n\nIf you believe this idea is of use and value to Steem, please vote for me as a [witness](https://steemit.com/witness-category/@gtg/witness-gtg \"witness-gtg\")\neither on [Steemit's Witnesses List](https://steemit.com/~witnesses \"Witnesses\") \nor by using your `cli_wallet` command:\n`vote_for_witness \"YOURACCOUNT\" \"gtg\" true true`",
-          "title": "Heavy duty witness node infrastructure",
+          "body": "Suppose your miner node found `pow2`, but your `total_missed` count increased, instead of generating a block.\n\nIf this happens, double check your keys used in the `config.ini` file.\n\n```\nwitness = \"minerwitness\"\n\nminer = [\"minerwitness\",\"WIF_ACTIVE_PRIVATE_KEY\"]\nminer = [\"miner1\",\"WIF_ACTIVE_PRIVATE_KEY\"]\nminer = [\"miner2\",\"WIF_ACTIVE_PRIVATE_KEY\"]\nminer = [\"miner3\",\"WIF_ACTIVE_PRIVATE_KEY\"]\n\nmining-threads = 4\n\nprivate-key = WIF_SIGNING_PRIVATE_KEY\n```\n\nUsing keys without paying attention to their roles is a common mistake. @artakan [found out](https://steemit.com/mining/@artakan/important-info-for-steem-miner-do-not-use-your-steemit-com-account \"@artakan - Do not use your steemit.com account for mining\")\nthat issues with missing blocks tend to happen when you are using an account that was created through [steemit.com](https://steemit.com/ \"Blogging is the new mining\") but seems to work for the mined account.\n\nSo erroneous configuration might work for your mined account by pure coincidence. In other words, the same key has been defined for all roles, so:  `WIF_ACTIVE_PRIVATE_KEY` is exactly the same as `WIF_SIGNING_PRIVATE_KEY`.\n\n![witness](https://grey.house/img/witness2.jpg)\n\nIf you believe this idea is of use and value to Steem, please vote for me as a [witness](https://steemit.com/witness-category/@gtg/witness-gtg \"witness-gtg\")\neither on [Steemit's Witnesses List](https://steemit.com/~witnesses \"Witnesses\") \nor by using your `cli_wallet` command:\n`vote_for_witness \"YOURACCOUNT\" \"gtg\" true true`",
+          "title": "Missing rewards while mining",
           "author": "gtg",
-          "permlink": "heavy-duty-witness-node-infrastructure",
-          "json_metadata": "{\"tags\":[\"witness-category\",\"security\",\"steem\",\"steemit\"],\"links\":[\"https://steemit.com/witness-category/@gtg/witness-gtg\"]}",
+          "permlink": "missing-rewards-while-mining",
+          "json_metadata": "{\"tags\":[\"mining\",\"steem\",\"steem-mining\"],\"users\":[\"artakan\"],\"links\":[\"https://steemit.com/mining/@artakan/important-info-for-steem-miner-do-not-use-your-steemit-com-account\"]}",
           "parent_author": "",
-          "parent_permlink": "witness-category"
+          "parent_permlink": "mining"
         }
-      }
+      },
+      "block": 4274934,
+      "trx_id": "612c1e9ed2fb846fda150365b91cbee7393bd487",
+      "op_pos": 0,
+      "op_type_id": 1,
+      "timestamp": "2016-08-21T12:29:21",
+      "virtual_op": false,
+      "operation_id": "18360701722560001",
+      "trx_in_block": 3
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138768,
-      "operation_id": "17775873205731840",
-      "created_at": "2016-08-16T18:11:06",
-      "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
           "voter": "gtg",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4274934,
+      "trx_id": "612c1e9ed2fb846fda150365b91cbee7393bd487",
+      "op_pos": 1,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:29:21",
+      "virtual_op": false,
+      "operation_id": "18360701722560256",
+      "trx_in_block": 3
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138768,
-      "operation_id": "17775873205732168",
-      "created_at": "2016-08-16T18:11:06",
-      "trx_hash": "f8831ba6d1f7ad1b09b26aaf785f59a539f2aeaa",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
           "voter": "gtg",
           "author": "gtg",
           "weight": 0,
-          "rshares": 39092198167,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "rshares": 49812626493,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "27",
+            "amount": "28",
             "precision": 3
           },
-          "total_vote_weight": "178536101550898818"
+          "total_vote_weight": "226894638666622621"
         }
-      }
+      },
+      "block": 4274934,
+      "trx_id": "612c1e9ed2fb846fda150365b91cbee7393bd487",
+      "op_pos": 2,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:29:21",
+      "virtual_op": true,
+      "operation_id": "18360701722560584",
+      "trx_in_block": 3
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138783,
-      "operation_id": "17775937630240768",
-      "created_at": "2016-08-16T18:11:51",
-      "trx_hash": "c66cb0a4971b23c635b6c81f42bb5f144fd8713b",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
-          "voter": "vishal1",
+          "voter": "qonq99",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4274940,
+      "trx_id": "28e5724d579d922f9ec093e1ec7f741877e0251f",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:29:39",
+      "virtual_op": false,
+      "operation_id": "18360727492362496",
+      "trx_in_block": 1
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138783,
-      "operation_id": "17775937630241096",
-      "created_at": "2016-08-16T18:11:51",
-      "trx_hash": "c66cb0a4971b23c635b6c81f42bb5f144fd8713b",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
-          "voter": "vishal1",
+          "voter": "qonq99",
           "author": "gtg",
-          "weight": 5962425105974,
-          "rshares": 52732264,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "weight": 24273547132147,
+          "rshares": 539611572,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "27",
+            "amount": "29",
             "precision": 3
           },
-          "total_vote_weight": "178774598555137778"
+          "total_vote_weight": "229321993379837331"
         }
-      }
+      },
+      "block": 4274940,
+      "trx_id": "28e5724d579d922f9ec093e1ec7f741877e0251f",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:29:39",
+      "virtual_op": true,
+      "operation_id": "18360727492362824",
+      "trx_in_block": 1
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138799,
-      "operation_id": "17776006349721088",
-      "created_at": "2016-08-16T18:12:39",
-      "trx_hash": "6d682f6ad63de01a1932c6a4a3e937fa6975d01a",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
-          "voter": "runridefly",
+          "voter": "brains",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4275056,
+      "trx_id": "4e3f5da6d216a13fd74a4118d474fa976469ff33",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:35:33",
+      "virtual_op": false,
+      "operation_id": "18361225708570112",
+      "trx_in_block": 5
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138799,
-      "operation_id": "17776006349721416",
-      "created_at": "2016-08-16T18:12:39",
-      "trx_hash": "6d682f6ad63de01a1932c6a4a3e937fa6975d01a",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
-          "voter": "runridefly",
+          "voter": "brains",
           "author": "gtg",
-          "weight": 21635459628341,
-          "rshares": 92590152,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "weight": "10475460221133079",
+          "rshares": 11301045003,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "27",
+            "amount": "35",
             "precision": 3
           },
-          "total_vote_weight": "179193349386654062"
+          "total_vote_weight": "280009704127255458"
         }
-      }
+      },
+      "block": 4275056,
+      "trx_id": "4e3f5da6d216a13fd74a4118d474fa976469ff33",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:35:33",
+      "virtual_op": true,
+      "operation_id": "18361225708570440",
+      "trx_in_block": 5
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138900,
-      "operation_id": "17776440141414912",
-      "created_at": "2016-08-16T18:17:45",
-      "trx_hash": "b26fd7a6ca8159b60ef25e09793d4104d669bdc5",
-      "operation": {
-        "type": "vote_operation",
-        "value": {
-          "voter": "valtr",
-          "author": "gtg",
-          "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138900,
-      "operation_id": "17776440141415240",
-      "created_at": "2016-08-16T18:17:45",
-      "trx_hash": "b26fd7a6ca8159b60ef25e09793d4104d669bdc5",
-      "operation": {
-        "type": "effective_comment_vote_operation",
-        "value": {
-          "voter": "valtr",
-          "author": "gtg",
-          "weight": "14607246862286690",
-          "rshares": 14623675138,
-          "permlink": "heavy-duty-witness-node-infrastructure",
-          "pending_payout": {
-            "nai": "@@000000013",
-            "amount": "37",
-            "precision": 3
-          },
-          "total_vote_weight": "245090703652609056"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138938,
-      "operation_id": "17776603350172672",
-      "created_at": "2016-08-16T18:19:42",
-      "trx_hash": "7d268fc333dfc16a2c1b44338191b2d23827f3a4",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
           "voter": "stiletto",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4275072,
+      "trx_id": "e73003e9d4c428cea27504650cbe11ebf62bcde4",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:36:21",
+      "virtual_op": false,
+      "operation_id": "18361294428047616",
+      "trx_in_block": 5
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138938,
-      "operation_id": "17776603350173000",
-      "created_at": "2016-08-16T18:19:42",
-      "trx_hash": "7d268fc333dfc16a2c1b44338191b2d23827f3a4",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
           "voter": "stiletto",
           "author": "gtg",
-          "weight": 474071488837851,
-          "rshares": 368352936,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "weight": 410414889008036,
+          "rshares": 393291314,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "37",
+            "amount": "35",
             "precision": 3
           },
-          "total_vote_weight": "246744441404369002"
+          "total_vote_weight": "281768625080147042"
         }
-      }
+      },
+      "block": 4275072,
+      "trx_id": "e73003e9d4c428cea27504650cbe11ebf62bcde4",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:36:21",
+      "virtual_op": true,
+      "operation_id": "18361294428047944",
+      "trx_in_block": 5
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138939,
-      "operation_id": "17776607645139456",
-      "created_at": "2016-08-16T18:19:45",
-      "trx_hash": "33784ddd75892754df1426b2eecf4c112c7d4d08",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
           "voter": "paco-steem",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4275074,
+      "trx_id": "21b58678ecd48df11961e716ba1a04dbb15b972b",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:36:27",
+      "virtual_op": false,
+      "operation_id": "18361303017979904",
+      "trx_in_block": 0
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138939,
-      "operation_id": "17776607645139784",
-      "created_at": "2016-08-16T18:19:45",
-      "trx_hash": "33784ddd75892754df1426b2eecf4c112c7d4d08",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
           "voter": "paco-steem",
           "author": "gtg",
-          "weight": 609744595322054,
-          "rshares": 471129748,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "weight": 532408855653675,
+          "rshares": 503120540,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "38",
+            "amount": "36",
             "precision": 3
           },
-          "total_vote_weight": "248859162544214277"
+          "total_vote_weight": "284018239963190741"
         }
-      }
+      },
+      "block": 4275074,
+      "trx_id": "21b58678ecd48df11961e716ba1a04dbb15b972b",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:36:27",
+      "virtual_op": true,
+      "operation_id": "18361303017980232",
+      "trx_in_block": 0
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138940,
-      "operation_id": "17776611940106240",
-      "created_at": "2016-08-16T18:19:48",
-      "trx_hash": "10832691576033edb9c4d1cf19f9bc999813c580",
-      "operation": {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "sponge-bob",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "missing-rewards-while-mining"
+        }
+      },
+      "block": 4275074,
+      "trx_id": "9a0844d84de950f6943d5a359b8f5c55f82f4fc6",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:36:27",
+      "virtual_op": false,
+      "operation_id": "18361303017980928",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "sponge-bob",
+          "author": "gtg",
+          "weight": "15618044906320586",
+          "rshares": 14814536032,
+          "permlink": "missing-rewards-while-mining",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "45",
+            "precision": 3
+          },
+          "total_vote_weight": "350009979003981950"
+        }
+      },
+      "block": 4275074,
+      "trx_id": "9a0844d84de950f6943d5a359b8f5c55f82f4fc6",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:36:27",
+      "virtual_op": true,
+      "operation_id": "18361303017981256",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
         "type": "vote_operation",
         "value": {
           "voter": "spaninv",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4275075,
+      "trx_id": "75aa9eb6c2d585cb3e7fb75e2c09029e2f0e555f",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:36:30",
+      "virtual_op": false,
+      "operation_id": "18361307312947712",
+      "trx_in_block": 1
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138940,
-      "operation_id": "17776611940106568",
-      "created_at": "2016-08-16T18:19:48",
-      "trx_hash": "10832691576033edb9c4d1cf19f9bc999813c580",
-      "operation": {
+      "op": {
         "type": "effective_comment_vote_operation",
         "value": {
           "voter": "spaninv",
           "author": "gtg",
-          "weight": 7329394306549251,
-          "rshares": 5639122835,
-          "permlink": "heavy-duty-witness-node-infrastructure",
+          "weight": 6275481801898872,
+          "rshares": 5941196935,
+          "permlink": "missing-rewards-while-mining",
           "pending_payout": {
             "nai": "@@000000013",
-            "amount": "42",
+            "amount": "48",
             "precision": 3
           },
-          "total_vote_weight": "274132936015073766"
+          "total_vote_weight": "376340671879082116"
         }
-      }
+      },
+      "block": 4275075,
+      "trx_id": "75aa9eb6c2d585cb3e7fb75e2c09029e2f0e555f",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:36:30",
+      "virtual_op": true,
+      "operation_id": "18361307312948040",
+      "trx_in_block": 1
     },
     {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138984,
-      "operation_id": "17776800918667264",
-      "created_at": "2016-08-16T18:22:00",
-      "trx_hash": "9a433941f2da1ff9a3dd16266349d6df04cfb400",
-      "operation": {
-        "type": "vote_operation",
-        "value": {
-          "voter": "metaflute",
-          "author": "gtg",
-          "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4138984,
-      "operation_id": "17776800918667592",
-      "created_at": "2016-08-16T18:22:00",
-      "trx_hash": "9a433941f2da1ff9a3dd16266349d6df04cfb400",
-      "operation": {
-        "type": "effective_comment_vote_operation",
-        "value": {
-          "voter": "metaflute",
-          "author": "gtg",
-          "weight": 1113889294781944,
-          "rshares": 685101796,
-          "permlink": "heavy-duty-witness-node-infrastructure",
-          "pending_payout": {
-            "nai": "@@000000013",
-            "amount": "42",
-            "precision": 3
-          },
-          "total_vote_weight": "277198686367684623"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4139004,
-      "operation_id": "17776886818013696",
-      "created_at": "2016-08-16T18:23:00",
-      "trx_hash": "649d78c8b71a35e96c664b9792f6c76b99e5f04f",
-      "operation": {
-        "type": "vote_operation",
-        "value": {
-          "voter": "anwar78",
-          "author": "gtg",
-          "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4139004,
-      "operation_id": "17776886818014024",
-      "created_at": "2016-08-16T18:23:00",
-      "trx_hash": "649d78c8b71a35e96c664b9792f6c76b99e5f04f",
-      "operation": {
-        "type": "effective_comment_vote_operation",
-        "value": {
-          "voter": "anwar78",
-          "author": "gtg",
-          "weight": 2003062576046923,
-          "rshares": 1128966666,
-          "permlink": "heavy-duty-witness-node-infrastructure",
-          "pending_payout": {
-            "nai": "@@000000013",
-            "amount": "42",
-            "precision": 3
-          },
-          "total_vote_weight": "282248423954357540"
-        }
-      }
-    },
-    {
-      "permlink": "heavy-duty-witness-node-infrastructure",
-      "block_num": 4139056,
-      "operation_id": "17777110156313088",
-      "created_at": "2016-08-16T18:25:36",
-      "trx_hash": "6af588d776b88143aed76873738bafe4c03e1866",
-      "operation": {
+      "op": {
         "type": "vote_operation",
         "value": {
           "voter": "thegoodguy",
           "author": "gtg",
           "weight": 10000,
-          "permlink": "heavy-duty-witness-node-infrastructure"
+          "permlink": "missing-rewards-while-mining"
         }
-      }
+      },
+      "block": 4275088,
+      "trx_id": "b8d1b244e42b6b72ba951eb294438f802e82048e",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:37:09",
+      "virtual_op": false,
+      "operation_id": "18361363147522816",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "thegoodguy",
+          "author": "gtg",
+          "weight": 5020877797199169,
+          "rshares": 4368322380,
+          "permlink": "missing-rewards-while-mining",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "51",
+            "precision": 3
+          },
+          "total_vote_weight": "395651740329848153"
+        }
+      },
+      "block": 4275088,
+      "trx_id": "b8d1b244e42b6b72ba951eb294438f802e82048e",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:37:09",
+      "virtual_op": true,
+      "operation_id": "18361363147523144",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "ullikume",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "missing-rewards-while-mining"
+        }
+      },
+      "block": 4275095,
+      "trx_id": "e9a13af9d9fb1e7f610a84f032dd4831755ff5ba",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:37:36",
+      "virtual_op": false,
+      "operation_id": "18361393212294144",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "ullikume",
+          "author": "gtg",
+          "weight": 2867274754769938,
+          "rshares": 2362437240,
+          "permlink": "missing-rewards-while-mining",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "52",
+            "precision": 3
+          },
+          "total_vote_weight": "406078193983557022"
+        }
+      },
+      "block": 4275095,
+      "trx_id": "e9a13af9d9fb1e7f610a84f032dd4831755ff5ba",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-21T12:37:36",
+      "virtual_op": true,
+      "operation_id": "18361393212294472",
+      "trx_in_block": 2
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "kev7000",
+          "author": "gtg",
+          "weight": 10000,
+          "permlink": "missing-rewards-while-mining"
+        }
+      },
+      "block": 4275154,
+      "trx_id": "9e8cafcd254946e368cbd72bf8dbfb55f0f3fd36",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-21T12:40:33",
+      "virtual_op": false,
+      "operation_id": "18361646615364864",
+      "trx_in_block": 2
     }
   ]
 }

@@ -7,6 +7,25 @@ CREATE SCHEMA IF NOT EXISTS hafbe_types AUTHORIZATION hafbe_owner;
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_types.comment_type:
+  type: string
+  enum:
+    - post
+    - comment
+    - all
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.comment_type CASCADE;
+CREATE TYPE hafbe_types.comment_type AS ENUM (
+    'post',
+    'comment',
+    'all'
+);
+-- openapi-generated-code-end
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
 hafbe_types.sort_direction:
   type: string
   enum:

@@ -1,3 +1,5 @@
+-- noqa: disable=CP03
+
 SET ROLE hafbe_owner;
 
 --- Helper function telling application main-loop to continue execution.
@@ -47,6 +49,37 @@ BEGIN
     );
 END
 $$;
+
+CREATE OR REPLACE FUNCTION isCommentSearchIndexesCreated()
+RETURNS BOOLEAN
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN EXISTS(
+      SELECT true FROM pg_index WHERE indexrelid = 
+      (
+        SELECT oid FROM pg_class WHERE relname = 'hive_operations_comment_search_permlink_author'
+      )
+    );
+END
+$$;
+
+CREATE OR REPLACE FUNCTION isBlockSearchIndexesCreated()
+RETURNS BOOLEAN
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN EXISTS(
+      SELECT true FROM pg_index WHERE indexrelid = 
+      (
+        SELECT oid FROM pg_class WHERE relname = 'hive_operations_vote_author_permlink'
+      )
+    );
+END
+$$;
+
 
 CREATE OR REPLACE PROCEDURE hafbe_app.create_context_if_not_exists(_appContext VARCHAR)
 LANGUAGE 'plpgsql'

@@ -22,9 +22,8 @@ DEFAULT_TYPES="
 ../$types/witnesses/witness_votes_history_record.sql
 ../$types/accounts/account.sql
 ../$types/accounts/account_authority.sql
-../$types/accounts/comment_history.sql
+../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
-../$types/blocks/block_by_ops.sql
 ../$types/operations/operation.sql
 ../$types/operations/op_types_count.sql"
 
@@ -37,14 +36,13 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/witnesses/get_witness_votes_history.sql
 ../$endpoints/accounts/get_account.sql
 ../$endpoints/accounts/get_account_authority.sql
+../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/block-numbers/get_block_by_op.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql
 ../$endpoints/other/get_latest_blocks.sql"
-
-
 
 # Function to reverse the lines
 reverse_lines() {
