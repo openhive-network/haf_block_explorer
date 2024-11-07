@@ -190,7 +190,7 @@ ELSE
 END IF;
 
 IF _operation_types IS NULL THEN
-  SELECT array_agg(id) FROM hive.operation_types INTO _operation_types;
+  SELECT array_agg(id) FROM hafd.operation_types INTO _operation_types;
 END IF;
 
 IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN

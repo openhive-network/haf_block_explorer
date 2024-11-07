@@ -40,7 +40,7 @@ $$
 BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-  RETURN current_block_num FROM hive.contexts WHERE name = 'hafbe_app';
+  RETURN current_block_num FROM hafd.contexts WHERE name = 'hafbe_app';
 END
 $$;
 

@@ -29,7 +29,7 @@ function wait-for-haf-be-startup() {
 }
 
 #shellcheck disable=SC2089
-COMMAND="SELECT CASE WHEN irreversible_block = 5000000 THEN 0 ELSE 1 END FROM hive.contexts WHERE name = 'hafbe_app';"
+COMMAND="SELECT CASE WHEN irreversible_block = 5000000 THEN 0 ELSE 1 END FROM hafd.contexts WHERE name = 'hafbe_app';"
 MESSAGE="Waiting for HAF Block Explorer to finish processing blocks..."
 
 while [ $# -gt 0 ]; do

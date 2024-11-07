@@ -595,7 +595,7 @@ SELECT
      hafbe_app.process_create_account_operation(bc.body, bc._timestamp, bc.op_type)
 
     WHEN bc.op_type = 80 THEN
-     hafbe_app.process_created_account_operation(bc.body, bc._timestamp, COALESCE( ( SELECT ah.block_num < bc.source_op_block FROM hive.applied_hardforks ah WHERE hardfork_num = 11 ), FALSE ))
+     hafbe_app.process_created_account_operation(bc.body, bc._timestamp, COALESCE( ( SELECT ah.block_num < bc.source_op_block FROM hafd.applied_hardforks ah WHERE hardfork_num = 11 ), FALSE ))
 
     WHEN bc.op_type = 14 OR bc.op_type = 30 THEN
      hafbe_app.process_pow_operation(bc.body, bc._timestamp, bc.op_type)

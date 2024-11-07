@@ -18,7 +18,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink'),
@@ -35,7 +35,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -50,7 +50,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -65,7 +65,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -80,7 +80,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -95,7 +95,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -110,7 +110,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -125,7 +125,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -140,7 +140,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hive.operations USING gin
+CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING gin
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -156,14 +156,14 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hive.operations USING btree
+CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hafd.operations USING btree
 (
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
 )
 WHERE hive.operation_id_to_type_id(id) = any(ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]);
 
-ANALYZE VERBOSE hive.operations;
+ANALYZE VERBOSE hafd.operations;
 ----------------------------------------------------------------------------------
 
 /*
