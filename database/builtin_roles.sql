@@ -1,22 +1,14 @@
 -- Role involved into data schema creation.
 DO $$
 BEGIN
-  CREATE ROLE hafbe_owner WITH LOGIN INHERIT IN ROLE hive_applications_owner_group;
+  CREATE ROLE hafbe_owner WITH LOGIN INHERIT IN ROLE hive_applications_owner_group, reptracker_owner, btracker_owner, hafah_owner;
 EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 END
 $$;
 
 DO $$
 BEGIN
-  CREATE ROLE hafbe_user WITH LOGIN INHERIT IN ROLE hive_applications_group;  
+  CREATE ROLE hafbe_user WITH LOGIN INHERIT IN ROLE hive_applications_group, reptracker_user, btracker_user, hafah_user;  
 EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 END
 $$;
-
-GRANT reptracker_owner TO hafbe_owner;
-GRANT reptracker_user TO hafbe_owner;
-GRANT btracker_owner TO hafbe_owner;
-GRANT btracker_user TO hafbe_owner;
-GRANT hafbe_user TO hafbe_owner;
-GRANT ALL ON SCHEMA hafbe_bal TO hafbe_owner;
-GRANT ALL ON SCHEMA reptracker_app TO hafbe_owner;

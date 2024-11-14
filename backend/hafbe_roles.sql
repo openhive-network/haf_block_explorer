@@ -1,72 +1,21 @@
-DO $$
-DECLARE
-    retry_count INT := 0;
-    max_retries INT := 5;
-BEGIN
-    LOOP
-        BEGIN
-            -- grant new priviliges
-            GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;
-            GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_exceptions TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_exceptions TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA hafbe_views TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_views TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_views TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_views TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA hafbe_types TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_types TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_types TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_types TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA hafbe_bal TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_bal TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_bal TO hafbe_user;
+GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hafbe_app TO hafbe_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
 
-            GRANT USAGE ON SCHEMA btracker_endpoints TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA btracker_endpoints TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA btracker_endpoints TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA reptracker_app TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA reptracker_app TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA reptracker_app TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA reptracker_endpoints TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA reptracker_endpoints TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA reptracker_endpoints TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA hafah_python TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafah_python TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_python TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA hafah_backend TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafah_backend TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_backend TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA hafah_endpoints TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafah_endpoints TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafah_endpoints TO hafbe_user;
-
-            GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;
-            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA hafbe_app TO hafbe_user;
-            GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;
-            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hafbe_app TO hafbe_user;
-
-            GRANT hafbe_user TO hafbe_owner;
-            -- Exit loop if successful
-            EXIT;
-        EXCEPTION
-            WHEN unique_violation OR deadlock_detected THEN
-                -- Increment retry count
-                retry_count := retry_count + 1;
-                -- Raise exception if max retries reached
-                IF retry_count >= max_retries THEN
-                    RAISE;
-                END IF;
-                -- Delay before retrying
-                PERFORM pg_sleep(1);
-        END;
-    END LOOP;
-END $$;
+GRANT hafbe_user TO hafbe_owner;
