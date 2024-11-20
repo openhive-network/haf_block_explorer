@@ -65,7 +65,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log"
+POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_block_processing"
 BLOCK_PROCESSING_JOB_PID=0
 
 # shellcheck disable=SC2317
