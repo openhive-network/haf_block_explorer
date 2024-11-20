@@ -21,6 +21,8 @@ cat <<EOF
     --port=NUMBER                     PostgreSQL operating port (defaults to 5432)
     --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
     --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
+    --indexes-only                    Only creates indexes (ignored when --only-apps is specified)
+    --schema-only                     Only creates schema, but not indexes (ignored when --only-apps is specified)
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
     --swagger-url=URL        Allows to specify a server URL
 
@@ -29,6 +31,9 @@ EOF
 
 ONLY_APPS=0
 ONLY_HAFBE=0
+CREATE_SCHEMA=1
+CREATE_INDEXES=1
+POSTGRES_APP_NAME=block_explorer_install
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -60,6 +65,14 @@ while [ $# -gt 0 ]; do
     --only-hafbe)
         ONLY_HAFBE=1
         ;;
+    --indexes-only)
+        CREATE_SCHEMA=0
+        POSTGRES_APP_NAME=block_explorer_install_indexes
+        ;;
+    --schema-only)
+        CREATE_INDEXES=0
+        POSTGRES_APP_NAME=block_explorer_install_schema
+        ;;
     -*)
         echo "ERROR: '$1' is not a valid option"
         echo
@@ -76,9 +89,9 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-POSTGRES_ACCESS_ADMIN="postgresql://haf_admin@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_install"
+POSTGRES_ACCESS_ADMIN="postgresql://haf_admin@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=${POSTGRES_APP_NAME}"
 
-POSTGRES_ACCESS_OWNER="postgresql://$owner_role@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_install"
+POSTGRES_ACCESS_OWNER="postgresql://$owner_role@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=${POSTGRES_APP_NAME}"
 
 find_function() {
   local schema=$1
@@ -238,9 +251,13 @@ if [ "$ONLY_HAFBE" -eq 0 ]; then
 fi
 
 if [ "$ONLY_APPS" -eq 0 ]; then
-  setup_api
-  create_haf_indexes
-  create_blocksearch_indexes
-  create_commentsearch_indexes
+  if [ "$CREATE_SCHEMA" = 1 ]; then
+    setup_api
+  fi
+  if [ "$CREATE_INDEXES" = 1 ]; then
+    create_haf_indexes
+    create_blocksearch_indexes
+    create_commentsearch_indexes
+  fi
 fi
 
