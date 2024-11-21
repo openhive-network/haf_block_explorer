@@ -105,6 +105,9 @@ process_blocks() {
       timestamper="cat"
     fi
 
+    # save off the startup time for use in health checks
+    date -uIseconds > /tmp/block_processing_startup_time.txt
+
     if [[ "$log_file" == "STDOUT" ]]; then
         psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', $n_blocks);"
     else
