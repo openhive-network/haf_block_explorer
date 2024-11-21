@@ -192,7 +192,6 @@ RETURNS JSON
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
-SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
