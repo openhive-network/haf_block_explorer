@@ -159,7 +159,7 @@ BEGIN
         SELECT url, operation_id, witness
         FROM select_url_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT url, operation_id, witness
         FROM select_url_from_witness_update_op
@@ -219,7 +219,7 @@ BEGIN
         SELECT exchange_rate, operation_id, timestamp, witness
         FROM select_exchange_rate_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT exchange_rate, operation_id, timestamp, witness
         FROM select_exchange_rate_from_feed_publish_op
@@ -267,7 +267,7 @@ BEGIN
         SELECT block_size, operation_id, witness
         FROM select_block_size_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT block_size, operation_id, witness
         FROM select_block_size_from_witness_update_op
@@ -325,7 +325,7 @@ BEGIN
         SELECT signing_key, operation_id, witness
         FROM select_signing_key_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT signing_key, operation_id, witness
         FROM select_signing_key_from_witness_update_op
@@ -367,7 +367,7 @@ BEGIN
         SELECT signing_key, operation_id, witness
         FROM select_signing_key_from_pow
 
-        UNION
+        UNION ALL
 
         SELECT signing_key, operation_id, witness
         FROM select_signing_key_from_pow_two
@@ -415,7 +415,7 @@ BEGIN
         SELECT hbd_interest_rate, operation_id, witness
         FROM select_hbd_interest_rate_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT hbd_interest_rate, operation_id, witness
         FROM select_hbd_interest_rate_from_witness_update_op
@@ -463,7 +463,7 @@ BEGIN
         SELECT account_creation_fee, operation_id, witness
         FROM select_account_creation_fee_from_set_witness_properties
 
-        UNION
+        UNION ALL
 
         SELECT account_creation_fee, operation_id, witness
         FROM select_account_creation_fee_from_witness_update_op
