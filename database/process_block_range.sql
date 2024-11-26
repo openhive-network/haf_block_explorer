@@ -64,8 +64,6 @@ CREATE OR REPLACE FUNCTION hafbe_app.process_block_range_data_b(_from INT, _to I
 RETURNS VOID
 AS
 $function$
-DECLARE
-  __balance_impacting_ops_ids INT[] = (SELECT op_type_ids_arr FROM hafbe_app.balance_impacting_op_ids LIMIT 1);
 BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
