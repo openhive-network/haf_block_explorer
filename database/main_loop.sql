@@ -46,7 +46,7 @@ BEGIN
     END IF;
 
     IF _blocks_range IS NULL THEN
-      RAISE WARNING 'Waiting for next block...';
+      RAISE INFO 'Waiting for next block...';
       CONTINUE;
     END IF;
 
