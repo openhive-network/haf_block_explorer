@@ -27,7 +27,7 @@ SET ROLE hafbe_owner;
         required: false
         schema:
           $ref: '#/components/schemas/hafbe_types.comment_type'
-          default: all
+          default: post
         description: |
           Sort order:
           
@@ -124,7 +124,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_permlinks;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_permlinks(
     "account-name" TEXT,
-    "comment-type" hafbe_types.comment_type = 'all',
+    "comment-type" hafbe_types.comment_type = 'post',
     "page" INT = 1,
     "page-size" INT = 100,
     "from-block" TEXT = NULL,
@@ -137,7 +137,7 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF
 SET enable_hashjoin = OFF
-SET plan_cache_mode = force_custom_plan
+SET plan_cache_mode = force_custom_plan -- FIXME
 AS
 $$
 DECLARE

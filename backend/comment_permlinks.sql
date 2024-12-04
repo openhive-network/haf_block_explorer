@@ -25,13 +25,13 @@ RETURN QUERY
     FROM 
       hive.operations_view ov
     WHERE 
-      op_type_id = 1 AND  
-      ov.body_binary::jsonb->'value'->>'author' = _author AND
-      ((_to IS NULL) OR ov.block_num <= _to) AND
-      ((_from IS NULL) OR ov.block_num >= _from) AND
-      ((_comment_type = 'post' AND ov.body_binary::jsonb->'value'->>'parent_author' = '') OR
-      (_comment_type = 'comment' AND ov.body_binary::jsonb->'value'->>'parent_author' != '') OR
-      (_comment_type = 'all'))
+      op_type_id = 1  
+      AND ov.body_binary::jsonb->'value'->>'author' = _author
+      AND ((_to IS NULL) OR ov.block_num <= _to)
+      AND ((_from IS NULL) OR ov.block_num >= _from)
+      AND ((_comment_type = 'post' AND ov.body_binary::jsonb->'value'->>'parent_author' = '')
+      OR (_comment_type = 'comment' AND ov.body_binary::jsonb->'value'->>'parent_author' != '')
+      OR (_comment_type = 'all'))
     ORDER BY ov.id DESC
   ),
   permlink_list AS 
@@ -91,13 +91,13 @@ RETURN (
     FROM
       hive.operations_view ov
     WHERE 
-      ov.op_type_id = 1 AND 
-      ov.body_binary::jsonb->'value'->>'author' = _author AND
-      ((_from IS NULL) OR ov.block_num >= _from) AND
-      ((_to IS NULL) OR ov.block_num <= _to) AND
-      ((_comment_type = 'post' AND ov.body_binary::jsonb->'value'->>'parent_author' = '') OR
-      (_comment_type = 'comment' AND ov.body_binary::jsonb->'value'->>'parent_author' != '') OR
-      (_comment_type = 'all'))
+      ov.op_type_id = 1 
+      AND ov.body_binary::jsonb->'value'->>'author' = _author
+      AND ((_from IS NULL) OR ov.block_num >= _from)
+      AND ((_to IS NULL) OR ov.block_num <= _to)
+      AND ((_comment_type = 'post' AND ov.body_binary::jsonb->'value'->>'parent_author' = '')
+      OR (_comment_type = 'comment' AND ov.body_binary::jsonb->'value'->>'parent_author' != '')
+      OR (_comment_type = 'all'))
     GROUP BY ov.body_binary::jsonb->'value'->>'permlink'
   )
   SELECT COUNT(*) FROM agg_permlink
