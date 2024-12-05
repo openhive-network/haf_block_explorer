@@ -31,9 +31,9 @@ RETURN QUERY
     FROM 
       hive.operations_view ov
     WHERE 
-      ov.op_type_id = ANY(_operation_types) AND 
-      ov.body_binary::jsonb->'value'->>'author' = _author AND
-      ov.body_binary::jsonb->'value'->>'permlink' = _permlink
+      ov.op_type_id = ANY(_operation_types) 
+      AND ov.body_binary::jsonb->'value'->>'author' = _author
+      AND ov.body_binary::jsonb->'value'->>'permlink' = _permlink
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ov.id ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ov.id ELSE NULL END) ASC
@@ -103,9 +103,9 @@ RETURN (
   FROM
     hive.operations_view ov
   WHERE 
-    ov.op_type_id = ANY(_operation_types) AND 
-    ov.body_binary::jsonb->'value'->>'author' = _author AND
-    ov.body_binary::jsonb->'value'->>'permlink' = _permlink
+    ov.op_type_id = ANY(_operation_types) 
+    AND ov.body_binary::jsonb->'value'->>'author' = _author
+    AND ov.body_binary::jsonb->'value'->>'permlink' = _permlink
 );
 
 END
