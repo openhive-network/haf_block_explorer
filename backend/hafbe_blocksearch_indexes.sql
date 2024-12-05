@@ -6,9 +6,6 @@
 -- returns true.  This function has a list of the indexes created in this file, and returns
 -- true if they all exist.  If you add, remove, or rename an index created in this file, you
 -- must make a corresponding change in that function
-
-CREATE EXTENSION IF NOT EXISTS btree_gin;
-
 DO $$
   BEGIN
     IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_vote_author_permlink')) THEN
@@ -17,7 +14,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -32,10 +29,23 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING btree
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-    jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
+    jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author')
+)
+WHERE hive.operation_id_to_type_id(id) = 1;
+
+DO $$
+  BEGIN
+    IF EXISTS(SELECT 1 FROM pg_index WHERE NOT indisvalid AND indexrelid = (SELECT oid FROM pg_class WHERE relname = 'hive_operations_comment_parent_author_permlink')) THEN
+      RAISE NOTICE 'Dropping invalid index hive_operations_comment_parent_author_permlink, it will be recreated';
+      DROP INDEX hafd.hive_operations_comment_parent_author_permlink;
+    END IF;
+  END
+$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_parent_author_permlink ON hafd.operations USING btree 
+(
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
 )
@@ -49,12 +59,12 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
-WHERE hive.operation_id_to_type_id(id) = any(ARRAY[17, 73]);
+WHERE hive.operation_id_to_type_id(id) IN (17, 73);
 
 DO $$
   BEGIN
@@ -64,7 +74,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -79,7 +89,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -94,7 +104,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_curation_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_curation_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -109,7 +119,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -124,7 +134,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -139,7 +149,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
@@ -154,7 +164,7 @@ DO $$
     END IF;
   END
 $$;
-CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING gin
+CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING btree 
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')

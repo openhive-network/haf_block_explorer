@@ -39,7 +39,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_search_permlink_
     (body_binary::jsonb -> 'value' ->> 'author'),
     (body_binary::jsonb -> 'value' ->> 'permlink')
 )
-WHERE hive.operation_id_to_type_id(id) = any(ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73]);
+WHERE hive.operation_id_to_type_id(id) IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73);
 
 /*
 DO $$
