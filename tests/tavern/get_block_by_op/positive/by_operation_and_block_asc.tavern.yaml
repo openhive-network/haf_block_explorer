@@ -16,9 +16,11 @@
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "blocktrades"
-          page: 18
+          operation-types: "9,13"
+          direction: "asc"
           page-size: 20
+          from-block: "3000000"
+          to-block: "4000000"
       response:
         status_code: 200
         verify_response_with:
