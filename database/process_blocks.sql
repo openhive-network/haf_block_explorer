@@ -108,7 +108,7 @@ BEGIN
   SELECT hafbe_backend.get_sync_time(_time, 'hafbe') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM btracker_process_blocks(_context_btracker, _block_range, false);
+  PERFORM btracker_process_blocks(_context_btracker, _block_range, true);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
