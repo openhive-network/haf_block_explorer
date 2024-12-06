@@ -17,6 +17,7 @@
           accept: application/json  
         json:
           account-name: "gtg"
+          comment-type: "all"
           page-size: 20
           from-block: "3000000"
           to-block: "4000000"
