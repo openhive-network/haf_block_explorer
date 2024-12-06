@@ -260,7 +260,7 @@ ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
-RETURN hafbe_backend.get_block_by_op(
+RETURN hafbe_backend.get_blocks_by_ops(
   _operation_types,
   "account-name",
   "direction",
