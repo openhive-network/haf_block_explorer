@@ -32,7 +32,7 @@ $$;
 CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING btree
 (
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-    jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author')
+    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
 )
 WHERE hive.operation_id_to_type_id(id) = 1;
 
@@ -46,7 +46,7 @@ DO $$
 $$;
 CREATE INDEX CONCURRENTLY IF NOT EXISTS hive_operations_comment_parent_author_permlink ON hafd.operations USING btree 
 (
-    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink'),
+    jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
     jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
 )
 WHERE hive.operation_id_to_type_id(id) = 1;
