@@ -10,15 +10,16 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_comment_permlinks"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_block_by_op"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
-          account-name: "blocktrades"
-          comment-type: "all"
+          operation-types: "9,13"
           page-size: 20
+          from-block: "3000000"
+          to-block: "4000000"
       response:
         status_code: 200
         verify_response_with:

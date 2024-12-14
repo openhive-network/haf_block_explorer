@@ -31,8 +31,6 @@ EOF
 
 ONLY_APPS=0
 ONLY_HAFBE=0
-CREATE_SCHEMA=1
-CREATE_INDEXES=1
 POSTGRES_APP_NAME=block_explorer_install
 
 while [ $# -gt 0 ]; do
@@ -64,14 +62,6 @@ while [ $# -gt 0 ]; do
         ;;
     --only-hafbe)
         ONLY_HAFBE=1
-        ;;
-    --indexes-only)
-        CREATE_SCHEMA=0
-        POSTGRES_APP_NAME=block_explorer_install_indexes
-        ;;
-    --schema-only)
-        CREATE_INDEXES=0
-        POSTGRES_APP_NAME=block_explorer_install_schema
         ;;
     -*)
         echo "ERROR: '$1' is not a valid option"
@@ -172,7 +162,20 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/witness.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_sync_time.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/block_search.sql"
+
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/count_functions/blocksearch_count.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/count_functions/blocksearch_by_key_count.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/count_functions/blocksearch_by_account_count.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/count_functions/blocksearch_by_account_and_key_count.sql"
+
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/blocksearch.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/blocksearch_by_block.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/blocksearch_by_key.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/blocksearch_by_account.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/blocksearch_by_account_and_key.sql"
+
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/get_blocks_by_ops.sql"
+
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/comment_operations.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/comment_permlinks.sql"
 
@@ -203,35 +206,17 @@ setup_api() {
 
 }
 
-create_haf_indexes() {
-  if [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_haf_indexes_exist();")" = f ]; then
-    # if HAF is in massive sync, where most indexes on HAF tables have been deleted, we should wait.  We don't
-    # want to add our own indexes, which would slow down massive sync, so we just wait.
-    echo "Waiting for HAF to be out of massive sync"
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SELECT hive.wait_for_ready_instance(ARRAY['hafbe_app', 'hafbe_bal'], interval '3 days');"
-
-    echo "Creating indexes, this might take a while."
-    # There's an un-solved bug that happens any time and app like hafbe adds/drops indexes at the same time
-    # HAF is entering/leaving massive sync.  We need to prevent this, probably by having hafbe set a flag
-    # that prevents haf from re-entering massive sync during the time hafbe is creating indexes
-    psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$db_dir/create_haf_indexes.sql"
-  else
-    echo "HAF indexes already exist, skipping creation"
-  fi
-}
-
-create_blocksearch_indexes() {
-if [ "$BLOCKSEARCH_INDEXES" = "true" ] && [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_blocksearch_indexes_exist();")" = f ]; then
-  echo 'Creating block search indexes...'
+# blockseach indexes are registered when flag is set to true
+register_blocksearch_indexes() {
+if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
+  echo 'Registering block search indexes...'
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
 fi
 }
 
-create_commentsearch_indexes() {
-if [ "$(psql "$POSTGRES_ACCESS_ADMIN" --quiet --no-align --tuples-only --command="SELECT hafbe_indexes.do_commentsearch_indexes_exist();")" = f ]; then
-  echo 'Creating comment search indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "\timing" -f "$backend/hafbe_indexes.sql"
-fi
+register_commentsearch_indexes() {
+  echo 'Registering comment search indexes...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_indexes.sql"
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
@@ -251,13 +236,8 @@ if [ "$ONLY_HAFBE" -eq 0 ]; then
 fi
 
 if [ "$ONLY_APPS" -eq 0 ]; then
-  if [ "$CREATE_SCHEMA" = 1 ]; then
-    setup_api
-  fi
-  if [ "$CREATE_INDEXES" = 1 ]; then
-    create_haf_indexes
-    create_blocksearch_indexes
-    create_commentsearch_indexes
-  fi
+  setup_api
+  register_blocksearch_indexes
+  register_commentsearch_indexes
 fi
 

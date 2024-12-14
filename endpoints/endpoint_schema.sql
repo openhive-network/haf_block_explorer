@@ -1187,7 +1187,7 @@ declare
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/hafbe_types.comment_type",
-              "default": "all"
+              "default": "post"
             },
             "description": "Sort order:\n\n * `post`    - permlinks related to root posts\n\n * `comment` - permlinks related to comments \n\n * `all`     - both, posts and comments\n"
           },
