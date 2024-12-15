@@ -208,15 +208,13 @@ setup_api() {
 
 # blockseach indexes are registered when flag is set to true
 register_blocksearch_indexes() {
-if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
   echo 'Registering block search indexes...'
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_blocksearch_indexes.sql"
-fi
 }
 
 register_commentsearch_indexes() {
   echo 'Registering comment search indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_indexes.sql"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_commentsearch_indexes.sql"
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
@@ -237,7 +235,9 @@ fi
 
 if [ "$ONLY_APPS" -eq 0 ]; then
   setup_api
-  register_blocksearch_indexes
+  if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
+    register_blocksearch_indexes
+  fi
   register_commentsearch_indexes
 fi
 
