@@ -9,9 +9,9 @@ SELECT hive.register_index_dependency(
         (body_binary::jsonb -> 'value' ->> 'author'),
         (body_binary::jsonb -> 'value' ->> 'parent_author'),
         (body_binary::jsonb -> 'value' ->> 'permlink'),
-        hive.operation_id_to_block_num(id)
+        hafd.operation_id_to_block_num(id)
     )
-    WHERE hive.operation_id_to_type_id(id) = 1
+    WHERE hafd.operation_id_to_type_id(id) = 1
     $$
 );
 
@@ -23,7 +23,7 @@ SELECT hive.register_index_dependency(
         (body_binary::jsonb -> 'value' ->> 'author'),
         (body_binary::jsonb -> 'value' ->> 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73)
+    WHERE hafd.operation_id_to_type_id(id) IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73)
     $$
 );
 

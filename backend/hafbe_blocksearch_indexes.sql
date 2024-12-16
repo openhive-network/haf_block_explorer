@@ -9,7 +9,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 0
+    WHERE hafd.operation_id_to_type_id(id) = 0
     $$
 );
 
@@ -21,7 +21,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 1
+    WHERE hafd.operation_id_to_type_id(id) = 1
     $$
 );
 
@@ -33,7 +33,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 1
+    WHERE hafd.operation_id_to_type_id(id) = 1
     $$
 );
 
@@ -45,7 +45,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) IN (17, 73)
+    WHERE hafd.operation_id_to_type_id(id) IN (17, 73)
     $$
 );
 
@@ -57,7 +57,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 19
+    WHERE hafd.operation_id_to_type_id(id) = 19
     $$
 );
 
@@ -69,7 +69,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 51
+    WHERE hafd.operation_id_to_type_id(id) = 51
     $$
 );
 
@@ -81,7 +81,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 52
+    WHERE hafd.operation_id_to_type_id(id) = 52
     $$
 );
 
@@ -93,7 +93,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 63
+    WHERE hafd.operation_id_to_type_id(id) = 63
     $$
 );
 
@@ -105,7 +105,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 61
+    WHERE hafd.operation_id_to_type_id(id) = 61
     $$
 );
 
@@ -117,7 +117,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 53
+    WHERE hafd.operation_id_to_type_id(id) = 53
     $$
 );
 
@@ -129,7 +129,7 @@ SELECT hive.register_index_dependency(
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
         jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
     )
-    WHERE hive.operation_id_to_type_id(id) = 72
+    WHERE hafd.operation_id_to_type_id(id) = 72
     $$
 );
 
