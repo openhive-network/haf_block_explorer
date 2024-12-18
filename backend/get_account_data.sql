@@ -206,20 +206,29 @@ BEGIN
 RETURN (
   WITH get_key_auth AS 
   (
-    SELECT ARRAY[hive.public_key_to_string(keys.key), active_key_auths.w::TEXT] as key_auth, active_key_auths.weight_threshold
+    SELECT ARRAY[hive.public_key_to_string(keys.key), active_key_auths.w::TEXT] as key_auth
     FROM hafd.hafbe_app_keyauth_a active_key_auths
     JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
     WHERE active_key_auths.account_id = _account_id 
     AND active_key_auths.key_kind = _key_kind
     AND (active_key_auths.key_kind != 'MEMO' OR active_key_auths.key_kind != 'WITNESS_SIGNING')
+    ORDER BY hive.public_key_to_string(keys.key)
   ),
   get_account_auth AS 
   (
-    SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth, active_account_auths.weight_threshold
+    SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth
     FROM hafd.hafbe_app_accountauth_a active_account_auths
     JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
     WHERE active_account_auths.account_id = _account_id
     AND active_account_auths.key_kind = _key_kind
+    ORDER BY av.name
+  ),
+  get_weight_threshold AS 
+  (
+    SELECT wt.weight_threshold
+    FROM hafd.hafbe_app_authority_definition wt
+    WHERE wt.account_id = _account_id
+    AND wt.key_kind = _key_kind
   )
   SELECT ROW(
       COALESCE(
@@ -234,10 +243,7 @@ RETURN (
         ), '{}')::TEXT[],
       COALESCE(
         (
-          SELECT aka.weight_threshold FROM get_key_auth aka LIMIT 1
-        ),
-        (
-          SELECT aaa.weight_threshold FROM get_account_auth aaa LIMIT 1
+          SELECT wt.weight_threshold FROM get_weight_threshold wt
         ), 1))
 );
 
