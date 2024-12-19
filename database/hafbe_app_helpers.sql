@@ -80,7 +80,6 @@ BEGIN
 END
 $$;
 
-
 CREATE OR REPLACE PROCEDURE hafbe_app.create_context_if_not_exists(_appContext VARCHAR)
 LANGUAGE 'plpgsql'
 AS
@@ -113,22 +112,6 @@ BEGIN
 
   RAISE NOTICE 'Updated witness voters cache';
 
-  TRUNCATE TABLE hafbe_app.witness_votes_history_cache;
-
-  INSERT INTO hafbe_app.witness_votes_history_cache (witness_id, voter_id, approve, timestamp, proxied_vests, account_vests)
-    SELECT
-      wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
-      ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
-    FROM hafbe_app.witness_votes_history wvh
-    LEFT JOIN current_account_balances av
-      ON av.account = wvh.voter_id AND av.nai = 37
-    LEFT JOIN account_withdraws dv
-      ON dv.account = wvh.voter_id
-    LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
-    ON rpav.proxy_id = wvh.voter_id;
-
-  RAISE NOTICE 'Updated witness voters history cache';
-
   TRUNCATE TABLE hafbe_app.witness_votes_cache;
 
   INSERT INTO hafbe_app.witness_votes_cache (witness_id, rank, votes, voters_num)
@@ -144,19 +127,6 @@ BEGIN
   ) vsv;
 
   RAISE NOTICE 'Updated witnesses cache';
-
-  TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
-
-  INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
-  SELECT
-    witness_id,
-    SUM(CASE WHEN wvhc.approve THEN wvhc.account_vests + wvhc.proxied_vests ELSE -1 * (wvhc.account_vests + wvhc.proxied_vests) END)::BIGINT,
-    SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT
-  FROM hafbe_app.witness_votes_history_cache wvhc
-  WHERE wvhc.timestamp >= 'today'::DATE
-  GROUP BY wvhc.witness_id;
-
-  RAISE NOTICE 'Updated witness change cache';
 
   UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
 END

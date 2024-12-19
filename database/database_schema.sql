@@ -174,23 +174,6 @@ BEGIN
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history_cache (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    approve BOOLEAN NOT NULL,
-    account_vests BIGINT NOT NULL,
-    proxied_vests BIGINT NOT NULL,
-    timestamp TIMESTAMP NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
-    witness_id INT NOT NULL,
-    votes_daily_change BIGINT NOT NULL,
-    voters_num_daily_change INT NOT NULL,
-
-    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
-  );
-
   CREATE TABLE IF NOT EXISTS hafbe_app.sync_time_logs (
     block_num INT NOT NULL,
     time_json JSONB NOT NULL,

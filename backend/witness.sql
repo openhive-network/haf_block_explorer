@@ -96,7 +96,7 @@ RETURN QUERY EXECUTE format(
     SELECT 
       (SELECT av.name FROM hive.accounts_view av WHERE av.id = voter_id)::TEXT AS voter,
       * 
-    FROM hafbe_app.witness_votes_history_cache 
+    FROM hafbe_app.witness_votes_history
     WHERE witness_id = %L AND
       (%L OR timestamp >= %L) AND
 	    (%L OR timestamp <= %L)
@@ -108,11 +108,14 @@ RETURN QUERY EXECUTE format(
   select_votes_history AS (
   SELECT
     wvh.voter, wvh.voter_id, wvh.approve, 
-    (wvh.account_vests + wvh.proxied_vests) AS vests, 
-    wvh.account_vests AS account_vests, 
-    wvh.proxied_vests AS proxied_vests,
+    (wvh.account_vests + rpav.proxied_vests) AS vests, 
+    ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
+    ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
     wvh.timestamp AS timestamp
   FROM select_range wvh
+  LEFT JOIN current_account_balances av ON av.account = wvh.voter_id AND av.nai = 37
+  LEFT JOIN account_withdraws dv ON dv.account = wvh.voter_id      
+  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav ON rpav.proxy_id = wvh.voter_id
   )
   SELECT 
     voter,
@@ -181,8 +184,8 @@ BEGIN
         b.rank, 
         COALESCE(b.votes,0) AS votes, 
         COALESCE(b.voters_num,0) AS voters_num, 
-        COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
-        COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
+        COALESCE(witness_vote_change.votes_daily_change, 0) AS votes_daily_change, 
+        COALESCE(witness_vote_change.voters_num_daily_change,0) AS voters_num_daily_change,
         COALESCE(
         (
           SELECT count(*) as missed
@@ -195,7 +198,7 @@ BEGIN
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
       LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
-      LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
+      LEFT JOIN get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = cw.witness_id
     ),
     limited_set_order AS MATERIALIZED (
       SELECT * FROM limited_set
@@ -282,9 +285,9 @@ BEGIN
       all_votes.rank, 
       ls.url,
       COALESCE(all_votes.votes::TEXT, '0'),
-      COALESCE(wvcc.votes_daily_change::TEXT, '0'),
+      COALESCE(witness_vote_change.votes_daily_change::TEXT, '0'),
       COALESCE(all_votes.voters_num, 0),
-      COALESCE(wvcc.voters_num_daily_change, 0),
+      COALESCE(witness_vote_change.voters_num_daily_change, 0),
       ls.price_feed, 
       ls.bias, 
       ls.feed_updated_at,
@@ -298,11 +301,60 @@ BEGIN
     )
     FROM limited_set ls
     LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
-    LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id
+    LEFT JOIN get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = ls.witness_id
   );
 
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, timestamp TIMESTAMP)
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN QUERY
+  SELECT witness_id, voter_id, approve, timestamp
+  FROM hafbe_app.witness_votes_history
+  WHERE timestamp >= NOW() - INTERVAL '24 hours';
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, timestamp TIMESTAMP, proxied_vests BIGINT, account_vests BIGINT)
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    votes.witness_id,
+    votes.voter_id, 
+    votes.approve,
+    votes.timestamp,
+    ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
+    ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
+  FROM hafbe_backend.get_witness_votes_in_last_24_hours() votes
+  LEFT JOIN current_account_balances av ON av.account = votes.voter_id AND av.nai = 37      
+  LEFT JOIN account_withdraws dv ON dv.account = votes.voter_id      
+  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav ON rpav.proxy_id = votes.voter_id;    
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voters_num_daily_change INT, votes_daily_change NUMERIC)
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    witness_id,
+    SUM(CASE WHEN approve THEN 1 ELSE -1 END) AS voters_num_daily_change,
+    SUM(CASE WHEN approve THEN proxied_vests + account_vests ELSE -(proxied_vests + account_vests) END) AS votes_daily_change
+  FROM hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
+  GROUP BY witness_id;
+END
+$$;
 
 RESET ROLE;
