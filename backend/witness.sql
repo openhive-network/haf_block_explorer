@@ -246,7 +246,7 @@ BEGIN
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
       LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
-      LEFT JOIN get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = cw.witness_id
+      LEFT JOIN hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = cw.witness_id
     ),
     limited_set_order AS MATERIALIZED (
       SELECT * FROM limited_set
@@ -349,7 +349,7 @@ BEGIN
     )
     FROM limited_set ls
     LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
-    LEFT JOIN get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = ls.witness_id
+    LEFT JOIN hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours() witness_vote_change ON witness_vote_change.witness_id = ls.witness_id
   );
 
 END
