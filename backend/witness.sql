@@ -1,5 +1,53 @@
 SET ROLE hafbe_owner;
 
+DROP FUNCTION IF EXISTS hafbe_backend.get_witness_votes_in_last_24_hours;
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, "timestamp" TIMESTAMP)
+LANGUAGE sql
+STABLE
+AS
+$$
+  SELECT witness_id, voter_id, approve, "timestamp"
+  FROM hafbe_app.witness_votes_history
+  WHERE "timestamp" >= NOW() - INTERVAL '24 hours';
+$$;
+
+
+DROP FUNCTION IF EXISTS hafbe_backend.get_witness_vote_power_changes_in_last_24_hours;
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, "timestamp" TIMESTAMP, proxied_vests BIGINT, account_vests BIGINT)
+LANGUAGE sql
+STABLE
+AS
+$$
+  SELECT 
+    votes.witness_id,
+    votes.voter_id, 
+    votes.approve,
+    votes."timestamp",
+    ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
+    ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
+  FROM hafbe_backend.get_witness_votes_in_last_24_hours() votes
+  LEFT JOIN current_account_balances av ON av.account = votes.voter_id AND av.nai = 37      
+  LEFT JOIN account_withdraws dv ON dv.account = votes.voter_id      
+  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav ON rpav.proxy_id = votes.voter_id;
+$$;
+
+DROP FUNCTION IF EXISTS hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours;
+CREATE OR REPLACE FUNCTION hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours()
+RETURNS TABLE(witness_id INT, voters_num_daily_change INT, votes_daily_change BIGINT)
+LANGUAGE sql
+STABLE
+AS
+$$
+  SELECT 
+    witness_id,
+    SUM(CASE WHEN approve THEN 1 ELSE -1 END) AS voters_num_daily_change,
+    SUM(CASE WHEN approve THEN proxied_vests + account_vests ELSE -(proxied_vests + account_vests) END) AS votes_daily_change
+  FROM hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
+  GROUP BY witness_id;
+$$;
+
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(
     "account_id" INT,
@@ -307,48 +355,5 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_in_last_24_hours()
-RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, "timestamp" TIMESTAMP)
-LANGUAGE sql
-STABLE
-AS
-$$
-  SELECT witness_id, voter_id, approve, "timestamp"
-  FROM hafbe_app.witness_votes_history
-  WHERE "timestamp" >= NOW() - INTERVAL '24 hours';
-$$;
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
-RETURNS TABLE(witness_id INT, voter_id INT, approve BOOLEAN, "timestamp" TIMESTAMP, proxied_vests BIGINT, account_vests BIGINT)
-LANGUAGE sql
-STABLE
-AS
-$$
-  SELECT 
-    votes.witness_id,
-    votes.voter_id, 
-    votes.approve,
-    votes."timestamp",
-    ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
-    ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
-  FROM hafbe_backend.get_witness_votes_in_last_24_hours() votes
-  LEFT JOIN current_account_balances av ON av.account = votes.voter_id AND av.nai = 37      
-  LEFT JOIN account_withdraws dv ON dv.account = votes.voter_id      
-  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav ON rpav.proxy_id = votes.voter_id;
-$$;
-
-CREATE OR REPLACE FUNCTION hafbe_backend.get_total_witness_vote_power_changes_in_last_24_hours()
-RETURNS TABLE(witness_id INT, voters_num_daily_change INT, votes_daily_change BIGINT)
-LANGUAGE sql
-STABLE
-AS
-$$
-  SELECT 
-    witness_id,
-    SUM(CASE WHEN approve THEN 1 ELSE -1 END) AS voters_num_daily_change,
-    SUM(CASE WHEN approve THEN proxied_vests + account_vests ELSE -(proxied_vests + account_vests) END) AS votes_daily_change
-  FROM hafbe_backend.get_witness_vote_power_changes_in_last_24_hours()
-  GROUP BY witness_id;
-$$;
 
 RESET ROLE;
