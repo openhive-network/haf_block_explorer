@@ -60,6 +60,6 @@ export POSTGRES_ACCESS
 export COMMAND
 export MESSAGE
 
-timeout -k 1m 10m bash -c wait-for-haf-be-startup
+timeout -k 1m 20m bash -c wait-for-haf-be-startup
       
 echo "Block processing is finished."
