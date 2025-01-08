@@ -177,7 +177,7 @@ generate-wax-spec:
   stage: build
   variables:
     INPUT_JSON_SWAGGER_FILE: "${BUILT_JSON_SWAGGER_FILE}"
-    NAMESPACE: "hafbe"
+    NAMESPACE: "hafbe-api"
     NPM_PACKAGE_SCOPE: "@hiveio"
     NPM_PACKAGE_NAME: "wax-api-hafbe"
   needs:
