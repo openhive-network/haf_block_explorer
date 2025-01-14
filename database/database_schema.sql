@@ -29,7 +29,7 @@ BEGIN
 
   IF NOT hive.app_context_exists('hafbe_app') THEN
 
-  synchronization_stages := ARRAY[( 'MASSIVE_PROCESSING', 101, 10000 ), hive.live_stage()]::hive.application_stages;
+  synchronization_stages := ARRAY[hive.stage( 'MASSIVE_PROCESSING', 101, 10000, '20 seconds' ), hive.live_stage()]::hive.application_stages;
 
   PERFORM hive.app_create_context(
     _name =>'hafbe_app',
