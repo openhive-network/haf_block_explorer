@@ -5,47 +5,49 @@ set -o pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit 1; pwd -P )"
 
-haf_dir="../submodules/haf"
-endpoints="endpoints"
-types="backend/types"
-rewrite_dir="${endpoints}_openapi"
-rewrite_types_dir="${types}_openapi"
+haf_dir="${SCRIPTDIR}/../submodules/haf"
+endpoints="${SCRIPTDIR}/../endpoints"
+types="${SCRIPTDIR}/../backend/types"
+
 input_file="rewrite_rules.conf"
 temp_output_file=$(mktemp)
 
 # Default directories with fixed order if none provided
 OUTPUT="$SCRIPTDIR/output"
-DEFAULT_TYPES="
-../$types/backend_types.sql
-../$types/witnesses/witness.sql
-../$types/witnesses/witness_voters.sql
-../$types/witnesses/witness_votes_history_record.sql
-../$types/accounts/account.sql
-../$types/accounts/account_authority.sql
-../$types/accounts/permlink_history.sql
-../$types/blocks/latest_blocks.sql
-../$types/operations/operation.sql
-../$types/operations/op_types_count.sql"
+DEFAULT_TYPES=(
+"$types/backend_types.sql"
+"$types/witnesses/witness.sql"
+"$types/witnesses/witness_voters.sql"
+"$types/witnesses/witness_votes_history_record.sql"
+"$types/accounts/account.sql"
+"$types/accounts/account_authority.sql"
+"$types/accounts/permlink_history.sql"
+"$types/blocks/latest_blocks.sql"
+"$types/operations/operation.sql"
+"$types/operations/op_types_count.sql"
+)
 
-ENDPOINTS_IN_ORDER="
-../$endpoints/endpoint_schema.sql
-../$endpoints/witnesses/get_witnesses.sql
-../$endpoints/witnesses/get_witness.sql
-../$endpoints/witnesses/get_witness_voters.sql
-../$endpoints/witnesses/get_witness_voters_num.sql
-../$endpoints/witnesses/get_witness_votes_history.sql
-../$endpoints/accounts/get_account.sql
-../$endpoints/accounts/get_account_authority.sql
-../$endpoints/accounts/get_comment_permlinks.sql
-../$endpoints/accounts/get_comment_operations.sql
-../$endpoints/block-numbers/get_block_by_op.sql
-../$endpoints/other/get_hafbe_version.sql
-../$endpoints/other/get_hafbe_last_synced_block.sql
-../$endpoints/other/get_input_type.sql
-../$endpoints/other/get_latest_blocks.sql"
+ENDPOINTS_IN_ORDER=(
+"$endpoints/endpoint_schema.sql"
+"$endpoints/witnesses/get_witnesses.sql"
+"$endpoints/witnesses/get_witness.sql"
+"$endpoints/witnesses/get_witness_voters.sql"
+"$endpoints/witnesses/get_witness_voters_num.sql"
+"$endpoints/witnesses/get_witness_votes_history.sql"
+"$endpoints/accounts/get_account.sql"
+"$endpoints/accounts/get_account_authority.sql"
+"$endpoints/accounts/get_comment_permlinks.sql"
+"$endpoints/accounts/get_comment_operations.sql"
+"$endpoints/block-numbers/get_block_by_op.sql"
+"$endpoints/other/get_hafbe_version.sql"
+"$endpoints/other/get_hafbe_last_synced_block.sql"
+"$endpoints/other/get_input_type.sql"
+"$endpoints/other/get_latest_blocks.sql"
+)
 
 # Function to reverse the lines
 reverse_lines() {
+    local inFile="$1"
     awk '
     BEGIN {
         RS = ""
@@ -64,7 +66,7 @@ reverse_lines() {
         }
         print comment
         print rewrite
-    }' "$input_file" | tac
+    }' "${inFile}" | tac
 }
 
 # Function to install pip3
@@ -107,24 +109,24 @@ else
     echo "jsonpointer has been installed."
 fi
 
-echo "Using endpoints and types directories"
-echo "$ENDPOINTS_IN_ORDER"
-echo "$DEFAULT_TYPES"
+echo "Using endpoints sources:"
+echo "${ENDPOINTS_IN_ORDER[@]}"
+echo "Using types sources:"
+echo "${DEFAULT_TYPES[@]}"
+
+rm -rfv "${OUTPUT}"
+
+pushd "${SCRIPTDIR}"
 
 # run openapi rewrite script
 # shellcheck disable=SC2086
-python3 $haf_dir/scripts/process_openapi.py $OUTPUT $DEFAULT_TYPES $ENDPOINTS_IN_ORDER
+python3 "${haf_dir}/scripts/process_openapi.py" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
 
 # Create rewrite_rules.conf
-reverse_lines > "$temp_output_file"
-mv "$temp_output_file" "../$input_file"
-rm "$input_file"
+reverse_lines "${OUTPUT}/${input_file}" > "$temp_output_file"
+mv "$temp_output_file" "${OUTPUT}/${input_file}"
 
-# Move rewriten directory to /postgrest
-rm -rf "$SCRIPTDIR/../$rewrite_dir"
-rm -rf "$SCRIPTDIR/../$rewrite_types_dir"
-mv "$OUTPUT/../$endpoints" "$SCRIPTDIR/../$rewrite_dir"
-mv "$OUTPUT/../$types" "$SCRIPTDIR/../$rewrite_types_dir"
-rm -rf "$SCRIPTDIR/output"
-echo "Rewritten endpoint scripts saved in $rewrite_dir"
-echo "Rewritten types scripts saved in $rewrite_types_dir"
+echo "Rewritten endpoint scripts saved in ${OUTPUT}"
+echo "Generated rewrite rules saved to: ${OUTPUT}/${input_file}"
+
+popd
