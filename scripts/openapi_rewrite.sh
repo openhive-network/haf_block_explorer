@@ -93,7 +93,7 @@ pushd "${SCRIPTDIR}"
 
 # run openapi rewrite script
 # shellcheck disable=SC2086
-python3 "${haf_dir}/scripts/process_openapi.py" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
+python3 "${haf_dir}/scripts/process_openapi.py" "$@" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
 
 echo "Rewritten endpoint scripts and rewrite_rules.conf file saved in ${OUTPUT}"
 
