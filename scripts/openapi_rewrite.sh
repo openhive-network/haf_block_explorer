@@ -45,30 +45,6 @@ ENDPOINTS_IN_ORDER=(
 "$endpoints/other/get_latest_blocks.sql"
 )
 
-# Function to reverse the lines
-reverse_lines() {
-    local inFile="$1"
-    awk '
-    BEGIN {
-        RS = ""
-        FS = "\n"
-    }
-    {
-        for (i = 1; i <= NF; i++) {
-            if ($i ~ /^#/) {
-                comment = $i
-            } else if ($i ~ /^rewrite/) {
-                rewrite = $i
-            }
-        }
-        if (NR > 1) {
-            print ""
-        }
-        print comment
-        print rewrite
-    }' "${inFile}" | tac
-}
-
 # Function to install pip3
 install_pip() {
     echo "pip3 is not installed. Installing now..."
@@ -123,7 +99,7 @@ pushd "${SCRIPTDIR}"
 python3 "${haf_dir}/scripts/process_openapi.py" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
 
 # Create rewrite_rules.conf
-reverse_lines "${OUTPUT}/${input_file}" > "$temp_output_file"
+tac "${OUTPUT}/${input_file}" > "$temp_output_file"
 mv "$temp_output_file" "${OUTPUT}/${input_file}"
 
 echo "Rewritten endpoint scripts saved in ${OUTPUT}"
