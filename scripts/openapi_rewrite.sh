@@ -9,9 +9,6 @@ haf_dir="${SCRIPTDIR}/../submodules/haf"
 endpoints="${SCRIPTDIR}/../endpoints"
 types="${SCRIPTDIR}/../backend/types"
 
-input_file="rewrite_rules.conf"
-temp_output_file=$(mktemp)
-
 # Default directories with fixed order if none provided
 OUTPUT="$SCRIPTDIR/output"
 DEFAULT_TYPES=(
@@ -98,11 +95,6 @@ pushd "${SCRIPTDIR}"
 # shellcheck disable=SC2086
 python3 "${haf_dir}/scripts/process_openapi.py" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
 
-# Create rewrite_rules.conf
-tac "${OUTPUT}/${input_file}" > "$temp_output_file"
-mv "$temp_output_file" "${OUTPUT}/${input_file}"
-
-echo "Rewritten endpoint scripts saved in ${OUTPUT}"
-echo "Generated rewrite rules saved to: ${OUTPUT}/${input_file}"
+echo "Rewritten endpoint scripts and rewrite_rules.conf file saved in ${OUTPUT}"
 
 popd
