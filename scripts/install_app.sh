@@ -217,6 +217,11 @@ register_commentsearch_indexes() {
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_commentsearch_indexes.sql"
 }
 
+register_haf_indexes() {
+  echo 'Registering haf indexes...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/create_haf_indexes.sql"
+}
+
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 account_dump="$SCRIPT_DIR/../account_dump"
@@ -238,6 +243,7 @@ if [ "$ONLY_APPS" -eq 0 ]; then
   if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
     register_blocksearch_indexes
   fi
+  register_haf_indexes
   register_commentsearch_indexes
 fi
 
