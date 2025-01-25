@@ -133,7 +133,7 @@ docker buildx build \
     --load \
     --file Dockerfile.rewriter .
 
-docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
+#docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
 
 popd
 
