@@ -9,17 +9,22 @@ Usage: $0 <image_tag> <src_dir> <registry_url> [OPTION[=VALUE]]...
 A wrapper script for building HAF Block Explorer Docker image
 OPTIONS:
     --progress=TYPE       Determines how to display build progress (default: 'auto')
+    --push                Allows to automatically push built image to the registry
     --help|-h|-?          Display this help screen and exit
 EOF
 }
 
 PROGRESS_DISPLAY=${PROGRESS_DISPLAY:-"auto"}
+IMAGE_OUTPUT="--load"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --progress=*)
       arg="${1#*=}"
       PROGRESS_DISPLAY="$arg"
+      ;;
+    --push)
+      IMAGE_OUTPUT="--push"
       ;;
     --help|-h|-\?)
       print_help
@@ -104,7 +109,7 @@ if [ -z "$GIT_LAST_COMMIT_DATE" ]; then
 fi
 export GIT_LAST_COMMIT_DATE
 
-docker buildx bake --provenance=false --progress="$PROGRESS_DISPLAY" "$TARGET"
+docker buildx bake --provenance=false "${IMAGE_OUTPUT}" --progress="$PROGRESS_DISPLAY" "$TARGET"
 
 # This script can be called with BUILD_IMAGE_TAG set to either a short commit hash
 # or a release tag like 1.27.5rc6.  If it's a release tag, we need to build the
@@ -130,10 +135,8 @@ docker buildx build \
     --target=$REWRITER_TARGET \
     $TAG_BUILD_ARGS \
     --tag "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG" \
-    --load \
-    --file Dockerfile.rewriter .
-
-docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
+    "${IMAGE_OUTPUT}" \
+    --file Dockerfile .
 
 popd
 
