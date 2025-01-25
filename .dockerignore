@@ -1,4 +1,3 @@
-.git/modules
 .tests/*
 ./vscode/*
 docker/blockchain/*
@@ -8,7 +7,6 @@ docker/pgadmin4/*
 docker/srv/*
 gui/*
 misc/*
-submodules/*
 tests/*
 .dockerignore
 .gitignore
