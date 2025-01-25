@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.5
 ARG PSQL_CLIENT_VERSION=14-1
+ARG PYTHON_IMAGE_VERSION=6b9e9e75ec5263939450936a4f8348dfbca3666d #commit from common-ci-configuration develop
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/psql:$PSQL_CLIENT_VERSION AS psql
 
 FROM psql as daemontools
@@ -12,9 +13,25 @@ EOF
 
 FROM psql as version-calculcation
 
-COPY --chown=haf_admin:users . /home/haf_admin/src
+COPY --chown=haf_admin:users scripts /home/haf_admin/src/scripts
+COPY --chown=haf_admin:users .git /home/haf_admin/src/.git
 WORKDIR /home/haf_admin/src
 RUN scripts/generate_version_sql.sh $(pwd)
+
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/python-scripts:$PYTHON_IMAGE_VERSION AS openapi-generator
+
+ARG GIT_COMMIT_SHA
+ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
+
+RUN pip3 install deepmerge jsonpointer pyyaml
+
+COPY backend /haf_block_explorer/backend
+COPY endpoints /haf_block_explorer/endpoints
+COPY scripts /haf_block_explorer/scripts
+COPY submodules/haf/scripts/process_openapi.py /haf_block_explorer/submodules/haf/scripts/
+
+WORKDIR /haf_block_explorer
+RUN echo "Processing git version: ${GIT_COMMIT_SHA}" && ./scripts/openapi_rewrite.sh --version "${GIT_COMMIT_SHA}" --swagger_json swagger.json
 
 FROM psql as full
 
@@ -44,7 +61,6 @@ COPY --from=daemontools /usr/bin/tai64n /usr/bin/tai64nlocal /usr/bin/
 COPY --chown=haf_admin:users docker/scripts/block-processing-healthcheck.sh /app/
 
 COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend
-COPY --chown=haf_admin:users endpoints /home/haf_admin/haf_block_explorer/endpoints
 COPY --chown=haf_admin:users database /home/haf_admin/haf_block_explorer/database
 COPY --chown=haf_admin:users account_dump /home/haf_admin/haf_block_explorer/account_dump
 
@@ -56,6 +72,7 @@ COPY --chown=haf_admin:users \
   /home/haf_admin/haf_block_explorer/scripts/
 
 COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/scripts/set_version_in_sql.pgsql /home/haf_admin/haf_block_explorer/scripts/set_version_in_sql.pgsql
+COPY --from=openapi-generator --chown=haf_admin:users /haf_block_explorer/scripts/output/ /home/haf_admin/haf_block_explorer/
 
 USER haf_admin
 
