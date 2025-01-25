@@ -154,10 +154,10 @@ docker-ci-runner-build:
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
-docker-setup-docker-image-build:
+haf_be-docker-image-build:
   extends: .docker-base-build-template
   variables:
-    GIT_SUBMODULE_STRATEGY: none
+    GIT_SUBMODULE_STRATEGY: normal
     GIT_DEPTH: 1
     BASE_REPO_NAME: ""
     BASE_TAG: "$CI_COMMIT_SHORT_SHA"
@@ -192,7 +192,7 @@ sync:
   needs:
   - prepare_haf_image
   - prepare_haf_data
-  - docker-setup-docker-image-build
+  - haf_be-docker-image-build
   - docker-ci-runner-build
   variables:
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
@@ -311,7 +311,7 @@ regression-test:
   needs:
   - job: sync
     artifacts: true
-  - job: docker-setup-docker-image-build
+  - job: haf_be-docker-image-build
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
@@ -344,7 +344,7 @@ setup-scripts-test:
   needs:
   - job: sync
     artifacts: true
-  - job: docker-setup-docker-image-build
+  - job: haf_be-docker-image-build
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
@@ -369,7 +369,7 @@ performance-test:
   needs:
   - job: sync
     artifacts: true
-  - job: docker-setup-docker-image-build
+  - job: haf_be-docker-image-build
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
@@ -405,7 +405,7 @@ pattern-test:
   needs:
   - job: sync
     artifacts: true
-  - job: docker-setup-docker-image-build
+  - job: haf_be-docker-image-build
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
