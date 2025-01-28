@@ -163,12 +163,31 @@ haf_be-docker-image-build:
     BASE_TAG: "$CI_COMMIT_SHORT_SHA"
     NAME: ""
     TARGET: "full-ci"
+  artifacts:
+    reports:
+      dotenv: haf_be_docker_image_name.env
 
 extract-swagger-json:
-  extends: .filter_out_swagger_json
+  extends: .docker_image_builder_job_template
   stage: build
   variables:
-    INPUT_SQL_SWAGGER_FILE: "${CI_PROJECT_DIR}/endpoints/endpoint_schema.sql"
+    SOURCE_DIR: "${CI_PROJECT_DIR}"
+    JSON_SWAGGER_FILE: "${SOURCE_DIR}/swagger-doc.json"
+  needs:
+    - haf_be-docker-image-build
+  script:
+    - cd "${CI_PROJECT_DIR}"
+    - ./submodules/haf/scripts/ci-helpers/export-data-from-docker-image.sh "${APP_IMAGE_NAME}" "${SOURCE_DIR}" --image-path=/home/haf_admin/haf_block_explorer/endpoints/swagger-doc.json
+    - echo BUILT_JSON_SWAGGER_FILE="${JSON_SWAGGER_FILE}" > "${SOURCE_DIR}/built_swagger_json.env"
+  artifacts:
+    reports:
+      dotenv:
+        - "${SOURCE_DIR}/built_swagger_json.env"  # contains path to produced .json file
+    paths:
+      - "${JSON_SWAGGER_FILE}"
+    when: always
+    expire_in: 1 week
+
   tags:
   - public-runner-docker
 
