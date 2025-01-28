@@ -6,9 +6,10 @@ set -o pipefail
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit 1; pwd -P )"
 
 haf_dir="${SCRIPTDIR}/../submodules/haf"
-endpoints="${SCRIPTDIR}/../endpoints"
-types="${SCRIPTDIR}/../backend/types"
+endpoints="${SCRIPTDIR}/../openapi-gen-input/endpoints"
+types="${SCRIPTDIR}/../openapi-gen-input/backend/types"
 
+DEPLOY="${SCRIPTDIR}/../"
 # Default directories with fixed order if none provided
 OUTPUT="$SCRIPTDIR/output"
 DEFAULT_TYPES=(
@@ -96,5 +97,7 @@ pushd "${SCRIPTDIR}"
 python3 "${haf_dir}/scripts/process_openapi.py" "$@" "${OUTPUT}" "${DEFAULT_TYPES[@]}" "${ENDPOINTS_IN_ORDER[@]}"
 
 echo "Rewritten endpoint scripts and rewrite_rules.conf file saved in ${OUTPUT}"
+echo "Copying generated sources from ${OUTPUT}/openapi-gen-input/ into expected location by installation scripts: ${DEPLOY}"
+cp -vrf "${OUTPUT}"/openapi-gen-input/* "${OUTPUT}"/swagger-doc.json "${DEPLOY}"/
 
 popd
