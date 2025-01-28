@@ -136,6 +136,13 @@ docker buildx build \
 
 #docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
 
+
+echo "APP_IMAGE_NAME=$REGISTRY:$BUILD_IMAGE_TAG" > docker_image_name.env
+{
+  echo "APP_IMAGE_VERSION=$BUILD_IMAGE_TAG"
+  echo "REWRITER_IMAGE_NAME=$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
+} >> docker_image_name.env
+
 popd
 
 # On CI pull the image form the registry since it's pushed directly to the registry after build
