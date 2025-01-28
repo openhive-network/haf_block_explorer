@@ -126,6 +126,7 @@ esac
 
 # shellcheck disable=SC2086
 docker buildx build \
+    --progress="$PROGRESS_DISPLAY" \
     --build-arg BUILD_TIME="$BUILD_TIME" \
     --build-arg GIT_COMMIT_SHA="$GIT_COMMIT_SHA" \
     --build-arg GIT_CURRENT_BRANCH="$GIT_CURRENT_BRANCH" \
