@@ -121,6 +121,7 @@ esac
 
 # shellcheck disable=SC2086
 docker buildx build \
+    --progress="$PROGRESS_DISPLAY" \
     --build-arg BUILD_TIME="$BUILD_TIME" \
     --build-arg GIT_COMMIT_SHA="$GIT_COMMIT_SHA" \
     --build-arg GIT_CURRENT_BRANCH="$GIT_CURRENT_BRANCH" \
@@ -131,7 +132,7 @@ docker buildx build \
     $TAG_BUILD_ARGS \
     --tag "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG" \
     --load \
-    --file Dockerfile.rewriter .
+    --file Dockerfile .
 
 #docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
 
