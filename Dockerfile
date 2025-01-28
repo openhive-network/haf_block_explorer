@@ -25,13 +25,12 @@ ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
 
 RUN pip3 install deepmerge jsonpointer pyyaml
 
-COPY backend /haf_block_explorer/backend
-COPY endpoints /haf_block_explorer/endpoints
+COPY openapi-gen-input /haf_block_explorer/openapi-gen-input
 COPY scripts /haf_block_explorer/scripts
 COPY submodules/haf/scripts/process_openapi.py /haf_block_explorer/submodules/haf/scripts/
 
 WORKDIR /haf_block_explorer
-RUN echo "Processing git version: ${GIT_COMMIT_SHA}" && ./scripts/openapi_rewrite.sh --version "${GIT_COMMIT_SHA}" --swagger_json swagger.json
+RUN echo "Processing git version: ${GIT_COMMIT_SHA}" && ./scripts/openapi_rewrite.sh --version "${GIT_COMMIT_SHA}" --swagger_json swagger-doc.json
 
 FROM psql as full
 
@@ -72,7 +71,8 @@ COPY --chown=haf_admin:users \
   /home/haf_admin/haf_block_explorer/scripts/
 
 COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/scripts/set_version_in_sql.pgsql /home/haf_admin/haf_block_explorer/scripts/set_version_in_sql.pgsql
-COPY --from=openapi-generator --chown=haf_admin:users /haf_block_explorer/scripts/output/ /home/haf_admin/haf_block_explorer/
+COPY --from=openapi-generator --chown=haf_admin:users /haf_block_explorer/scripts/output/openapi-gen-input /home/haf_admin/haf_block_explorer/
+COPY --from=openapi-generator --chown=haf_admin:users /haf_block_explorer/scripts/output/swagger-doc.json /home/haf_admin/haf_block_explorer/endpoints
 
 USER haf_admin
 
