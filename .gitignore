@@ -9,8 +9,12 @@ hafbe_sync.log
 accounts_dump.json
 account_dump_test.log
 witness_dump_test.log
-endpoints_openapi
-backend/types_openapi
+# Generated files by openapi_rewrite.sh
+scripts/output
+endpoints
+backend/types
+swagger-doc.json
+rewrite_rules.conf
 
 # Docker
 docker/blockchain/block_log*
