@@ -139,6 +139,12 @@ docker buildx build \
     "${IMAGE_OUTPUT}" \
     --file Dockerfile .
 
+echo "APP_IMAGE_NAME=$REGISTRY:$BUILD_IMAGE_TAG" > haf_be_docker_image_name.env
+{
+  echo "APP_IMAGE_VERSION=$BUILD_IMAGE_TAG"
+  echo "REWRITER_IMAGE_NAME=$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
+} >> haf_be_docker_image_name.env
+
 popd
 
 # On CI pull the image form the registry since it's pushed directly to the registry after build
@@ -146,5 +152,6 @@ if [[ -n ${CI:-} ]]; then
   docker pull "$REGISTRY:$BUILD_IMAGE_TAG"
 fi
 
+# TODO remove it when build_and_publish_instance.sh script (shared from hive repo) will not need such tags
 docker tag "$REGISTRY:$BUILD_IMAGE_TAG" "$REGISTRY/instance:$BUILD_IMAGE_TAG"
 docker tag "$REGISTRY:$BUILD_IMAGE_TAG" "$REGISTRY/minimal-instance:$BUILD_IMAGE_TAG"
