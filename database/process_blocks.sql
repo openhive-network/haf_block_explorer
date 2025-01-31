@@ -15,10 +15,7 @@ BEGIN
     PERFORM hive.app_request_table_vacuum('hafbe_app.current_witness_votes', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app.current_witnesses', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app.current_account_proxies', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_bal.account_rewards', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_bal.current_account_balances', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_bal.account_info_rewards', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_bal.account_delegations', interval '30 minutes');
+    
     RETURN;
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
