@@ -1,6 +1,6 @@
 {
-  "code": "2201X",
+  "code": "P0001",
   "details": null,
   "hint": null,
-  "message": "OFFSET must not be negative"
+  "message": "page <= 0: page of -1 is lesser or equal 0"
 }

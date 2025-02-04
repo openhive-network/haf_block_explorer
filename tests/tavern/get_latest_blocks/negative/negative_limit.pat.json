@@ -1,6 +1,6 @@
 {
-  "code": "2201W",
+  "code": "P0001",
   "details": null,
   "hint": null,
-  "message": "LIMIT must not be negative"
+  "message": "result-limit <= 0: result-limit of -1 is lesser or equal 0"
 }
