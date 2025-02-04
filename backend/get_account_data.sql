@@ -304,4 +304,31 @@ RETURN (
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.count_missed_blocks(
+    _account_id INT
+)
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+SET JIT = OFF
+SET join_collapse_limit = 16
+SET from_collapse_limit = 16
+AS
+$$
+BEGIN
+RETURN (
+  COALESCE(
+    (
+      SELECT count(*) as missed
+      FROM hive.account_operations_view aov
+      WHERE 
+        aov.op_type_id = 86 AND 
+        aov.account_id = _account_id
+    )::INT
+  ,0)
+);
+
+END
+$$;
+
 RESET ROLE;

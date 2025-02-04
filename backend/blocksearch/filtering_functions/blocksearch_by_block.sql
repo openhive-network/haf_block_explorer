@@ -32,6 +32,8 @@ BEGIN
       END
   )::INT;
 
+  PERFORM hafbe_exceptions.validate_page(_page, _total_pages);
+
   IF _total_pages = 0 THEN
     RETURN json_build_object(
     'total_blocks', _count,
@@ -40,10 +42,6 @@ BEGIN
     );
   END IF;
 
-  IF _page > _total_pages AND _total_pages != 0 THEN
-    RAISE EXCEPTION 'Page number exceeds total pages';
-  END IF;
-  
   _rest_of_division := (_count % _limit)::INT;
 
   SELECT jsonb_agg(result) INTO _result
@@ -120,16 +118,14 @@ BEGIN
       END
   )::INT;
 
+  PERFORM hafbe_exceptions.validate_page(_page, _total_pages);
+
   IF _total_pages = 0 THEN
     RETURN json_build_object(
     'total_blocks', _count,
     'total_pages', _total_pages,
     'blocks_result', '[]'::jsonb
     );
-  END IF;
-
-  IF _page > _total_pages AND _total_pages != 0 THEN
-    RAISE EXCEPTION 'Page number exceeds total pages';
   END IF;
   
   _rest_of_division := (_count % _limit)::INT;

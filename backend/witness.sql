@@ -170,7 +170,8 @@ BEGIN
     (
       SELECT
         cw.witness_id, 
-        (SELECT av.name FROM hive.accounts_view av WHERE av.id = cw.witness_id)::TEXT AS witness,
+        (SELECT av.name FROM hive.accounts_view av where av.id = cw.witness_id)::TEXT AS witness,
+        b.rank, 
         COALESCE(cw.url, '') AS url,
         COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
         COALESCE(cw.bias, 0) AS bias,
@@ -178,22 +179,16 @@ BEGIN
         COALESCE(cw.block_size, 0) AS block_size,
         COALESCE(cw.signing_key, '') AS signing_key, 
         COALESCE(cw.version, '0.0.0') AS version,
-        b.rank, 
         COALESCE(b.votes,0) AS votes, 
         COALESCE(b.voters_num,0) AS voters_num, 
         COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
         COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
-        COALESCE(
-        (
-          SELECT count(*) as missed
-          FROM hive.account_operations_view aov
-          WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
-        )::INT
-        ,0) AS missed_blocks,
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
+ --   join couses significant slowdown
+ --   JOIN hive.accounts_view av ON av.id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
     ),
@@ -221,7 +216,7 @@ BEGIN
       ls.block_size, 
       ls.signing_key, 
       ls.version,
-      ls.missed_blocks,
+      hafbe_backend.count_missed_blocks(ls.witness_id),
       ls.hbd_interest_rate,
       ls.last_created_block_num,
       ls.account_creation_fee
@@ -239,7 +234,6 @@ BEGIN
 
 END
 $$;
-
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
@@ -263,13 +257,6 @@ BEGIN
         COALESCE(cw.block_size, 0) AS block_size,
         COALESCE(cw.signing_key, '') AS signing_key, 
         COALESCE(cw.version, '0.0.0') AS version,
-        COALESCE(
-        (
-            SELECT count(*) as missed
-            FROM hive.account_operations_view aov
-            WHERE aov.op_type_id = 86 AND aov.account_id = cw.witness_id
-        )::INT
-        ,0) AS missed_blocks,
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
@@ -291,7 +278,7 @@ BEGIN
       ls.block_size, 
       ls.signing_key, 
       ls.version,
-      ls.missed_blocks, 
+      hafbe_backend.count_missed_blocks(ls.witness_id),
       ls.hbd_interest_rate,
       ls.last_created_block_num,
       ls.account_creation_fee

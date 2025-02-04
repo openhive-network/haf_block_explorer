@@ -83,6 +83,9 @@ DECLARE
   __block INT := hive.convert_to_block_num("block-num");
   _is_block_filter BOOLEAN;
 BEGIN
+  PERFORM hafbe_exceptions.validate_limit("result-limit", 1000, 'result-limit');
+  PERFORM hafbe_exceptions.validate_negative_limit("result-limit",'result-limit');
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _is_block_filter := (__block IS NULL);

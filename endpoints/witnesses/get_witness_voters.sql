@@ -127,6 +127,10 @@ DECLARE
   _ops_count INT;
   _calculate_total_pages INT;
 BEGIN
+  PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
+  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+  PERFORM hafbe_exceptions.validate_negative_page("page");
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
     --count for given parameters 
@@ -142,6 +146,8 @@ BEGIN
       ELSE ((_ops_count/"page-size") + 1) 
       END
     )::INT INTO _calculate_total_pages;
+
+  PERFORM hafbe_exceptions.validate_page("page", _calculate_total_pages);
 
   RETURN (
     SELECT json_build_object(
