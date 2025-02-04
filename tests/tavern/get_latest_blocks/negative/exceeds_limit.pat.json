@@ -1,0 +1,6 @@
+{
+  "code": "P0001",
+  "details": null,
+  "hint": null,
+  "message": "result-limit <= 1000: result-limit of 1001 is greater than maxmimum allowed"
+}
