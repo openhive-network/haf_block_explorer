@@ -25,6 +25,7 @@ variables:
   PYTEST_NUMBER_OF_PROCESSES: 8
   BUILDER_IMAGE_TAG: "@sha256:834e666ee84fb78d66a695b274b87f75535f96fda98e51726a23eab60812813b"
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
+  CI_DEBUG_SERVICES: "true"
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
@@ -358,7 +359,7 @@ regression-test:
   - data-cache-storage
 
 setup-scripts-test:
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  extends: .job-defaults
   stage: test
   needs:
   - job: sync
@@ -367,16 +368,21 @@ setup-scripts-test:
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
+  image:
+    name: "${APP_IMAGE_NAME}"
+    entrypoint: [""] # use default bash to execute script in the job definition
   services:
   - *hfm-only-service
   variables:
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
+    GIT_SUBMODULE_STRATEGY: none
   script:
   - |
-    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
-
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests using APP Image name: ${APP_IMAGE_NAME}..."
+    # Warning: we are executing INSIDE application production image, to verify it. But PWD is source directory on Gitlab /build space
+    # to make things more clear and avoid hardcoding path to docker entrypoint in test script, let's pass it through params
     cd tests/functional
-    ./test_scripts.sh --host=hfm-only-instance
+    ./test_scripts.sh --host=hfm-only-instance --cmd-executor-script="/home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh"
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   tags:
