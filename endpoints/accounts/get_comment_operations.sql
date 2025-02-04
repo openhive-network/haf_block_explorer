@@ -180,6 +180,12 @@ DECLARE
   _calculate_total_pages INT;
   _ops_count INT;
 BEGIN
+
+PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
+PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+PERFORM hafbe_exceptions.validate_negative_page("page");
+
+
 IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
   RAISE EXCEPTION 'Comment search indexes are not installed';
 END IF;
@@ -210,6 +216,8 @@ SELECT (
     ELSE ((_ops_count/"page-size") + 1) 
     END
   )::INT INTO _calculate_total_pages;
+
+PERFORM hafbe_exceptions.validate_page("page", _calculate_total_pages);
 
 RETURN (
   SELECT json_build_object(

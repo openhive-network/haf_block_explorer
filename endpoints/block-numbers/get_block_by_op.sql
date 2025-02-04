@@ -202,6 +202,11 @@ DECLARE
   _is_key_incorrect BOOLEAN := FALSE;
   _invalid_key TEXT := NULL;
 BEGIN
+
+PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
+PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+PERFORM hafbe_exceptions.validate_negative_page("page");
+
 IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
   --using path-filter requires indexes on hive.operations
   IF NOT hafbe_app.isBlockSearchIndexesCreated() THEN

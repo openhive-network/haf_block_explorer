@@ -152,6 +152,10 @@ $$
 DECLARE 
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
 BEGIN
+  PERFORM hafbe_exceptions.validate_limit("result-limit", 10000, 'result-limit');
+  PERFORM hafbe_exceptions.validate_negative_limit("result-limit",'result-limit');
+  PERFORM hafbe_exceptions.validate_negative_page("result-limit");
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   RETURN (
