@@ -75,11 +75,6 @@ SET ROLE hafbe_owner;
         description: No such account in the database
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_account;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(
-    "account-name" TEXT
-)
-RETURNS hafbe_types.account 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE

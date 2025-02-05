@@ -176,18 +176,6 @@ SET ROLE hafbe_owner;
         description: No operations in database
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_by_op;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
-    "operation-types" TEXT = NULL,
-    "account-name" TEXT = NULL,
-    "page" INT = 1,
-    "page-size" INT = 100,
-    "direction" hafbe_types.sort_direction = 'desc',
-    "from-block" TEXT = NULL,
-    "to-block" TEXT = NULL,
-    "path-filter" TEXT[] = NULL
-)
-RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16

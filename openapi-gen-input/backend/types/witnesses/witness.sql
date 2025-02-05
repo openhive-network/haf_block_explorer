@@ -80,26 +80,6 @@ hafbe_types.witness:
       description: the cost of creating an account. 
 */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.witness CASCADE;
-CREATE TYPE hafbe_types.witness AS (
-    "witness_name" TEXT,
-    "rank" INT,
-    "url" TEXT,
-    "vests" TEXT,
-    "votes_daily_change" TEXT,
-    "voters_num" INT,
-    "voters_num_daily_change" INT,
-    "price_feed" FLOAT,
-    "bias" NUMERIC,
-    "feed_updated_at" TIMESTAMP,
-    "block_size" INT,
-    "signing_key" TEXT,
-    "version" TEXT,
-    "missed_blocks" INT,
-    "hbd_interest_rate" INT,
-    "last_confirmed_block_num" INT,
-    "account_creation_fee" INT
-);
 -- openapi-generated-code-end
 
 /** openapi:components:schemas

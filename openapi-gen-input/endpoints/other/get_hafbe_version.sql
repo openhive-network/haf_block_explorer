@@ -30,9 +30,6 @@ SET ROLE hafbe_owner;
         description: App not installed
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_hafbe_version;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_version()
-RETURNS TEXT 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS

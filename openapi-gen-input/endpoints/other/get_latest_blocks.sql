@@ -66,12 +66,6 @@ SET ROLE hafbe_owner;
         description: No blocks in the database
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_latest_blocks;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(
-    "block-num" TEXT = NULL,
-    "result-limit" INT = 20
-)
-RETURNS SETOF hafbe_types.latest_blocks 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF

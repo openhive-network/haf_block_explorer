@@ -45,11 +45,6 @@ SET ROLE hafbe_owner;
         description: Input is not recognized
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_input_type;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(
-    "input-value" TEXT
-)
-RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS

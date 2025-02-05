@@ -150,46 +150,6 @@ hafbe_types.account:
       description: whether account is a witness
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.account CASCADE;
-CREATE TYPE hafbe_types.account AS (
-    "id" INT,
-    "name" TEXT,
-    "can_vote" BOOLEAN,
-    "mined" BOOLEAN,
-    "proxy" TEXT,
-    "recovery_account" TEXT,
-    "last_account_recovery" TIMESTAMP,
-    "created" TIMESTAMP,
-    "reputation" INT,
-    "json_metadata" TEXT,
-    "posting_json_metadata" TEXT,
-    "profile_image" TEXT,
-    "hbd_balance" BIGINT,
-    "balance" BIGINT,
-    "vesting_shares" TEXT,
-    "vesting_balance" BIGINT,
-    "hbd_saving_balance" BIGINT,
-    "savings_balance" BIGINT,
-    "savings_withdraw_requests" INT,
-    "reward_hbd_balance" BIGINT,
-    "reward_hive_balance" BIGINT,
-    "reward_vesting_balance" TEXT,
-    "reward_vesting_hive" BIGINT,
-    "posting_rewards" TEXT,
-    "curation_rewards" TEXT,
-    "delegated_vesting_shares" TEXT,
-    "received_vesting_shares" TEXT,
-    "proxied_vsf_votes" JSON,
-    "withdrawn" TEXT,
-    "vesting_withdraw_rate" TEXT,
-    "to_withdraw" TEXT,
-    "withdraw_routes" INT,
-    "delayed_vests" TEXT,
-    "witness_votes" JSON,
-    "witnesses_voted_for" INT,
-    "ops_count" INT,
-    "is_witness" BOOLEAN
-);
 -- openapi-generated-code-end
 
 RESET ROLE;

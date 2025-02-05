@@ -16,12 +16,6 @@ hafbe_types.latest_blocks:
       description: count of each operation type
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.latest_blocks CASCADE;
-CREATE TYPE hafbe_types.latest_blocks AS (
-    "block_num" INT,
-    "witness" TEXT,
-    "ops_count" JSON
-);
 -- openapi-generated-code-end
 
 

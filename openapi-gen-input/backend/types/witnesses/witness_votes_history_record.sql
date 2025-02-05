@@ -27,15 +27,6 @@ hafbe_types.witness_votes_history_record:
       description: the time of the vote change
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.witness_votes_history_record CASCADE;
-CREATE TYPE hafbe_types.witness_votes_history_record AS (
-    "voter_name" TEXT,
-    "approve" BOOLEAN,
-    "vests" TEXT,
-    "account_vests" TEXT,
-    "proxied_vests" TEXT,
-    "timestamp" TIMESTAMP
-);
 -- openapi-generated-code-end
 
 /** openapi:components:schemas

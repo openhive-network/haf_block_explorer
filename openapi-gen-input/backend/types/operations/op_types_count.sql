@@ -11,11 +11,6 @@ hafbe_types.op_types_count:
       description: number of operations in the block
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.op_types_count CASCADE;
-CREATE TYPE hafbe_types.op_types_count AS (
-    "op_type_id" INT,
-    "count" BIGINT
-);
 -- openapi-generated-code-end
 
 /** openapi:components:schemas

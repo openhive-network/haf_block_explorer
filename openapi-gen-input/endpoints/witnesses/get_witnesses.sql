@@ -140,14 +140,6 @@ SET ROLE hafbe_owner;
                 }
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
-    "page" INT = 1,
-    "page-size" INT = 100,
-    "sort" hafbe_types.order_by_witness = 'votes',
-    "direction" hafbe_types.sort_direction = 'desc'
-)
-RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE

@@ -15,12 +15,6 @@ hafbe_types.comment_type:
     - all
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.comment_type CASCADE;
-CREATE TYPE hafbe_types.comment_type AS ENUM (
-    'post',
-    'comment',
-    'all'
-);
 -- openapi-generated-code-end
 
 ----------------------------------------------------------------------
@@ -33,11 +27,6 @@ hafbe_types.sort_direction:
     - desc
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.sort_direction CASCADE;
-CREATE TYPE hafbe_types.sort_direction AS ENUM (
-    'asc',
-    'desc'
-);
 -- openapi-generated-code-end
 
 ----------------------------------------------------------------------
@@ -53,14 +42,6 @@ hafbe_types.order_by_votes:
     - timestamp
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.order_by_votes CASCADE;
-CREATE TYPE hafbe_types.order_by_votes AS ENUM (
-    'voter',
-    'vests',
-    'account_vests',
-    'proxied_vests',
-    'timestamp'
-);
 -- openapi-generated-code-end
 
 ----------------------------------------------------------------------
@@ -84,22 +65,6 @@ hafbe_types.order_by_witness:
     - feed_updated_at
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.order_by_witness CASCADE;
-CREATE TYPE hafbe_types.order_by_witness AS ENUM (
-    'witness',
-    'rank',
-    'url',
-    'votes',
-    'votes_daily_change',
-    'voters_num',
-    'voters_num_daily_change',
-    'price_feed',
-    'bias',
-    'block_size',
-    'signing_key',
-    'version',
-    'feed_updated_at'
-);
 -- openapi-generated-code-end
 
 ----------------------------------------------------------------------

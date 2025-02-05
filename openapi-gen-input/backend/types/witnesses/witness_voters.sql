@@ -24,14 +24,6 @@ hafbe_types.witness_voter:
       description: the time this account last changed its voting power
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.witness_voter CASCADE;
-CREATE TYPE hafbe_types.witness_voter AS (
-    "voter_name" TEXT,
-    "vests" TEXT,
-    "account_vests" TEXT,
-    "proxied_vests" TEXT,
-    "timestamp" TIMESTAMP
-);
 -- openapi-generated-code-end
 
 /** openapi:components:schemas

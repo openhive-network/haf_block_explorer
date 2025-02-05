@@ -105,15 +105,6 @@ SET ROLE hafbe_owner;
         description: No such witness
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_voters;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
-    "account-name" TEXT,
-    "page" INT = 1,
-    "page-size" INT = 100,
-    "sort" hafbe_types.order_by_votes = 'vests',
-    "direction" hafbe_types.sort_direction = 'desc'
-)
-RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE

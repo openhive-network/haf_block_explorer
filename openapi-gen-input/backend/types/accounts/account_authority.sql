@@ -33,14 +33,6 @@ hafbe_types.account_authority:
         key used by a witness to sign blocks
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.account_authority CASCADE;
-CREATE TYPE hafbe_types.account_authority AS (
-    "owner" JSON,
-    "active" JSON,
-    "posting" JSON,
-    "memo" TEXT,
-    "witness_signing" TEXT
-);
 -- openapi-generated-code-end
 
 RESET ROLE;

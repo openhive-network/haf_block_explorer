@@ -40,18 +40,6 @@ hafbe_types.operation:
         transaction identifier that indicates its sequence number in block
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.operation CASCADE;
-CREATE TYPE hafbe_types.operation AS (
-    "op" JSONB,
-    "block" INT,
-    "trx_id" TEXT,
-    "op_pos" INT,
-    "op_type_id" INT,
-    "timestamp" TIMESTAMP,
-    "virtual_op" BOOLEAN,
-    "operation_id" TEXT,
-    "trx_in_block" SMALLINT
-);
 -- openapi-generated-code-end
 
 

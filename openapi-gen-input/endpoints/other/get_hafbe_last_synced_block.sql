@@ -30,9 +30,6 @@ SET ROLE hafbe_owner;
         description: No blocks synced
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_hafbe_last_synced_block;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_last_synced_block()
-RETURNS INT 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS

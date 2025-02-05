@@ -26,14 +26,6 @@ hafbe_types.permlink_history:
         an encoded block number and operation type id
  */
 -- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.permlink_history CASCADE;
-CREATE TYPE hafbe_types.permlink_history AS (
-    "permlink" TEXT,
-    "block" INT,
-    "trx_id" TEXT,
-    "timestamp" TIMESTAMP,
-    "operation_id" TEXT
-);
 -- openapi-generated-code-end
 
 

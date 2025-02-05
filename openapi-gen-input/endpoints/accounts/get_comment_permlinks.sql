@@ -121,16 +121,6 @@ SET ROLE hafbe_owner;
         description: No such account in the database
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_permlinks;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_permlinks(
-    "account-name" TEXT,
-    "comment-type" hafbe_types.comment_type = 'post',
-    "page" INT = 1,
-    "page-size" INT = 100,
-    "from-block" TEXT = NULL,
-    "to-block" TEXT = NULL
-)
-RETURNS JSON 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
