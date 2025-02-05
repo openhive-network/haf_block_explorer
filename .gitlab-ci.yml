@@ -156,17 +156,22 @@ docker-ci-runner-build:
     TARGET: "ci-runner-ci"
 
 haf_be-docker-image-build:
-  extends: .docker-base-build-template
+  # common-ci-configuration base
+  extends: .docker_image_builder_job_template
+  stage: build
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_DEPTH: 1
-    BASE_REPO_NAME: ""
-    BASE_TAG: "$CI_COMMIT_SHORT_SHA"
-    NAME: ""
-    TARGET: "full-ci"
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" "$CI_REGISTRY" --password-stdin
+    - ./scripts/ci-helpers/build_instance.sh --push "$CI_COMMIT_SHORT_SHA" "$CI_PROJECT_DIR" "$CI_REGISTRY_IMAGE" --progress="plain"
+
   artifacts:
     reports:
       dotenv: haf_be_docker_image_name.env
+  tags:
+  - public-runner-docker
+  - hived-for-tests
 
 extract-swagger-json:
   extends: .docker_image_builder_job_template
