@@ -106,14 +106,14 @@ prepare_haf_data:
   tags:
   - data-cache-storage
 
-.docker-base-build-template:
+docker-ci-runner-build:
   extends: .docker_image_builder_job_template
   stage: build
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: ""
-    NAME: ""
-    TARGET: "$NAME"
+    BASE_TAG: "docker-24.0.1-4"
+    NAME: "ci-runner"
+    TARGET: "ci-runner-ci"
     PROGRESS_DISPLAY: "plain"
   before_script:
   - !reference [.docker_image_builder_job_template, before_script]
@@ -140,20 +140,12 @@ prepare_haf_data:
     else
       echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} image..."
       git config --global --add safe.directory $(pwd)
-      scripts/ci-helpers/build_docker_image.sh "$CI_PROJECT_DIR"
+      scripts/ci-helpers/scripts/build_ci-runner_image.sh "$CI_PROJECT_DIR" --registry="$CI_REGISTRY_IMAGE" --tag="$BASE_TAG" --progress="$PROGRESS_DISPLAY" --target="$TARGET"
     fi
     echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
   - public-runner-docker
   - hived-for-tests
-
-docker-ci-runner-build:
-  extends: .docker-base-build-template
-  variables:
-    BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-4"
-    NAME: "ci-runner"
-    TARGET: "ci-runner-ci"
 
 haf_be-docker-image-build:
   # common-ci-configuration base
