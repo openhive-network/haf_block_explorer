@@ -55,15 +55,7 @@ _TST_IMGTAG=${BUILD_IMAGE_TAG:?"Missing argument #1 - image tag to be built"}
 _TST_SRCDIR=${SRCROOTDIR:?"Missing arg #2 - source directory"}
 _TST_REGISTRY=${REGISTRY:?"Missing arg #3 - container registry URL"}
 
-# On CI build the image using the registry-stored BuildKit cache
-# and push it to registry immediately.
-# Locally, build it using local BuildKit cache and load it to the
-# local image store.
-if [[ -n ${CI:-} ]]; then
-    TARGET="full-ci"
-else
-    TARGET="full"
-fi
+TARGET="full"
 
 export TAG=$BUILD_IMAGE_TAG
 
@@ -146,11 +138,6 @@ echo "APP_IMAGE_NAME=$REGISTRY:$BUILD_IMAGE_TAG" > haf_be_docker_image_name.env
 } >> haf_be_docker_image_name.env
 
 popd
-
-# On CI pull the image form the registry since it's pushed directly to the registry after build
-if [[ -n ${CI:-} ]]; then
-  docker pull "$REGISTRY:$BUILD_IMAGE_TAG"
-fi
 
 # TODO remove it when build_and_publish_instance.sh script (shared from hive repo) will not need such tags
 docker tag "$REGISTRY:$BUILD_IMAGE_TAG" "$REGISTRY/instance:$BUILD_IMAGE_TAG"
