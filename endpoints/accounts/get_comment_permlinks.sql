@@ -96,27 +96,26 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example:  
-              - {
-                  "total_operations": 3,
-                  "total_pages": 2,
-                  "operations_result": [
-                    {
-                      "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
-                      "block": 4228346,
-                      "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
-                      "timestamp": "2016-08-19T21:27:00",
-                      "operation_id": "18160607786173953"
-                    },
-                    {
-                      "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
-                      "block": 4024774,
-                      "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
-                      "timestamp": "2016-08-12T18:40:42",
-                      "operation_id": "17286272703793409"
-                    }
-                  ]
+            example: {
+              "total_operations": 3,
+              "total_pages": 2,
+              "operations_result": [
+                {
+                  "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+                  "block": 4228346,
+                  "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
+                  "timestamp": "2016-08-19T21:27:00",
+                  "operation_id": "18160607786173953"
+                },
+                {
+                  "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
+                  "block": 4024774,
+                  "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
+                  "timestamp": "2016-08-12T18:40:42",
+                  "operation_id": "17286272703793409"
                 }
+              ]
+            }
       '404':
         description: No such account in the database
  */

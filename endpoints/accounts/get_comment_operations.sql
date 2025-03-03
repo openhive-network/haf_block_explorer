@@ -86,70 +86,69 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example:  
-              - {
-                  "total_operations": 350,
-                  "total_pages": 117,
-                  "operations_result": [
-                    {
-                      "op": {
-                        "type": "vote_operation",
-                        "value": {
-                          "voter": "blocktrades",
-                          "author": "blocktrades",
-                          "weight": 10000,
-                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                        }
-                      },
-                      "block": 4228228,
-                      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
-                      "op_pos": 1,
-                      "op_type_id": 0,
-                      "timestamp": "2016-08-19T21:21:03",
-                      "virtual_op": false,
-                      "operation_id": "18160100980032256",
-                      "trx_in_block": 1
-                    },
-                    {
-                      "op": {
-                        "type": "vote_operation",
-                        "value": {
-                          "voter": "murh",
-                          "author": "blocktrades",
-                          "weight": 3301,
-                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                        }
-                      },
-                      "block": 4228239,
-                      "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
-                      "op_pos": 0,
-                      "op_type_id": 0,
-                      "timestamp": "2016-08-19T21:21:36",
-                      "virtual_op": false,
-                      "operation_id": "18160148224672256",
-                      "trx_in_block": 1
-                    },
-                    {
-                      "op": {
-                        "type": "vote_operation",
-                        "value": {
-                          "voter": "weenis",
-                          "author": "blocktrades",
-                          "weight": 10000,
-                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                        }
-                      },
-                      "block": 4228240,
-                      "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
-                      "op_pos": 0,
-                      "op_type_id": 0,
-                      "timestamp": "2016-08-19T21:21:39",
-                      "virtual_op": false,
-                      "operation_id": "18160152519641600",
-                      "trx_in_block": 5
+            example: {
+              "total_operations": 350,
+              "total_pages": 117,
+              "operations_result": [
+                {
+                  "op": {
+                    "type": "vote_operation",
+                    "value": {
+                      "voter": "blocktrades",
+                      "author": "blocktrades",
+                      "weight": 10000,
+                      "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
                     }
-                  ]
+                  },
+                  "block": 4228228,
+                  "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+                  "op_pos": 1,
+                  "op_type_id": 0,
+                  "timestamp": "2016-08-19T21:21:03",
+                  "virtual_op": false,
+                  "operation_id": "18160100980032256",
+                  "trx_in_block": 1
+                },
+                {
+                  "op": {
+                    "type": "vote_operation",
+                    "value": {
+                      "voter": "murh",
+                      "author": "blocktrades",
+                      "weight": 3301,
+                      "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                    }
+                  },
+                  "block": 4228239,
+                  "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+                  "op_pos": 0,
+                  "op_type_id": 0,
+                  "timestamp": "2016-08-19T21:21:36",
+                  "virtual_op": false,
+                  "operation_id": "18160148224672256",
+                  "trx_in_block": 1
+                },
+                {
+                  "op": {
+                    "type": "vote_operation",
+                    "value": {
+                      "voter": "weenis",
+                      "author": "blocktrades",
+                      "weight": 10000,
+                      "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                    }
+                  },
+                  "block": 4228240,
+                  "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+                  "op_pos": 0,
+                  "op_type_id": 0,
+                  "timestamp": "2016-08-19T21:21:39",
+                  "virtual_op": false,
+                  "operation_id": "18160152519641600",
+                  "trx_in_block": 5
                 }
+              ]
+            }
       '404':
         description: No such account in the database
  */

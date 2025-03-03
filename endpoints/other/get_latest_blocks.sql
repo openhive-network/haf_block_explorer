@@ -54,14 +54,28 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.array_of_latest_blocks'
             example:
-              - block_num: 5000000
-                witness: ihashfury
-                ops_count: [
-                    {"count": 1,"op_type_id": 64},
-                    {"count": 1,"op_type_id": 9},
-                    {"count": 1,"op_type_id": 80},
-                    {"count": 1,"op_type_id": 5}
+              - {
+                  "block_num": 5000000,
+                  "witness": "ihashfury",
+                  "ops_count": [
+                    {
+                      "count": 1,
+                      "op_type_id": 64
+                    },
+                    {
+                      "count": 1,
+                      "op_type_id": 9
+                    },
+                    {
+                      "count": 1,
+                      "op_type_id": 80
+                    },
+                    {
+                      "count": 1,
+                      "op_type_id": 5
+                    }
                   ]
+                }
       '404':
         description: No blocks in the database
  */

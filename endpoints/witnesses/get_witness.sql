@@ -34,29 +34,28 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example:
-              - {
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
-                  "witness": {
-                    "witness_name": "blocktrades",
-                    "rank": 8,
-                    "url": "https://blocktrades.us",
-                    "vests": "82373419958692803",
-                    "votes_daily_change": "0",
-                    "voters_num": 263,
-                    "voters_num_daily_change": 0,
-                    "price_feed": 0.545,
-                    "bias": 0,
-                    "feed_updated_at": "2016-09-15T16:02:21",
-                    "block_size": 65536,
-                    "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
-                    "version": "0.13.0",
-                    "missed_blocks": 935,
-                    "hbd_interest_rate": 1000,
-                    "last_confirmed_block_num": 4999992,
-                    "account_creation_fee": 9000
-                  }
-                }
+            example: {
+              "votes_updated_at": "2024-08-29T12:05:08.097875",
+              "witness": {
+                "witness_name": "blocktrades",
+                "rank": 8,
+                "url": "https://blocktrades.us",
+                "vests": "82373419958692803",
+                "votes_daily_change": "0",
+                "voters_num": 263,
+                "voters_num_daily_change": 0,
+                "price_feed": 0.545,
+                "bias": 0,
+                "feed_updated_at": "2016-09-15T16:02:21",
+                "block_size": 65536,
+                "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
+                "version": "0.13.0",
+                "missed_blocks": 935,
+                "hbd_interest_rate": 1000,
+                "last_confirmed_block_num": 4999992,
+                "account_creation_fee": 9000
+              }
+            }
       '404':
         description: No such witness
 */
