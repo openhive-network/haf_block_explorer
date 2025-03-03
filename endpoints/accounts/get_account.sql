@@ -32,45 +32,60 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               $ref: '#/components/schemas/hafbe_types.account'
-            example:
-              - id: 440
-                name: "blocktrades"
-                can_vote: true
-                mined: true
-                proxy: ""
-                recovery_account: "steem"
-                last_account_recovery: "1970-01-01T00:00:00"
-                created: "2016-03-30T00:04:36"
-                reputation: 69,
-                json_metadata: ""
-                posting_json_metadata: ""
-                profile_image: ""
-                hbd_balance: 77246982
-                balance: 29594875
-                vesting_shares: "8172549681941451"
-                vesting_balance: 2720696229
-                hbd_saving_balance: 0
-                savings_balance: 0
-                savings_withdraw_requests: 0
-                reward_hbd_balance: 0
-                reward_hive_balance: 0
-                reward_vesting_balance: "0"
-                reward_vesting_hive: 0
-                posting_rewards: "65916519"
-                curation_rewards: "196115157"
-                delegated_vesting_shares: "0"
-                received_vesting_shares: "0"
-                proxied_vsf_votes: >-
-                  [4983403929606734, 0, 0, 0]
-                withdrawn: "804048182205290"
-                vesting_withdraw_rate: "80404818220529"
-                to_withdraw: "8362101094935031"
-                withdraw_routes: 4
-                delayed_vests: "0"
-                witness_votes: ["steempty","blocktrades","datasecuritynode","steemed","silversteem","witness.svk","joseph","smooth.witness","gtg"]
-                witnesses_voted_for: 9
-                ops_count: 219867
-                is_witness: true
+            example: {
+              "id": 440,
+              "name": "blocktrades",
+              "can_vote": true,
+              "mined": true,
+              "proxy": "",
+              "recovery_account": "steem",
+              "last_account_recovery": "1970-01-01T00:00:00",
+              "created": "2016-03-30T00:04:36",
+              "reputation": 69,
+              "json_metadata": "",
+              "posting_json_metadata": "",
+              "profile_image": "",
+              "hbd_balance": 77246982,
+              "balance": 29594875,
+              "vesting_shares": "8172549681941451",
+              "vesting_balance": 2720696229,
+              "hbd_saving_balance": 0,
+              "savings_balance": 0,
+              "savings_withdraw_requests": 0,
+              "reward_hbd_balance": 0,
+              "reward_hive_balance": 0,
+              "reward_vesting_balance": "0",
+              "reward_vesting_hive": 0,
+              "posting_rewards": "65916519",
+              "curation_rewards": "196115157",
+              "delegated_vesting_shares": "0",
+              "received_vesting_shares": "0",
+              "proxied_vsf_votes": [
+                4983403929606734,
+                0,
+                0,
+                0
+              ],
+              "withdrawn": "804048182205290",
+              "vesting_withdraw_rate": "80404818220529",
+              "to_withdraw": "8362101094935031",
+              "withdraw_routes": 4,
+              "delayed_vests": "0",
+              "witness_votes": [
+                "steempty",
+                "blocktrades",
+                "datasecuritynode",
+                "steemed",
+                "silversteem",
+                "witness.svk",
+                "joseph",
+                "smooth.witness",
+                "gtg"
+              ],
+              "witnesses_voted_for": 9,
+              "ops_count": 219867,
+              "is_witness": true
+            }
       '404':
         description: No such account in the database
  */

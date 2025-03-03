@@ -644,53 +644,51 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "total_operations": 731,
-                    "total_pages": 366,
-                    "votes_updated_at": "2024-08-29T12:05:08.097875",
-                    "witnesses": [
-                      {
-                        "witness_name": "roadscape",
-                        "rank": 1,
-                        "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
-                        "vests": "94172201023355097",
-                        "votes_daily_change": "0",
-                        "voters_num": 306,
-                        "voters_num_daily_change": 0,
-                        "price_feed": 0.539,
-                        "bias": 0,
-                        "feed_updated_at": "2016-09-15T16:07:42",
-                        "block_size": 65536,
-                        "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
-                        "version": "0.13.0",
-                        "missed_blocks": 129,
-                        "hbd_interest_rate": 1000,
-                        "last_confirmed_block_num": 4999986,
-                        "account_creation_fee": 2000
-                      },
-                      {
-                        "witness_name": "arhag",
-                        "rank": 2,
-                        "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
-                        "vests": "91835048921097725",
-                        "votes_daily_change": "0",
-                        "voters_num": 348,
-                        "voters_num_daily_change": 0,
-                        "price_feed": 0.536,
-                        "bias": 0,
-                        "feed_updated_at": "2016-09-15T19:31:18",
-                        "block_size": 65536,
-                        "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
-                        "version": "0.13.0",
-                        "missed_blocks": 61,
-                        "hbd_interest_rate": 1000,
-                        "last_confirmed_block_num": 4999993,
-                        "account_creation_fee": 7000
-                      }
-                    ]
-                  }
-                ]
+                "example": {
+                  "total_operations": 731,
+                  "total_pages": 366,
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "witnesses": [
+                    {
+                      "witness_name": "roadscape",
+                      "rank": 1,
+                      "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
+                      "vests": "94172201023355097",
+                      "votes_daily_change": "0",
+                      "voters_num": 306,
+                      "voters_num_daily_change": 0,
+                      "price_feed": 0.539,
+                      "bias": 0,
+                      "feed_updated_at": "2016-09-15T16:07:42",
+                      "block_size": 65536,
+                      "signing_key": "STM5AS7ZS33pzTf1xbTi8ZUaUeVAZBsD7QXGrA51HvKmvUDwVbFP9",
+                      "version": "0.13.0",
+                      "missed_blocks": 129,
+                      "hbd_interest_rate": 1000,
+                      "last_confirmed_block_num": 4999986,
+                      "account_creation_fee": 2000
+                    },
+                    {
+                      "witness_name": "arhag",
+                      "rank": 2,
+                      "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
+                      "vests": "91835048921097725",
+                      "votes_daily_change": "0",
+                      "voters_num": 348,
+                      "voters_num_daily_change": 0,
+                      "price_feed": 0.536,
+                      "bias": 0,
+                      "feed_updated_at": "2016-09-15T19:31:18",
+                      "block_size": 65536,
+                      "signing_key": "STM8kvk4JH2m6ZyHBGNor4qk2Zwdi2MJAjMYUpfqiicCKu7HqAeZh",
+                      "version": "0.13.0",
+                      "missed_blocks": 61,
+                      "hbd_interest_rate": 1000,
+                      "last_confirmed_block_num": 4999993,
+                      "account_creation_fee": 7000
+                    }
+                  ]
+                }
               }
             }
           }
@@ -725,30 +723,28 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "votes_updated_at": "2024-08-29T12:05:08.097875",
-                    "witness": {
-                      "witness_name": "blocktrades",
-                      "rank": 8,
-                      "url": "https://blocktrades.us",
-                      "vests": "82373419958692803",
-                      "votes_daily_change": "0",
-                      "voters_num": 263,
-                      "voters_num_daily_change": 0,
-                      "price_feed": 0.545,
-                      "bias": 0,
-                      "feed_updated_at": "2016-09-15T16:02:21",
-                      "block_size": 65536,
-                      "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
-                      "version": "0.13.0",
-                      "missed_blocks": 935,
-                      "hbd_interest_rate": 1000,
-                      "last_confirmed_block_num": 4999992,
-                      "account_creation_fee": 9000
-                    }
+                "example": {
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "witness": {
+                    "witness_name": "blocktrades",
+                    "rank": 8,
+                    "url": "https://blocktrades.us",
+                    "vests": "82373419958692803",
+                    "votes_daily_change": "0",
+                    "voters_num": 263,
+                    "voters_num_daily_change": 0,
+                    "price_feed": 0.545,
+                    "bias": 0,
+                    "feed_updated_at": "2016-09-15T16:02:21",
+                    "block_size": 65536,
+                    "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
+                    "version": "0.13.0",
+                    "missed_blocks": 935,
+                    "hbd_interest_rate": 1000,
+                    "last_confirmed_block_num": 4999992,
+                    "account_creation_fee": 9000
                   }
-                ]
+                }
               }
             }
           },
@@ -826,29 +822,27 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "total_operations": 263,
-                    "total_pages": 132,
-                    "votes_updated_at": "2024-08-29T12:05:08.097875",
-                    "voters": [
-                      {
-                        "voter_name": "blocktrades",
-                        "vests": "13155953611548185",
-                        "account_vests": "8172549681941451",
-                        "proxied_vests": "4983403929606734",
-                        "timestamp": "2016-04-15T02:19:57"
-                      },
-                      {
-                        "voter_name": "dan",
-                        "vests": "9928811304950768",
-                        "account_vests": "9928811304950768",
-                        "proxied_vests": "0",
-                        "timestamp": "2016-06-27T12:41:42"
-                      }
-                    ]
-                  }
-                ]
+                "example": {
+                  "total_operations": 263,
+                  "total_pages": 132,
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "voters": [
+                    {
+                      "voter_name": "blocktrades",
+                      "vests": "13155953611548185",
+                      "account_vests": "8172549681941451",
+                      "proxied_vests": "4983403929606734",
+                      "timestamp": "2016-04-15T02:19:57"
+                    },
+                    {
+                      "voter_name": "dan",
+                      "vests": "9928811304950768",
+                      "account_vests": "9928811304950768",
+                      "proxied_vests": "0",
+                      "timestamp": "2016-06-27T12:41:42"
+                    }
+                  ]
+                }
               }
             }
           },
@@ -972,29 +966,27 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "votes_updated_at": "2024-08-29T12:05:08.097875",
-                    "votes_history": [
-                      {
-                        "voter_name": "jeremyfromwi",
-                        "approve": true,
-                        "vests": "441156952466",
-                        "account_vests": "441156952466",
-                        "proxied_vests": "0",
-                        "timestamp": "2016-09-15T07:07:15"
-                      },
-                      {
-                        "voter_name": "cryptomental",
-                        "approve": true,
-                        "vests": "686005633844",
-                        "account_vests": "686005633844",
-                        "proxied_vests": "0",
-                        "timestamp": "2016-09-15T07:00:51"
-                      }
-                    ]
-                  }
-                ]
+                "example": {
+                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "votes_history": [
+                    {
+                      "voter_name": "jeremyfromwi",
+                      "approve": true,
+                      "vests": "441156952466",
+                      "account_vests": "441156952466",
+                      "proxied_vests": "0",
+                      "timestamp": "2016-09-15T07:07:15"
+                    },
+                    {
+                      "voter_name": "cryptomental",
+                      "approve": true,
+                      "vests": "686005633844",
+                      "account_vests": "686005633844",
+                      "proxied_vests": "0",
+                      "timestamp": "2016-09-15T07:00:51"
+                    }
+                  ]
+                }
               }
             }
           },
@@ -1031,57 +1023,60 @@ declare
                 "schema": {
                   "$ref": "#/components/schemas/hafbe_types.account"
                 },
-                "example": [
-                  {
-                    "id": 440,
-                    "name": "blocktrades",
-                    "can_vote": true,
-                    "mined": true,
-                    "proxy": "",
-                    "recovery_account": "steem",
-                    "last_account_recovery": "1970-01-01T00:00:00",
-                    "created": "2016-03-30T00:04:36",
-                    "reputation": "69,",
-                    "json_metadata": "",
-                    "posting_json_metadata": "",
-                    "profile_image": "",
-                    "hbd_balance": 77246982,
-                    "balance": 29594875,
-                    "vesting_shares": "8172549681941451",
-                    "vesting_balance": 2720696229,
-                    "hbd_saving_balance": 0,
-                    "savings_balance": 0,
-                    "savings_withdraw_requests": 0,
-                    "reward_hbd_balance": 0,
-                    "reward_hive_balance": 0,
-                    "reward_vesting_balance": "0",
-                    "reward_vesting_hive": 0,
-                    "posting_rewards": "65916519",
-                    "curation_rewards": "196115157",
-                    "delegated_vesting_shares": "0",
-                    "received_vesting_shares": "0",
-                    "proxied_vsf_votes": "[4983403929606734, 0, 0, 0]",
-                    "withdrawn": "804048182205290",
-                    "vesting_withdraw_rate": "80404818220529",
-                    "to_withdraw": "8362101094935031",
-                    "withdraw_routes": 4,
-                    "delayed_vests": "0",
-                    "witness_votes": [
-                      "steempty",
-                      "blocktrades",
-                      "datasecuritynode",
-                      "steemed",
-                      "silversteem",
-                      "witness.svk",
-                      "joseph",
-                      "smooth.witness",
-                      "gtg"
-                    ],
-                    "witnesses_voted_for": 9,
-                    "ops_count": 219867,
-                    "is_witness": true
-                  }
-                ]
+                "example": {
+                  "id": 440,
+                  "name": "blocktrades",
+                  "can_vote": true,
+                  "mined": true,
+                  "proxy": "",
+                  "recovery_account": "steem",
+                  "last_account_recovery": "1970-01-01T00:00:00",
+                  "created": "2016-03-30T00:04:36",
+                  "reputation": 69,
+                  "json_metadata": "",
+                  "posting_json_metadata": "",
+                  "profile_image": "",
+                  "hbd_balance": 77246982,
+                  "balance": 29594875,
+                  "vesting_shares": "8172549681941451",
+                  "vesting_balance": 2720696229,
+                  "hbd_saving_balance": 0,
+                  "savings_balance": 0,
+                  "savings_withdraw_requests": 0,
+                  "reward_hbd_balance": 0,
+                  "reward_hive_balance": 0,
+                  "reward_vesting_balance": "0",
+                  "reward_vesting_hive": 0,
+                  "posting_rewards": "65916519",
+                  "curation_rewards": "196115157",
+                  "delegated_vesting_shares": "0",
+                  "received_vesting_shares": "0",
+                  "proxied_vsf_votes": [
+                    4983403929606734,
+                    0,
+                    0,
+                    0
+                  ],
+                  "withdrawn": "804048182205290",
+                  "vesting_withdraw_rate": "80404818220529",
+                  "to_withdraw": "8362101094935031",
+                  "withdraw_routes": 4,
+                  "delayed_vests": "0",
+                  "witness_votes": [
+                    "steempty",
+                    "blocktrades",
+                    "datasecuritynode",
+                    "steemed",
+                    "silversteem",
+                    "witness.svk",
+                    "joseph",
+                    "smooth.witness",
+                    "gtg"
+                  ],
+                  "witnesses_voted_for": 9,
+                  "ops_count": 219867,
+                  "is_witness": true
+                }
               }
             }
           },
@@ -1118,42 +1113,40 @@ declare
                 "schema": {
                   "$ref": "#/components/schemas/hafbe_types.account_authority"
                 },
-                "example": [
-                  {
-                    "owner": {
-                      "key_auths": [
-                        [
-                          "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
-                          "1"
-                        ]
-                      ],
-                      "account_auths": [],
-                      "weight_threshold": 1
-                    },
-                    "active": {
-                      "key_auths": [
-                        [
-                          "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
-                          "1"
-                        ]
-                      ],
-                      "account_auths": [],
-                      "weight_threshold": 1
-                    },
-                    "posting": {
-                      "key_auths": [
-                        [
-                          "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
-                          "1"
-                        ]
-                      ],
-                      "account_auths": [],
-                      "weight_threshold": 1
-                    },
-                    "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
-                    "witness_signing": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
-                  }
-                ]
+                "example": {
+                  "owner": {
+                    "key_auths": [
+                      [
+                        "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
+                        "1"
+                      ]
+                    ],
+                    "account_auths": [],
+                    "weight_threshold": 1
+                  },
+                  "active": {
+                    "key_auths": [
+                      [
+                        "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
+                        "1"
+                      ]
+                    ],
+                    "account_auths": [],
+                    "weight_threshold": 1
+                  },
+                  "posting": {
+                    "key_auths": [
+                      [
+                        "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
+                        "1"
+                      ]
+                    ],
+                    "account_auths": [],
+                    "weight_threshold": 1
+                  },
+                  "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
+                  "witness_signing": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
+                }
               }
             }
           },
@@ -1241,28 +1234,26 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "total_operations": 3,
-                    "total_pages": 2,
-                    "operations_result": [
-                      {
-                        "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
-                        "block": 4228346,
-                        "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
-                        "timestamp": "2016-08-19T21:27:00",
-                        "operation_id": "18160607786173953"
-                      },
-                      {
-                        "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
-                        "block": 4024774,
-                        "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
-                        "timestamp": "2016-08-12T18:40:42",
-                        "operation_id": "17286272703793409"
-                      }
-                    ]
-                  }
-                ]
+                "example": {
+                  "total_operations": 3,
+                  "total_pages": 2,
+                  "operations_result": [
+                    {
+                      "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+                      "block": 4228346,
+                      "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
+                      "timestamp": "2016-08-19T21:27:00",
+                      "operation_id": "18160607786173953"
+                    },
+                    {
+                      "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
+                      "block": 4024774,
+                      "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
+                      "timestamp": "2016-08-12T18:40:42",
+                      "operation_id": "17286272703793409"
+                    }
+                  ]
+                }
               }
             }
           },
@@ -1359,71 +1350,69 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "total_operations": 350,
-                    "total_pages": 117,
-                    "operations_result": [
-                      {
-                        "op": {
-                          "type": "vote_operation",
-                          "value": {
-                            "voter": "blocktrades",
-                            "author": "blocktrades",
-                            "weight": 10000,
-                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                          }
-                        },
-                        "block": 4228228,
-                        "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
-                        "op_pos": 1,
-                        "op_type_id": 0,
-                        "timestamp": "2016-08-19T21:21:03",
-                        "virtual_op": false,
-                        "operation_id": "18160100980032256",
-                        "trx_in_block": 1
+                "example": {
+                  "total_operations": 350,
+                  "total_pages": 117,
+                  "operations_result": [
+                    {
+                      "op": {
+                        "type": "vote_operation",
+                        "value": {
+                          "voter": "blocktrades",
+                          "author": "blocktrades",
+                          "weight": 10000,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                        }
                       },
-                      {
-                        "op": {
-                          "type": "vote_operation",
-                          "value": {
-                            "voter": "murh",
-                            "author": "blocktrades",
-                            "weight": 3301,
-                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                          }
-                        },
-                        "block": 4228239,
-                        "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
-                        "op_pos": 0,
-                        "op_type_id": 0,
-                        "timestamp": "2016-08-19T21:21:36",
-                        "virtual_op": false,
-                        "operation_id": "18160148224672256",
-                        "trx_in_block": 1
+                      "block": 4228228,
+                      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+                      "op_pos": 1,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:03",
+                      "virtual_op": false,
+                      "operation_id": "18160100980032256",
+                      "trx_in_block": 1
+                    },
+                    {
+                      "op": {
+                        "type": "vote_operation",
+                        "value": {
+                          "voter": "murh",
+                          "author": "blocktrades",
+                          "weight": 3301,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                        }
                       },
-                      {
-                        "op": {
-                          "type": "vote_operation",
-                          "value": {
-                            "voter": "weenis",
-                            "author": "blocktrades",
-                            "weight": 10000,
-                            "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
-                          }
-                        },
-                        "block": 4228240,
-                        "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
-                        "op_pos": 0,
-                        "op_type_id": 0,
-                        "timestamp": "2016-08-19T21:21:39",
-                        "virtual_op": false,
-                        "operation_id": "18160152519641600",
-                        "trx_in_block": 5
-                      }
-                    ]
-                  }
-                ]
+                      "block": 4228239,
+                      "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+                      "op_pos": 0,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:36",
+                      "virtual_op": false,
+                      "operation_id": "18160148224672256",
+                      "trx_in_block": 1
+                    },
+                    {
+                      "op": {
+                        "type": "vote_operation",
+                        "value": {
+                          "voter": "weenis",
+                          "author": "blocktrades",
+                          "weight": 10000,
+                          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+                        }
+                      },
+                      "block": 4228240,
+                      "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+                      "op_pos": 0,
+                      "op_type_id": 0,
+                      "timestamp": "2016-08-19T21:21:39",
+                      "virtual_op": false,
+                      "operation_id": "18160152519641600",
+                      "trx_in_block": 5
+                    }
+                  ]
+                }
               }
             }
           },
@@ -1536,63 +1525,61 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "total_blocks": 160,
-                    "total_pages": 32,
-                    "blocks_result": [
-                      {
-                        "block_num": 5000000,
-                        "op_type_ids": [
-                          9,
-                          5,
-                          64,
-                          80
-                        ]
-                      },
-                      {
-                        "block_num": 4999999,
-                        "op_type_ids": [
-                          64,
-                          30,
-                          6,
-                          0,
-                          85,
-                          72,
-                          78
-                        ]
-                      },
-                      {
-                        "block_num": 4999998,
-                        "op_type_ids": [
-                          1,
-                          64,
-                          0,
-                          72
-                        ]
-                      },
-                      {
-                        "block_num": 4999997,
-                        "op_type_ids": [
-                          61,
-                          5,
-                          64,
-                          2,
-                          0,
-                          72
-                        ]
-                      },
-                      {
-                        "block_num": 4999996,
-                        "op_type_ids": [
-                          64,
-                          6,
-                          85
-                        ]
-                      }
-                    ]
-                  }
-                ]
+                "example": {
+                  "total_blocks": 160,
+                  "total_pages": 32,
+                  "blocks_result": [
+                    {
+                      "block_num": 5000000,
+                      "op_type_ids": [
+                        9,
+                        5,
+                        64,
+                        80
+                      ]
+                    },
+                    {
+                      "block_num": 4999999,
+                      "op_type_ids": [
+                        64,
+                        30,
+                        6,
+                        0,
+                        85,
+                        72,
+                        78
+                      ]
+                    },
+                    {
+                      "block_num": 4999998,
+                      "op_type_ids": [
+                        1,
+                        64,
+                        0,
+                        72
+                      ]
+                    },
+                    {
+                      "block_num": 4999997,
+                      "op_type_ids": [
+                        61,
+                        5,
+                        64,
+                        2,
+                        0,
+                        72
+                      ]
+                    },
+                    {
+                      "block_num": 4999996,
+                      "op_type_ids": [
+                        64,
+                        6,
+                        85
+                      ]
+                    }
+                  ]
+                }
               }
             }
           },
@@ -1682,12 +1669,10 @@ declare
                   "type": "string",
                   "x-sql-datatype": "JSON"
                 },
-                "example": [
-                  {
-                    "input_type": "account_name",
-                    "input_value": "blocktrades"
-                  }
-                ]
+                "example": {
+                  "input_type": "account_name",
+                  "input_value": "blocktrades"
+                }
               }
             }
           },

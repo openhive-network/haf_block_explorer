@@ -116,62 +116,61 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example: 
-              - {
-                  "total_blocks": 160,
-                  "total_pages": 32,
-                  "blocks_result": [
-                    {
-                      "block_num": 5000000,
-                      "op_type_ids": [
-                        9,
-                        5,
-                        64,
-                        80
-                      ]
-                    },
-                    {
-                      "block_num": 4999999,
-                      "op_type_ids": [
-                        64,
-                        30,
-                        6,
-                        0,
-                        85,
-                        72,
-                        78
-                      ]
-                    },
-                    {
-                      "block_num": 4999998,
-                      "op_type_ids": [
-                        1,
-                        64,
-                        0,
-                        72
-                      ]
-                    },
-                    {
-                      "block_num": 4999997,
-                      "op_type_ids": [
-                        61,
-                        5,
-                        64,
-                        2,
-                        0,
-                        72
-                      ]
-                    },
-                    {
-                      "block_num": 4999996,
-                      "op_type_ids": [
-                        64,
-                        6,
-                        85
-                      ]
-                    }
+            example: {
+              "total_blocks": 160,
+              "total_pages": 32,
+              "blocks_result": [
+                {
+                  "block_num": 5000000,
+                  "op_type_ids": [
+                    9,
+                    5,
+                    64,
+                    80
+                  ]
+                },
+                {
+                  "block_num": 4999999,
+                  "op_type_ids": [
+                    64,
+                    30,
+                    6,
+                    0,
+                    85,
+                    72,
+                    78
+                  ]
+                },
+                {
+                  "block_num": 4999998,
+                  "op_type_ids": [
+                    1,
+                    64,
+                    0,
+                    72
+                  ]
+                },
+                {
+                  "block_num": 4999997,
+                  "op_type_ids": [
+                    61,
+                    5,
+                    64,
+                    2,
+                    0,
+                    72
+                  ]
+                },
+                {
+                  "block_num": 4999996,
+                  "op_type_ids": [
+                    64,
+                    6,
+                    85
                   ]
                 }
+              ]
+            }
       '404':
         description: No operations in database
  */
