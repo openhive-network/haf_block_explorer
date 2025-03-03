@@ -79,28 +79,27 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example:
-              - {
-                  "total_operations": 263,
-                  "total_pages": 132,
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
-                  "voters": [
-                    {
-                      "voter_name": "blocktrades",
-                      "vests": "13155953611548185",
-                      "account_vests": "8172549681941451",
-                      "proxied_vests": "4983403929606734",
-                      "timestamp": "2016-04-15T02:19:57"
-                    },
-                    {
-                      "voter_name": "dan",
-                      "vests": "9928811304950768",
-                      "account_vests": "9928811304950768",
-                      "proxied_vests": "0",
-                      "timestamp": "2016-06-27T12:41:42"
-                    }
-                  ]
+            example: {
+              "total_operations": 263,
+              "total_pages": 132,
+              "votes_updated_at": "2024-08-29T12:05:08.097875",
+              "voters": [
+                {
+                  "voter_name": "blocktrades",
+                  "vests": "13155953611548185",
+                  "account_vests": "8172549681941451",
+                  "proxied_vests": "4983403929606734",
+                  "timestamp": "2016-04-15T02:19:57"
+                },
+                {
+                  "voter_name": "dan",
+                  "vests": "9928811304950768",
+                  "account_vests": "9928811304950768",
+                  "proxied_vests": "0",
+                  "timestamp": "2016-06-27T12:41:42"
                 }
+              ]
+            }
       '404':
         description: No such witness
  */

@@ -36,8 +36,7 @@ SET ROLE hafbe_owner;
             schema:
               type: string
               x-sql-datatype: JSON
-            example:      
-              - {
+            example: {
                   "input_type": "account_name",
                   "input_value": "blocktrades"
                 }

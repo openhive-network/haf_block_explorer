@@ -32,39 +32,40 @@ SET ROLE hafbe_owner;
           application/json:
             schema:
               $ref: '#/components/schemas/hafbe_types.account_authority'
-            example:
-              - owner: {
-                          "key_auths": [
-                            [
-                              "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
-                              "1"
-                            ]
-                          ],
-                          "account_auths": [],
-                          "weight_threshold": 1
-                        }
-                active: {
-                          "key_auths": [
-                            [
-                              "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
-                              "1"
-                            ]
-                          ],
-                          "account_auths": [],
-                          "weight_threshold": 1
-                        }
-                posting: {
-                            "key_auths": [
-                              [
-                                "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
-                                "1"
-                              ]
-                            ],
-                            "account_auths": [],
-                            "weight_threshold": 1
-                          }
-                memo: "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT"
-                witness_signing: "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
+            example: {
+              "owner": {
+                "key_auths": [
+                  [
+                    "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
+                    "1"
+                  ]
+                ],
+                "account_auths": [],
+                "weight_threshold": 1
+              },
+              "active": {
+                "key_auths": [
+                  [
+                    "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
+                    "1"
+                  ]
+                ],
+                "account_auths": [],
+                "weight_threshold": 1
+              },
+              "posting": {
+                "key_auths": [
+                  [
+                    "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
+                    "1"
+                  ]
+                ],
+                "account_auths": [],
+                "weight_threshold": 1
+              },
+              "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
+              "witness_signing": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
+            }
       '404':
         description: No such account in the database
  */
