@@ -483,6 +483,21 @@ BEGIN
   ) blocks
   WHERE cw.witness_id = blocks.witness_id;
 
+  WITH operations AS (
+    SELECT block_num, op_type_id, COUNT(*) AS count
+    FROM hafbe_app.operations_view
+    WHERE block_num BETWEEN _from AND _to
+    GROUP BY block_num, op_type_id
+    ORDER BY block_num, op_type_id
+  )
+  INSERT INTO hafbe_app.block_operations
+    (block_num, op_type_id, op_count)
+  SELECT
+    block_num,
+    op_type_id,
+    count
+  FROM operations;
+
 END
 $function$
 LANGUAGE 'plpgsql' VOLATILE
