@@ -64,9 +64,7 @@ BEGIN
   (
     block_num INT NOT NULL, 
     op_type_id INT NOT NULL,
-    op_count INT NOT NULL,
-
-    CONSTRAINT pk_block_operations PRIMARY KEY (op_type_id, block_num)
+    op_count INT NOT NULL
   );
 
   PERFORM hive.app_register_table( 'hafbe_app', 'block_operations', 'hafbe_app' );
