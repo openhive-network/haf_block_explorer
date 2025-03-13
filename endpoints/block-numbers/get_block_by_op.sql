@@ -1,20 +1,20 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/block-numbers:
+/block-search:
   get:
     tags:
-      - Block-numbers
-    summary: List block numbers that match operation type filter, account name, and time/block range.
+      - Block-search
+    summary: List block stats that match operation type filter, account name, and time/block range.
     description: |
-      List the block numbers that match given operation type filter,
+      List the block stats that match given operation type filter,
       account name and time/block range in specified order
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_block_by_op(NULL,NULL,1,5);`
+      * `SELECT * FROM hafbe_endpoints.get_block_by_op(NULL,NULL,NULL,5);`
 
       REST call example
-      * `GET ''https://%1$s/hafbe-api/block-numbers?page-size=5''`
+      * `GET ''https://%1$s/hafbe-api/block-search?page-size=5''`
     operationId: hafbe_endpoints.get_block_by_op
     parameters:
       - in: query
@@ -38,8 +38,8 @@ SET ROLE hafbe_owner;
         required: false
         schema:
           type: integer
-          default: 1
-        description: Return page on `page` number, defaults to `1`
+          default: NULL
+        description: Return page on `page` number, defaults to `NULL`
       - in: query
         name: page-size
         required: false
@@ -117,56 +117,162 @@ SET ROLE hafbe_owner;
               type: string
               x-sql-datatype: JSON
             example: {
-              "total_blocks": 160,
-              "total_pages": 32,
+              "total_blocks": 5000000,
+              "total_pages": 1000000,
+              "block_range": {
+                "from": 1,
+                "to": 5000000
+              },
               "blocks_result": [
                 {
                   "block_num": 5000000,
-                  "op_type_ids": [
-                    9,
-                    5,
-                    64,
-                    80
+                  "created_at": "2016-09-15T19:47:21",
+                  "producer_account": "ihashfury",
+                  "producer_reward": "3003845513",
+                  "trx_count": 2,
+                  "hash": "004c4b40245ffb07380a393fb2b3d841b76cdaec",
+                  "prev": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
+                  "operations": [
+                    {
+                      "op_type_id": 5,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 9,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 64,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 80,
+                      "op_count": 1
+                    }
                   ]
                 },
                 {
                   "block_num": 4999999,
-                  "op_type_ids": [
-                    64,
-                    30,
-                    6,
-                    0,
-                    85,
-                    72,
-                    78
+                  "created_at": "2016-09-15T19:47:18",
+                  "producer_account": "smooth.witness",
+                  "producer_reward": "3003846056",
+                  "trx_count": 4,
+                  "hash": "004c4b3fc6a8735b4ab5433d59f4526e4a042644",
+                  "prev": "004c4b3e03ea2eac2494790786bfb9e41a8669d9",
+                  "operations": [
+                    {
+                      "op_type_id": 0,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 6,
+                      "op_count": 2
+                    },
+                    {
+                      "op_type_id": 30,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 64,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 72,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 78,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 85,
+                      "op_count": 2
+                    }
                   ]
                 },
                 {
                   "block_num": 4999998,
-                  "op_type_ids": [
-                    1,
-                    64,
-                    0,
-                    72
+                  "created_at": "2016-09-15T19:47:15",
+                  "producer_account": "steemed",
+                  "producer_reward": "3003846904",
+                  "trx_count": 2,
+                  "hash": "004c4b3e03ea2eac2494790786bfb9e41a8669d9",
+                  "prev": "004c4b3d6c34ebe3eb75dad04ce0a13b5f8a08cf",
+                  "operations": [
+                    {
+                      "op_type_id": 0,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 1,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 64,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 72,
+                      "op_count": 1
+                    }
                   ]
                 },
                 {
                   "block_num": 4999997,
-                  "op_type_ids": [
-                    61,
-                    5,
-                    64,
-                    2,
-                    0,
-                    72
+                  "created_at": "2016-09-15T19:47:12",
+                  "producer_account": "clayop",
+                  "producer_reward": "3003847447",
+                  "trx_count": 4,
+                  "hash": "004c4b3d6c34ebe3eb75dad04ce0a13b5f8a08cf",
+                  "prev": "004c4b3c51ee947feceeb1812702816114aea6e4",
+                  "operations": [
+                    {
+                      "op_type_id": 0,
+                      "op_count": 2
+                    },
+                    {
+                      "op_type_id": 2,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 5,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 61,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 64,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 72,
+                      "op_count": 2
+                    }
                   ]
                 },
                 {
                   "block_num": 4999996,
-                  "op_type_ids": [
-                    64,
-                    6,
-                    85
+                  "created_at": "2016-09-15T19:47:09",
+                  "producer_account": "riverhead",
+                  "producer_reward": "3003847991",
+                  "trx_count": 2,
+                  "hash": "004c4b3c51ee947feceeb1812702816114aea6e4",
+                  "prev": "004c4b3bd268694ea02f24de50c50c9e7a831e60",
+                  "operations": [
+                    {
+                      "op_type_id": 6,
+                      "op_count": 2
+                    },
+                    {
+                      "op_type_id": 64,
+                      "op_count": 1
+                    },
+                    {
+                      "op_type_id": 85,
+                      "op_count": 2
+                    }
                   ]
                 }
               ]
@@ -179,7 +285,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_block_by_op;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "operation-types" TEXT = NULL,
     "account-name" TEXT = NULL,
-    "page" INT = 1,
+    "page" INT = NULL,
     "page-size" INT = 100,
     "direction" hafbe_types.sort_direction = 'desc',
     "from-block" TEXT = NULL,
