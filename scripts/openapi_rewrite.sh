@@ -38,7 +38,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_account_authority.sql
 ../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
-../$endpoints/block-numbers/get_block_by_op.sql
+../$endpoints/block-search/get_block_by_op.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql
