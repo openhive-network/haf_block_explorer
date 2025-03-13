@@ -17,6 +17,18 @@ FROM hive.accounts_view av WHERE av.name = _account
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_name(_account_id INT)
+RETURNS TEXT STABLE
+LANGUAGE 'plpgsql'
+AS
+$$
+BEGIN
+RETURN av.name 
+FROM hive.accounts_view av
+WHERE av.id = _account_id;
+END
+$$;
+
 -- ACCOUNT PROFILE PICTURE
 CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(json_metadata TEXT, posting_json_metadata TEXT)
 RETURNS TEXT IMMUTABLE
