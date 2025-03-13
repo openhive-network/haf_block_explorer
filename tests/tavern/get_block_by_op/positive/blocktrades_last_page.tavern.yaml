@@ -17,7 +17,7 @@
           accept: application/json  
         json:
           account-name: "blocktrades"
-          page: 18
+          page: 1
           page-size: 20
       response:
         status_code: 200
