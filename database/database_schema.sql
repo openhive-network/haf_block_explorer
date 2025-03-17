@@ -123,6 +123,34 @@ BEGIN
 
 ------------------------------------------
 
+CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month
+(
+  trx_count INT NOT NULL,
+  avg_trx INT NOT NULL,
+  min_trx INT NOT NULL,
+  max_trx INT NOT NULL,
+  last_block_num INT NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+
+  CONSTRAINT pk_transaction_stats_by_month PRIMARY KEY (updated_at)
+);
+PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_month', 'hafbe_app' );
+
+CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day
+(
+  trx_count INT NOT NULL,
+  avg_trx INT NOT NULL,
+  min_trx INT NOT NULL,
+  max_trx INT NOT NULL,
+  last_block_num INT NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+
+  CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
+);
+PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe_app' );
+
+------------------------------------------
+
 -- Updated by hafbe_app.process_block_range_data_b
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
     witness_id INT NOT NULL,
