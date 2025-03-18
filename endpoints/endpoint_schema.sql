@@ -18,6 +18,8 @@ externalDocs:
 tags:
   - name: Block-search
     description: Information about blocks
+  - name: Transactions
+    description: Information about transactions
   - name: Accounts
     description: Information about accounts
   - name: Witnesses
@@ -544,6 +546,14 @@ declare
         "items": {
           "$ref": "#/components/schemas/hafbe_types.op_types_count"
         }
+      },
+      "hafbe_types.granularity": {
+        "type": "string",
+        "enum": [
+          "daily",
+          "monthly",
+          "yearly"
+        ]
       }
     }
   },
@@ -565,6 +575,10 @@ declare
     {
       "name": "Block-search",
       "description": "Information about blocks"
+    },
+    {
+      "name": "Transactions",
+      "description": "Information about transactions"
     },
     {
       "name": "Accounts",
@@ -1691,6 +1705,84 @@ declare
           },
           "404": {
             "description": "No operations in database"
+          }
+        }
+      }
+    },
+    "/transaction-statistics": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Aggregated transaction statistics",
+        "description": "History of amount of transactions per day, month or year.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_transaction_statistics();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/transaction-statistics''`\n",
+        "operationId": "hafbe_endpoints.get_transaction_statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_types.granularity",
+              "default": "yearly"
+            },
+            "description": "granularity types:\n\n* daily\n\n* monthly\n\n* yearly\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort order:\n\n * `asc` - Ascending, from oldest to newest \n\n * `desc` - Descending, from newest to oldest \n"
+          },
+          {
+            "in": "query",
+            "name": "from-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Lower limit of the block range, can be represented either by a block-number (integer) or a timestamp (in the format YYYY-MM-DD HH:MI:SS).\n\nThe provided `timestamp` will be converted to a `block-num` by finding the first block \nwhere the block''s `created_at` is more than or equal to the given `timestamp` (i.e. `block''s created_at >= timestamp`).\n\nThe function will interpret and convert the input based on its format, example input:\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          },
+          {
+            "in": "query",
+            "name": "to-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Similar to the from-block parameter, can either be a block-number (integer) or a timestamp (formatted as YYYY-MM-DD HH:MI:SS). \n\nThe provided `timestamp` will be converted to a `block-num` by finding the first block \nwhere the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`).\n\nThe function will convert the value depending on its format, example input:\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Balance change\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "x-sql-datatype": "JSON"
+                },
+                "example": [
+                  {
+                    "date": "2016-12-31T23:59:59",
+                    "trx_count": 6961192,
+                    "avg_trx": 1,
+                    "min_trx": 0,
+                    "max_trx": 89,
+                    "last_block_num": 5000000
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "No such account in the database"
           }
         }
       }
