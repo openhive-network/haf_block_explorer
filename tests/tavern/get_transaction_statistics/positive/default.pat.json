@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2016-12-31T23:59:59",
+    "trx_count": 6961192,
+    "avg_trx": 1,
+    "min_trx": 0,
+    "max_trx": 89,
+    "last_block_num": 5000000
+  }
+]
