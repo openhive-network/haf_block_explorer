@@ -505,19 +505,20 @@ WITH gather_transactions AS MATERIALIZED (
 	SELECT 
     block_num, 
     COUNT(*) as trx_count
-	FROM hive.transactions_view
+	FROM hafbe_app.transactions_view
 	WHERE 
     block_num BETWEEN _from AND _to
 	GROUP BY block_num
 ),
 join_blocks_date AS MATERIALIZED (
 	SELECT 
-		gt.block_num, 
-		gt.trx_count, 
+		bv.num as block_num, 
+		COALESCE(gt.trx_count, 0) AS trx_count, 
 		date_trunc('day',bv.created_at) as by_day, 
 		date_trunc('month',bv.created_at) as by_month
-	FROM gather_transactions gt
-	JOIN hive.blocks_view bv ON gt.block_num = bv.num
+	FROM hafbe_app.blocks_view bv
+	LEFT JOIN gather_transactions gt ON gt.block_num = bv.num
+  WHERE bv.num BETWEEN _from AND _to
 ),
 group_by_day AS (
   SELECT 

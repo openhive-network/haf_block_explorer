@@ -25,7 +25,8 @@ DEFAULT_TYPES="
 ../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
 ../$types/operations/operation.sql
-../$types/operations/op_types_count.sql"
+../$types/operations/op_types_count.sql
+../$types/transactions/granularity.sql"
 
 ENDPOINTS_IN_ORDER="
 ../$endpoints/endpoint_schema.sql
@@ -39,6 +40,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/block-search/get_block_by_op.sql
+../$endpoints/transactions/get_transaction_statistics.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql

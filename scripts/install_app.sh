@@ -157,6 +157,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_voters.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_votes_history_record.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/transactions/granularity.sql"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$backend/hafbe_views.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/get_account_data.sql"
@@ -173,6 +174,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_operation.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_operation_key_value.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_multi_operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/aggregated_transactions.sql"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/get_blocks_by_ops.sql"
 
@@ -190,6 +192,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_comment_operations.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/accounts/get_comment_permlinks.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/block-search/get_block_by_op.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/transactions/get_transaction_statistics.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/other/get_hafbe_version.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/other/get_input_type.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/other/get_latest_blocks.sql"
