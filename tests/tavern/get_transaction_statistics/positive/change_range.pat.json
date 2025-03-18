@@ -1,0 +1,290 @@
+[
+  {
+    "date": "2016-09-15T23:59:59",
+    "trx_count": 61272,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 22,
+    "last_block_num": 5000000
+  },
+  {
+    "date": "2016-09-14T23:59:59",
+    "trx_count": 78489,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 26,
+    "last_block_num": 4976433
+  },
+  {
+    "date": "2016-09-13T23:59:59",
+    "trx_count": 77357,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4947836
+  },
+  {
+    "date": "2016-09-12T23:59:59",
+    "trx_count": 83709,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 24,
+    "last_block_num": 4919136
+  },
+  {
+    "date": "2016-09-11T23:59:59",
+    "trx_count": 78448,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4890480
+  },
+  {
+    "date": "2016-09-10T23:59:59",
+    "trx_count": 76924,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 30,
+    "last_block_num": 4861808
+  },
+  {
+    "date": "2016-09-09T23:59:59",
+    "trx_count": 83659,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 25,
+    "last_block_num": 4833139
+  },
+  {
+    "date": "2016-09-08T23:59:59",
+    "trx_count": 80117,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4804486
+  },
+  {
+    "date": "2016-09-07T23:59:59",
+    "trx_count": 92463,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 25,
+    "last_block_num": 4775763
+  },
+  {
+    "date": "2016-09-06T23:59:59",
+    "trx_count": 78944,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4747009
+  },
+  {
+    "date": "2016-09-05T23:59:59",
+    "trx_count": 78643,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 22,
+    "last_block_num": 4718263
+  },
+  {
+    "date": "2016-09-04T23:59:59",
+    "trx_count": 70270,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4689511
+  },
+  {
+    "date": "2016-09-03T23:59:59",
+    "trx_count": 67988,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 20,
+    "last_block_num": 4660848
+  },
+  {
+    "date": "2016-09-02T23:59:59",
+    "trx_count": 79493,
+    "avg_trx": 2,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4632084
+  },
+  {
+    "date": "2016-09-01T23:59:59",
+    "trx_count": 87410,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4603339
+  },
+  {
+    "date": "2016-08-31T23:59:59",
+    "trx_count": 84881,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4574687
+  },
+  {
+    "date": "2016-08-30T23:59:59",
+    "trx_count": 91543,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 20,
+    "last_block_num": 4545944
+  },
+  {
+    "date": "2016-08-29T23:59:59",
+    "trx_count": 95993,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4517261
+  },
+  {
+    "date": "2016-08-28T23:59:59",
+    "trx_count": 84524,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4488510
+  },
+  {
+    "date": "2016-08-27T23:59:59",
+    "trx_count": 93513,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 20,
+    "last_block_num": 4459775
+  },
+  {
+    "date": "2016-08-26T23:59:59",
+    "trx_count": 95859,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 25,
+    "last_block_num": 4431095
+  },
+  {
+    "date": "2016-08-25T23:59:59",
+    "trx_count": 94727,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 26,
+    "last_block_num": 4402571
+  },
+  {
+    "date": "2016-08-24T23:59:59",
+    "trx_count": 95720,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 20,
+    "last_block_num": 4374265
+  },
+  {
+    "date": "2016-08-23T23:59:59",
+    "trx_count": 99171,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4345588
+  },
+  {
+    "date": "2016-08-22T23:59:59",
+    "trx_count": 98310,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4317051
+  },
+  {
+    "date": "2016-08-21T23:59:59",
+    "trx_count": 93604,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4288591
+  },
+  {
+    "date": "2016-08-20T23:59:59",
+    "trx_count": 90069,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 22,
+    "last_block_num": 4260041
+  },
+  {
+    "date": "2016-08-19T23:59:59",
+    "trx_count": 110352,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 24,
+    "last_block_num": 4231370
+  },
+  {
+    "date": "2016-08-18T23:59:59",
+    "trx_count": 100942,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 21,
+    "last_block_num": 4202966
+  },
+  {
+    "date": "2016-08-17T23:59:59",
+    "trx_count": 101041,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4174340
+  },
+  {
+    "date": "2016-08-16T23:59:59",
+    "trx_count": 96987,
+    "avg_trx": 4,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4145711
+  },
+  {
+    "date": "2016-08-15T23:59:59",
+    "trx_count": 93236,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 24,
+    "last_block_num": 4117029
+  },
+  {
+    "date": "2016-08-14T23:59:59",
+    "trx_count": 85477,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 23,
+    "last_block_num": 4088397
+  },
+  {
+    "date": "2016-08-13T23:59:59",
+    "trx_count": 87976,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 19,
+    "last_block_num": 4059779
+  },
+  {
+    "date": "2016-08-12T23:59:59",
+    "trx_count": 89553,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 18,
+    "last_block_num": 4031140
+  },
+  {
+    "date": "2016-08-11T23:59:59",
+    "trx_count": 106023,
+    "avg_trx": 3,
+    "min_trx": 0,
+    "max_trx": 31,
+    "last_block_num": 4002391
+  }
+]
