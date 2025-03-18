@@ -12,6 +12,7 @@ CREATE TYPE hafbe_backend.transaction_stats AS (
     last_block_num INT
 );
 
+DROP VIEW IF EXISTS hafbe_backend.transaction_stats_by_year CASCADE;
 CREATE OR REPLACE VIEW hafbe_backend.transaction_stats_by_year AS
 WITH get_year AS (
     SELECT
@@ -163,8 +164,6 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_stats_by_month(
-    _account_id INT,
-    _coin_type INT,
     _direction hafbe_types.sort_direction,
     _from_block INT,
     _to_block INT
