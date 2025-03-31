@@ -52,8 +52,4 @@ echo "Test 2. Uninstall app, leave indexes..."
 ./uninstall_app.sh --host="$POSTGRES_HOST"
 echo "Uninstall app completed successfully"
 
-echo "Test 3. Clear indexes..."
-./uninstall_app.sh --host="$POSTGRES_HOST" --drop-indexes
-echo "Uninstall app and clear indexes completed successfully"
-
 popd

@@ -167,7 +167,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_range(
     _current_block INT
 )
 RETURNS hafbe_backend.blocksearch_account_filter_return -- noqa: LT01, CP05
-LANGUAGE 'plpgsql' IMMUTABLE
+LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
 AS
 $$
