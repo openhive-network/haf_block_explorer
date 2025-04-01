@@ -84,7 +84,7 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  _account_id INT := hafbe_backend.get_account_id("account-name")
+  _account_id INT := hafbe_backend.get_account_id("account-name");
 BEGIN
   -- 2s because this endpoint result is live account parameters and balances 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);

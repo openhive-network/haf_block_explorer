@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
     _account_id INT,
     _key_kind hafd.key_type -- noqa: LT01, CP05
 )
-RETURNS hafbe_backend.account_authority -- noqa: LT01, CP05
+RETURNS hafbe_types.authority_type -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -13,7 +13,7 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  _result hafbe_backend.account_authority;
+  _result hafbe_types.authority_type;
 BEGIN
 RETURN (
   WITH get_key_auth AS 

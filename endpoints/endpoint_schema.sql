@@ -361,8 +361,10 @@ declare
             "description": "VESTS received from another user,  account''s power is increased by received VESTS"
           },
           "proxied_vsf_votes": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "description": "recursive proxy of VESTS "
           },
           "withdrawn": {
@@ -386,8 +388,10 @@ declare
             "description": "blocked VESTS by a withdrawal"
           },
           "witness_votes": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "description": "the roster of witnesses voted by the account"
           },
           "witnesses_voted_for": {
@@ -404,22 +408,39 @@ declare
           }
         }
       },
+      "hafbe_types.authority_type": {
+        "type": "object",
+        "properties": {
+          "key_auths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "account_auths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "weight_threshold": {
+            "type": "integer"
+          }
+        }
+      },
       "hafbe_types.account_authority": {
         "type": "object",
         "properties": {
           "owner": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
+            "$ref": "#/components/schemas/hafbe_types.authority_type",
             "description": "the most powerful key because it can change any key of an account, including the owner key. Ideally it is meant to be stored offline, and only used to recover a compromised account"
           },
           "active": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
+            "$ref": "#/components/schemas/hafbe_types.authority_type",
             "description": "key meant for more sensitive tasks such as transferring funds, power up/down transactions, converting Hive Dollars, voting for witnesses, updating profile details and avatar, and placing a market order"
           },
           "posting": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
+            "$ref": "#/components/schemas/hafbe_types.authority_type",
             "description": "key allows accounts to post, comment, edit, vote, reblog and follow or mute other accounts"
           },
           "memo": {
@@ -1066,10 +1087,10 @@ declare
                   "delegated_vesting_shares": "0",
                   "received_vesting_shares": "0",
                   "proxied_vsf_votes": [
-                    4983403929606734,
-                    0,
-                    0,
-                    0
+                    "4983403929606734",
+                    "0",
+                    "0",
+                    "0"
                   ],
                   "withdrawn": "804048182205290",
                   "vesting_withdraw_rate": "80404818220529",

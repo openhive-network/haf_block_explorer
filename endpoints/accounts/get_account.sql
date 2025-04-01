@@ -61,10 +61,10 @@ SET ROLE hafbe_owner;
               "delegated_vesting_shares": "0",
               "received_vesting_shares": "0",
               "proxied_vsf_votes": [
-                4983403929606734,
-                0,
-                0,
-                0
+                "4983403929606734",
+                "0",
+                "0",
+                "0"
               ],
               "withdrawn": "804048182205290",
               "vesting_withdraw_rate": "80404818220529",
@@ -177,7 +177,7 @@ BEGIN
       --hidden, shouldn't be shown on account page
       COALESCE(_result_count, 0)::INT,
       EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
-  )::hafbe_types.account;
+  )::hafbe_types.account
   FROM 
     btracker_endpoints.get_account_balances("account-name")      _result_balance,
     reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
