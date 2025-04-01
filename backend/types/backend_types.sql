@@ -131,7 +131,7 @@ DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE; -- noqa: LT01
 CREATE TYPE hafbe_backend.account_votes AS
 (
     witnesses_voted_for INT,
-    witness_votes JSON
+    witness_votes TEXT[]
 );
 
 ----------------------------------------------------------------------
