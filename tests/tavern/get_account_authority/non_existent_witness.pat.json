@@ -1,7 +1,6 @@
 {
-  "owner": null,
-  "active": null,
-  "posting": null,
-  "memo": null,
-  "witness_signing": null
+  "code": "P0001",
+  "details": null,
+  "hint": null,
+  "message": "Account 'themarkymark' does not exist"
 }

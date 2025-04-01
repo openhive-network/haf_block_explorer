@@ -143,15 +143,4 @@ CREATE TYPE hafbe_backend.json_metadata AS
     posting_json_metadata TEXT
 );
 
-----------------------------------------------------------------------
-
-DROP TYPE IF EXISTS hafbe_backend.account_authority CASCADE; -- noqa: LT01
-CREATE TYPE hafbe_backend.account_authority AS (
-    key_auths TEXT[],
-    account_auths TEXT[],
-    weight_threshold INT
-);
-
-----------------------------------------------------------------------
-
 RESET ROLE;
