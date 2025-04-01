@@ -83,34 +83,23 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
+DECLARE
+  _account_id INT := hafbe_backend.get_account_id("account-name")
 BEGIN
+  -- 2s because this endpoint result is live account parameters and balances 
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
--- 2s because this endpoint result is live account parameters and balances 
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  IF _account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
+  END IF;
 
-RETURN (
-  WITH get_account_id AS
-  (
-    SELECT av.id FROM hive.accounts_view av WHERE av.name = "account-name"
-  ),
-  authorities AS
-  (
-    SELECT
-      hafbe_backend.get_account_authority(gai.id, 'OWNER') AS owner,
-      hafbe_backend.get_account_authority(gai.id, 'ACTIVE') AS active,
-      hafbe_backend.get_account_authority(gai.id, 'POSTING') AS posting,   
-      hafbe_backend.get_account_memo(gai.id) AS memo,
-      hafbe_backend.get_account_witness_signing(gai.id) AS signing
-    FROM get_account_id gai
-  )
-  SELECT ROW(
-    to_json(a.owner),
-    to_json(a.active),
-    to_json(a.posting),
-    a.memo,
-    a.signing)
-  FROM authorities a
-);
+  RETURN (
+    hafbe_backend.get_account_authority(_account_id, 'OWNER'),
+    hafbe_backend.get_account_authority(_account_id, 'ACTIVE'),
+    hafbe_backend.get_account_authority(_account_id, 'POSTING'),   
+    hafbe_backend.get_account_memo(_account_id),
+    hafbe_backend.get_account_witness_signing(_account_id)
+  )::hafbe_types.account_authority;
 
 END
 $$;
