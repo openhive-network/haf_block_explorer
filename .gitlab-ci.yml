@@ -139,7 +139,7 @@ docker-ci-runner-build:
   extends: .docker-base-build-template
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-4"
+    BASE_TAG: "docker-24.0.1-5"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
@@ -177,7 +177,7 @@ generate-wax-spec:
 sync:
   extends: .docker_image_builder_job_template
   stage: sync
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   needs:
   - prepare_haf_image
   - prepare_haf_data
@@ -295,7 +295,7 @@ sync:
     HEALTHCHECK_TCP_PORT: 3000
 
 regression-test:
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
   - job: sync
@@ -328,7 +328,7 @@ regression-test:
   - data-cache-storage
 
 setup-scripts-test:
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
   - job: sync
@@ -353,7 +353,7 @@ setup-scripts-test:
   - data-cache-storage
 
 performance-test:
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-4
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
   - job: sync
