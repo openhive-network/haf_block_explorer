@@ -343,7 +343,7 @@ IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
 	),
 	haf_keys AS
 	(
-		SELECT jsonb_array_elements_text(hafah_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) AS keys
+		SELECT json_array_elements_text(hafah_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) AS keys
 	),
 	check_if_given_keys_are_correct AS
 	(
