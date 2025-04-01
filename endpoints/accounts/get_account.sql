@@ -110,73 +110,74 @@ DECLARE
   __profile_image TEXT;
   _account_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
+  -- 2s because this endpoint result is live account parameters and balances 
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
--- 2s because this endpoint result is live account parameters and balances 
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  IF _account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
+  END IF;
 
-RETURN (
-  SELECT ROW(
+  RETURN (
+      --general
+      _account_id,
+      "account-name",
+      COALESCE(_result_parameters.can_vote, TRUE),
+      COALESCE(_result_parameters.mined, TRUE),
+      COALESCE(_result_proxy, ''),
+      COALESCE(_result_parameters.recovery_account, ''),
+      COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00'),
+      COALESCE(_result_parameters.created,'1970-01-01T00:00:00'), 
+      COALESCE(_result_reputation, 0)::INT,
 
-    --general
-    _account_id,
-    "account-name",
-    COALESCE(_result_parameters.can_vote, TRUE),
-    COALESCE(_result_parameters.mined, TRUE),
-    COALESCE(_result_proxy, ''),
-    COALESCE(_result_parameters.recovery_account, ''),
-    COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00'),
-    COALESCE(_result_parameters.created,'1970-01-01T00:00:00'), 
-    COALESCE(_result_reputation, 0)::INT,
+      --metadata
+      COALESCE(_result_json_metadata.json_metadata,''),
+      COALESCE(_result_json_metadata.posting_json_metadata, ''),
+      COALESCE((SELECT hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata)), ''),
 
-    --metadata
-    COALESCE(_result_json_metadata.json_metadata,''),
-    COALESCE(_result_json_metadata.posting_json_metadata, ''),
-    COALESCE((SELECT hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata)), ''),
+      --balance
+      COALESCE(_result_balance.hbd_balance, 0)::BIGINT,
+      COALESCE(_result_balance.hive_balance, 0)::BIGINT,
+      COALESCE(_result_balance.vesting_shares, '0')::TEXT,
+      COALESCE(_result_balance.vesting_balance_hive, 0)::BIGINT,
+      --COALESCE(_result_balance.post_voting_power_vests, 0),
 
-    --balance
-    COALESCE(_result_balance.hbd_balance, 0)::BIGINT,
-    COALESCE(_result_balance.hive_balance, 0)::BIGINT,
-    COALESCE(_result_balance.vesting_shares, '0')::TEXT,
-    COALESCE(_result_balance.vesting_balance_hive, 0)::BIGINT,
-    --COALESCE(_result_balance.post_voting_power_vests, 0),
+      --saving
+      COALESCE(_result_balance.hbd_savings, 0)::BIGINT,
+      COALESCE(_result_balance.hive_savings, 0)::BIGINT,
+      COALESCE(_result_balance.savings_withdraw_requests, 0),
 
-    --saving
-    COALESCE(_result_balance.hbd_savings, 0)::BIGINT,
-    COALESCE(_result_balance.hive_savings, 0)::BIGINT,
-    COALESCE(_result_balance.savings_withdraw_requests, 0),
+      --reward
+      COALESCE(_result_balance.hbd_rewards, 0)::BIGINT,
+      COALESCE(_result_balance.hive_rewards, 0)::BIGINT,
+      COALESCE(_result_balance.vests_rewards, '0')::TEXT,
+      COALESCE(_result_balance.hive_vesting_rewards, 0)::BIGINT,
+      COALESCE(_result_balance.posting_rewards, '0')::TEXT,
+      COALESCE(_result_balance.curation_rewards, '0')::TEXT,
 
-    --reward
-    COALESCE(_result_balance.hbd_rewards, 0)::BIGINT,
-    COALESCE(_result_balance.hive_rewards, 0)::BIGINT,
-    COALESCE(_result_balance.vests_rewards, '0')::TEXT,
-    COALESCE(_result_balance.hive_vesting_rewards, 0)::BIGINT,
-    COALESCE(_result_balance.posting_rewards, '0')::TEXT,
-    COALESCE(_result_balance.curation_rewards, '0')::TEXT,
+      --received/delegated/proxied
+      COALESCE(_result_balance.delegated_vests, '0')::TEXT,
+      COALESCE(_result_balance.received_vests, '0')::TEXT,
+      COALESCE(_result_proxied_votes, '{}'::TEXT[])::TEXT[],
 
-    --received/delegated/proxied
-    COALESCE(_result_balance.delegated_vests, '0')::TEXT,
-    COALESCE(_result_balance.received_vests, '0')::TEXT,
-    COALESCE(_result_proxied_votes, '[]'),
+      --withdraw
+      COALESCE(_result_balance.withdrawn, '0')::TEXT,
+      COALESCE(_result_balance.vesting_withdraw_rate, '0')::TEXT,
+      COALESCE(_result_balance.to_withdraw, '0')::TEXT,
+      COALESCE(_result_balance.withdraw_routes, 0)::INT,
+      COALESCE(_result_balance.delayed_vests, '0')::TEXT,
 
-    --withdraw
-    COALESCE(_result_balance.withdrawn, '0')::TEXT,
-    COALESCE(_result_balance.vesting_withdraw_rate, '0')::TEXT,
-    COALESCE(_result_balance.to_withdraw, '0')::TEXT,
-    COALESCE(_result_balance.withdraw_routes, 0)::INT,
-    COALESCE(_result_balance.delayed_vests, '0')::TEXT,
+      --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
+      --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
+      --COALESCE(NULL::INT, 0) AS post_count, --- FIXME to be supplemented by new data collection algorithm or removed soon
 
-    --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
-    --COALESCE(NULL::TIMESTAMP, '1970-01-01T00:00:00') AS last_root_post, --- FIXME to be supplemented by new data collection algorithm or removed soon
-    --COALESCE(NULL::INT, 0) AS post_count, --- FIXME to be supplemented by new data collection algorithm or removed soon
+      --witness vote
+      COALESCE(_result_votes.witness_votes, '{}'::TEXT[])::TEXT[],
+      COALESCE(_result_votes.witnesses_voted_for, 0)::INT,
 
-    --witness vote
-    COALESCE(_result_votes.witness_votes, '[]'),
-    COALESCE(_result_votes.witnesses_voted_for, 0)::INT,
-
-    --hidden, shouldn't be shown on account page
-    COALESCE(_result_count, 0)::INT,
-    EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
-  )
+      --hidden, shouldn't be shown on account page
+      COALESCE(_result_count, 0)::INT,
+      EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
+  )::hafbe_types.account;
   FROM 
     btracker_endpoints.get_account_balances("account-name")      _result_balance,
     reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
@@ -185,9 +186,7 @@ RETURN (
     hafbe_backend.get_account_witness_votes(_account_id)      _result_votes,
     hafbe_backend.get_account_proxy(_account_id)              _result_proxy,
     hafbe_backend.get_account_ops_count(_account_id)          _result_count,
-    hafbe_backend.get_account_proxied_vsf_votes(_account_id)  _result_proxied_votes
-);
-
+    hafbe_backend.get_account_proxied_vsf_votes(_account_id)  _result_proxied_votes;
 END
 $$;
 

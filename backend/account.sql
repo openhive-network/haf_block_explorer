@@ -37,4 +37,21 @@ RETURN (
 END
 $$;
 
+-- ACCOUNT VOTES
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_votes(_account INT)
+RETURNS hafbe_backend.account_votes -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+BEGIN
+  RETURN (
+    COUNT(*)::INT, 
+    json_agg(cwvv.vote)
+  )::hafbe_backend.account_votes
+  FROM hafbe_views.current_witness_votes_view cwvv 
+  WHERE cwvv.account = _account;
+END
+$$;
+
 RESET ROLE;

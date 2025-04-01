@@ -114,8 +114,9 @@ hafbe_types.account:
         VESTS received from another user, 
         account''s power is increased by received VESTS
     proxied_vsf_votes:
-      type: string
-      x-sql-datatype: JSON
+      type: array
+      items:
+        type: string
       description: >-
         recursive proxy of VESTS 
     withdrawn:
@@ -136,8 +137,9 @@ hafbe_types.account:
       type: string
       description: blocked VESTS by a withdrawal
     witness_votes:
-      type: string
-      x-sql-datatype: JSON
+      type: array
+      items:
+        type: string
       description: the roster of witnesses voted by the account
     witnesses_voted_for:
       type: integer
@@ -179,13 +181,13 @@ CREATE TYPE hafbe_types.account AS (
     "curation_rewards" TEXT,
     "delegated_vesting_shares" TEXT,
     "received_vesting_shares" TEXT,
-    "proxied_vsf_votes" JSON,
+    "proxied_vsf_votes" TEXT[],
     "withdrawn" TEXT,
     "vesting_withdraw_rate" TEXT,
     "to_withdraw" TEXT,
     "withdraw_routes" INT,
     "delayed_vests" TEXT,
-    "witness_votes" JSON,
+    "witness_votes" TEXT[],
     "witnesses_voted_for" INT,
     "ops_count" INT,
     "is_witness" BOOLEAN
