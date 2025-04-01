@@ -112,10 +112,12 @@ setup_apps() {
   popd
 
   pushd "$btracker_dir"
+  ./scripts/generate_version_sql.sh "$btracker_dir" "$hafbe_dir/.git/modules/submodules/btracker"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$BTRACKER_SCHEMA"
   popd
 
   pushd "$reptracker_dir"
+  ./scripts/generate_version_sql.sh "$reptracker_dir" "$hafbe_dir/.git/modules/submodules/reptracker"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$REPTRACKER_SCHEMA"
   popd
 
