@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_exception(
     _status INT, _error_id INT, _error TEXT, _message TEXT, _data TEXT = NULL
 )
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -23,7 +23,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -35,7 +35,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -47,7 +47,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_input_exception(_input TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -60,7 +60,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_ops_limit_exception(_start BIGINT, _limit BIGINT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -73,7 +73,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_no_such_column_exception(_order_by TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -86,7 +86,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_no_such_order_exception(_order_is TEXT)
 RETURNS JSON
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE 'plpgsql' IMMUTABLE
 AS
 $$
 BEGIN
@@ -100,7 +100,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_limit(given_limit BIGINT, expected_limit INT,given_limit_name TEXT DEFAULT 'page-size')
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
-STABLE
+IMMUTABLE
 AS
 $$
 BEGIN
@@ -115,7 +115,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_page(given_page BIGINT, max_page INT)
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
-STABLE
+IMMUTABLE
 AS
 $$
 BEGIN
@@ -131,7 +131,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_negative_limit(given_limit BIGINT, given_limit_name TEXT DEFAULT 'page-size')
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
-STABLE
+IMMUTABLE
 AS
 $$
 BEGIN
@@ -146,7 +146,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_negative_page(given_page BIGINT)
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
-STABLE
+IMMUTABLE
 AS
 $$
 BEGIN
@@ -155,6 +155,17 @@ BEGIN
   END IF;
 
   RETURN;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_exceptions.rest_raise_missing_account(_account_name TEXT)
+RETURNS VOID
+LANGUAGE 'plpgsql'
+IMMUTABLE
+AS
+$$
+BEGIN
+  RAISE EXCEPTION 'Account ''%'' does not exist', _account_name;
 END
 $$;
 
