@@ -20,16 +20,16 @@ RETURN (
   ),
   populate_record AS MATERIALIZED
   (
-    SELECT 0 as proxy, 1 as proxy_level
+    SELECT '0' as proxy, 1 as proxy_level
     UNION ALL
-    SELECT 0 as proxy, 2 as proxy_level
+    SELECT '0' as proxy, 2 as proxy_level
     UNION ALL
-    SELECT 0 as proxy, 3 as proxy_level
+    SELECT '0' as proxy, 3 as proxy_level
     UNION ALL
-    SELECT 0 as proxy, 4 as proxy_level
+    SELECT '0' as proxy, 4 as proxy_level
   )
   SELECT 
-    array_agg(coalesce(s.proxy::TEXT,"0") ORDER BY pr.proxy_level) 
+    array_agg(coalesce(s.proxy::TEXT,pr.proxy) ORDER BY pr.proxy_level) 
   FROM populate_record pr
   LEFT JOIN proxy_levels s ON s.proxy_level = pr.proxy_level
 );
@@ -47,7 +47,7 @@ $$
 BEGIN
   RETURN (
     COUNT(*)::INT, 
-    json_agg(cwvv.vote)
+    array_agg(cwvv.vote)
   )::hafbe_backend.account_votes
   FROM hafbe_views.current_witness_votes_view cwvv 
   WHERE cwvv.account = _account;
