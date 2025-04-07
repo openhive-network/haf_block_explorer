@@ -21,30 +21,6 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
-RETURNS JSON
-LANGUAGE 'plpgsql' IMMUTABLE
-AS
-$$
-BEGIN
-  RETURN hafbe_exceptions.raise_exception(406, 1, 'Not Acceptable',
-    format('block_num ''%s'' is higher than head block (%s).', _block_num, _head_block_num)
-  );
-END
-$$;
-
-CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
-RETURNS JSON
-LANGUAGE 'plpgsql' IMMUTABLE
-AS
-$$
-BEGIN
-  RETURN hafbe_exceptions.raise_exception(404, 2, 'Not Found',
-    format('Block or transaction hash ''%s'' does not exist in database.', _hash)
-  );
-END
-$$;
-
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_input_exception(_input TEXT)
 RETURNS JSON
 LANGUAGE 'plpgsql' IMMUTABLE
@@ -166,6 +142,26 @@ AS
 $$
 BEGIN
   RAISE EXCEPTION 'Account ''%'' does not exist', _account_name;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
+RETURNS VOID
+LANGUAGE 'plpgsql' IMMUTABLE
+AS
+$$
+BEGIN
+  RAISE EXCEPTION 'Block_num ''%s'' is higher than head block (%s).', _block_num, _head_block_num;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
+RETURNS VOID
+LANGUAGE 'plpgsql' IMMUTABLE
+AS
+$$
+BEGIN
+  RAISE EXCEPTION 'Block or transaction hash ''%s'' does not exist in database.', _hash;
 END
 $$;
 
