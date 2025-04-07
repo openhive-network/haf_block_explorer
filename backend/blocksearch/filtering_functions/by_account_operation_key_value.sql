@@ -2,7 +2,7 @@ SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_key_value(
     _operation INT,
-    _account TEXT,
+    _account_id INT,
     _from INT, 
     _to INT,
     _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
@@ -30,7 +30,6 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _account_id INT := hafbe_backend.get_account_id(_account);
   _result JSON;
   -- keys must be declared in seperate variables
   -- otherwise planner will not use indexes
