@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_permlinks(
     _from INT,
     _to INT
 )
-RETURNS SETOF hafbe_types.permlink_history -- noqa: LT01, CP05
+RETURNS SETOF hafbe_types.permlink -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET enable_hashjoin = OFF
 AS

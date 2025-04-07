@@ -90,12 +90,11 @@ SET ROLE hafbe_owner;
           Result contains total number of operations,
           total pages, and the list of operations.
 
-          * Returns `JSON`
+          * Returns `hafbe_types.permlink_history`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.permlink_history'
             example: {
               "total_operations": 3,
               "total_pages": 2,
@@ -129,7 +128,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_permlinks(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS JSON 
+RETURNS hafbe_types.permlink_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
@@ -140,14 +139,21 @@ SET plan_cache_mode = force_custom_plan -- FIXME
 AS
 $$
 DECLARE
+  _account_id INT := hafbe_backend.get_account_id("account-name");
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
-  _calculate_total_pages INT;
+  __total_pages INT;
   _ops_count INT;
+
+  _result hafbe_types.permlink[];
 BEGIN
 
 PERFORM hafbe_exceptions.validate_limit("page-size", 100);
 PERFORM hafbe_exceptions.validate_negative_limit("page-size");
 PERFORM hafbe_exceptions.validate_negative_page("page");
+
+IF _account_id IS NULL THEN 
+  PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
+END IF;
 
 IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
   RAISE EXCEPTION 'Commentsearch indexes are not installed';
@@ -159,40 +165,46 @@ ELSE
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 END IF;
 
---count for given parameters 
-SELECT hafbe_backend.get_comment_permlinks_count(
+_ops_count := hafbe_backend.get_comment_permlinks_count(
   "account-name",
   "comment-type",
   _block_range.first_block,
   _block_range.last_block
-) INTO _ops_count;
+);
 
---amount of pages
-SELECT (
-  CASE WHEN (_ops_count % "page-size") = 0 THEN 
-    _ops_count/"page-size" 
-  ELSE ((_ops_count/"page-size") + 1) 
+__total_pages := (
+  CASE 
+    WHEN (_ops_count % "page-size") = 0 THEN 
+      _ops_count/"page-size" 
+    ELSE 
+      (_ops_count/"page-size") + 1
   END
-)::INT INTO _calculate_total_pages;
+);
 
-PERFORM hafbe_exceptions.validate_page("page", _calculate_total_pages);
+PERFORM hafbe_exceptions.validate_page("page", __total_pages);
+
+_result := array_agg(row ORDER BY row.operation_id::BIGINT DESC) FROM (
+  SELECT 
+    ba.permlink,
+    ba.block,
+    ba.trx_id,
+    ba.timestamp,
+    ba.operation_id
+  FROM hafbe_backend.get_comment_permlinks(
+    "account-name",
+    "comment-type",
+    "page",
+    "page-size",
+    _block_range.first_block,
+    _block_range.last_block
+  ) ba
+) row;
 
 RETURN (
-  SELECT json_build_object(
-    'total_permlinks', _ops_count,
-    'total_pages', _calculate_total_pages,
-    'permlinks_result', 
-    (SELECT COALESCE(to_json(array_agg(row)), '[]') FROM (
-      SELECT * FROM hafbe_backend.get_comment_permlinks(
-        "account-name",
-        "comment-type",
-        "page",
-        "page-size",
-        _block_range.first_block,
-        _block_range.last_block
-      )
-    ) row)
-  ));
+  COALESCE(_ops_count,0),
+  COALESCE(__total_pages,0),
+  COALESCE(_result, '{}'::hafbe_types.permlink[])
+)::hafbe_types.permlink_history;
 
 END
 $$;
