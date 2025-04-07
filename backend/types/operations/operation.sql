@@ -1,11 +1,22 @@
 SET ROLE hafbe_owner;
 
 /** openapi:components:schemas
+hafbe_types.operation_body:
+  type: object
+  x-sql-datatype: JSON
+  properties:
+    type:
+      type: string
+    value:
+      type: object
+*/
+
+/** openapi:components:schemas
 hafbe_types.operation:
   type: object
   properties:
     op:
-      type: string
+      $ref: '#/components/schemas/hafah_backend.operation_body'
       x-sql-datatype: JSONB
       description: operation body
     block:
@@ -54,5 +65,29 @@ CREATE TYPE hafbe_types.operation AS (
 );
 -- openapi-generated-code-end
 
+/** openapi:components:schemas
+hafbe_types.operation_history:
+  type: object
+  properties:
+    total_operations:
+      type: integer
+      description: Total number of operations
+    total_pages:
+      type: integer
+      description: Total number of pages
+    operations_result:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_types.operation'
+      description: List of operation results
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.operation_history CASCADE;
+CREATE TYPE hafbe_types.operation_history AS (
+    "total_operations" INT,
+    "total_pages" INT,
+    "operations_result" hafbe_types.operation[]
+);
+-- openapi-generated-code-end
 
 RESET ROLE;
