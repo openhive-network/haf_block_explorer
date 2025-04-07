@@ -30,15 +30,16 @@ SET ROLE hafbe_owner;
           Result contains total operations number,
           total pages and the list of operations
 
-          * Returns `JSON`
+          * Returns `hafbe_types.input_type_return `
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.input_type_return'
             example: {
                   "input_type": "account_name",
-                  "input_value": "blocktrades"
+                  "input_value": [
+                    "blocktrades"
+                  ]
                 }
       '404':
         description: Input is not recognized
@@ -48,7 +49,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_input_type;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(
     "input-value" TEXT
 )
-RETURNS JSON 
+RETURNS hafbe_types.input_type_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -57,7 +58,7 @@ DECLARE
   __hash BYTEA;
   __block_num INT;
   __head_block_num INT;
-  __accounts_array JSON;
+  __accounts_array TEXT[];
 BEGIN
   -- names in db are lowercase, no uppercase is used in hashes
   SELECT lower("input-value") INTO "input-value";
@@ -67,10 +68,10 @@ BEGIN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
-    RETURN json_build_object(
-      'input_type', 'account_name',
-      'input_value', "input-value"
-    );
+    RETURN (
+      'account_name',
+      ARRAY["input-value"]
+    )::hafbe_types.input_type_return;
   END IF;
 
   -- second, positive digit and not name is assumed to be block number
@@ -80,15 +81,16 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      RETURN hafbe_exceptions.raise_block_num_too_high_exception("input-value"::NUMERIC, __head_block_num);
+      PERFORM hafbe_exceptions.raise_block_num_too_high_exception("input-value"::NUMERIC, __head_block_num);
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
-      RETURN json_build_object(
-        'input_type', 'block_num',
-        'input_value', "input-value"
-      );
+      RETURN (
+        'block_num',
+        ARRAY["input-value"]
+      )::hafbe_types.input_type_return;
+
     END IF;
   END IF;
 
@@ -101,10 +103,11 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
-      RETURN json_build_object(
-        'input_type', 'transaction_hash',
-        'input_value', "input-value"
-      );
+      RETURN (
+        'transaction_hash',
+        ARRAY["input-value"]
+      )::hafbe_types.input_type_return;
+
     ELSE
       SELECT bv.num 
       FROM hive.blocks_view bv
@@ -116,24 +119,26 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
-      RETURN json_build_object(
-        'input_type', 'block_hash',
-        'input_value', __block_num
-      );
+      RETURN (
+        'block_hash',
+        ARRAY[__block_num::TEXT]
+      )::hafbe_types.input_type_return;
+
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      RETURN hafbe_exceptions.raise_unknown_hash_exception("input-value");
+      PERFORM hafbe_exceptions.raise_unknown_hash_exception("input-value");
     END IF;
   END IF;
 
   -- fourth, it is still possible input is partial name, max 50 names returned.
   -- if no matching accounts were found, 'unknown_input' is returned
-  SELECT json_agg(account_query.accounts
+  SELECT array_agg(account_query.accounts
     ORDER BY
       account_query.name_lengths,
-      account_query.accounts)
+      account_query.accounts
+  )
   INTO __accounts_array
   FROM (
     SELECT
@@ -153,18 +158,20 @@ BEGIN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
-    RETURN json_build_object(
-      'input_type', 'account_name_array',
-      'input_value', __accounts_array
-    );
+    RETURN (
+      'account_name_array',
+      __accounts_array
+    )::hafbe_types.input_type_return;
+
   ELSE
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-    RETURN json_build_object(
-        'input_type', 'invalid_input',
-        'input_value', "input-value"
-      );
+    RETURN (
+      'invalid_input',
+      "input-value"
+    )::hafbe_types.input_type_return;
+
   END IF;
 END
 $$;

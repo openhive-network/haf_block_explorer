@@ -25,8 +25,8 @@ DEFAULT_TYPES="
 ../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
 ../$types/blocks/blocksearch.sql
+../$types/other/input_type.sql
 ../$types/operations/operation.sql
-../$types/operations/op_types_count.sql
 ../$types/transactions/granularity.sql"
 
 ENDPOINTS_IN_ORDER="
