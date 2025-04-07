@@ -2,7 +2,7 @@ SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_op(
     _operation INT,
-    _account TEXT,
+    _account_id INT,
     _from INT, 
     _to INT,
     _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
@@ -28,8 +28,6 @@ DECLARE
   __total_pages INT;
 
   _result JSON;
-  
-  _account_id INT := hafbe_backend.get_account_id(_account);
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to

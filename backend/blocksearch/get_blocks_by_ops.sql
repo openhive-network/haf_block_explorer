@@ -2,7 +2,7 @@ SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_blocks_by_ops(
     _operations INT[],
-    _account TEXT,
+    _account INT,
     _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
     _from INT, 
     _to INT,
