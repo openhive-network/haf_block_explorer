@@ -57,21 +57,21 @@ SET ROLE hafbe_owner;
               - {
                   "block_num": 5000000,
                   "witness": "ihashfury",
-                  "ops_count": [
+                  "operations": [
                     {
-                      "count": 1,
+                      "op_count": 1,
                       "op_type_id": 64
                     },
                     {
-                      "count": 1,
+                      "op_count": 1,
                       "op_type_id": 9
                     },
                     {
-                      "count": 1,
+                      "op_count": 1,
                       "op_type_id": 80
                     },
                     {
-                      "count": 1,
+                      "op_count": 1,
                       "op_type_id": 5
                     }
                   ]
@@ -126,12 +126,12 @@ BEGIN
     SELECT 
       jo.block_num,
       jo.witness,
-      json_agg(
-        json_build_object(
-          'count', jo.count,
-          'op_type_id', jo.op_type_id
-        ) 
-      ) 
+      array_agg(
+        (
+          jo.op_type_id,
+          jo.count
+        )::hafbe_types.block_operations
+      )
     FROM join_operations jo
     GROUP BY jo.block_num, jo.witness
     ORDER BY jo.block_num DESC
