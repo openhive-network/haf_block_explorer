@@ -80,12 +80,11 @@ SET ROLE hafbe_owner;
           Result contains total number of operations,
           total pages, and the list of operations.
 
-          * Returns `JSON`
+          * Returns `hafbe_types.operation_history `
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.operation_history'
             example: {
               "total_operations": 350,
               "total_pages": 117,
@@ -163,7 +162,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     "direction" hafbe_types.sort_direction = 'asc',
     "data-size-limit" INT = 200000
 )
-RETURNS JSON 
+RETURNS hafbe_types.operation_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
@@ -174,16 +173,22 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
+  _account_id INT := hafbe_backend.get_account_id("account-name");
   allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
   _operation_types INT[];
-  _calculate_total_pages INT;
+  __total_pages INT;
   _ops_count INT;
+
+  _result hafbe_types.operation[];
 BEGIN
 
 PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
 PERFORM hafbe_exceptions.validate_negative_limit("page-size");
 PERFORM hafbe_exceptions.validate_negative_page("page");
 
+IF _account_id IS NULL THEN 
+  PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
+END IF;
 
 IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
   RAISE EXCEPTION 'Comment search indexes are not installed';
@@ -201,40 +206,53 @@ END IF;
 
 PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
---count for given parameters 
-SELECT hafbe_backend.get_comment_operations_count(
+_ops_count := hafbe_backend.get_comment_operations_count(
   "account-name",
   "permlink",
   _operation_types
-) INTO _ops_count;
+);
 
---amount of pages
-SELECT (
-    CASE WHEN (_ops_count % "page-size") = 0 THEN 
+__total_pages := (
+  CASE 
+    WHEN (_ops_count % "page-size") = 0 THEN 
       _ops_count/"page-size" 
-    ELSE ((_ops_count/"page-size") + 1) 
-    END
-  )::INT INTO _calculate_total_pages;
+    ELSE 
+      (_ops_count/"page-size") + 1
+  END
+);
 
-PERFORM hafbe_exceptions.validate_page("page", _calculate_total_pages);
+PERFORM hafbe_exceptions.validate_page("page", __total_pages);
+
+_result := array_agg(row ORDER BY
+    (CASE WHEN "direction" = 'desc' THEN row.operation_id::BIGINT ELSE NULL END) DESC,
+    (CASE WHEN "direction" = 'asc' THEN row.operation_id::BIGINT ELSE NULL END) ASC
+  ) FROM (
+    SELECT 
+      ba.op,
+      ba.block,
+      ba.trx_id,
+      ba.op_pos,
+      ba.op_type_id,
+      ba.timestamp,
+      ba.virtual_op,
+      ba.operation_id,
+      ba.trx_in_block
+    FROM hafbe_backend.get_comment_operations(
+      "account-name",
+      "permlink",
+      _operation_types,
+      "page",
+      "page-size",
+      "direction",
+      "data-size-limit"
+      ) ba
+) row;
 
 RETURN (
-  SELECT json_build_object(
-    'total_operations', _ops_count,
-    'total_pages', _calculate_total_pages,
-    'operations_result', 
-    (SELECT COALESCE(to_json(array_agg(row)), '[]') FROM (
-      SELECT * FROM hafbe_backend.get_comment_operations(
-        "account-name",
-        "permlink",
-        _operation_types,
-        "page",
-        "page-size",
-        "direction",
-        "data-size-limit"
-      )
-    ) row)
-  ));
+  COALESCE(_ops_count,0),
+  COALESCE(__total_pages,0),
+  COALESCE(_result, '{}'::hafbe_types.operation[])
+)::hafbe_types.operation_history;
 
 END
 $$;
