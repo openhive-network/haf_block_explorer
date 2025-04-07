@@ -38,15 +38,9 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-
---100000s because version of hafbe doesn't change as often, but it may change
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=100000"}]', true);
-
-RETURN (
-	SELECT git_hash
-	FROM hafbe_app.version
-);
-
+  --100000s because version of hafbe doesn't change as often, but it may change
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=100000"}]', true);
+  RETURN git_hash FROM hafbe_app.version;
 END
 $$;
 

@@ -38,7 +38,6 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
-
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=0"}]', true);
   RETURN current_block_num FROM hafd.contexts WHERE name = 'hafbe_app';
 END
