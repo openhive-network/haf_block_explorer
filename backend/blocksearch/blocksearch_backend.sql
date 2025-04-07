@@ -16,18 +16,18 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_operation_aggregation(_block_num INT)
-RETURNS JSON
+RETURNS hafbe_types.block_operations[]
 LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
 BEGIN
 RETURN 
-  json_agg(
-    json_build_object(
-      'op_type_id', op_type_id,
-      'op_count', op_count
-    )
+  array_agg(
+    (
+      op_type_id,
+      op_count
+    )::hafbe_types.block_operations
 	)
 FROM hafbe_app.block_operations
 WHERE	block_num = _block_num;
@@ -35,19 +35,18 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.build_json_for_single_operation(_op_type_id INT, _op_count INT)
-RETURNS JSON
+RETURNS hafbe_types.block_operations[]
 LANGUAGE 'plpgsql'
 IMMUTABLE
 AS
 $$
 BEGIN
-RETURN 
-  json_build_array(
-    json_build_object(
-          'op_type_id', _op_type_id,
-          'op_count', _op_count
-        )
-  ) AS operations;
+  RETURN ARRAY[
+    (
+      _op_type_id,
+      _op_count
+    )
+  ];
 END
 $$;
 

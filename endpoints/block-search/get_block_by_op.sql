@@ -110,12 +110,11 @@ SET ROLE hafbe_owner;
         description: |
           Block number with filtered operations
 
-          * Returns `JSON`
+          * Returns `hafbe_types.block_history`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.block_history'
             example: {
               "total_blocks": 5000000,
               "total_pages": 1000000,
@@ -292,7 +291,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "to-block" TEXT = NULL,
     "path-filter" TEXT[] = NULL
 )
-RETURNS JSON 
+RETURNS hafbe_types.block_history
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
