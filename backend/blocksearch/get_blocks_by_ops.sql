@@ -11,12 +11,12 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_blocks_by_ops(
     _key_content TEXT [],
     _setof_keys JSON
 )
-RETURNS JSON -- noqa: LT01, CP05
+RETURNS hafbe_types.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE 
-  result JSON;
+  result hafbe_types.block_history;
 
   -- flags
   _filter_by_op BOOLEAN:= (_operations IS NOT NULL);

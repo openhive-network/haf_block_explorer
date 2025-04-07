@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_multi_op(
     _page INT,
     _limit INT
 )
-RETURNS JSON -- noqa: LT01, CP05
+RETURNS hafbe_types.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -26,7 +26,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result JSON;
+  _result hafbe_types.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -45,11 +45,11 @@ BEGIN
   eliminate_duplicate_blocks AS MATERIALIZED (
     SELECT 
       gb.block_num,
-      json_agg(
-        json_build_object(
-          'op_type_id', gb.op_type_id,
-          'op_count', gb.op_count
-        )
+      array_agg(
+        (
+          op_type_id,
+          op_count
+        )::hafbe_types.block_operations
       ) AS operations
     FROM gather_operations gb
     GROUP BY gb.block_num
@@ -125,12 +125,22 @@ BEGIN
     (SELECT total_pages FROM calculate_pages),
     (SELECT block_num FROM min_block_num),
     (SELECT count FROM count_pre_grouped_blocks),
-    COALESCE(
-      (
-        SELECT json_agg(result) FROM (
-          SELECT * FROM result_query
-        ) AS result
-      ), '[]'::json
+    (
+      SELECT array_agg(rows ORDER BY 
+        (CASE WHEN _order_is = 'desc' THEN rows.block_num ELSE NULL END) DESC,
+        (CASE WHEN _order_is = 'asc' THEN rows.block_num ELSE NULL END) ASC
+      ) FROM (
+        SELECT 
+          s.block_num,
+          s.created_at,
+          s.producer_account,
+          s.producer_reward,
+          s.trx_count,
+          s.hash,
+          s.prev,
+          s.operations
+        FROM result_query s
+      ) rows
     )
   INTO __count, __total_pages, __min_block_num, __count_pre_grouped_blocks, _result;
 
@@ -147,12 +157,12 @@ BEGIN
     END
   );
 
-  RETURN json_build_object(
-    'total_blocks', __count,
-    'total_pages', __total_pages,
-    'block_range', json_build_object('from', __from, 'to', __to),
-    'blocks_result', COALESCE(_result, '[]'::json)
-  );
+  RETURN (
+    COALESCE(__count, 0),
+    COALESCE(__total_pages, 0),
+    (__from, __to)::hafbe_types.block_range,
+    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
+  )::hafbe_types.block_history;
 
 END
 $$;
