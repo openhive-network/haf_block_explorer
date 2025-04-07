@@ -10,17 +10,18 @@ hafbe_types.latest_blocks:
     witness:
       type: string
       description: witness that created the block
-    ops_count:
-      type: string
-      x-sql-datatype: JSON
-      description: count of each operation type
+    operations:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_types.block_operations'
+      description: List of block_operation
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.latest_blocks CASCADE;
 CREATE TYPE hafbe_types.latest_blocks AS (
     "block_num" INT,
     "witness" TEXT,
-    "ops_count" JSON
+    "operations" hafbe_types.block_operations[]
 );
 -- openapi-generated-code-end
 
