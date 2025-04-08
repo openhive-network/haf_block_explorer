@@ -475,6 +475,27 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
+  -- parse witness account_creation_fee
+  WITH select_ops_with_missed AS (
+    SELECT witness
+    FROM hafbe_views.witness_prop_op_view
+    WHERE op_type_id = 86 AND block_num BETWEEN _from AND _to
+  ),
+  count_missed AS (
+    SELECT COUNT(*) AS missed_blocks, witness
+    FROM select_ops_with_missed
+    GROUP BY witness
+  )
+  INSERT INTO hafbe_app.current_witnesses AS cw 
+    (witness_id, missed_blocks)
+  SELECT 
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = cm.witness),
+    cm.missed_blocks
+  FROM count_missed cm
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO 
+  UPDATE SET 
+    missed_blocks = cw.missed_blocks + EXCLUDED.missed_blocks;
+
   -- parse last_created_block_num
   UPDATE hafbe_app.current_witnesses cw SET last_created_block_num = blocks.last_created_block_num FROM (
     SELECT 
