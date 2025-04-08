@@ -99,12 +99,11 @@ SET ROLE hafbe_owner;
         description: |
           The number of voters currently voting for this witness
 
-          * Returns `JSON`
+          * Returns `hafbe_types.witness_votes_history`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.witness_votes_history'
             example: {
               "votes_updated_at": "2024-08-29T12:05:08.097875",
               "votes_history": [
@@ -139,7 +138,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS JSON 
+RETURNS hafbe_types.witness_votes_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -150,30 +149,54 @@ AS
 $$
 DECLARE 
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
+  _hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  _witness_id INT = hafbe_backend.get_account_id("account-name");
+  _votes_updated_at TIMESTAMP;
+
+  _result hafbe_types.witness_votes_history_record[];
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("result-limit", 10000, 'result-limit');
   PERFORM hafbe_exceptions.validate_negative_limit("result-limit",'result-limit');
   PERFORM hafbe_exceptions.validate_negative_page("result-limit");
 
+  IF _block_range.first_block IS NOT NULL AND _hafbe_current_block < _block_range.first_block THEN
+    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _hafbe_current_block);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses WHERE witness_id = _witness_id) THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
+  END IF;
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  RETURN (
-    SELECT json_build_object(
-      'votes_updated_at', (SELECT last_updated_at 
-          FROM hafbe_app.witnesses_cache_config
-          ),
-      'votes_history', 
-        COALESCE((SELECT to_json(array_agg(row)) FROM (
-          SELECT * FROM hafbe_backend.get_witness_votes_history(
-            "account-name",
-            "sort",
-            "direction",
-            "result-limit",
-            _block_range.first_block,
-            _block_range.last_block)
-      ) row),'[]')
-    )
+  _votes_updated_at := (
+    SELECT last_updated_at 
+    FROM hafbe_app.witnesses_cache_config
   );
+
+  _result := array_agg(row) FROM (
+    SELECT 
+      ba.voter_name,
+      ba.approve,
+      ba.vests,
+      ba.account_vests,
+      ba.proxied_vests,
+      ba.timestamp
+    FROM hafbe_backend.get_witness_votes_history(
+      "account-name",
+      "sort",
+      "direction",
+      "result-limit",
+      _block_range.first_block,
+      _block_range.last_block
+    ) ba
+  ) row;
+
+  RETURN (
+    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
+    COALESCE(_result, '{}'::hafbe_types.witness_votes_history_record[])
+  )::hafbe_types.witness_votes_history;
+
 END
 $$;
 
