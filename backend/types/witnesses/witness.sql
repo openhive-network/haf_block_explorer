@@ -122,4 +122,34 @@ CREATE TYPE hafbe_types.witness_return AS (
 );
 -- openapi-generated-code-end
 
+/** openapi:components:schemas
+hafbe_types.witnesses_return:
+  type: object
+  properties:
+    total_witnesses:
+      type: integer
+      description: Total number of witnesses
+    total_pages:
+      type: integer
+      description: Total number of pages
+    votes_updated_at:
+      type: string
+      format: date-time
+      description: Time of cache update
+    witnesses:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_types.witness'
+      description: List of witness parameters
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.witnesses_return CASCADE;
+CREATE TYPE hafbe_types.witnesses_return AS (
+    "total_witnesses" INT,
+    "total_pages" INT,
+    "votes_updated_at" TIMESTAMP,
+    "witnesses" hafbe_types.witness[]
+);
+-- openapi-generated-code-end
+
 RESET ROLE;

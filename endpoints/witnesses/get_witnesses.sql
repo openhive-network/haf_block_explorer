@@ -86,12 +86,11 @@ SET ROLE hafbe_owner;
         description: |
           The list of witnesses
 
-          * Returns `JSON`
+          * Returns `hafbe_types.witnesses_return`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.witnesses_return'
             example: {
               "total_operations": 731,
               "total_pages": 366,
@@ -146,7 +145,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
     "sort" hafbe_types.order_by_witness = 'votes',
     "direction" hafbe_types.sort_direction = 'desc'
 )
-RETURNS JSON 
+RETURNS hafbe_types.witnesses_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -157,48 +156,72 @@ AS
 $$
 DECLARE
   _ops_count INT;
-  _calculate_total_pages INT;
-BEGIN
+  __total_pages INT;
+  _votes_updated_at TIMESTAMP;
 
+  _result hafbe_types.witness[];
+BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  --count for given parameters 
-  SELECT COUNT(*) INTO _ops_count
-  FROM hafbe_app.current_witnesses;
+  _ops_count := (
+    SELECT COUNT(*)
+    FROM hafbe_app.current_witnesses
+  );
 
-  --amount of pages
-  SELECT 
-    (
-      CASE WHEN (_ops_count % "page-size") = 0 THEN 
+  __total_pages := (
+    CASE 
+      WHEN (_ops_count % "page-size") = 0 THEN 
         _ops_count/"page-size" 
-      ELSE ((_ops_count/"page-size") + 1) 
-      END
-    )::INT INTO _calculate_total_pages;
+      ELSE 
+        (_ops_count/"page-size") + 1
+    END
+  );
 
-  PERFORM hafbe_exceptions.validate_page("page", _calculate_total_pages);
+  _votes_updated_at := (
+    SELECT last_updated_at 
+    FROM hafbe_app.witnesses_cache_config
+  );
 
+  PERFORM hafbe_exceptions.validate_page("page", __total_pages);
+
+  _result := array_agg(row) FROM (
+    SELECT 
+      ba.witness_name,
+      ba.rank,
+      ba.url,
+      ba.vests,
+      ba.votes_daily_change,
+      ba.voters_num,
+      ba.voters_num_daily_change,
+      ba.price_feed,
+      ba.bias,
+      ba.feed_updated_at,
+      ba.block_size,
+      ba.signing_key,
+      ba.version,
+      ba.missed_blocks,
+      ba.hbd_interest_rate,
+      ba.last_confirmed_block_num,
+      ba.account_creation_fee
+    FROM hafbe_backend.get_witnesses(
+      "page",
+      "page-size",
+      "sort",
+      "direction"
+    ) ba
+  ) row;
 
   RETURN (
-    SELECT json_build_object(
-      'total_operations', _ops_count,
-      'total_pages', _calculate_total_pages,
-      'votes_updated_at', (SELECT last_updated_at 
-          FROM hafbe_app.witnesses_cache_config
-          ),
-      'witnesses', 
-        COALESCE((SELECT to_json(array_agg(row)) FROM (
-          SELECT * FROM hafbe_backend.get_witnesses(
-            "page",
-            "page-size",
-            "sort",
-            "direction")
-      ) row),'[]')
-    )
-  );
+    COALESCE(_ops_count,0),
+    COALESCE(__total_pages,0),
+    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
+    COALESCE(_result, '{}'::hafbe_types.witness[])
+  )::hafbe_types.witnesses_return;
+
 END
 $$;
 
