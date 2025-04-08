@@ -1,4 +1,6 @@
 {
   "input_type": "block_hash",
-  "input_value": 4888888
+  "input_value": [
+    "4888888"
+  ]
 }

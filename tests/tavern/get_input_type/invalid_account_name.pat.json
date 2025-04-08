@@ -1,4 +1,6 @@
 {
   "input_type": "invalid_input",
-  "input_value": "themarkymark"
+  "input_value": [
+    "themarkymark"
+  ]
 }

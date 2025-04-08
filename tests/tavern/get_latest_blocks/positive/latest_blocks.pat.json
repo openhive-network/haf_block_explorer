@@ -2,21 +2,21 @@
   {
     "block_num": 5000000,
     "witness": "ihashfury",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 5
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 80
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 9
       }
     ]
@@ -24,33 +24,33 @@
   {
     "block_num": 4999999,
     "witness": "smooth.witness",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 0
       },
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 85
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 30
       },
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 6
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 78
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 72
       }
     ]
@@ -58,21 +58,21 @@
   {
     "block_num": 4999998,
     "witness": "steemed",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 0
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 72
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 1
       }
     ]
@@ -80,29 +80,29 @@
   {
     "block_num": 4999997,
     "witness": "clayop",
-    "ops_count": [
+    "operations": [
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 72
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 0
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 5
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 61
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 2
       }
     ]
@@ -110,17 +110,17 @@
   {
     "block_num": 4999996,
     "witness": "riverhead",
-    "ops_count": [
+    "operations": [
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 6
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 85
       }
     ]
@@ -128,17 +128,17 @@
   {
     "block_num": 4999995,
     "witness": "ihashfury",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 72
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 0
       }
     ]
@@ -146,21 +146,21 @@
   {
     "block_num": 4999994,
     "witness": "boatymcboatface",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 0
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 1
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 72
       }
     ]
@@ -168,9 +168,9 @@
   {
     "block_num": 4999993,
     "witness": "arhag",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       }
     ]
@@ -178,17 +178,17 @@
   {
     "block_num": 4999992,
     "witness": "blocktrades",
-    "ops_count": [
+    "operations": [
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 0
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 72
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       }
     ]
@@ -196,25 +196,25 @@
   {
     "block_num": 4999991,
     "witness": "pharesim",
-    "ops_count": [
+    "operations": [
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 72
       },
       {
-        "count": 2,
+        "op_count": 2,
         "op_type_id": 0
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 64
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 1
       },
       {
-        "count": 1,
+        "op_count": 1,
         "op_type_id": 18
       }
     ]
