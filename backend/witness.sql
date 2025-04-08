@@ -238,7 +238,7 @@ $$;
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
-    "account-name" TEXT
+    _witness_id INT
 )
 RETURNS hafbe_types.witness 
 LANGUAGE 'plpgsql'
@@ -250,7 +250,7 @@ BEGIN
     WITH limited_set AS (
       SELECT
         cw.witness_id,
-        av.name::TEXT AS witness,
+        (SELECT av.name FROM hive.accounts_view av WHERE av.id = _witness_id)::TEXT AS witness,
         COALESCE(cw.url, '') AS url,
         COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
         COALESCE(cw.bias, 0) AS bias,
@@ -262,9 +262,8 @@ BEGIN
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
-      FROM hive.accounts_view av
-      JOIN hafbe_app.current_witnesses cw ON av.id = cw.witness_id
-      WHERE av.name = "account-name"
+      FROM hafbe_app.current_witnesses cw 
+      WHERE cw.witness_id = _witness_id
     )
     SELECT ROW(
       ls.witness, 

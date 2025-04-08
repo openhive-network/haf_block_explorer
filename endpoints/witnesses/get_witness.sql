@@ -28,12 +28,11 @@ SET ROLE hafbe_owner;
         description: |
           Various witness statistics
 
-          * Returns `JSON`
+          * Returns `hafbe_types.witness_return`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.witness_return'
             example: {
               "votes_updated_at": "2024-08-29T12:05:08.097875",
               "witness": {
@@ -64,7 +63,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(
     "account-name" TEXT
 )
-RETURNS JSON 
+RETURNS hafbe_types.witness_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -73,21 +72,29 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
+DECLARE
+  _witness_id INT = hafbe_backend.get_account_id("account-name");
+  _votes_updated_at TIMESTAMP;
+
+  _result hafbe_types.witness;
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses WHERE witness_id = _witness_id) THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
+  END IF;
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  RETURN (
-    SELECT json_build_object(
-      'votes_updated_at', (SELECT last_updated_at 
-        FROM hafbe_app.witnesses_cache_config
-        ),
-      'witness', COALESCE((SELECT to_json(
-        hafbe_backend.get_witness(
-          "account-name")
-        )
-      ), '{}')
-    )
+  _votes_updated_at := (
+    SELECT last_updated_at 
+    FROM hafbe_app.witnesses_cache_config
   );
+
+  _result := hafbe_backend.get_witness(_witness_id);
+
+  RETURN (
+    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
+    _result
+  )::hafbe_types.witness_return;
 
 END
 $$;
