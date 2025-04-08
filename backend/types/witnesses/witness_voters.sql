@@ -35,10 +35,33 @@ CREATE TYPE hafbe_types.witness_voter AS (
 -- openapi-generated-code-end
 
 /** openapi:components:schemas
-hafbe_types.array_of_witness_voters:
-  type: array
-  items:
-    $ref: '#/components/schemas/hafbe_types.witness_voter'
+hafbe_types.witness_voter_history:
+  type: object
+  properties:
+    total_votes:
+      type: integer
+      description: Total number of votes
+    total_pages:
+      type: integer
+      description: Total number of pages
+    votes_updated_at:
+      type: string
+      format: date-time
+      description: Time of cache update
+    voters:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_types.witness_voter'
+      description: List of votes results
  */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_types.witness_voter_history CASCADE;
+CREATE TYPE hafbe_types.witness_voter_history AS (
+    "total_votes" INT,
+    "total_pages" INT,
+    "votes_updated_at" TIMESTAMP,
+    "voters" hafbe_types.witness_voter[]
+);
+-- openapi-generated-code-end
 
 RESET ROLE;
