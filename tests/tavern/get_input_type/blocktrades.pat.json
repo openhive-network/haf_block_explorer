@@ -1,4 +1,6 @@
 {
   "input_type": "account_name",
-  "input_value": "blocktrades"
+  "input_value": [
+    "blocktrades"
+  ]
 }
