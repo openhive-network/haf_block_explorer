@@ -141,6 +141,7 @@ $$
 DECLARE
   _account_id INT := hafbe_backend.get_account_id("account-name");
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
+  _head_block_num INT := (SELECT bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1);
   __total_pages INT;
   _ops_count INT;
 
@@ -150,6 +151,10 @@ BEGIN
 PERFORM hafbe_exceptions.validate_limit("page-size", 100);
 PERFORM hafbe_exceptions.validate_negative_limit("page-size");
 PERFORM hafbe_exceptions.validate_negative_page("page");
+
+IF _block_range.first_block IS NOT NULL AND _head_block_num < _block_range.first_block THEN
+  PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _head_block_num);
+END IF;
 
 IF _account_id IS NULL THEN 
   PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
