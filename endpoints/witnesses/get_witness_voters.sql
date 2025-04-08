@@ -79,7 +79,7 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.witness_voter_history'
             example: {
-              "total_operations": 263,
+              "total_votes": 263,
               "total_pages": 132,
               "votes_updated_at": "2024-08-29T12:05:08.097875",
               "voters": [

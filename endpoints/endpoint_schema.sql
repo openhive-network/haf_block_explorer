@@ -917,7 +917,7 @@ declare
                   "$ref": "#/components/schemas/hafbe_types.witnesses_return"
                 },
                 "example": {
-                  "total_operations": 731,
+                  "total_witnesses": 731,
                   "total_pages": 366,
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "witnesses": [
@@ -1093,7 +1093,7 @@ declare
                   "$ref": "#/components/schemas/hafbe_types.witness_voter_history"
                 },
                 "example": {
-                  "total_operations": 263,
+                  "total_votes": 263,
                   "total_pages": 132,
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "voters": [

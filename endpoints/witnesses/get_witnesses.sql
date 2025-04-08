@@ -92,7 +92,7 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.witnesses_return'
             example: {
-              "total_operations": 731,
+              "total_witnesses": 731,
               "total_pages": 366,
               "votes_updated_at": "2024-08-29T12:05:08.097875",
               "witnesses": [
