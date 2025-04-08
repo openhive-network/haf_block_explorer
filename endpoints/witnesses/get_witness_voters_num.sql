@@ -49,6 +49,10 @@ $$
 DECLARE
   _witness_id INT = hafbe_backend.get_account_id("account-name");
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses WHERE witness_id = _witness_id) THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
+  END IF;
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   RETURN COALESCE(
     (SELECT COUNT(*) FROM hafbe_app.current_witness_votes WHERE witness_id = _witness_id), 0
