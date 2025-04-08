@@ -164,6 +164,7 @@ PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe
     hbd_interest_rate INT,
     last_created_block_num INT,
     account_creation_fee INT,
+    missed_blocks INT,
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   );

@@ -179,6 +179,7 @@ BEGIN
         COALESCE(cw.block_size, 0) AS block_size,
         COALESCE(cw.signing_key, '') AS signing_key, 
         COALESCE(cw.version, '0.0.0') AS version,
+        COALESCE(cw.missed_blocks, 0) AS missed_blocks,
         COALESCE(b.votes,0) AS votes, 
         COALESCE(b.voters_num,0) AS voters_num, 
         COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
@@ -216,7 +217,7 @@ BEGIN
       ls.block_size, 
       ls.signing_key, 
       ls.version,
-      hafbe_backend.count_missed_blocks(ls.witness_id),
+      ls.missed_blocks,
       ls.hbd_interest_rate,
       ls.last_created_block_num,
       ls.account_creation_fee
@@ -257,6 +258,7 @@ BEGIN
         COALESCE(cw.block_size, 0) AS block_size,
         COALESCE(cw.signing_key, '') AS signing_key, 
         COALESCE(cw.version, '0.0.0') AS version,
+        COALESCE(cw.missed_blocks, 0) AS missed_blocks,
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
@@ -278,7 +280,7 @@ BEGIN
       ls.block_size, 
       ls.signing_key, 
       ls.version,
-      hafbe_backend.count_missed_blocks(ls.witness_id),
+      ls.missed_blocks,
       ls.hbd_interest_rate,
       ls.last_created_block_num,
       ls.account_creation_fee
