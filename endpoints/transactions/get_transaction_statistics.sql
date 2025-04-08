@@ -80,11 +80,12 @@ SET ROLE hafbe_owner;
       '200':
         description: |
           Balance change
+
+          * Returns array of `hafbe_types.transaction_stats`
         content:
           application/json:
             schema:
-              type: string
-              x-sql-datatype: JSON
+              $ref: '#/components/schemas/hafbe_types.array_of_transaction_stats'
             example: [
               {
                 "date": "2016-12-31T23:59:59",
@@ -107,7 +108,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS JSON 
+RETURNS SETOF hafbe_types.transaction_stats
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 SET jit = OFF
@@ -115,31 +116,34 @@ AS
 $$
 DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
+  _hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
-
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
   ELSE
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  RETURN COALESCE((
-    SELECT to_json(array_agg(row)) FROM (
-      SELECT 
-        fb.date,
-        fb.trx_count,
-        fb.avg_trx,
-        fb.min_trx,
-        fb.max_trx,
-        fb.last_block_num
-      FROM hafbe_backend.get_transaction_stats(
-        "granularity",
-        "direction",
-        _block_range.first_block,
-        _block_range.last_block
-      ) fb
-    ) row
-  ), '[]'); 
+  IF _block_range.first_block IS NOT NULL AND _hafbe_current_block < _block_range.first_block THEN
+    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _hafbe_current_block);
+  END IF;
+
+  RETURN QUERY (
+    SELECT
+      fb.date,
+      fb.trx_count,
+      fb.avg_trx,
+      fb.min_trx,
+      fb.max_trx,
+      fb.last_block_num
+    FROM hafbe_backend.get_transaction_stats(
+      "granularity",
+      "direction",
+      _block_range.first_block,
+      _block_range.last_block
+    ) fb
+  );
+
 END
 $$;
 
