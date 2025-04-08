@@ -291,7 +291,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "to-block" TEXT = NULL,
     "path-filter" TEXT[] = NULL
 )
-RETURNS hafbe_types.block_history
+RETURNS hafbe_types.block_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
