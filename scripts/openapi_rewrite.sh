@@ -27,7 +27,8 @@ DEFAULT_TYPES="
 ../$types/blocks/blocksearch.sql
 ../$types/other/input_type.sql
 ../$types/operations/operation.sql
-../$types/transactions/granularity.sql"
+../$types/transactions/granularity.sql
+../$types/transactions/transaction_stats.sql"
 
 ENDPOINTS_IN_ORDER="
 ../$endpoints/endpoint_schema.sql
