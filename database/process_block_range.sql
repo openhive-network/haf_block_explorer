@@ -475,7 +475,7 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
-  -- parse witness account_creation_fee
+  -- parse witness missed_blocks
   WITH select_ops_with_missed AS (
     SELECT witness
     FROM hafbe_views.witness_prop_op_view

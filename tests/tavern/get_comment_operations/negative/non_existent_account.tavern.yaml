@@ -18,6 +18,7 @@
           accept: application/json  
         json:
           account-name: "themarkymark"
+          permlink: "blocktrades-witness-report-for-3rd-week-of-august"
       response:
         status_code: 400
         verify_response_with:

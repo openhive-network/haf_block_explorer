@@ -59,36 +59,37 @@ DECLARE
   __block_num INT;
   __head_block_num INT;
   __accounts_array TEXT[];
+  __input_value TEXT;
 BEGIN
   -- names in db are lowercase, no uppercase is used in hashes
-  SELECT lower("input-value") INTO "input-value";
+  SELECT lower("input-value") INTO __input_value;
 
   -- first, name existance is checked
-  IF (SELECT 1 FROM hive.accounts_view WHERE name = "input-value" LIMIT 1) IS NOT NULL THEN
+  IF (SELECT 1 FROM hive.accounts_view WHERE name = __input_value LIMIT 1) IS NOT NULL THEN
 
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
     RETURN (
       'account_name',
-      ARRAY["input-value"]
+      ARRAY[__input_value]
     )::hafbe_types.input_type_return;
   END IF;
 
   -- second, positive digit and not name is assumed to be block number
-  IF "input-value" SIMILAR TO '(\d+)' THEN
+  IF __input_value SIMILAR TO '(\d+)' THEN
     SELECT bv.num INTO __head_block_num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1;
-    IF "input-value"::NUMERIC > __head_block_num THEN
+    IF __input_value::NUMERIC > __head_block_num THEN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      PERFORM hafbe_exceptions.raise_block_num_too_high_exception("input-value"::NUMERIC, __head_block_num);
+      PERFORM hafbe_exceptions.raise_block_num_too_high_exception(__input_value::NUMERIC, __head_block_num);
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
 
       RETURN (
         'block_num',
-        ARRAY["input-value"]
+        ARRAY[__input_value]
       )::hafbe_types.input_type_return;
 
     END IF;
@@ -96,8 +97,8 @@ BEGIN
 
   -- third, if input is 40 char hash, it is validated for transaction or block hash
   -- hash is unknown if failed to validate
-  IF "input-value" SIMILAR TO '([a-f0-9]{40})' THEN
-    SELECT ('\x' || "input-value")::BYTEA INTO __hash;
+  IF __input_value SIMILAR TO '([a-f0-9]{40})' THEN
+    SELECT ('\x' || __input_value)::BYTEA INTO __hash;
     
     IF (SELECT trx_hash FROM hive.transactions_view WHERE trx_hash = __hash LIMIT 1) IS NOT NULL THEN
 
@@ -105,7 +106,7 @@ BEGIN
 
       RETURN (
         'transaction_hash',
-        ARRAY["input-value"]
+        ARRAY[__input_value]
       )::hafbe_types.input_type_return;
 
     ELSE
@@ -128,7 +129,7 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      PERFORM hafbe_exceptions.raise_unknown_hash_exception("input-value");
+      PERFORM hafbe_exceptions.raise_unknown_hash_exception(__input_value);
     END IF;
   END IF;
 
@@ -147,7 +148,7 @@ BEGIN
     FROM
       hive.accounts_view ha
     WHERE
-      ha.name LIKE "input-value" || '%'
+      ha.name LIKE __input_value || '%'
     ORDER BY
       accounts,
       name_lengths
@@ -169,7 +170,7 @@ BEGIN
 
     RETURN (
       'invalid_input',
-      "input-value"
+      ARRAY[__input_value]
     )::hafbe_types.input_type_return;
 
   END IF;
