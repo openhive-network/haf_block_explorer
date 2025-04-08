@@ -74,6 +74,17 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION hafbe_exceptions.rest_raise_missing_witness(_account_name TEXT)
+RETURNS VOID
+LANGUAGE 'plpgsql'
+IMMUTABLE
+AS
+$$
+BEGIN
+  RAISE EXCEPTION 'Witness ''%'' does not exist', _account_name;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
 RETURNS VOID
 LANGUAGE 'plpgsql' IMMUTABLE
