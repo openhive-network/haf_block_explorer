@@ -165,10 +165,43 @@ declare
           }
         }
       },
-      "hafbe_types.array_of_witnesses": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.witness"
+      "hafbe_types.witness_return": {
+        "type": "object",
+        "properties": {
+          "votes_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of cache update"
+          },
+          "witness": {
+            "$ref": "#/components/schemas/hafbe_types.witness",
+            "description": "Witness parameters"
+          }
+        }
+      },
+      "hafbe_types.witnesses_return": {
+        "type": "object",
+        "properties": {
+          "total_witnesses": {
+            "type": "integer",
+            "description": "Total number of witnesses"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "votes_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of cache update"
+          },
+          "witnesses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.witness"
+            },
+            "description": "List of witness parameters"
+          }
         }
       },
       "hafbe_types.witness_voter": {
@@ -197,10 +230,29 @@ declare
           }
         }
       },
-      "hafbe_types.array_of_witness_voters": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.witness_voter"
+      "hafbe_types.witness_voter_history": {
+        "type": "object",
+        "properties": {
+          "total_votes": {
+            "type": "integer",
+            "description": "Total number of votes"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "votes_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of cache update"
+          },
+          "voters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.witness_voter"
+            },
+            "description": "List of votes results"
+          }
         }
       },
       "hafbe_types.witness_votes_history_record": {
@@ -233,10 +285,21 @@ declare
           }
         }
       },
-      "hafbe_types.array_of_witness_vote_history_records": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.witness_votes_history_record"
+      "hafbe_types.witness_votes_history": {
+        "type": "object",
+        "properties": {
+          "votes_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of cache update"
+          },
+          "votes_history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.witness_votes_history_record"
+            },
+            "description": "List of witness votes"
+          }
         }
       },
       "hafbe_types.account": {
@@ -453,7 +516,7 @@ declare
           }
         }
       },
-      "hafbe_types.permlink_history": {
+      "hafbe_types.permlink": {
         "type": "object",
         "properties": {
           "permlink": {
@@ -480,6 +543,26 @@ declare
           }
         }
       },
+      "hafbe_types.permlink_history": {
+        "type": "object",
+        "properties": {
+          "total_permlinks": {
+            "type": "integer",
+            "description": "Total number of permlinks"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "permlinks_result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.permlink"
+            },
+            "description": "List of permlinks"
+          }
+        }
+      },
       "hafbe_types.latest_blocks": {
         "type": "object",
         "properties": {
@@ -491,10 +574,12 @@ declare
             "type": "string",
             "description": "witness that created the block"
           },
-          "ops_count": {
-            "type": "string",
-            "x-sql-datatype": "JSON",
-            "description": "count of each operation type"
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.block_operations"
+            },
+            "description": "List of block_operation"
           }
         }
       },
@@ -504,11 +589,128 @@ declare
           "$ref": "#/components/schemas/hafbe_types.latest_blocks"
         }
       },
+      "hafbe_types.block_range": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "integer"
+          }
+        }
+      },
+      "hafbe_types.block_operations": {
+        "type": "object",
+        "properties": {
+          "op_type_id": {
+            "type": "integer",
+            "description": "operation type identifier"
+          },
+          "op_count": {
+            "type": "integer",
+            "description": "amount of operations in block"
+          }
+        }
+      },
+      "hafbe_types.blocksearch": {
+        "type": "object",
+        "properties": {
+          "block_num": {
+            "type": "integer",
+            "description": "block number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "creation date"
+          },
+          "producer_account": {
+            "type": "string",
+            "description": "account name of block''s producer"
+          },
+          "producer_reward": {
+            "type": "string",
+            "description": "operation type identifier"
+          },
+          "trx_count": {
+            "type": "integer",
+            "description": "count of transactions in block"
+          },
+          "hash": {
+            "type": "string",
+            "description": "block hash in a blockchain is a unique, fixed-length string generated  by applying a cryptographic hash function to a block''s contents"
+          },
+          "prev": {
+            "type": "string",
+            "description": "hash of a previous block"
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.block_operations"
+            },
+            "description": "List of block_operation"
+          }
+        }
+      },
+      "hafbe_types.block_history": {
+        "type": "object",
+        "properties": {
+          "total_blocks": {
+            "type": "integer",
+            "description": "Total number of blocks"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "block_range": {
+            "$ref": "#/components/schemas/hafbe_types.block_range",
+            "description": "Range of blocks that contains the returned pages"
+          },
+          "blocks_result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.blocksearch"
+            },
+            "description": "List of block results"
+          }
+        }
+      },
+      "hafbe_types.input_type_return": {
+        "type": "object",
+        "properties": {
+          "input_type": {
+            "type": "string",
+            "description": "operation type id"
+          },
+          "input_value": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "number of operations in the block"
+          }
+        }
+      },
+      "hafbe_types.operation_body": {
+        "type": "object",
+        "x-sql-datatype": "JSON",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
       "hafbe_types.operation": {
         "type": "object",
         "properties": {
           "op": {
-            "type": "string",
+            "$ref": "#/components/schemas/hafah_backend.operation_body",
             "x-sql-datatype": "JSONB",
             "description": "operation body"
           },
@@ -548,24 +750,24 @@ declare
           }
         }
       },
-      "hafbe_types.op_types_count": {
+      "hafbe_types.operation_history": {
         "type": "object",
         "properties": {
-          "op_type_id": {
+          "total_operations": {
             "type": "integer",
-            "description": "operation type id"
+            "description": "Total number of operations"
           },
-          "count": {
+          "total_pages": {
             "type": "integer",
-            "x-sql-datatype": "BIGINT",
-            "description": "number of operations in the block"
+            "description": "Total number of pages"
+          },
+          "operations_result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.operation"
+            },
+            "description": "List of operation results"
           }
-        }
-      },
-      "hafbe_types.array_of_op_types_count": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.op_types_count"
         }
       },
       "hafbe_types.granularity": {
@@ -575,6 +777,42 @@ declare
           "monthly",
           "yearly"
         ]
+      },
+      "hafbe_types.transaction_stats": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "the time transaction was included in the blockchain"
+          },
+          "trx_count": {
+            "type": "integer",
+            "description": "amount of transactions"
+          },
+          "avg_trx": {
+            "type": "integer",
+            "description": "avarage amount of transactions in block"
+          },
+          "min_trx": {
+            "type": "integer",
+            "description": "minimal amount of transactions in block"
+          },
+          "max_trx": {
+            "type": "integer",
+            "description": "maximum amount of transactions in block"
+          },
+          "last_block_num": {
+            "type": "integer",
+            "description": "last block number in time range"
+          }
+        }
+      },
+      "hafbe_types.array_of_transaction_stats": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_types.transaction_stats"
+        }
       }
     }
   },
@@ -672,12 +910,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The list of witnesses\n\n* Returns `JSON`\n",
+            "description": "The list of witnesses\n\n* Returns `hafbe_types.witnesses_return`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.witnesses_return"
                 },
                 "example": {
                   "total_operations": 731,
@@ -751,12 +988,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Various witness statistics\n\n* Returns `JSON`\n",
+            "description": "Various witness statistics\n\n* Returns `hafbe_types.witness_return`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.witness_return"
                 },
                 "example": {
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
@@ -850,12 +1086,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns `JSON`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_types.witness_voter_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.witness_voter_history"
                 },
                 "example": {
                   "total_operations": 263,
@@ -994,12 +1229,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns `JSON`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_types.witness_votes_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.witness_votes_history"
                 },
                 "example": {
                   "votes_updated_at": "2024-08-29T12:05:08.097875",
@@ -1262,12 +1496,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `JSON`\n",
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_types.permlink_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.permlink_history"
                 },
                 "example": {
                   "total_operations": 3,
@@ -1378,12 +1611,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `JSON`\n",
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_types.operation_history `\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.operation_history"
                 },
                 "example": {
                   "total_operations": 350,
@@ -1553,12 +1785,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Block number with filtered operations\n\n* Returns `JSON`\n",
+            "description": "Block number with filtered operations\n\n* Returns `hafbe_types.block_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.block_history"
                 },
                 "example": {
                   "total_blocks": 5000000,
@@ -1782,12 +2013,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Balance change\n",
+            "description": "Balance change\n\n* Returns array of `hafbe_types.transaction_stats`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.array_of_transaction_stats"
                 },
                 "example": [
                   {
@@ -1881,16 +2111,17 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `JSON`\n",
+            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `hafbe_types.input_type_return `\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "x-sql-datatype": "JSON"
+                  "$ref": "#/components/schemas/hafbe_types.input_type_return"
                 },
                 "example": {
                   "input_type": "account_name",
-                  "input_value": "blocktrades"
+                  "input_value": [
+                    "blocktrades"
+                  ]
                 }
               }
             }
@@ -1943,21 +2174,21 @@ declare
                   {
                     "block_num": 5000000,
                     "witness": "ihashfury",
-                    "ops_count": [
+                    "operations": [
                       {
-                        "count": 1,
+                        "op_count": 1,
                         "op_type_id": 64
                       },
                       {
-                        "count": 1,
+                        "op_count": 1,
                         "op_type_id": 9
                       },
                       {
-                        "count": 1,
+                        "op_count": 1,
                         "op_type_id": 80
                       },
                       {
-                        "count": 1,
+                        "op_count": 1,
                         "op_type_id": 5
                       }
                     ]
