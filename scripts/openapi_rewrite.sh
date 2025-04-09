@@ -22,9 +22,9 @@ DEFAULT_TYPES="
 ../$types/witnesses/witness_votes_history_record.sql
 ../$types/accounts/account.sql
 ../$types/accounts/account_authority.sql
+../$types/blocks/blocksearch.sql
 ../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
-../$types/blocks/blocksearch.sql
 ../$types/other/input_type.sql
 ../$types/operations/operation.sql
 ../$types/transactions/granularity.sql
