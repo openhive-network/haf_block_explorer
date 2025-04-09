@@ -1,6 +1,10 @@
 {
   "total_permlinks": 7,
   "total_pages": 1,
+  "block_range": {
+    "from": 3000000,
+    "to": 4000000
+  },
   "permlinks_result": [
     {
       "permlink": "re-wackou-btstools-development-bounties-20160811t173426180z",

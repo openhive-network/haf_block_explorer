@@ -1,6 +1,10 @@
 {
   "total_permlinks": 27,
   "total_pages": 2,
+  "block_range": {
+    "from": 1,
+    "to": 5000000
+  },
   "permlinks_result": [
     {
       "permlink": "witness-report-for-blocktrades-for-last-week-of-august",

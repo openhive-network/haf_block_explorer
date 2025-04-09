@@ -1,6 +1,10 @@
 {
   "total_permlinks": 51,
   "total_pages": 3,
+  "block_range": {
+    "from": 1,
+    "to": 5000000
+  },
   "permlinks_result": [
     {
       "permlink": "re-chitty-re-gtg-re-chitty-a-balanced-voting-system-is-impossible-with-current-witness-s-payouts-20160915t184349883z",

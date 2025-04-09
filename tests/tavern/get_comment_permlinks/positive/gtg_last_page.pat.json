@@ -1,6 +1,10 @@
 {
   "total_permlinks": 51,
   "total_pages": 3,
+  "block_range": {
+    "from": 1,
+    "to": 5000000
+  },
   "permlinks_result": [
     {
       "permlink": "re-artakan-important-info-for-steem-miner-do-not-use-your-steemit-com-account-20160821t123356072z",
