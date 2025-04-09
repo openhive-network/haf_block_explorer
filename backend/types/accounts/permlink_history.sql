@@ -46,6 +46,9 @@ hafbe_types.permlink_history:
     total_pages:
       type: integer
       description: Total number of pages
+    block_range:
+      $ref: '#/components/schemas/hafbe_types.block_range'
+      description: Range of blocks that contains the returned pages  
     permlinks_result:
       type: array
       items:
@@ -57,6 +60,7 @@ DROP TYPE IF EXISTS hafbe_types.permlink_history CASCADE;
 CREATE TYPE hafbe_types.permlink_history AS (
     "total_permlinks" INT,
     "total_pages" INT,
+    "block_range" hafbe_types.block_range,
     "permlinks_result" hafbe_types.permlink[]
 );
 -- openapi-generated-code-end
