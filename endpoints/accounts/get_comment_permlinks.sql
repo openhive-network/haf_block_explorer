@@ -27,7 +27,7 @@ SET ROLE hafbe_owner;
         required: false
         schema:
           $ref: '#/components/schemas/hafbe_types.comment_type'
-          default: post
+          default: all
         description: |
           Sort order:
           
@@ -96,25 +96,29 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.permlink_history'
             example: {
-              "total_operations": 3,
-              "total_pages": 2,
-              "operations_result": [
-                {
-                  "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
-                  "block": 4228346,
-                  "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
-                  "timestamp": "2016-08-19T21:27:00",
-                  "operation_id": "18160607786173953"
+                "total_permlinks": 3,
+                "total_pages": 2,
+                "block_range": {
+                  "from": 4000000,
+                  "to": 4800000
                 },
-                {
-                  "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
-                  "block": 4024774,
-                  "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
-                  "timestamp": "2016-08-12T18:40:42",
-                  "operation_id": "17286272703793409"
-                }
-              ]
-            }
+                "permlinks_result": [
+                  {
+                    "permlink": "witness-report-for-blocktrades-for-last-week-of-august",
+                    "block": 4575065,
+                    "trx_id": "d35590b9690ee8aa4b572901d62bc6263953346a",
+                    "timestamp": "2016-09-01T00:18:51",
+                    "operation_id": "19649754552074241"
+                  },
+                  {
+                    "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+                    "block": 4228346,
+                    "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
+                    "timestamp": "2016-08-19T21:27:00",
+                    "operation_id": "18160607786173953"
+                  }
+                ]
+              }
       '404':
         description: No such account in the database
  */
@@ -122,7 +126,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_permlinks;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_permlinks(
     "account-name" TEXT,
-    "comment-type" hafbe_types.comment_type = 'post',
+    "comment-type" hafbe_types.comment_type = 'all',
     "page" INT = 1,
     "page-size" INT = 100,
     "from-block" TEXT = NULL,
@@ -142,74 +146,43 @@ DECLARE
   _account_id INT := hafbe_backend.get_account_id("account-name");
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT := (SELECT bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1);
-  __total_pages INT;
-  _ops_count INT;
-
-  _result hafbe_types.permlink[];
+  __from INT;
+  __to INT;
 BEGIN
+  PERFORM hafbe_exceptions.validate_limit("page-size", 100);
+  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+  PERFORM hafbe_exceptions.validate_negative_page("page");
 
-PERFORM hafbe_exceptions.validate_limit("page-size", 100);
-PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-PERFORM hafbe_exceptions.validate_negative_page("page");
+  IF _block_range.first_block IS NOT NULL AND _head_block_num < _block_range.first_block THEN
+    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _head_block_num);
+  END IF;
 
-IF _block_range.first_block IS NOT NULL AND _head_block_num < _block_range.first_block THEN
-  PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _head_block_num);
-END IF;
+  IF _account_id IS NULL THEN 
+    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
+  END IF;
 
-IF _account_id IS NULL THEN 
-  PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
-END IF;
+  IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
+    RAISE EXCEPTION 'Commentsearch indexes are not installed';
+  END IF;
 
-IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
-  RAISE EXCEPTION 'Commentsearch indexes are not installed';
-END IF;
+  IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+  ELSE
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  END IF;
 
-IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
-ELSE
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-END IF;
+  SELECT from_block, to_block
+  INTO __from, __to
+  FROM hafbe_backend.blocksearch_range(_block_range.first_block, _block_range.last_block, _head_block_num);
 
-_ops_count := hafbe_backend.get_comment_permlinks_count(
-  "account-name",
-  "comment-type",
-  _block_range.first_block,
-  _block_range.last_block
-);
-
-__total_pages := (
-  CASE 
-    WHEN (_ops_count % "page-size") = 0 THEN 
-      _ops_count/"page-size" 
-    ELSE 
-      (_ops_count/"page-size") + 1
-  END
-);
-
-PERFORM hafbe_exceptions.validate_page("page", __total_pages);
-
-_result := array_agg(row ORDER BY row.operation_id::BIGINT DESC) FROM (
-  SELECT 
-    ba.permlink,
-    ba.block,
-    ba.trx_id,
-    ba.timestamp,
-    ba.operation_id
-  FROM hafbe_backend.get_comment_permlinks(
+  RETURN hafbe_backend.get_comment_permlinks(
     "account-name",
     "comment-type",
     "page",
     "page-size",
-    _block_range.first_block,
-    _block_range.last_block
-  ) ba
-) row;
-
-RETURN (
-  COALESCE(_ops_count,0),
-  COALESCE(__total_pages,0),
-  COALESCE(_result, '{}'::hafbe_types.permlink[])
-)::hafbe_types.permlink_history;
+    __from,
+    __to
+  );
 
 END
 $$;

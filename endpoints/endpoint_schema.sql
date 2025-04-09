@@ -516,79 +516,6 @@ declare
           }
         }
       },
-      "hafbe_types.permlink": {
-        "type": "object",
-        "properties": {
-          "permlink": {
-            "type": "string",
-            "description": "unique post identifier containing post''s title and generated number"
-          },
-          "block": {
-            "type": "integer",
-            "description": "operation block number"
-          },
-          "trx_id": {
-            "type": "string",
-            "description": "hash of the transaction"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "creation date"
-          },
-          "operation_id": {
-            "type": "integer",
-            "x-sql-datatype": "TEXT",
-            "description": "unique operation identifier with an encoded block number and operation type id"
-          }
-        }
-      },
-      "hafbe_types.permlink_history": {
-        "type": "object",
-        "properties": {
-          "total_permlinks": {
-            "type": "integer",
-            "description": "Total number of permlinks"
-          },
-          "total_pages": {
-            "type": "integer",
-            "description": "Total number of pages"
-          },
-          "permlinks_result": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/hafbe_types.permlink"
-            },
-            "description": "List of permlinks"
-          }
-        }
-      },
-      "hafbe_types.latest_blocks": {
-        "type": "object",
-        "properties": {
-          "block_num": {
-            "type": "integer",
-            "description": "block number"
-          },
-          "witness": {
-            "type": "string",
-            "description": "witness that created the block"
-          },
-          "operations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/hafbe_types.block_operations"
-            },
-            "description": "List of block_operation"
-          }
-        }
-      },
-      "hafbe_types.array_of_latest_blocks": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_types.latest_blocks"
-        }
-      },
       "hafbe_types.block_range": {
         "type": "object",
         "properties": {
@@ -676,6 +603,83 @@ declare
             },
             "description": "List of block results"
           }
+        }
+      },
+      "hafbe_types.permlink": {
+        "type": "object",
+        "properties": {
+          "permlink": {
+            "type": "string",
+            "description": "unique post identifier containing post''s title and generated number"
+          },
+          "block": {
+            "type": "integer",
+            "description": "operation block number"
+          },
+          "trx_id": {
+            "type": "string",
+            "description": "hash of the transaction"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "creation date"
+          },
+          "operation_id": {
+            "type": "integer",
+            "x-sql-datatype": "TEXT",
+            "description": "unique operation identifier with an encoded block number and operation type id"
+          }
+        }
+      },
+      "hafbe_types.permlink_history": {
+        "type": "object",
+        "properties": {
+          "total_permlinks": {
+            "type": "integer",
+            "description": "Total number of permlinks"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "block_range": {
+            "$ref": "#/components/schemas/hafbe_types.block_range",
+            "description": "Range of blocks that contains the returned pages"
+          },
+          "permlinks_result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.permlink"
+            },
+            "description": "List of permlinks"
+          }
+        }
+      },
+      "hafbe_types.latest_blocks": {
+        "type": "object",
+        "properties": {
+          "block_num": {
+            "type": "integer",
+            "description": "block number"
+          },
+          "witness": {
+            "type": "string",
+            "description": "witness that created the block"
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_types.block_operations"
+            },
+            "description": "List of block_operation"
+          }
+        }
+      },
+      "hafbe_types.array_of_latest_blocks": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_types.latest_blocks"
         }
       },
       "hafbe_types.input_type_return": {
@@ -1449,7 +1453,7 @@ declare
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/hafbe_types.comment_type",
-              "default": "post"
+              "default": "all"
             },
             "description": "Sort order:\n\n * `post`    - permlinks related to root posts\n\n * `comment` - permlinks related to comments \n\n * `all`     - both, posts and comments\n"
           },
@@ -1503,22 +1507,26 @@ declare
                   "$ref": "#/components/schemas/hafbe_types.permlink_history"
                 },
                 "example": {
-                  "total_operations": 3,
+                  "total_permlinks": 3,
                   "total_pages": 2,
-                  "operations_result": [
+                  "block_range": {
+                    "from": 4000000,
+                    "to": 4800000
+                  },
+                  "permlinks_result": [
+                    {
+                      "permlink": "witness-report-for-blocktrades-for-last-week-of-august",
+                      "block": 4575065,
+                      "trx_id": "d35590b9690ee8aa4b572901d62bc6263953346a",
+                      "timestamp": "2016-09-01T00:18:51",
+                      "operation_id": "19649754552074241"
+                    },
                     {
                       "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
                       "block": 4228346,
                       "trx_id": "bdcd754eb66f18eac11322310ae7ece1e951c08c",
                       "timestamp": "2016-08-19T21:27:00",
                       "operation_id": "18160607786173953"
-                    },
-                    {
-                      "permlink": "blocktrades-witness-report-for-2nd-week-of-august",
-                      "block": 4024774,
-                      "trx_id": "82a2a959b0087f1eb8f38512b032d8468f194154",
-                      "timestamp": "2016-08-12T18:40:42",
-                      "operation_id": "17286272703793409"
                     }
                   ]
                 }
