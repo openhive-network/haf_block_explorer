@@ -1,11 +1,26 @@
 -- noqa: disable=LT02, PRS
 
+--used in permlink search API, for filtering by 'all' and 'comment'
 SELECT hive.register_index_dependency(
     'hafbe_app',
     $$
     CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink ON hafd.operations USING btree
     (
         (body_binary::jsonb -> 'value' ->> 'author'),
+        hafd.operation_id_to_block_num(id) DESC
+    )
+    WHERE hafd.operation_id_to_type_id(id) = 1
+    $$
+);
+
+--used in permlink search API, for filtering by 'post'
+SELECT hive.register_index_dependency(
+    'hafbe_app',
+    $$
+    CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_parent_author ON hafd.operations USING btree
+    (
+        (body_binary::jsonb -> 'value' ->> 'author'),
+        (body_binary::jsonb -> 'value' ->> 'parent_author'),
         hafd.operation_id_to_block_num(id) DESC
     )
     WHERE hafd.operation_id_to_type_id(id) = 1
