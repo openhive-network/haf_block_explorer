@@ -126,6 +126,37 @@ BEGIN
   )
   SELECT COUNT(*) FROM balance_change INTO _result;
 
+-- parse witness pending_claimed_accounts
+  WITH select_ops_with_claimed AS (
+    SELECT 
+      (body -> 'value' ->> 'creator') AS account,
+      (
+        CASE WHEN ov.op_type_id = 22 THEN
+          1
+        ELSE
+          -1
+        END
+      ) AS claimed_account
+    FROM hafbe_app.operations_view ov
+    WHERE ov.op_type_id IN (22,23) AND ov.block_num BETWEEN _from AND _to
+  ),
+  count_claimed AS (
+    SELECT 
+      so.account,
+      SUM(so.claimed_account) AS claimed_account
+    FROM select_ops_with_claimed so
+    GROUP BY so.account
+  )
+  INSERT INTO hafbe_app.account_parameters AS ap 
+    (account, pending_claimed_accounts)
+  SELECT 
+    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = cm.account),
+    cm.claimed_account
+  FROM count_claimed cm
+  ON CONFLICT ON CONSTRAINT pk_account_parameters DO 
+  UPDATE SET 
+    pending_claimed_accounts = ap.pending_claimed_accounts + EXCLUDED.pending_claimed_accounts;
+
 END
 $$;
 
