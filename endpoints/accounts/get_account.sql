@@ -42,6 +42,7 @@ SET ROLE hafbe_owner;
               "last_account_recovery": "1970-01-01T00:00:00",
               "created": "2016-03-30T00:04:36",
               "reputation": 69,
+              "pending_claimed_accounts": 0,
               "json_metadata": "",
               "posting_json_metadata": "",
               "profile_image": "",
@@ -128,6 +129,7 @@ BEGIN
       COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00'),
       COALESCE(_result_parameters.created,'1970-01-01T00:00:00'), 
       COALESCE(_result_reputation, 0)::INT,
+      COALESCE(_result_parameters.pending_claimed_accounts, 0)::INT, 
 
       --metadata
       COALESCE(_result_json_metadata.json_metadata,''),

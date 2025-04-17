@@ -124,7 +124,7 @@ AS
 $$
 BEGIN
 RETURN (
-  SELECT ROW (ap.can_vote, ap.mined, ap.recovery_account, ap.last_account_recovery, ap.created)
+  SELECT ROW (ap.can_vote, ap.mined, ap.recovery_account, ap.last_account_recovery, ap.created, ap.pending_claimed_accounts)
   FROM hafbe_app.account_parameters ap
   WHERE ap.account = _account
 );

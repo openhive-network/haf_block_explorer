@@ -35,6 +35,11 @@ hafbe_types.account:
       description: >-
         numerical rating of the user 
         based on upvotes and downvotes on user''s posts
+    pending_claimed_accounts:
+      type: integer
+      description: >-
+         pool of prepaid accounts available for user allocation. 
+         These accounts are pre-registered and can be claimed by users as needed
     json_metadata:
       type: string
       description: parameter encompasses personalized profile information
@@ -163,6 +168,7 @@ CREATE TYPE hafbe_types.account AS (
     "last_account_recovery" TIMESTAMP,
     "created" TIMESTAMP,
     "reputation" INT,
+    "pending_claimed_accounts" INT,
     "json_metadata" TEXT,
     "posting_json_metadata" TEXT,
     "profile_image" TEXT,

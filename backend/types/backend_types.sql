@@ -122,7 +122,8 @@ CREATE TYPE hafbe_backend.account_parameters AS
     mined BOOLEAN,
     recovery_account TEXT,
     last_account_recovery TIMESTAMP,
-    created TIMESTAMP
+    created TIMESTAMP,
+    pending_claimed_accounts INT
 );
 
 ----------------------------------------------------------------------
