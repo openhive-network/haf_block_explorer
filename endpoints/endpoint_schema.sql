@@ -343,6 +343,10 @@ declare
             "type": "integer",
             "description": "numerical rating of the user  based on upvotes and downvotes on user''s posts"
           },
+          "pending_claimed_accounts": {
+            "type": "integer",
+            "description": "pool of prepaid accounts available for user allocation.  These accounts are pre-registered and can be claimed by users as needed"
+          },
           "json_metadata": {
             "type": "string",
             "description": "parameter encompasses personalized profile information"
@@ -1306,6 +1310,7 @@ declare
                   "last_account_recovery": "1970-01-01T00:00:00",
                   "created": "2016-03-30T00:04:36",
                   "reputation": 69,
+                  "pending_claimed_accounts": 0,
                   "json_metadata": "",
                   "posting_json_metadata": "",
                   "profile_image": "",
