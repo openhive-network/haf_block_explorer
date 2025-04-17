@@ -79,6 +79,7 @@ BEGIN
     recovery_account TEXT DEFAULT '',
     last_account_recovery TIMESTAMP DEFAULT '1970-01-01T00:00:00',
     created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
+    pending_claimed_accounts INT DEFAULT 0,
 
     CONSTRAINT pk_account_parameters PRIMARY KEY (account)
   );
