@@ -210,9 +210,11 @@ BEGIN
     __start_ts := clock_timestamp();
   END IF;
 
-  PERFORM hafbe_app.process_block_range_data_a(_from, _to);
-  PERFORM hafbe_app.process_block_range_data_b(_from, _to);
-  PERFORM hafbe_app.process_block_range_data_c(_from, _to);
+  PERFORM hafbe_app.process_account_stats(_from, _to);
+  PERFORM hafbe_app.process_block_operations(_from, _to);
+  PERFORM hafbe_app.process_transaction_stats(_from, _to);
+  PERFORM hafbe_app.process_witness_stats(_from, _to);
+  PERFORM hafbe_app.process_witness_votes(_from, _to);
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -240,9 +242,11 @@ BEGIN
     __start_ts := clock_timestamp();
   END IF;
 
-  PERFORM hafbe_app.process_block_range_data_a(_block, _block);
-  PERFORM hafbe_app.process_block_range_data_b(_block, _block);
-  PERFORM hafbe_app.process_block_range_data_c(_block, _block);
+  PERFORM hafbe_app.process_account_stats(_block, _block);
+  PERFORM hafbe_app.process_block_operations(_block, _block);
+  PERFORM hafbe_app.process_transaction_stats(_block, _block);
+  PERFORM hafbe_app.process_witness_stats(_block, _block);
+  PERFORM hafbe_app.process_witness_votes(_block, _block);
 
   IF _logs THEN
     __end_ts := clock_timestamp();
