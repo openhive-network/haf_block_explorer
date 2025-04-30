@@ -1,5 +1,28 @@
 SET ROLE hafbe_owner;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.process_votes_and_proxies(IN _operation_body JSONB, IN _op_type_id INT, _timestamp TIMESTAMP)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS
+$$
+BEGIN
+  PERFORM (
+    CASE 
+      WHEN _op_type_id = 12 THEN
+      hafbe_backend.process_vote_op(_operation_body, _timestamp)
+
+      WHEN _op_type_id = 13 OR _op_type_id = 91 THEN
+      hafbe_backend.process_proxy_ops(_operation_body, _timestamp, _op_type_id)
+
+      WHEN _op_type_id = 92 OR _op_type_id = 75 THEN
+      hafbe_backend.process_expired_accounts(_operation_body)
+    END
+  );
+
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.process_vote_op(_body jsonb, _timestamp timestamp)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
