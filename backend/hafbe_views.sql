@@ -180,53 +180,6 @@ GROUP BY aph.account_id;
 
 ------
 
--- used in hafbe_app.process_block_range_data_c
-CREATE OR REPLACE VIEW hafbe_views.votes_view
-AS
-  WITH select_operations AS
-  (
-    SELECT
-      (ov.body)->'value'->>'voter' AS voter,
-      ov.block_num,
-      ov.id
-    FROM
-      hafbe_app.operations_view ov
-    WHERE 
-      ov.op_type_id = 72
-  )
-  SELECT so.voter, so.block_num, so.id, hb.created_at timestamp
-  FROM select_operations so
-  JOIN hive.blocks_view hb ON hb.num = so.block_num;
-
-------
-
--- used in hafbe_app.process_block_range_data_c
-CREATE OR REPLACE VIEW hafbe_views.pow_view
-AS
-  SELECT
-    (ov.body)->'value'->>'worker_account' AS worker_account,
-    ov.block_num,
-    ov.id
-  FROM
-    hafbe_app.operations_view ov
-  WHERE 
-    ov.op_type_id = 14;
-
-------
-
--- used in hafbe_app.process_block_range_data_c
-CREATE OR REPLACE VIEW hafbe_views.pow_two_view
-AS
-  SELECT
-    (ov.body)->'value'->'work'->'value'->'input'->>'worker_account' AS worker_account,
-    ov.block_num,
-    ov.id
-  FROM
-    hafbe_app.operations_view ov
-  WHERE 
-    ov.op_type_id = 30;
-
-------
 
 CREATE OR REPLACE VIEW hafbe_views.voters_stats_change_view AS
 SELECT
