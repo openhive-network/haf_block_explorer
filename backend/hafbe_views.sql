@@ -61,20 +61,6 @@ FROM (
   SELECT top_proxy_id, account_id, proxy_level FROM proxies4
 ) rap;
 ------
-
--- used in witness page endpoints
-CREATE OR REPLACE VIEW hafbe_views.recursive_account_proxies_stats_view AS
-SELECT
-  rapv.proxy_id,
-  (SELECT av.name FROM hive.accounts_view av WHERE av.id = rapv.account_id) as name,
-  (cab.balance::BIGINT - COALESCE(dv.delayed_vests::BIGINT,0)) AS proxied_vests,
-  rapv.proxy_level
-FROM hafbe_views.recursive_account_proxies_view rapv
-JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id;
-
-------
-
 -- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_views.witness_voters_vests_view AS
 SELECT
@@ -137,67 +123,6 @@ LEFT JOIN account_withdraws dv ON dv.account = wvvv.voter_id;
 
 ------
 
--- used in witness page endpoints
-CREATE OR REPLACE VIEW hafbe_views.voters_approve_vests_change_view AS
-SELECT
-  wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-  CASE WHEN wvh.approve THEN COALESCE(cab.balance,0) ELSE -1 * COALESCE(cab.balance,0) END AS account_vests,
-  CASE WHEN wvh.approve THEN COALESCE(rpav.proxied_vests, 0) ELSE -1 * COALESCE(rpav.proxied_vests, 0) END AS proxied_vests
-FROM hafbe_app.witness_votes_history wvh
-
-JOIN (
-  SELECT balance::BIGINT, account, nai
-  FROM current_account_balances
-) cab ON cab.account = wvh.voter_id AND cab.nai = 37
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, proxied_vests
-  FROM hafbe_views.voters_proxied_vests_sum_view
-  WHERE proxy_id = wvh.voter_id
-) rpav ON TRUE;
-
-------
-
--- used in witness page endpoints
-CREATE OR REPLACE VIEW hafbe_views.voters_proxy_vests_change_view AS
-SELECT
-  aph.account_id AS voter_id,
-  SUM(CASE WHEN aph.proxy THEN -1 * cab.balance ELSE cab.balance END) AS account_vests,
-  SUM(CASE WHEN aph.proxy THEN -1 * COALESCE(rpav.proxied_vests, 0) ELSE COALESCE(rpav.proxied_vests, 0) END) AS proxied_vests
-FROM hafbe_app.account_proxies_history aph
-
-JOIN (
-  SELECT balance::BIGINT, account, nai
-  FROM current_account_balances 
-) cab ON cab.account = aph.account_id AND cab.nai = 37
-
-LEFT JOIN LATERAL (
-  SELECT proxy_id, proxied_vests
-  FROM hafbe_views.voters_proxied_vests_sum_view
-  WHERE proxy_id = aph.account_id
-) rpav ON TRUE
-GROUP BY aph.account_id;
-
-------
-
-
-CREATE OR REPLACE VIEW hafbe_views.voters_stats_change_view AS
-SELECT
-  vavcv.witness_id, vavcv.voter_id,
-  vavcv.account_vests + vavcv.proxied_vests + COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0) AS vests,
-  vavcv.account_vests + vavcv.proxied_vests AS account_vests,
-  COALESCE(vpvcv.account_vests, 0) + COALESCE(vpvcv.proxied_vests, 0) AS proxied_vests,
-  vavcv.approve, vavcv.timestamp
-FROM hafbe_views.voters_approve_vests_change_view vavcv
-
-LEFT JOIN LATERAL (
-  SELECT voter_id, account_vests, proxied_vests
-  FROM hafbe_views.voters_proxy_vests_change_view
-  WHERE voter_id = vavcv.voter_id
-) vpvcv ON TRUE;
-
-------
-
 -- Allows to easly search though timmings of each section of hafbe sync
 CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
   SELECT
@@ -210,31 +135,5 @@ CREATE OR REPLACE VIEW hafbe_views.time_logs_view AS
     
 ------
 
--- used in witness page endpoints
-CREATE OR REPLACE VIEW hafbe_views.votes_history_view AS
-WITH select_range AS (
-  SELECT
-    wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp,
-    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS balance,
-    COALESCE(rpav.proxied_vests, 0) AS proxied_vests
-  FROM hafbe_app.witness_votes_history wvh
-  LEFT JOIN current_account_balances cab
-    ON cab.account = wvh.voter_id AND cab.nai = 37
-  LEFT JOIN account_withdraws dv
-  	ON dv.account = wvh.voter_id
-  LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
-  ON rpav.proxy_id = wvh.voter_id
-)
-
-SELECT
-  wvh.witness_id, 
-  (SELECT av.name FROM hive.accounts_view av WHERE av.id = wvh.voter_id) as name,
-  wvh.approve, wvh.timestamp, 
-  (wvh.balance + COALESCE(wvh.proxied_vests, 0))::BIGINT  AS vests, 
-  (wvh.balance)::BIGINT  AS account_vests, 
-  (COALESCE(wvh.proxied_vests, 0))::BIGINT AS proxied_vests
-FROM select_range wvh
-ORDER BY wvh.timestamp desc
-;
 
 RESET ROLE;
