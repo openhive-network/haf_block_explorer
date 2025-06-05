@@ -68,7 +68,7 @@ CREATE OR REPLACE VIEW hafbe_backend.witness_voters_list_view AS
 
 ------
 
--- calculates the total vests being proxied to an account
+-- calculates proxied vests for each proxy level
 CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_view AS
 SELECT
   rapv.proxy_id,
@@ -79,11 +79,14 @@ JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai =
 LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id, rapv.proxy_level;
 
+-- calculates the total vests being proxied to an account
 CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_sum_view AS
 SELECT
   rapv.proxy_id,
-  SUM(rapv.proxied_vests)::BIGINT AS proxied_vests
-FROM hafbe_backend.voters_proxied_vests_view rapv
+  SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests
+FROM hafbe_backend.recursive_account_proxies_view rapv
+JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id;
 
 ------
@@ -92,19 +95,30 @@ GROUP BY rapv.proxy_id;
 CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
   SELECT
     cw.account_id,
-    cw.account_vests - COALESCE(dv.delayed_vests::BIGINT,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
-    cw.account_vests - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
+    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
+    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
     COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
+  FROM hafbe_backend.witness_voters_list_view cw
+  LEFT JOIN current_account_balances cab ON cab.account = cw.account_id AND cab.nai = 37
+  LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
+  LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
+
+  /*
   FROM (
     SELECT
       wvl.account_id,
-      CASE WHEN cap.proxy_id IS NULL THEN COALESCE(cab.balance::BIGINT, 0) ELSE 0 END AS account_vests
+      --I think this condition is unnecessary anymore - the list is taken from active witness voters which indicates that the account has no proxy
+      --CASE WHEN cap.proxy_id IS NULL THEN COALESCE(cab.balance::BIGINT, 0) ELSE 0 END AS account_vests
+      COALESCE(cab.balance::BIGINT, 0) AS account_vests
     FROM hafbe_backend.witness_voters_list_view wvl
-    LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = wvl.account_id
+    --LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = wvl.account_id
     LEFT JOIN current_account_balances cab ON cab.account = wvl.account_id AND cab.nai = 37
   ) cw
   LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
   LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
+  */
+
+
 ------
 
 -- Allows to easly search though timmings of each section of hafbe sync
