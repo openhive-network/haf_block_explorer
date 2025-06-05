@@ -37,7 +37,7 @@ BEGIN
   balance_change AS (
     SELECT
       bc.id,
-      hafbe_backend.process_votes_and_proxies(bc.body, bc.op_type, bc.timestamp)
+      hafbe_backend.process_votes_and_proxies(bc.body, bc.op_type, bc.id, bc.block_num) AS result
     FROM proxy_ops bc
     ORDER BY bc.id
   )

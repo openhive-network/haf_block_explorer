@@ -67,7 +67,7 @@ BEGIN
   -- parse witness url
   WITH select_ops_with_url AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -115,7 +115,7 @@ BEGIN
   -- parse witness exchange_rate
   WITH select_ops_with_exchange_rate_without_timestamp AS (
     SELECT witness, value, op_type_id, operation_id, block_num
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,7}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -175,7 +175,7 @@ BEGIN
   -- parse witness block_size
   WITH select_ops_with_block_size AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,11,30,14}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -223,7 +223,7 @@ BEGIN
   -- parse witness signing_key
   WITH select_ops_with_signing_key AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -281,7 +281,7 @@ BEGIN
   -- parse witness signing_key
   WITH select_ops_with_signing_key AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{14,30}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -323,7 +323,7 @@ BEGIN
       -- parse witness hbd_interest_rate
   WITH select_ops_with_hbd_interest_rate AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -371,7 +371,7 @@ BEGIN
   -- parse witness account_creation_fee
   WITH select_ops_with_account_creation_fee AS (
     SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
   ),
 
@@ -419,7 +419,7 @@ BEGIN
   -- parse witness missed_blocks
   WITH select_ops_with_missed AS (
     SELECT witness
-    FROM hafbe_views.witness_prop_op_view
+    FROM hafbe_backend.witness_prop_op_view
     WHERE op_type_id = 86 AND block_num BETWEEN _from AND _to
   ),
   count_missed AS (

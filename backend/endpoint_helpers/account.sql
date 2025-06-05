@@ -13,7 +13,7 @@ RETURN (
     SELECT 
       vpvv.proxied_vests as proxy, 
       vpvv.proxy_level 
-    FROM hafbe_views.voters_proxied_vests_view vpvv 
+    FROM hafbe_backend.voters_proxied_vests_view vpvv 
     WHERE 
       vpvv.proxy_id= _account
     ORDER BY vpvv.proxy_level 
@@ -46,14 +46,20 @@ AS
 $$
 BEGIN
   RETURN (
-    COUNT(*)::INT, 
-    array_agg(cwvv.vote)
-  )::hafbe_backend.account_votes
-  FROM hafbe_views.current_witness_votes_view cwvv 
-  WHERE cwvv.account = _account;
+    WITH votes AS (
+      SELECT 
+        av.name AS vote
+      FROM hafbe_app.current_witness_votes cwvv
+      JOIN hive.accounts_view av ON av.id = cwvv.witness_id
+      WHERE cwvv.voter_id = _account
+    )
+    SELECT 
+      COUNT(*)::INT, 
+      array_agg(v.vote ORDER BY v.vote)
+    FROM votes v
+  )::hafbe_backend.account_votes;
 END
 $$;
-
 
 -- ACCOUNT PROFILE PICTURE
 CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(json_metadata TEXT, posting_json_metadata TEXT)
