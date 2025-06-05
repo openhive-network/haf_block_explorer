@@ -87,20 +87,22 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'account_parameters', 'hafbe_app' );
 
 ------------------------------------------
-
--- Updated by hafbe_app.process_block_range_data_a
+-- proxy and witness votes
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
-    timestamp TIMESTAMP NOT NULL
+    source_op BIGINT NOT NULL,
+    source_op_block INT NOT NULL
+
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'witness_votes_history', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
     voter_id INT NOT NULL,
     witness_id INT NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
+    source_op BIGINT NOT NULL,
+    source_op_block INT NOT NULL,
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
   );
@@ -110,13 +112,17 @@ BEGIN
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
     proxy BOOLEAN NOT NULL,
-    timestamp TIMESTAMP NOT NULL
+    source_op BIGINT NOT NULL,
+    source_op_block INT NOT NULL
+
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'account_proxies_history', 'hafbe_app' );
 
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
+    source_op BIGINT NOT NULL,
+    source_op_block INT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   );
@@ -124,36 +130,36 @@ BEGIN
 
 ------------------------------------------
 
-CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month
-(
-  trx_count INT NOT NULL,
-  avg_trx INT NOT NULL,
-  min_trx INT NOT NULL,
-  max_trx INT NOT NULL,
-  last_block_num INT NOT NULL,
-  updated_at TIMESTAMP NOT NULL,
+  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month
+  (
+    trx_count INT NOT NULL,
+    avg_trx INT NOT NULL,
+    min_trx INT NOT NULL,
+    max_trx INT NOT NULL,
+    last_block_num INT NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
 
-  CONSTRAINT pk_transaction_stats_by_month PRIMARY KEY (updated_at)
-);
-PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_month', 'hafbe_app' );
+    CONSTRAINT pk_transaction_stats_by_month PRIMARY KEY (updated_at)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_month', 'hafbe_app' );
 
-CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day
-(
-  trx_count INT NOT NULL,
-  avg_trx INT NOT NULL,
-  min_trx INT NOT NULL,
-  max_trx INT NOT NULL,
-  last_block_num INT NOT NULL,
-  updated_at TIMESTAMP NOT NULL,
+  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day
+  (
+    trx_count INT NOT NULL,
+    avg_trx INT NOT NULL,
+    min_trx INT NOT NULL,
+    max_trx INT NOT NULL,
+    last_block_num INT NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
 
-  CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
-);
-PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe_app' );
+    CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe_app' );
 
 ------------------------------------------
-
--- Updated by hafbe_app.process_block_range_data_b
-  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
+-- holds witnesses statistics
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses 
+  (
     witness_id INT NOT NULL,
     url TEXT,
     price_feed FLOAT,
@@ -171,67 +177,8 @@ PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_witnesses', 'hafbe_app' );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.balance_impacting_op_ids (
-    op_type_ids_arr SMALLINT[] NOT NULL
-  );
-
 ------------------------------------------
-
--- Used in witness endpoints
--- Updated by hafbe_app.update_witnesses_cache
-  INSERT INTO hafbe_app.balance_impacting_op_ids (op_type_ids_arr)
-  SELECT array_agg(hot.id)
-  FROM hafd.operation_types hot
-  JOIN (
-    SELECT get_balance_impacting_operations AS name
-    FROM hive.get_balance_impacting_operations()
-  ) bio ON bio.name = hot.name::TEXT;
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witnesses_cache_config (
-    update_interval INTERVAL,
-    last_updated_at TIMESTAMP
-  );
-
-  INSERT INTO hafbe_app.witnesses_cache_config (update_interval, last_updated_at)
-  VALUES ('10 minutes', to_timestamp(0));
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_voters_stats_cache (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    vests BIGINT NOT NULL,
-    account_vests BIGINT NOT NULL,
-    proxied_vests BIGINT NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
-
-    CONSTRAINT pk_witness_voters_stats_cache PRIMARY KEY (witness_id, voter_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
-    witness_id INT NOT NULL,
-    rank INT NOT NULL,
-    votes BIGINT NOT NULL,
-    voters_num INT NOT NULL,
-
-    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history_cache (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    approve BOOLEAN NOT NULL,
-    account_vests BIGINT NOT NULL,
-    proxied_vests BIGINT NOT NULL,
-    timestamp TIMESTAMP NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
-    witness_id INT NOT NULL,
-    votes_daily_change BIGINT NOT NULL,
-    voters_num_daily_change INT NOT NULL,
-
-    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
-  );
-
+-- holds timming information for the sync process
   CREATE TABLE IF NOT EXISTS hafbe_app.sync_time_logs (
     block_num INT NOT NULL,
     time_json JSONB NOT NULL,
