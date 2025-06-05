@@ -21,10 +21,13 @@ WITH account_balances AS MATERIALIZED (
     recovery_account
   FROM hafbe_backend.account_balances
 ),
+
+
+
 witnesses_voted_for AS MATERIALIZED (
-  SELECT cwvv.account as account_id, COUNT(*)::INT as witnesses_voted_for
-  FROM hafbe_views.current_witness_votes_view cwvv
-  GROUP BY cwvv.account
+  SELECT cwvv.voter_id as account_id, COUNT(*)::INT as witnesses_voted_for
+  FROM hafbe_app.current_witness_votes cwvv
+  GROUP BY cwvv.voter_id
 ),
 account_params AS MATERIALIZED (
   SELECT ap.account as account_id, ap.can_vote, ap.mined, ap.last_account_recovery, ap.created, ap.recovery_account
