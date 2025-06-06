@@ -6,57 +6,57 @@ SET ROLE hafbe_owner;
 
 -- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_backend.witness_prop_op_view AS
-SELECT
-  bia.name AS witness,
-  (body)->'value' AS value,
-  body_binary,
-  block_num, op_type_id, id AS operation_id
-FROM hafbe_app.operations_view ov
+  SELECT
+    bia.name AS witness,
+    (body)->'value' AS value,
+    body_binary,
+    block_num, op_type_id, id AS operation_id
+  FROM hafbe_app.operations_view ov
 
-JOIN LATERAL (
-  SELECT get_impacted_accounts AS name
-  FROM hive.get_impacted_accounts(ov.body_binary)
-) bia ON TRUE;
+  JOIN LATERAL (
+    SELECT get_impacted_accounts AS name
+    FROM hive.get_impacted_accounts(ov.body_binary)
+  ) bia ON TRUE;
 
 ------
 
 -- used in witness page endpoints
 CREATE OR REPLACE VIEW hafbe_backend.recursive_account_proxies_view AS
-WITH proxies1 AS (
-  SELECT
-    prox1.proxy_id AS top_proxy_id,
-    prox1.account_id, 1 AS proxy_level
-  FROM hafbe_app.current_account_proxies prox1
-),
+  WITH proxies1 AS (
+    SELECT
+      prox1.proxy_id AS top_proxy_id,
+      prox1.account_id, 1 AS proxy_level
+    FROM hafbe_app.current_account_proxies prox1
+  ),
 
-proxies2 AS (
-  SELECT prox1.top_proxy_id, prox2.account_id, 2 AS proxy_level
-  FROM proxies1 prox1
-  JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
-),
+  proxies2 AS (
+    SELECT prox1.top_proxy_id, prox2.account_id, 2 AS proxy_level
+    FROM proxies1 prox1
+    JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
+  ),
 
-proxies3 AS (
-  SELECT prox2.top_proxy_id, prox3.account_id, 3 AS proxy_level
-  FROM proxies2 prox2
-  JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
-),
+  proxies3 AS (
+    SELECT prox2.top_proxy_id, prox3.account_id, 3 AS proxy_level
+    FROM proxies2 prox2
+    JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
+  ),
 
-proxies4 AS (
-  SELECT prox3.top_proxy_id, prox4.account_id, 4 AS proxy_level
-  FROM proxies3 prox3
-  JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
-)
+  proxies4 AS (
+    SELECT prox3.top_proxy_id, prox4.account_id, 4 AS proxy_level
+    FROM proxies3 prox3
+    JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
+  )
 
-SELECT top_proxy_id AS proxy_id, account_id, proxy_level
-FROM (
-  SELECT top_proxy_id, account_id, proxy_level FROM proxies1
-  UNION
-  SELECT top_proxy_id, account_id, proxy_level FROM proxies2
-  UNION
-  SELECT top_proxy_id, account_id, proxy_level FROM proxies3
-  UNION
-  SELECT top_proxy_id, account_id, proxy_level FROM proxies4
-) rap;
+  SELECT top_proxy_id AS proxy_id, account_id, proxy_level
+  FROM (
+    SELECT top_proxy_id, account_id, proxy_level FROM proxies1
+    UNION
+    SELECT top_proxy_id, account_id, proxy_level FROM proxies2
+    UNION
+    SELECT top_proxy_id, account_id, proxy_level FROM proxies3
+    UNION
+    SELECT top_proxy_id, account_id, proxy_level FROM proxies4
+  ) rap;
 ------
 
 -- list of accounts that voted on any witness 
@@ -70,24 +70,24 @@ CREATE OR REPLACE VIEW hafbe_backend.witness_voters_list_view AS
 
 -- calculates proxied vests for each proxy level
 CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_view AS
-SELECT
-  rapv.proxy_id,
-  SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
-  rapv.proxy_level
-FROM hafbe_backend.recursive_account_proxies_view rapv
-JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
-GROUP BY rapv.proxy_id, rapv.proxy_level;
+  SELECT
+    rapv.proxy_id,
+    SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
+    rapv.proxy_level
+  FROM hafbe_backend.recursive_account_proxies_view rapv
+  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+  LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
+  GROUP BY rapv.proxy_id, rapv.proxy_level;
 
 -- calculates the total vests being proxied to an account
 CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_sum_view AS
-SELECT
-  rapv.proxy_id,
-  SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests
-FROM hafbe_backend.recursive_account_proxies_view rapv
-JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
-LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
-GROUP BY rapv.proxy_id;
+  SELECT
+    rapv.proxy_id,
+    SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests
+  FROM hafbe_backend.recursive_account_proxies_view rapv
+  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+  LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
+  GROUP BY rapv.proxy_id;
 
 ------
 
