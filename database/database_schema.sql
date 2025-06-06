@@ -188,6 +188,34 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
 ------------------------------------------
+-- These tables store cached witness vest statistics, 
+-- which are updated exclusively during live synchronization at each block, ensuring real-time accuracy of the data.
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_vest_stats_cache (
+    account_id INT NOT NULL,
+    vests BIGINT NOT NULL,
+    account_vests BIGINT NOT NULL,
+    proxied_vests BIGINT NOT NULL,
+
+    CONSTRAINT pk_account_vest_stats_cache PRIMARY KEY (account_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
+    witness_id INT NOT NULL,
+    votes BIGINT NOT NULL,
+    voters_num INT NOT NULL,
+
+    CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
+    witness_id INT NOT NULL,
+    votes_daily_change BIGINT NOT NULL,
+    voters_num_daily_change INT NOT NULL,
+
+    CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
+  );
+
+------------------------------------------
 
 EXCEPTION WHEN duplicate_schema THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
 
