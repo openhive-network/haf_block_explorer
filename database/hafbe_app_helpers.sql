@@ -99,73 +99,6 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE PROCEDURE hafbe_app.update_witnesses_cache()
-AS
-$function$
-BEGIN
-  RAISE NOTICE 'Updating witnesses caches';
-
-  TRUNCATE TABLE hafbe_app.witness_voters_stats_cache;
-
-  INSERT INTO hafbe_app.witness_voters_stats_cache (witness_id, voter_id, vests, account_vests, proxied_vests, timestamp)
-  SELECT witness_id, voter_id, (vests)::BIGINT, (account_vests)::BIGINT, (proxied_vests)::BIGINT, timestamp
-  FROM hafbe_views.voters_stats_view;
-
-  RAISE NOTICE 'Updated witness voters cache';
-
-  TRUNCATE TABLE hafbe_app.witness_votes_history_cache;
-
-  INSERT INTO hafbe_app.witness_votes_history_cache (witness_id, voter_id, approve, timestamp, proxied_vests, account_vests)
-    SELECT
-      wvh.witness_id, wvh.voter_id, wvh.approve, wvh.timestamp, ((COALESCE(rpav.proxied_vests, 0)))::BIGINT AS proxied_vests,
-      ((COALESCE(av.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)))::BIGINT AS account_vests
-    FROM hafbe_app.witness_votes_history wvh
-    LEFT JOIN current_account_balances av
-      ON av.account = wvh.voter_id AND av.nai = 37
-    LEFT JOIN account_withdraws dv
-      ON dv.account = wvh.voter_id
-    LEFT JOIN hafbe_views.voters_proxied_vests_sum_view rpav
-    ON rpav.proxy_id = wvh.voter_id;
-
-  RAISE NOTICE 'Updated witness voters history cache';
-
-  TRUNCATE TABLE hafbe_app.witness_votes_cache;
-
-  INSERT INTO hafbe_app.witness_votes_cache (witness_id, rank, votes, voters_num)
-  SELECT witness_id, RANK() OVER (ORDER BY votes DESC, voters_num DESC, feed_updated_at DESC), votes, voters_num
-  FROM (
-    SELECT
-      witness_id,
-      (SUM(vests))::BIGINT AS votes,
-      COUNT(1) AS voters_num,
-      MAX(timestamp) AS feed_updated_at
-    FROM hafbe_app.witness_voters_stats_cache
-    GROUP BY witness_id
-  ) vsv;
-
-  RAISE NOTICE 'Updated witnesses cache';
-
-  TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
-
-  INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
-  SELECT
-    witness_id,
-    SUM(CASE WHEN wvhc.approve THEN wvhc.account_vests + wvhc.proxied_vests ELSE -1 * (wvhc.account_vests + wvhc.proxied_vests) END)::BIGINT,
-    SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT
-  FROM hafbe_app.witness_votes_history_cache wvhc
-  WHERE wvhc.timestamp >= 'today'::DATE
-  GROUP BY wvhc.witness_id;
-
-  RAISE NOTICE 'Updated witness change cache';
-
-  UPDATE hafbe_app.witnesses_cache_config SET last_updated_at = NOW();
-END
-$function$
-LANGUAGE 'plpgsql'
-SET JIT = OFF
-SET join_collapse_limit = 16
-SET from_collapse_limit = 16;
-
 CREATE OR REPLACE FUNCTION hafbe_app.process_blocks(
     _context_name hive.context_name,
     _block_range hive.blocks_range, 
@@ -215,6 +148,7 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
   PERFORM hafbe_app.process_witness_votes(_from, _to);
+  PERFORM hafbe_app.process_witness_votes_cache();
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -247,6 +181,7 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_block, _block);
   PERFORM hafbe_app.process_witness_stats(_block, _block);
   PERFORM hafbe_app.process_witness_votes(_block, _block);
+  PERFORM hafbe_app.process_witness_votes_cache();
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -278,12 +213,12 @@ BEGIN
   END IF;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
-  PERFORM hafbe_app.process_blocks(_context_hafbe, _block_range, false);
-  SELECT hafbe_backend.get_sync_time(_time, 'hafbe') INTO _time;
-
-  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM btracker_process_blocks(_context_btracker, _block_range, false);
   SELECT hafbe_backend.get_sync_time(_time, 'btracker') INTO _time;
+
+  SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+  PERFORM hafbe_app.process_blocks(_context_hafbe, _block_range, false);
+  SELECT hafbe_backend.get_sync_time(_time, 'hafbe') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
   PERFORM hive.app_state_providers_update(_block_range.first_block, _block_range.last_block, _context_hafbe);
@@ -299,17 +234,6 @@ BEGIN
   ',
   ROUND((EXTRACT(epoch FROM (SELECT clock_timestamp() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
   
-  IF (NOW() - (SELECT last_updated_at FROM hafbe_app.witnesses_cache_config LIMIT 1)) >= 
-    (SELECT update_interval FROM hafbe_app.witnesses_cache_config LIMIT 1) THEN
-    RAISE NOTICE 'Process witness cache...';
-
-    __start_ts := clock_timestamp();
-    CALL hafbe_app.update_witnesses_cache();
-    __end_ts := clock_timestamp();
-
-    RAISE NOTICE 'Witness cache processing done in % s', (extract(epoch FROM __end_ts - __start_ts));
-  END IF;
-
 END
 $$;
 

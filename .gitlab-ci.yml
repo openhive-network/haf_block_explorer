@@ -220,7 +220,7 @@ sync:
 
     "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh"
 
-    psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; CALL hafbe_app.update_witnesses_cache();"
+    psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache();"
 
     echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
   after_script:

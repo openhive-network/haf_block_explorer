@@ -46,4 +46,54 @@ BEGIN
 END
 $$;
 
+
+CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_cache()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
+AS
+$$
+DECLARE
+  _first_block_num INT := (SELECT num FROM hive.blocks_view WHERE created_at <= 'today'::DATE ORDER BY num DESC LIMIT 1);
+BEGIN
+--------------------------------------------------------
+  TRUNCATE TABLE hafbe_app.account_vest_stats_cache;
+
+  INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
+    SELECT 
+      account_id,
+      vests,
+      account_vests,
+      proxied_vests
+    FROM hafbe_backend.account_vest_stats_view;
+--------------------------------------------------------
+  TRUNCATE TABLE hafbe_app.witness_votes_cache;
+
+  INSERT INTO hafbe_app.witness_votes_cache (witness_id, votes, voters_num)
+    SELECT 
+      cwv.witness_id, 
+      SUM(avs.vests)::BIGINT,
+      COUNT(*)
+    FROM hafbe_app.current_witness_votes cwv
+    JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
+    GROUP BY cwv.witness_id;
+--------------------------------------------------------
+  TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
+
+  INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
+    SELECT
+      wvhc.witness_id,
+      SUM(CASE WHEN wvhc.approve THEN avs.vests ELSE -1 * (avs.vests) END)::BIGINT,
+      SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT
+    FROM hafbe_app.witness_votes_history wvhc
+    JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = wvhc.voter_id
+    WHERE wvhc.source_op_block >= _first_block_num
+    GROUP BY wvhc.witness_id;
+--------------------------------------------------------
+
+END
+$$;
+
 RESET ROLE;
