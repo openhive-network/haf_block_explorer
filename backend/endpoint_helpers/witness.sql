@@ -2,7 +2,8 @@ SET ROLE hafbe_owner;
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(
-    "account_id" INT,
+    "witness" INT,
+    "filter_account" INT,
     "page" INT,
     "page-size" INT,
     "sort" hafbe_types.order_by_votes,
@@ -16,53 +17,47 @@ AS
 $$
 DECLARE
   _offset INT := ((("page" - 1) * "page-size"));
+  _sort TEXT := (CASE WHEN "sort" = 'timestamp' THEN 'source_op_block' ELSE "sort"::TEXT END);
 BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
-    WITH limited_set AS (
+  RETURN QUERY (
+    WITH limited_set AS MATERIALIZED (
       SELECT 
-        (
-          SELECT av.name 
-          FROM hive.accounts_view av 
-          WHERE av.id = wvsc.voter_id
-        )::TEXT AS voter,
-        wvsc.voter_id, 
-        wvsc.vests, 
-        wvsc.account_vests,
-        wvsc.proxied_vests, 
-        wvsc.timestamp
-      FROM hafbe_app.witness_voters_stats_cache wvsc
-      WHERE witness_id = %L   
-    ),
-    limited_set_order AS MATERIALIZED (
-      SELECT * FROM limited_set
+        av.name,
+        avs.vests, 
+        avs.account_vests,
+        avs.proxied_vests,
+        bv.created_at
+      FROM hafbe_app.current_witness_votes cwv
+      JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
+      JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block
+      JOIN hive.accounts_view av ON av.id = cwv.voter_id
+      WHERE 
+        cwv.witness_id = "witness" AND
+        ("filter_account" IS NULL OR cwv.voter_id = "filter_account")
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
-        (CASE WHEN %L = 'desc' THEN voter_id ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
-      OFFSET %L  
-      LIMIT %L
+        (CASE WHEN "direction" = 'desc' AND _sort = 'vests'           THEN avs.vests           ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND _sort = 'vests'           THEN avs.vests           ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND _sort = 'account_vests'   THEN avs.account_vests   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND _sort = 'account_vests'   THEN avs.account_vests   ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND _sort = 'proxied_vests'   THEN avs.proxied_vests   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND _sort = 'proxied_vests'   THEN avs.proxied_vests   ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND _sort = 'voter'           THEN av.name             ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND _sort = 'voter'           THEN av.name             ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND _sort = 'source_op_block' THEN cwv.source_op_block ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND _sort = 'source_op_block' THEN cwv.source_op_block ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc'                               THEN cwv.voter_id        ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'                                THEN cwv.voter_id        ELSE NULL END) ASC
+      OFFSET _offset  
+      LIMIT "page-size"
     )
     SELECT 
-      ls.voter, 
+      ls.name::TEXT,
       ls.vests::TEXT,
       ls.account_vests::TEXT,
       ls.proxied_vests::TEXT,
-      ls.timestamp
-    FROM limited_set_order ls
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
-      (CASE WHEN %L = 'desc' THEN voter_id ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
-    ;
-
-    $query$,
-    "account_id", "direction", "sort", "direction", "sort", "direction", "direction", _offset, "page-size",
-    "direction", "sort", "direction", "sort", "direction", "direction"
-  ) res;
+      ls.created_at
+    FROM limited_set ls
+  );
 
 END
 $$;
