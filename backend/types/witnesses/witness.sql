@@ -112,10 +112,6 @@ hafbe_types.witnesses_return:
     total_pages:
       type: integer
       description: Total number of pages
-    votes_updated_at:
-      type: string
-      format: date-time
-      description: Time of cache update
     witnesses:
       type: array
       items:
@@ -127,7 +123,6 @@ DROP TYPE IF EXISTS hafbe_types.witnesses_return CASCADE;
 CREATE TYPE hafbe_types.witnesses_return AS (
     "total_witnesses" INT,
     "total_pages" INT,
-    "votes_updated_at" TIMESTAMP,
     "witnesses" hafbe_types.witness[]
 );
 -- openapi-generated-code-end
