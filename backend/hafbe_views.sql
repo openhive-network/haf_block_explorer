@@ -118,6 +118,18 @@ CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
   LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
   */
 
+-- helper view used in hafbe_backend.get_witness_votes_history to calculate vest stats for voters that are not in hafbe_backend.witness_voters_list_view
+-- these voters are not active, but they have vest stats in the current_account_balances table
+CREATE OR REPLACE VIEW hafbe_backend.expired_voter_stats_view AS
+  SELECT
+    av.id AS account_id,
+    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) + COALESCE(vpvv.proxied_vests, 0) AS vests,
+    COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
+    COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
+  FROM hive.accounts_view av
+  LEFT JOIN current_account_balances cab ON cab.account = av.id AND cab.nai = 37
+  LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = av.id
+  LEFT JOIN account_withdraws dv ON dv.account = av.id;
 
 ------
 

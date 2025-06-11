@@ -13,6 +13,7 @@ RETURNS SETOF hafbe_types.witness_voter
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
@@ -64,82 +65,98 @@ $$;
 
 DROP FUNCTION IF EXISTS hafbe_backend.get_witness_votes_history;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history(
-    "account-name" TEXT,
-    "sort" hafbe_types.order_by_votes,
+    "witness" INT,
+    "filter_account" INT,
+    "page" INT,
+    "page-size" INT,
     "direction" hafbe_types.sort_direction,
-    "result-limit" INT,
     "from-block" INT,
     "to-block" INT 
 )
 RETURNS SETOF hafbe_types.witness_votes_history_record 
 LANGUAGE 'plpgsql'
 STABLE
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  __no_start_date BOOLEAN := ("from-block" IS NULL);
-  __no_end_date BOOLEAN := ("to-block" IS NULL);
-  _start_date TIMESTAMP;
-  _end_date TIMESTAMP;
-  _witness_id INT = hafbe_backend.get_account_id("account-name");
+  _offset INT := ((("page" - 1) * "page-size"));
 BEGIN
-
-RETURN QUERY EXECUTE format(
-  $query$
-
-  WITH select_range AS MATERIALIZED (
+  RETURN QUERY (
+    WITH limited_set AS MATERIALIZED (
+      SELECT 
+        av.name,
+        cwv.voter_id,
+        cwv.approve,
+        avs.vests, 
+        avs.account_vests,
+        avs.proxied_vests,
+        cwv.source_op_block,
+        bv.created_at
+      FROM hafbe_app.witness_votes_history cwv
+      -- this table holds vest stats for CURRENT voters (if a voter took out his vote and never voted again, his stats are not available in this table)
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
+      JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block
+      JOIN hive.accounts_view av ON av.id = cwv.voter_id
+      WHERE 
+        cwv.witness_id = "witness" AND
+        ("filter_account" IS NULL OR cwv.voter_id = "filter_account"    ) AND
+        ("from-block" IS NULL     OR cwv.source_op_block >= "from-block") AND
+        ("to-block" IS NULL       OR cwv.source_op_block <= "to-block"  )
+      ORDER BY
+        (CASE WHEN "direction" = 'desc' THEN cwv.source_op_block ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  THEN cwv.source_op_block ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' THEN cwv.voter_id        ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  THEN cwv.voter_id        ELSE NULL END) ASC
+      OFFSET _offset  
+      LIMIT "page-size"
+    ),
+    empty_results AS (
+      SELECT 
+        ls.name,
+        ls.voter_id,
+        ls.approve,
+        evs.vests,
+        evs.account_vests,
+        evs.proxied_vests,
+        ls.source_op_block,
+        ls.created_at
+      FROM limited_set ls
+      JOIN hafbe_backend.expired_voter_stats_view evs ON evs.account_id = ls.voter_id
+      WHERE ls.vests IS NULL
+    ),
+    not_empty_results AS (
+      SELECT 
+        ls.name,
+        ls.voter_id,
+        ls.approve,
+        ls.vests,
+        ls.account_vests,
+        ls.proxied_vests,
+        ls.source_op_block,
+        ls.created_at 
+      FROM limited_set ls
+      WHERE ls.vests IS NOT NULL
+    ),
+    union_results AS (
+      SELECT * FROM empty_results
+      UNION ALL
+      SELECT * FROM not_empty_results
+    )
     SELECT 
-      (SELECT av.name FROM hive.accounts_view av WHERE av.id = voter_id)::TEXT AS voter,
-      * 
-    FROM hafbe_app.witness_votes_history_cache 
-    WHERE witness_id = %L AND
-      (%L OR timestamp >= %L) AND
-	    (%L OR timestamp <= %L)
+      ur.name::TEXT,
+      ur.approve,
+      ur.vests::TEXT,
+      ur.account_vests::TEXT,
+      ur.proxied_vests::TEXT,
+      ur.created_at
+    FROM union_results ur
     ORDER BY
-      (CASE WHEN %L = 'desc' THEN timestamp ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN timestamp ELSE NULL END) ASC
-    LIMIT %L
-  ),
-  select_votes_history AS (
-  SELECT
-    wvh.voter, wvh.voter_id, wvh.approve, 
-    (wvh.account_vests + wvh.proxied_vests) AS vests, 
-    wvh.account_vests AS account_vests, 
-    wvh.proxied_vests AS proxied_vests,
-    wvh.timestamp AS timestamp
-  FROM select_range wvh
-  )
-  SELECT 
-    voter,
-    approve,
-    vests::TEXT,
-    account_vests::TEXT,
-    proxied_vests::TEXT,
-    timestamp
-  FROM select_votes_history
-  ORDER BY
-    (CASE WHEN %L = 'desc' THEN  %I ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
-    (CASE WHEN %L = 'desc' THEN  voter_id ELSE NULL END) DESC,
-    (CASE WHEN %L = 'asc' THEN voter_id ELSE NULL END) ASC
-  ;
-  $query$,
-  _witness_id,
-  __no_start_date, 
-  (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "from-block"),
-  __no_end_date,
-  (SELECT bv.created_at FROM hive.blocks_view bv WHERE bv.num = "to-block"), 
-  "direction", 
-  "direction", 
-  "result-limit",
-  "direction", 
-  "sort", 
-  "direction", 
-  "sort",
-  "direction", 
-  "direction"
-
-) res;
+      (CASE WHEN "direction" = 'desc' THEN ur.source_op_block ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  THEN ur.source_op_block ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' THEN ur.voter_id        ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  THEN ur.voter_id        ELSE NULL END) ASC
+  );
 END
 $$;
 
