@@ -42,10 +42,12 @@ CREATE TYPE hafbe_types.witness_votes_history_record AS (
 hafbe_types.witness_votes_history:
   type: object
   properties:
-    votes_updated_at:
-      type: string
-      format: date-time
-      description: Time of cache update
+    total_votes:
+      type: integer
+      description: Total number of votes
+    total_pages:
+      type: integer
+      description: Total number of pages
     votes_history:
       type: array
       items:
@@ -55,7 +57,8 @@ hafbe_types.witness_votes_history:
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.witness_votes_history CASCADE;
 CREATE TYPE hafbe_types.witness_votes_history AS (
-    "votes_updated_at" TIMESTAMP,
+    "total_votes" INT,
+    "total_pages" INT,
     "votes_history" hafbe_types.witness_votes_history_record[]
 );
 -- openapi-generated-code-end
