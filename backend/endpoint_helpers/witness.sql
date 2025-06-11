@@ -265,6 +265,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
 RETURNS hafbe_types.witness 
 LANGUAGE 'plpgsql'
 STABLE
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 BEGIN
@@ -289,7 +290,7 @@ BEGIN
     )
     SELECT ROW(
       ls.witness, 
-      all_votes.rank, 
+      a.rank,
       ls.url,
       COALESCE(all_votes.votes::TEXT, '0'),
       COALESCE(wvcc.votes_daily_change::TEXT, '0'),
@@ -307,7 +308,8 @@ BEGIN
       ls.account_creation_fee
     )
     FROM limited_set ls
-    LEFT JOIN hafbe_app.witness_votes_cache all_votes ON all_votes.witness_id = ls.witness_id 
+	  JOIN hafbe_app.witness_rank_cache a                 ON a.witness_id = ls.witness_id
+    LEFT JOIN hafbe_app.witness_votes_cache all_votes   ON all_votes.witness_id = ls.witness_id 
     LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id
   );
 
