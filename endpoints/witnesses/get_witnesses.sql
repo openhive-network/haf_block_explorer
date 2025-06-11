@@ -94,7 +94,6 @@ SET ROLE hafbe_owner;
             example: {
               "total_witnesses": 731,
               "total_pages": 366,
-              "votes_updated_at": "2024-08-29T12:05:08.097875",
               "witnesses": [
                 {
                   "witness_name": "roadscape",
@@ -157,8 +156,6 @@ $$
 DECLARE
   _ops_count INT;
   __total_pages INT;
-  _votes_updated_at TIMESTAMP;
-
   _result hafbe_types.witness[];
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
@@ -179,11 +176,6 @@ BEGIN
       ELSE 
         (_ops_count/"page-size") + 1
     END
-  );
-
-  _votes_updated_at := (
-    SELECT last_updated_at 
-    FROM hafbe_app.witnesses_cache_config
   );
 
   PERFORM hafbe_exceptions.validate_page("page", __total_pages);
@@ -218,7 +210,6 @@ BEGIN
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(__total_pages,0),
-    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
     COALESCE(_result, '{}'::hafbe_types.witness[])
   )::hafbe_types.witnesses_return;
 
