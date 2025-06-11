@@ -24,6 +24,15 @@ SET ROLE hafbe_owner;
           type: string
         description: witness account name
       - in: query
+        name: filter-account
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: |
+          When provided, only votes associated with this account will be included in the results, 
+          allowing for targeted analysis of an individual account's voting activity.
+      - in: query
         name: page
         required: false
         schema:
@@ -81,7 +90,6 @@ SET ROLE hafbe_owner;
             example: {
               "total_votes": 263,
               "total_pages": 132,
-              "votes_updated_at": "2024-08-29T12:05:08.097875",
               "voters": [
                 {
                   "voter_name": "blocktrades",
@@ -106,6 +114,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     "account-name" TEXT,
+    "filter-account" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
     "sort" hafbe_types.order_by_votes = 'vests',
@@ -122,7 +131,7 @@ AS
 $$
 DECLARE
   _witness_id INT = hafbe_backend.get_account_id("account-name");
-  _votes_updated_at TIMESTAMP;
+  _filter_account_id = hafbe_backend.get_account_id("filter-account");
   _ops_count INT;
   __total_pages INT;
 
@@ -136,17 +145,18 @@ BEGIN
     PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
   END IF;
 
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  IF "filter-account" IS NOT NULL AND _filter_account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("filter-account");
+  END IF;
 
-  _votes_updated_at := (
-    SELECT last_updated_at 
-    FROM hafbe_app.witnesses_cache_config
-  );
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count := (
     SELECT COUNT(*) 
-    FROM hafbe_app.witness_voters_stats_cache 
-    WHERE witness_id = _witness_id
+    FROM hafbe_app.current_witness_votes 
+    WHERE 
+      witness_id = _witness_id AND
+      (_filter_account_id IS NULL OR voter_id = _filter_account_id)
   );
 
   __total_pages := (
@@ -169,6 +179,7 @@ BEGIN
       ba.timestamp
     FROM hafbe_backend.get_witness_voters(
       _witness_id,
+      _filter_account_id,
       "page",
       "page-size",
       "sort",
@@ -179,7 +190,6 @@ BEGIN
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(__total_pages,0),
-    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
     COALESCE(_result, '{}'::hafbe_types.witness_voter[])
   )::hafbe_types.witness_voter_history;
 
