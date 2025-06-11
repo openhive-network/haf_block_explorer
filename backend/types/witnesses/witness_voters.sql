@@ -44,10 +44,6 @@ hafbe_types.witness_voter_history:
     total_pages:
       type: integer
       description: Total number of pages
-    votes_updated_at:
-      type: string
-      format: date-time
-      description: Time of cache update
     voters:
       type: array
       items:
@@ -59,7 +55,6 @@ DROP TYPE IF EXISTS hafbe_types.witness_voter_history CASCADE;
 CREATE TYPE hafbe_types.witness_voter_history AS (
     "total_votes" INT,
     "total_pages" INT,
-    "votes_updated_at" TIMESTAMP,
     "voters" hafbe_types.witness_voter[]
 );
 -- openapi-generated-code-end
