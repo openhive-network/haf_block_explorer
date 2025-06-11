@@ -207,6 +207,13 @@ BEGIN
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
+  CREATE TABLE IF NOT EXISTS hafbe_app.witness_rank_cache (
+    witness_id INT NOT NULL,
+    rank INT NOT NULL,
+
+    CONSTRAINT pk_witness_rank_cache PRIMARY KEY (witness_id)
+  );
+
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
     witness_id INT NOT NULL,
     votes_daily_change BIGINT NOT NULL,

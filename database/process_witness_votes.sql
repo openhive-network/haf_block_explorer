@@ -80,6 +80,15 @@ BEGIN
     JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
     GROUP BY cwv.witness_id;
 --------------------------------------------------------
+  DELETE FROM hafbe_app.witness_rank_cache;
+
+  INSERT INTO hafbe_app.witness_rank_cache (witness_id, rank)
+    SELECT 
+      cw.witness_id, 
+      ROW_NUMBER() OVER (ORDER BY COALESCE(wv.votes,0) DESC, COALESCE(wv.voters_num,0) DESC, cw.witness_id DESC)
+    FROM hafbe_app.current_witnesses cw
+    LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id;
+--------------------------------------------------------
   DELETE FROM hafbe_app.witness_votes_change_cache;
 
   INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
