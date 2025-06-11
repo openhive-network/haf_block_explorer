@@ -103,26 +103,6 @@ CREATE TYPE hafbe_types.witness AS (
 -- openapi-generated-code-end
 
 /** openapi:components:schemas
-hafbe_types.witness_return:
-  type: object
-  properties:
-    votes_updated_at:
-      type: string
-      format: date-time
-      description: Time of cache update
-    witness:
-      $ref: '#/components/schemas/hafbe_types.witness'
-      description: Witness parameters
- */
--- openapi-generated-code-begin
-DROP TYPE IF EXISTS hafbe_types.witness_return CASCADE;
-CREATE TYPE hafbe_types.witness_return AS (
-    "votes_updated_at" TIMESTAMP,
-    "witness" hafbe_types.witness
-);
--- openapi-generated-code-end
-
-/** openapi:components:schemas
 hafbe_types.witnesses_return:
   type: object
   properties:
