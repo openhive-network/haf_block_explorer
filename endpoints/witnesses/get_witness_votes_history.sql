@@ -24,42 +24,35 @@ SET ROLE hafbe_owner;
           type: string
         description: witness account name
       - in: query
-        name: sort
+        name: filter-account
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.order_by_votes'
-          default: timestamp
+          type: string
+          default: NULL
         description: |
-          Sort order:
-
-           * `voter` - account name of voter
-
-           * `vests` - total voting power = account_vests + proxied_vests of voter
-
-           * `account_vests` - direct vests of voter
-
-           * `proxied_vests` - proxied vests of voter
-
-           * `timestamp` - time when user performed vote/unvote operation
+          When provided, only votes associated with this account will be included in the results, 
+          allowing for targeted analysis of an individual account's voting activity.
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: |
+          Return page on `page` number, defaults to `1`
+      - in: query
+        name: page-size
+        required: false
+        schema:
+          type: integer
+          default: 100
+        description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: direction
         required: false
         schema:
           $ref: '#/components/schemas/hafbe_types.sort_direction'
           default: desc
-      - in: query
-        name: result-limit
-        required: false
-        schema:
-          type: integer
-          default: 100
-        description: Return at most `result-limit` voters
-        description: |
-          Sort order:
-
-           * `asc` - Ascending, from A to Z or smallest to largest
-
-           * `desc` - Descending, from Z to A or largest to smallest
       - in: query
         name: from-block
         required: false
@@ -105,7 +98,8 @@ SET ROLE hafbe_owner;
             schema:
               $ref: '#/components/schemas/hafbe_types.witness_votes_history'
             example: {
-              "votes_updated_at": "2024-08-29T12:05:08.097875",
+              "total_votes": 263,
+              "total_pages": 132,
               "votes_history": [
                 {
                   "voter_name": "jeremyfromwi",
@@ -132,9 +126,10 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_votes_history;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "account-name" TEXT,
-    "sort" hafbe_types.order_by_votes = 'timestamp',
+    "filter-account" TEXT = NULL,
+    "page" INT = 1,
+    "page-size" INT = 100,
     "direction" hafbe_types.sort_direction = 'desc',
-    "result-limit" INT = 100,
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
@@ -151,13 +146,13 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
   _witness_id INT = hafbe_backend.get_account_id("account-name");
-  _votes_updated_at TIMESTAMP;
+  _filter_account_id = hafbe_backend.get_account_id("filter-account");
 
   _result hafbe_types.witness_votes_history_record[];
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("result-limit", 10000, 'result-limit');
-  PERFORM hafbe_exceptions.validate_negative_limit("result-limit",'result-limit');
-  PERFORM hafbe_exceptions.validate_negative_page("result-limit");
+  PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
+  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+  PERFORM hafbe_exceptions.validate_negative_page("page");
 
   IF _block_range.first_block IS NOT NULL AND _hafbe_current_block < _block_range.first_block THEN
     PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _hafbe_current_block);
@@ -167,12 +162,32 @@ BEGIN
     PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
   END IF;
 
+  IF "filter-account" IS NOT NULL AND _filter_account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("filter-account");
+  END IF;
+
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _votes_updated_at := (
-    SELECT last_updated_at 
-    FROM hafbe_app.witnesses_cache_config
+  _ops_count := (
+    SELECT COUNT(*) 
+    FROM hafbe_app.witness_votes_history 
+    WHERE 
+      witness_id = _witness_id AND
+      (_block_range.first_block IS NULL OR block_num >= _block_range.first_block) AND
+      (_block_range.last_block IS NULL OR block_num <= _block_range.last_block) AND
+      (_filter_account_id IS NULL OR voter_id = _filter_account_id)
   );
+
+  __total_pages := (
+    CASE 
+      WHEN (_ops_count % "page-size") = 0 THEN 
+        _ops_count/"page-size" 
+      ELSE 
+        (_ops_count/"page-size") + 1
+    END
+  );
+
+  PERFORM hafbe_exceptions.validate_page("page", __total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -183,17 +198,19 @@ BEGIN
       ba.proxied_vests,
       ba.timestamp
     FROM hafbe_backend.get_witness_votes_history(
-      "account-name",
-      "sort",
-      "direction",
-      "result-limit",
+      _witness_id,
+      _filter_account_id,
+      "page",
+      "page-size",
+      "direction"
       _block_range.first_block,
       _block_range.last_block
     ) ba
   ) row;
 
   RETURN (
-    COALESCE(_votes_updated_at, '1970-01-01T00:00:00'),
+    COALESCE(_ops_count,0),
+    COALESCE(__total_pages,0),
     COALESCE(_result, '{}'::hafbe_types.witness_votes_history_record[])
   )::hafbe_types.witness_votes_history;
 
