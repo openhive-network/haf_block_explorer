@@ -121,6 +121,10 @@ BEGIN
     PERFORM hafbe_indexes.create_hafbe_indexes();
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
+  -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
+  PERFORM hive.app_request_table_vacuum('hafbe_app.account_vest_stats_cache',   interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app.witness_votes_cache',        interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app.witness_votes_change_cache', interval '10 minutes');   
 END
 $$;
 
