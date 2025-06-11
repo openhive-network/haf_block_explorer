@@ -59,7 +59,7 @@ DECLARE
   _first_block_num INT := (SELECT num FROM hive.blocks_view WHERE created_at <= 'today'::DATE ORDER BY num DESC LIMIT 1);
 BEGIN
 --------------------------------------------------------
-  TRUNCATE TABLE hafbe_app.account_vest_stats_cache;
+  DELETE FROM hafbe_app.account_vest_stats_cache;
 
   INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
     SELECT 
@@ -69,7 +69,7 @@ BEGIN
       proxied_vests
     FROM hafbe_backend.account_vest_stats_view;
 --------------------------------------------------------
-  TRUNCATE TABLE hafbe_app.witness_votes_cache;
+  DELETE FROM hafbe_app.witness_votes_cache;
 
   INSERT INTO hafbe_app.witness_votes_cache (witness_id, votes, voters_num)
     SELECT 
@@ -80,7 +80,7 @@ BEGIN
     JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
     GROUP BY cwv.witness_id;
 --------------------------------------------------------
-  TRUNCATE TABLE hafbe_app.witness_votes_change_cache;
+  DELETE FROM hafbe_app.witness_votes_change_cache;
 
   INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
     SELECT
