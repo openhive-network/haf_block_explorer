@@ -18,7 +18,6 @@ AS
 $$
 DECLARE
   _offset INT := ((("page" - 1) * "page-size"));
-  _sort TEXT := (CASE WHEN "sort" = 'timestamp' THEN 'source_op_block' ELSE "sort"::TEXT END);
 BEGIN
   RETURN QUERY (
     WITH limited_set AS MATERIALIZED (
@@ -36,16 +35,16 @@ BEGIN
         cwv.witness_id = "witness" AND
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account")
       ORDER BY
-        (CASE WHEN "direction" = 'desc' AND _sort = 'vests'           THEN avs.vests           ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND _sort = 'vests'           THEN avs.vests           ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND _sort = 'account_vests'   THEN avs.account_vests   ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND _sort = 'account_vests'   THEN avs.account_vests   ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND _sort = 'proxied_vests'   THEN avs.proxied_vests   ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND _sort = 'proxied_vests'   THEN avs.proxied_vests   ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND _sort = 'voter'           THEN av.name             ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND _sort = 'voter'           THEN av.name             ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND _sort = 'source_op_block' THEN cwv.source_op_block ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND _sort = 'source_op_block' THEN cwv.source_op_block ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'vests'          THEN avs.vests           ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'vests'          THEN avs.vests           ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'account_vests'  THEN avs.account_vests   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'account_vests'  THEN avs.account_vests   ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'proxied_vests'  THEN avs.proxied_vests   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'proxied_vests'  THEN avs.proxied_vests   ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'voter'          THEN av.name             ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'voter'          THEN av.name             ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'timestamp'      THEN cwv.source_op_block ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'timestamp'      THEN cwv.source_op_block ELSE NULL END) ASC,
         (CASE WHEN "direction" = 'desc'                               THEN cwv.voter_id        ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'                                THEN cwv.voter_id        ELSE NULL END) ASC
       OFFSET _offset  
@@ -170,20 +169,19 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
 RETURNS SETOF hafbe_types.witness 
 LANGUAGE 'plpgsql'
 STABLE
+SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
   _offset INT := ((("page" - 1) * "page-size"));
 BEGIN
-  RETURN QUERY EXECUTE format(
-    $query$
-
+  RETURN QUERY (
     WITH limited_set AS 
     (
       SELECT
         cw.witness_id, 
-        (SELECT av.name FROM hive.accounts_view av where av.id = cw.witness_id)::TEXT AS witness,
-        b.rank, 
+        av.name,
+		    a.rank,
         COALESCE(cw.url, '') AS url,
         COALESCE(cw.price_feed, '0.000'::NUMERIC) AS price_feed,
         COALESCE(cw.bias, 0) AS bias,
@@ -200,23 +198,44 @@ BEGIN
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
- --   join couses significant slowdown
- --   JOIN hive.accounts_view av ON av.id = cw.witness_id
-      LEFT JOIN hafbe_app.witness_votes_cache b ON b.witness_id = cw.witness_id
+      JOIN hive.accounts_view av                       ON av.id = cw.witness_id
+	    JOIN hafbe_app.witness_rank_cache a              ON a.witness_id = cw.witness_id
+      LEFT JOIN hafbe_app.witness_votes_cache b        ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-    ),
-    limited_set_order AS MATERIALIZED (
-      SELECT * FROM limited_set
       ORDER BY
-        (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
-        (CASE WHEN %L = 'desc' THEN witness_id ELSE NULL END) DESC,
-        (CASE WHEN %L = 'asc' THEN witness_id ELSE NULL END) ASC
-      OFFSET %L
-      LIMIT %L
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN av.name                                                        ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'witness'                 THEN av.name                                                        ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'rank'                    THEN a.rank                                                         ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'rank'                    THEN a.rank                                                         ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'url'                     THEN COALESCE(cw.url, '')                                           ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'url'                     THEN COALESCE(cw.url, '')                                           ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'votes'                   THEN a.rank                                                         ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'votes'                   THEN a.rank                                                         ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'votes_daily_change'      THEN COALESCE(c.votes_daily_change, 0)                              ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'votes_daily_change'      THEN COALESCE(c.votes_daily_change, 0)                              ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'voters_num'              THEN COALESCE(b.voters_num,0)                                       ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'voters_num'              THEN COALESCE(b.voters_num,0)                                       ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'voters_num_daily_change' THEN COALESCE(c.voters_num_daily_change,0)                          ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'voters_num_daily_change' THEN COALESCE(c.voters_num_daily_change,0)                          ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'price_feed'              THEN COALESCE(cw.price_feed, '0.000'::NUMERIC)                      ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'price_feed'              THEN COALESCE(cw.price_feed, '0.000'::NUMERIC)                      ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'bias'                    THEN COALESCE(cw.bias, 0)                                           ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'bias'                    THEN COALESCE(cw.bias, 0)                                           ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'block_size'              THEN COALESCE(cw.block_size, 0)                                     ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'block_size'              THEN COALESCE(cw.block_size, 0)                                     ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'signing_key'             THEN COALESCE(cw.signing_key, '')                                   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'signing_key'             THEN COALESCE(cw.signing_key, '')                                   ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'version'                 THEN COALESCE(cw.version, '0.0.0')                                  ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'version'                 THEN COALESCE(cw.version, '0.0.0')                                  ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'feed_updated_at'         THEN COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'feed_updated_at'         THEN COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc'                                        THEN cw.witness_id                                                  ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'                                         THEN cw.witness_id                                                  ELSE NULL END) ASC
+      OFFSET _offset  
+      LIMIT "page-size"
     )
     SELECT
-      ls.witness, 
+      ls.name::TEXT, 
       ls.rank, 
       ls.url,
       ls.votes::TEXT,
@@ -233,16 +252,7 @@ BEGIN
       ls.hbd_interest_rate,
       ls.last_created_block_num,
       ls.account_creation_fee
-    FROM limited_set_order ls
-    ORDER BY
-      (CASE WHEN %L = 'desc' THEN %I ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN %I ELSE NULL END) ASC,
-      (CASE WHEN %L = 'desc' THEN witness_id ELSE NULL END) DESC,
-      (CASE WHEN %L = 'asc' THEN witness_id ELSE NULL END) ASC
-
-    $query$,
-    "direction", "sort", "direction", "sort", "direction", "direction", _offset,"page-size",
-    "direction", "sort", "direction", "sort", "direction", "direction"
+    FROM limited_set ls
   );
 
 END
