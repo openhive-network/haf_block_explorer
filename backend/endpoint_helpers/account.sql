@@ -53,11 +53,12 @@ BEGIN
       JOIN hive.accounts_view av ON av.id = cwvv.witness_id
       WHERE cwvv.voter_id = _account
     )
-    SELECT 
+    SELECT (
       COUNT(*)::INT, 
       array_agg(v.vote ORDER BY v.vote)
+    )::hafbe_backend.account_votes
     FROM votes v
-  )::hafbe_backend.account_votes;
+  );
 END
 $$;
 
