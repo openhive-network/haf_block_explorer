@@ -153,7 +153,6 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
   PERFORM hafbe_app.process_witness_votes(_from, _to);
-  PERFORM hafbe_app.process_witness_votes_cache();
 
   IF _logs THEN
     __end_ts := clock_timestamp();
