@@ -16,7 +16,7 @@ BEGIN
       hafbe_backend.process_proxy_ops(_operation_body, source_op, source_op_block, _op_type_id)
 
       WHEN _op_type_id = 92 OR _op_type_id = 75 THEN
-      hafbe_backend.process_expired_accounts(_operation_body)
+      hafbe_backend.process_expired_accounts(_operation_body, source_op, source_op_block)
     END
   );
 
@@ -28,36 +28,26 @@ RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
+DECLARE 
+  _voter_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
+  _witness_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness');
+  _approve BOOLEAN := (_body->'value'->>'approve')::BOOLEAN;
 BEGIN
-WITH vote_operation AS (
-  SELECT
-    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS voter_id,
-    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness') AS witness_id,
-    (_body->'value'->>'approve')::BOOLEAN AS approve,
-    _id AS _source_op,
-    _block_num AS _source_op_block
-),
-insert_votes_history AS (
+  -- Insert the vote into the history table
   INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op, source_op_block)
-  SELECT witness_id, voter_id, approve, _source_op, _source_op_block
-  FROM vote_operation
-),
-insert_current_votes AS (
+  SELECT _witness_id, _voter_id, _approve, _id, _block_num;
+
+  -- If the vote is approved, insert it into the current votes table
   INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, source_op, source_op_block)
-  SELECT witness_id, voter_id, _source_op, _source_op_block
-  FROM vote_operation
-  WHERE approve IS TRUE
+  SELECT _witness_id, _voter_id, _id, _block_num
+  WHERE _approve
   ON CONFLICT ON CONSTRAINT pk_current_witness_votes DO UPDATE SET
     source_op_block = EXCLUDED.source_op_block,
-    source_op = EXCLUDED.source_op
-)
+    source_op = EXCLUDED.source_op;
 
-DELETE FROM hafbe_app.current_witness_votes cwv USING (
-  SELECT witness_id, voter_id
-  FROM vote_operation
-  WHERE approve IS FALSE
-) svo
-WHERE cwv.witness_id = svo.witness_id AND cwv.voter_id = svo.voter_id;
+  -- If the vote is not approved, delete it from the current votes table
+  DELETE FROM hafbe_app.current_witness_votes cwv 
+  WHERE cwv.witness_id = _witness_id AND cwv.voter_id = _voter_id AND NOT _approve;
 
 END
 $$;
@@ -67,77 +57,75 @@ RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
+DECLARE 
+  _account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
+  _proxy_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'proxy');
+  _proxy BOOLEAN := (CASE WHEN _op_type = 13 THEN TRUE ELSE FALSE END);
 BEGIN
-WITH proxy_operations AS (
-  SELECT
-    _body->'value'->>'account' AS witness_account,
-    _body->'value'->>'proxy' AS proxy_account,
-    CASE WHEN _op_type = 13 THEN TRUE ELSE FALSE END AS proxy,
-    _id AS _source_op,
-    _block_num AS _source_op_block
-),
-selected AS (
-    SELECT av_a.id AS account_id, av_p.id AS proxy_id, proxy, _source_op, _source_op_block
-    FROM proxy_operations proxy_op
-    JOIN hafbe_app.accounts_view av_a ON av_a.name = proxy_op.witness_account
-    JOIN hafbe_app.accounts_view av_p ON av_p.name = proxy_op.proxy_account
-),
-insert_proxy_history AS (
+  -- Insert the proxy operation into the history table
   INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, source_op, source_op_block)
-  SELECT account_id, proxy_id, proxy, _source_op, _source_op_block
-  FROM selected
-),
-insert_current_proxies AS (
+  SELECT _account_id, _proxy_id, _proxy, _id, _block_num
+  WHERE _proxy_id IS NOT NULL;
+
+  -- If the proxy is approved, insert it into the current proxy table
   INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, source_op, source_op_block)
-  SELECT account_id, proxy_id, _source_op, _source_op_block
-  FROM selected
-  WHERE proxy IS TRUE 
+  SELECT _account_id, _proxy_id, _id, _block_num
+  WHERE _proxy AND _proxy_id IS NOT NULL
   ON CONFLICT ON CONSTRAINT pk_current_account_proxies DO UPDATE SET
     proxy_id = EXCLUDED.proxy_id,
     source_op_block = EXCLUDED.source_op_block,
-    source_op = EXCLUDED.source_op
-),
-delete_votes_if_proxy AS (
-  DELETE FROM hafbe_app.current_witness_votes cap USING (
-    SELECT account_id 
-    FROM selected
-    WHERE proxy IS TRUE
-  ) spo
-  WHERE cap.voter_id = spo.account_id
-)
-DELETE FROM hafbe_app.current_account_proxies cap USING (
-  SELECT account_id, proxy_id
-  FROM selected
-  WHERE proxy IS FALSE
-) spo
-WHERE cap.account_id = spo.account_id AND cap.proxy_id = spo.proxy_id
-;
+    source_op = EXCLUDED.source_op;
+
+  -- If the proxy is removed, delete it from the current proxy table
+  DELETE FROM hafbe_app.current_account_proxies cap 
+  WHERE 
+    cap.account_id = _account_id AND 
+    cap.proxy_id = _proxy_id AND
+    NOT _proxy AND _proxy_id IS NOT NULL;
+
+  -- If the proxy is set, delete any existing witness votes for the account 
+  WITH delete_votes_if_proxy AS (
+    DELETE FROM hafbe_app.current_witness_votes cap 
+    WHERE cap.voter_id = _account_id AND _proxy AND _proxy_id IS NOT NULL
+    RETURNING cap.voter_id, cap.witness_id
+  )
+  -- and insert them into the history table 
+  INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op, source_op_block)
+  SELECT cap.witness_id, cap.voter_id, FALSE, _id, _block_num
+  FROM delete_votes_if_proxy cap;
 
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.process_expired_accounts(_body jsonb)
+CREATE OR REPLACE FUNCTION hafbe_backend.process_expired_accounts(_body jsonb, _id BIGINT, _block_num INT)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
+DECLARE
+  _account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
 BEGIN
-WITH proxy_operations AS (
-  SELECT
-    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account') AS account_id
-),
-delete_proxies AS (
-  DELETE FROM hafbe_app.current_account_proxies cap USING (
-    SELECT account_id 
-    FROM proxy_operations
-  ) spo
-  WHERE cap.account_id = spo.account_id
-)
-DELETE FROM hafbe_app.current_witness_votes cap USING (
-  SELECT account_id 
-  FROM proxy_operations
-) spoo
-WHERE cap.voter_id = spoo.account_id;
+  -- Delete the account from the current proxies table
+  WITH delete_proxies AS (
+    DELETE FROM hafbe_app.current_account_proxies cap
+    WHERE cap.account_id = _account_id
+    RETURNING cap.account_id, cap.proxy_id
+  )
+  -- and insert the deleted proxies into the history table
+  INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, source_op, source_op_block)
+  SELECT cap.account_id, cap.proxy_id, FALSE, _id, _block_num
+  FROM delete_proxies cap;
+
+  -- Delete the account from the current votes table
+  WITH delete_votes AS (
+    DELETE FROM hafbe_app.current_witness_votes cap 
+    WHERE cap.voter_id = _account_id
+    RETURNING cap.voter_id, cap.witness_id
+  )
+  -- and insert the deleted votes into the history table
+  INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op, source_op_block)
+  SELECT cap.witness_id, cap.voter_id, FALSE, _id, _block_num
+  FROM delete_votes cap;
 
 END
 $$;
