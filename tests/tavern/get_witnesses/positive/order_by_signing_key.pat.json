@@ -1,11 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "tombstone53",
-      "rank": null,
+      "rank": 11186,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -24,7 +23,7 @@
     },
     {
       "witness_name": "liamoh",
-      "rank": null,
+      "rank": 8537,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -43,7 +42,7 @@
     },
     {
       "witness_name": "brighton36",
-      "rank": null,
+      "rank": 9790,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -62,7 +61,7 @@
     },
     {
       "witness_name": "skywalker-1",
-      "rank": null,
+      "rank": 11780,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -81,7 +80,7 @@
     },
     {
       "witness_name": "adelaide",
-      "rank": null,
+      "rank": 2840,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -100,7 +99,7 @@
     },
     {
       "witness_name": "indykpol-miner11",
-      "rank": null,
+      "rank": 562,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -119,7 +118,7 @@
     },
     {
       "witness_name": "indykpol-miner10",
-      "rank": null,
+      "rank": 567,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -138,7 +137,7 @@
     },
     {
       "witness_name": "indykpol-miner6",
-      "rank": null,
+      "rank": 616,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -157,7 +156,7 @@
     },
     {
       "witness_name": "indykpol-miner1",
-      "rank": null,
+      "rank": 664,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -176,7 +175,7 @@
     },
     {
       "witness_name": "indykpol",
-      "rank": null,
+      "rank": 1063,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -195,7 +194,7 @@
     },
     {
       "witness_name": "yiiihaa15",
-      "rank": null,
+      "rank": 1196,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -214,7 +213,7 @@
     },
     {
       "witness_name": "ella",
-      "rank": null,
+      "rank": 7440,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -233,7 +232,7 @@
     },
     {
       "witness_name": "elin",
-      "rank": null,
+      "rank": 7468,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -252,7 +251,7 @@
     },
     {
       "witness_name": "dyan",
-      "rank": null,
+      "rank": 7498,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -271,7 +270,7 @@
     },
     {
       "witness_name": "dwan",
-      "rank": null,
+      "rank": 7508,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -290,7 +289,7 @@
     },
     {
       "witness_name": "duke",
-      "rank": null,
+      "rank": 7555,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -309,7 +308,7 @@
     },
     {
       "witness_name": "duff",
-      "rank": null,
+      "rank": 7563,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +327,7 @@
     },
     {
       "witness_name": "drew",
-      "rank": null,
+      "rank": 7578,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -347,7 +346,7 @@
     },
     {
       "witness_name": "dove",
-      "rank": null,
+      "rank": 7595,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -366,7 +365,7 @@
     },
     {
       "witness_name": "doug",
-      "rank": null,
+      "rank": 7608,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",

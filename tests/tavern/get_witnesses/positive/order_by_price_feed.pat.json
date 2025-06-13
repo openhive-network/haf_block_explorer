@@ -1,11 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "dog",
-      "rank": null,
+      "rank": 11010,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -81,7 +80,7 @@
     },
     {
       "witness_name": "adm",
-      "rank": null,
+      "rank": 11128,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -138,7 +137,7 @@
     },
     {
       "witness_name": "eternal",
-      "rank": 222,
+      "rank": 220,
       "url": "https://steemit.com/@eternal",
       "vests": "85904436277",
       "votes_daily_change": "0",
@@ -214,7 +213,7 @@
     },
     {
       "witness_name": "ah1",
-      "rank": null,
+      "rank": 9043,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -347,7 +346,7 @@
     },
     {
       "witness_name": "fnait",
-      "rank": 113,
+      "rank": 112,
       "url": " ",
       "vests": "6624378606352",
       "votes_daily_change": "0",

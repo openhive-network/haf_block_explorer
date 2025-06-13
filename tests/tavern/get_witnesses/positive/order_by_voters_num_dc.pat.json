@@ -1,11 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "steemcon",
-      "rank": null,
+      "rank": 241,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -24,7 +23,7 @@
     },
     {
       "witness_name": "lamaras",
-      "rank": null,
+      "rank": 242,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -43,7 +42,7 @@
     },
     {
       "witness_name": "jasonxg1",
-      "rank": null,
+      "rank": 243,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -62,7 +61,7 @@
     },
     {
       "witness_name": "poeticammo",
-      "rank": null,
+      "rank": 244,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -81,7 +80,7 @@
     },
     {
       "witness_name": "solarcity",
-      "rank": null,
+      "rank": 245,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -100,7 +99,7 @@
     },
     {
       "witness_name": "djm40",
-      "rank": null,
+      "rank": 246,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -119,7 +118,7 @@
     },
     {
       "witness_name": "djm39",
-      "rank": null,
+      "rank": 247,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -138,7 +137,7 @@
     },
     {
       "witness_name": "msooi",
-      "rank": null,
+      "rank": 248,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -157,7 +156,7 @@
     },
     {
       "witness_name": "kloudery01",
-      "rank": null,
+      "rank": 249,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -176,7 +175,7 @@
     },
     {
       "witness_name": "pue",
-      "rank": null,
+      "rank": 250,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -214,7 +213,7 @@
     },
     {
       "witness_name": "djm37",
-      "rank": null,
+      "rank": 251,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -290,7 +289,7 @@
     },
     {
       "witness_name": "koparka1",
-      "rank": null,
+      "rank": 252,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -309,7 +308,7 @@
     },
     {
       "witness_name": "djm35",
-      "rank": null,
+      "rank": 253,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +327,7 @@
     },
     {
       "witness_name": "safeauto",
-      "rank": null,
+      "rank": 254,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -347,7 +346,7 @@
     },
     {
       "witness_name": "sigma6billion",
-      "rank": null,
+      "rank": 255,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -366,7 +365,7 @@
     },
     {
       "witness_name": "car0",
-      "rank": null,
+      "rank": 256,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
