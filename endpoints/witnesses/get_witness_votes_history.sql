@@ -14,7 +14,7 @@ SET ROLE hafbe_owner;
       * `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`
       
       REST call example
-      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?result-limit=2''`
+      * `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?page-size=2''`
     operationId: hafbe_endpoints.get_witness_votes_history
     parameters:
       - in: path
@@ -24,14 +24,14 @@ SET ROLE hafbe_owner;
           type: string
         description: witness account name
       - in: query
-        name: filter-account
+        name: voter-name
         required: false
         schema:
           type: string
           default: NULL
         description: |
           When provided, only votes associated with this account will be included in the results, 
-          allowing for targeted analysis of an individual account's voting activity.
+          allowing for targeted analysis of an individual account''s voting activity.
       - in: query
         name: page
         required: false
@@ -126,7 +126,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_votes_history;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "account-name" TEXT,
-    "filter-account" TEXT = NULL,
+    "voter-name" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
     "direction" hafbe_types.sort_direction = 'desc',
@@ -146,7 +146,9 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
   _witness_id INT = hafbe_backend.get_account_id("account-name");
-  _filter_account_id = hafbe_backend.get_account_id("filter-account");
+  _filter_account_id INT = hafbe_backend.get_account_id("voter-name");
+  _ops_count INT;
+  __total_pages INT;
 
   _result hafbe_types.witness_votes_history_record[];
 BEGIN
@@ -162,8 +164,8 @@ BEGIN
     PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
   END IF;
 
-  IF "filter-account" IS NOT NULL AND _filter_account_id IS NULL THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_account("filter-account");
+  IF "voter-name" IS NOT NULL AND _filter_account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("voter-name");
   END IF;
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
@@ -173,8 +175,8 @@ BEGIN
     FROM hafbe_app.witness_votes_history 
     WHERE 
       witness_id = _witness_id AND
-      (_block_range.first_block IS NULL OR block_num >= _block_range.first_block) AND
-      (_block_range.last_block IS NULL OR block_num <= _block_range.last_block) AND
+      (_block_range.first_block IS NULL OR source_op_block >= _block_range.first_block) AND
+      (_block_range.last_block IS NULL OR source_op_block <= _block_range.last_block) AND
       (_filter_account_id IS NULL OR voter_id = _filter_account_id)
   );
 
@@ -202,7 +204,7 @@ BEGIN
       _filter_account_id,
       "page",
       "page-size",
-      "direction"
+      "direction",
       _block_range.first_block,
       _block_range.last_block
     ) ba

@@ -165,20 +165,6 @@ declare
           }
         }
       },
-      "hafbe_types.witness_return": {
-        "type": "object",
-        "properties": {
-          "votes_updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Time of cache update"
-          },
-          "witness": {
-            "$ref": "#/components/schemas/hafbe_types.witness",
-            "description": "Witness parameters"
-          }
-        }
-      },
       "hafbe_types.witnesses_return": {
         "type": "object",
         "properties": {
@@ -189,11 +175,6 @@ declare
           "total_pages": {
             "type": "integer",
             "description": "Total number of pages"
-          },
-          "votes_updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Time of cache update"
           },
           "witnesses": {
             "type": "array",
@@ -241,11 +222,6 @@ declare
             "type": "integer",
             "description": "Total number of pages"
           },
-          "votes_updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Time of cache update"
-          },
           "voters": {
             "type": "array",
             "items": {
@@ -288,10 +264,13 @@ declare
       "hafbe_types.witness_votes_history": {
         "type": "object",
         "properties": {
-          "votes_updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Time of cache update"
+          "total_votes": {
+            "type": "integer",
+            "description": "Total number of votes"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
           },
           "votes_history": {
             "type": "array",
@@ -927,7 +906,6 @@ declare
                 "example": {
                   "total_witnesses": 731,
                   "total_pages": 366,
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "witnesses": [
                     {
                       "witness_name": "roadscape",
@@ -1000,29 +978,26 @@ declare
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witness_return"
+                  "$ref": "#/components/schemas/hafbe_types.witness"
                 },
                 "example": {
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
-                  "witness": {
-                    "witness_name": "blocktrades",
-                    "rank": 8,
-                    "url": "https://blocktrades.us",
-                    "vests": "82373419958692803",
-                    "votes_daily_change": "0",
-                    "voters_num": 263,
-                    "voters_num_daily_change": 0,
-                    "price_feed": 0.545,
-                    "bias": 0,
-                    "feed_updated_at": "2016-09-15T16:02:21",
-                    "block_size": 65536,
-                    "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
-                    "version": "0.13.0",
-                    "missed_blocks": 935,
-                    "hbd_interest_rate": 1000,
-                    "last_confirmed_block_num": 4999992,
-                    "account_creation_fee": 9000
-                  }
+                  "witness_name": "blocktrades",
+                  "rank": 8,
+                  "url": "https://blocktrades.us",
+                  "vests": "82373419958692803",
+                  "votes_daily_change": "0",
+                  "voters_num": 263,
+                  "voters_num_daily_change": 0,
+                  "price_feed": 0.545,
+                  "bias": 0,
+                  "feed_updated_at": "2016-09-15T16:02:21",
+                  "block_size": 65536,
+                  "signing_key": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz",
+                  "version": "0.13.0",
+                  "missed_blocks": 935,
+                  "hbd_interest_rate": 1000,
+                  "last_confirmed_block_num": 4999992,
+                  "account_creation_fee": 9000
                 }
               }
             }
@@ -1050,6 +1025,16 @@ declare
               "type": "string"
             },
             "description": "witness account name"
+          },
+          {
+            "in": "query",
+            "name": "voter-name",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "When provided, only votes associated with this account will be included in the results, \nallowing for targeted analysis of an individual account''s voting activity.\n"
           },
           {
             "in": "query",
@@ -1103,7 +1088,6 @@ declare
                 "example": {
                   "total_votes": 263,
                   "total_pages": 132,
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
                   "voters": [
                     {
                       "voter_name": "blocktrades",
@@ -1173,7 +1157,7 @@ declare
           "Witnesses"
         ],
         "summary": "Get the history of votes for this witness.",
-        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?result-limit=2''`\n",
+        "description": "Get information about each vote cast for this witness\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witness_votes_history(''blocktrades'');`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses/blocktrades/votes/history?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_witness_votes_history",
         "parameters": [
           {
@@ -1187,13 +1171,33 @@ declare
           },
           {
             "in": "query",
-            "name": "sort",
+            "name": "voter-name",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.order_by_votes",
-              "default": "timestamp"
+              "type": "string",
+              "default": null
             },
-            "description": "Sort order:\n\n * `voter` - account name of voter\n\n * `vests` - total voting power = account_vests + proxied_vests of voter\n\n * `account_vests` - direct vests of voter\n\n * `proxied_vests` - proxied vests of voter\n\n * `timestamp` - time when user performed vote/unvote operation\n"
+            "description": "When provided, only votes associated with this account will be included in the results, \nallowing for targeted analysis of an individual account''s voting activity.\n"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` operations per page, defaults to `100`"
           },
           {
             "in": "query",
@@ -1203,16 +1207,6 @@ declare
               "$ref": "#/components/schemas/hafbe_types.sort_direction",
               "default": "desc"
             }
-          },
-          {
-            "in": "query",
-            "name": "result-limit",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100
-            },
-            "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
           },
           {
             "in": "query",
@@ -1244,7 +1238,8 @@ declare
                   "$ref": "#/components/schemas/hafbe_types.witness_votes_history"
                 },
                 "example": {
-                  "votes_updated_at": "2024-08-29T12:05:08.097875",
+                  "total_votes": 263,
+                  "total_pages": 132,
                   "votes_history": [
                     {
                       "voter_name": "jeremyfromwi",

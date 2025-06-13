@@ -60,7 +60,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(
     "account-name" TEXT
 )
-RETURNS hafbe_types.witness_return 
+RETURNS hafbe_types.witness 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
