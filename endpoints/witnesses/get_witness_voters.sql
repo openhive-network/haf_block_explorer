@@ -24,14 +24,14 @@ SET ROLE hafbe_owner;
           type: string
         description: witness account name
       - in: query
-        name: filter-account
+        name: voter-name
         required: false
         schema:
           type: string
           default: NULL
         description: |
           When provided, only votes associated with this account will be included in the results, 
-          allowing for targeted analysis of an individual account's voting activity.
+          allowing for targeted analysis of an individual account''s voting activity.
       - in: query
         name: page
         required: false
@@ -114,7 +114,7 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness_voters;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters(
     "account-name" TEXT,
-    "filter-account" TEXT = NULL,
+    "voter-name" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
     "sort" hafbe_types.order_by_votes = 'vests',
@@ -131,7 +131,7 @@ AS
 $$
 DECLARE
   _witness_id INT = hafbe_backend.get_account_id("account-name");
-  _filter_account_id = hafbe_backend.get_account_id("filter-account");
+  _filter_account_id INT = hafbe_backend.get_account_id("voter-name");
   _ops_count INT;
   __total_pages INT;
 
@@ -145,8 +145,8 @@ BEGIN
     PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
   END IF;
 
-  IF "filter-account" IS NOT NULL AND _filter_account_id IS NULL THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_account("filter-account");
+  IF "voter-name" IS NOT NULL AND _filter_account_id IS NULL THEN
+    PERFORM hafbe_exceptions.rest_raise_missing_account("voter-name");
   END IF;
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
