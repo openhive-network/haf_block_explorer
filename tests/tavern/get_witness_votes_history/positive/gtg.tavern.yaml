@@ -17,9 +17,8 @@
           accept: application/json  
         json:
           account-name: "gtg"
-          sort: "timestamp"
           direction: "desc"
-          result-limit: 20
+          page-size: 21
       response:
         status_code: 200
         verify_response_with:

@@ -17,9 +17,8 @@
           accept: application/json  
         json:
           account-name: "blocktrades"
-          sort: "timestamp"
           direction: "desc"
-          result-limit: 20
+          page-size: 20
       response:
         status_code: 200
         verify_response_with:

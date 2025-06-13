@@ -18,7 +18,7 @@
           accept: application/json  
         json:
           account-name: "blocktrades"
-          result-limit: 100
+          page-size: 100
           from-block: "d400000"
       response:
         status_code: 400
