@@ -1,7 +1,6 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "jabbasteem",
@@ -271,7 +270,7 @@
     },
     {
       "witness_name": "furion",
-      "rank": 112,
+      "rank": 113,
       "url": " ",
       "vests": "6624378606352",
       "votes_daily_change": "0",

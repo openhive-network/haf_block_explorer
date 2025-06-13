@@ -1,7 +1,6 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "proctologic",
@@ -24,7 +23,7 @@
     },
     {
       "witness_name": "d-marim",
-      "rank": null,
+      "rank": 2568,
       "url": "www.steemit.com",
       "vests": "0",
       "votes_daily_change": "0",
@@ -43,7 +42,7 @@
     },
     {
       "witness_name": "falzxx",
-      "rank": null,
+      "rank": 2633,
       "url": "www.steemit.com",
       "vests": "0",
       "votes_daily_change": "0",
@@ -119,7 +118,7 @@
     },
     {
       "witness_name": "wisconsin",
-      "rank": null,
+      "rank": 10443,
       "url": "wisconsin.steemed.net",
       "vests": "0",
       "votes_daily_change": "0",
@@ -138,7 +137,7 @@
     },
     {
       "witness_name": "adneu",
-      "rank": null,
+      "rank": 2286,
       "url": "url",
       "vests": "0",
       "votes_daily_change": "0",
@@ -176,7 +175,7 @@
     },
     {
       "witness_name": "badger3196",
-      "rank": null,
+      "rank": 3509,
       "url": "steemit.com/@badger3196",
       "vests": "0",
       "votes_daily_change": "0",
@@ -195,7 +194,7 @@
     },
     {
       "witness_name": "badger3195",
-      "rank": null,
+      "rank": 3519,
       "url": "steemit.com/@badger3195",
       "vests": "0",
       "votes_daily_change": "0",
@@ -214,7 +213,7 @@
     },
     {
       "witness_name": "badger3194",
-      "rank": null,
+      "rank": 3525,
       "url": "steemit.com/@badger3194",
       "vests": "0",
       "votes_daily_change": "0",
@@ -233,7 +232,7 @@
     },
     {
       "witness_name": "badger3193",
-      "rank": null,
+      "rank": 3532,
       "url": "steemit.com/@badger3193",
       "vests": "0",
       "votes_daily_change": "0",
@@ -252,7 +251,7 @@
     },
     {
       "witness_name": "badger3192",
-      "rank": null,
+      "rank": 3495,
       "url": "steemit.com/@badger3192",
       "vests": "0",
       "votes_daily_change": "0",
@@ -271,7 +270,7 @@
     },
     {
       "witness_name": "badger3191",
-      "rank": null,
+      "rank": 3541,
       "url": "steemit.com/@badger3191",
       "vests": "0",
       "votes_daily_change": "0",
@@ -290,7 +289,7 @@
     },
     {
       "witness_name": "badger319",
-      "rank": null,
+      "rank": 3549,
       "url": "steemit.com/@badger319",
       "vests": "0",
       "votes_daily_change": "0",
@@ -309,7 +308,7 @@
     },
     {
       "witness_name": "badger3186",
-      "rank": null,
+      "rank": 3510,
       "url": "steemit.com/@badger3186",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +327,7 @@
     },
     {
       "witness_name": "badger3185",
-      "rank": null,
+      "rank": 3484,
       "url": "steemit.com/@badger3185",
       "vests": "0",
       "votes_daily_change": "0",
@@ -347,7 +346,7 @@
     },
     {
       "witness_name": "badger3184",
-      "rank": null,
+      "rank": 3488,
       "url": "steemit.com/@badger3184",
       "vests": "0",
       "votes_daily_change": "0",
@@ -366,7 +365,7 @@
     },
     {
       "witness_name": "badger3183",
-      "rank": null,
+      "rank": 3470,
       "url": "steemit.com/@badger3183",
       "vests": "0",
       "votes_daily_change": "0",
