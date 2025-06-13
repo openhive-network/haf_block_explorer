@@ -10,16 +10,16 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_witness_votes_history"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_witness_voters"
         method: POST  
         headers:
           content-type: application/json
           accept: application/json  
         json:
           account-name: "blocktrades"
-          sort: "proxied_vests"
-          direction: "desc"
-          result-limit: 20
+          voter-name: "wefdi"
+          page: 1
+          page-size: 20
       response:
         status_code: 200
         verify_response_with:

@@ -2,5 +2,5 @@
   "code": "P0001",
   "details": null,
   "hint": null,
-  "message": "result-limit <= 10000: result-limit of 10001 is greater than maxmimum allowed"
+  "message": "page-size <= 10000: page-size of 10001 is greater than maxmimum allowed"
 }

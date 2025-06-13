@@ -1,5 +1,6 @@
 {
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "total_votes": 82,
+  "total_pages": 4,
   "votes_history": [
     {
       "voter_name": "neoxian",
@@ -40,6 +41,14 @@
       "account_vests": "438727757370386",
       "proxied_vests": "2056949140772",
       "timestamp": "2016-09-10T01:57:30"
+    },
+    {
+      "voter_name": "joseph",
+      "approve": false,
+      "vests": "440784706511158",
+      "account_vests": "438727757370386",
+      "proxied_vests": "2056949140772",
+      "timestamp": "2016-09-09T23:22:21"
     },
     {
       "voter_name": "primordialviper",

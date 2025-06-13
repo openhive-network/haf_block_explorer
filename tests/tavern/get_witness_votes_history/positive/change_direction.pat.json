@@ -1,5 +1,6 @@
 {
-  "votes_updated_at": "2024-10-14T08:08:11.119424",
+  "total_votes": 82,
+  "total_pages": 4,
   "votes_history": [
     {
       "voter_name": "gtg",
@@ -128,6 +129,14 @@
       "account_vests": "1226498142000",
       "proxied_vests": "0",
       "timestamp": "2016-08-08T12:02:09"
+    },
+    {
+      "voter_name": "geoffrey",
+      "approve": false,
+      "vests": "30847126195440",
+      "account_vests": "30348411941678",
+      "proxied_vests": "498714253762",
+      "timestamp": "2016-08-09T06:52:03"
     },
     {
       "voter_name": "dave-hughes",

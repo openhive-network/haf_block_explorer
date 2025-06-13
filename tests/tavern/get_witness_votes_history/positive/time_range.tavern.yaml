@@ -17,9 +17,8 @@
           accept: application/json  
         json:
           account-name: "blocktrades"
-          sort: "timestamp"
           direction: "desc"
-          result-limit: 20
+          page-size: 20
           from-block: "2016-08-12T19:38:51"
           to-block: "2016-08-28T19:38:51"
       response:

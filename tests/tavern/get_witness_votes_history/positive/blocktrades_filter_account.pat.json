@@ -1,0 +1,22 @@
+{
+  "total_pages": 1,
+  "total_votes": 2,
+  "votes_history": [
+    {
+      "account_vests": "2744263365581",
+      "approve": false,
+      "proxied_vests": "0",
+      "timestamp": "2016-09-13T23:21:00",
+      "vests": "2744263365581",
+      "voter_name": "wefdi"
+    },
+    {
+      "account_vests": "2744263365581",
+      "approve": true,
+      "proxied_vests": "0",
+      "timestamp": "2016-09-13T14:58:57",
+      "vests": "2744263365581",
+      "voter_name": "wefdi"
+    }
+  ]
+}

@@ -17,9 +17,8 @@
           accept: application/json  
         json:
           account-name: "gtg"
-          sort: "timestamp"
           direction: "desc"
-          result-limit: 20
+          page-size: 20
           from-block: 4000000
           to-block: 4500000
       response:
