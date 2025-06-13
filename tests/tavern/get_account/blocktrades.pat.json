@@ -39,15 +39,15 @@
   "withdraw_routes": 4,
   "delayed_vests": "0",
   "witness_votes": [
-    "steempty",
     "blocktrades",
     "datasecuritynode",
-    "steemed",
-    "silversteem",
-    "witness.svk",
+    "gtg",
     "joseph",
+    "silversteem",
     "smooth.witness",
-    "gtg"
+    "steemed",
+    "steempty",
+    "witness.svk"
   ],
   "witnesses_voted_for": 9,
   "ops_count": 219867,
