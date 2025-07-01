@@ -136,7 +136,7 @@ BEGIN
       fb.min_trx,
       fb.max_trx,
       fb.last_block_num
-    FROM hafbe_backend.get_transaction_stats(
+    FROM hafbe_backend.get_transaction_aggregation(
       "granularity",
       "direction",
       _block_range.first_block,
