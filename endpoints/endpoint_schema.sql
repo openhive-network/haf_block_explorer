@@ -2029,7 +2029,7 @@ declare
                 },
                 "example": [
                   {
-                    "date": "2016-12-31T23:59:59",
+                    "date": "2017-01-01T00:00:00",
                     "trx_count": 6961192,
                     "avg_trx": 1,
                     "min_trx": 0,
