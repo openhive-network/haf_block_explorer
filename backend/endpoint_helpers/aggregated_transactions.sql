@@ -12,12 +12,22 @@ CREATE TYPE hafbe_backend.transaction_stats AS (
     last_block_num INT
 );
 
+DROP TYPE IF EXISTS hafbe_backend.trx_stats CASCADE;
+CREATE TYPE hafbe_backend.trx_stats AS (
+    date TIMESTAMP,
+    trx_count INT,
+    count_blocks INT,
+    min_trx INT,
+    max_trx INT,
+    last_block_num INT
+);
+
 -- aggregate transactions into yearly stats using monthly stats
 CREATE OR REPLACE FUNCTION hafbe_backend.transaction_stats_by_year(
     _from TIMESTAMP,
     _to TIMESTAMP
 )
-RETURNS SETOF hafbe_backend.transaction_stats -- noqa: LT01, CP05
+RETURNS SETOF hafbe_backend.trx_stats -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -27,7 +37,7 @@ BEGIN
     WITH get_year AS (
         SELECT
             trx_count,
-            avg_trx,
+            count_blocks,
             min_trx,
             max_trx,
             last_block_num,
@@ -40,7 +50,7 @@ BEGIN
     SELECT
         by_year,
         SUM(trx_count)::INT,
-        AVG(avg_trx)::INT,
+        SUM(count_blocks)::INT,
         MIN(min_trx)::INT,
         MAX(max_trx)::INT,
         MAX(last_block_num) AS last_block_num
@@ -54,7 +64,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_stats(
     _from TIMESTAMP,
     _to TIMESTAMP
 )
-RETURNS SETOF hafbe_backend.transaction_stats -- noqa: LT01, CP05
+RETURNS SETOF hafbe_backend.trx_stats -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 AS
@@ -65,7 +75,7 @@ BEGIN
       SELECT 
         bh.updated_at,
         bh.trx_count,
-        bh.avg_trx,
+        bh.count_blocks,
         bh.min_trx,
         bh.max_trx,
         bh.last_block_num
@@ -77,7 +87,7 @@ BEGIN
       SELECT 
         bh.updated_at,
         bh.trx_count,
-        bh.avg_trx,
+        bh.count_blocks,
         bh.min_trx,
         bh.max_trx,
         bh.last_block_num
@@ -89,7 +99,7 @@ BEGIN
       SELECT 
         bh.date,
         bh.trx_count,
-        bh.avg_trx,
+        bh.count_blocks,
         bh.min_trx,
         bh.max_trx,
         bh.last_block_num
@@ -149,7 +159,7 @@ BEGIN
       SELECT 
         bh.date,
         bh.trx_count,
-        bh.avg_trx,
+        bh.count_blocks,
         bh.min_trx,
         bh.max_trx,
         bh.last_block_num
@@ -159,7 +169,7 @@ BEGIN
       SELECT 
         ds.date,
         COALESCE(bh.trx_count,0) AS trx_count,
-        COALESCE(bh.avg_trx,0) AS avg_trx,
+        COALESCE(bh.count_blocks,0) AS count_blocks,
         COALESCE(bh.min_trx,0) AS min_trx,
         COALESCE(bh.max_trx,0) AS max_trx,
         COALESCE(bh.last_block_num,NULL) AS last_block_num
@@ -170,7 +180,7 @@ BEGIN
       SELECT
         fb.date,
         fb.trx_count,
-        fb.avg_trx,
+        fb.count_blocks,
         fb.min_trx,
         fb.max_trx,
         COALESCE(fb.last_block_num, jl.last_block_num) AS last_block_num
@@ -187,7 +197,7 @@ BEGIN
     SELECT 
       LEAST(fb.date + __one_period, CURRENT_TIMESTAMP)::TIMESTAMP AS adjusted_date,
       fb.trx_count::INT,
-      fb.avg_trx::INT,
+      (CASE WHEN fb.count_blocks = 0 THEN 0 ELSE (fb.trx_count / fb.count_blocks) END)::INT,
       fb.min_trx::INT,
       fb.max_trx::INT,
       fb.last_block_num::INT

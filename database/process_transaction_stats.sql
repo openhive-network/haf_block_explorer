@@ -26,8 +26,8 @@ BEGIN
     SELECT 
       bv.num as block_num, 
       COALESCE(gt.trx_count, 0) AS trx_count, 
-      date_trunc('day',bv.created_at) as by_day, 
-      date_trunc('month',bv.created_at) as by_month
+      date_trunc('day', bv.created_at) as by_day, 
+      date_trunc('month', bv.created_at) as by_month
     FROM hafbe_app.blocks_view bv
     LEFT JOIN gather_transactions gt ON gt.block_num = bv.num
     WHERE bv.num BETWEEN _from AND _to
@@ -35,7 +35,7 @@ BEGIN
   group_by_day AS (
     SELECT 
       sum(trx_count)::INT AS sum_trx,
-      avg(trx_count)::INT AS avg_trx,
+      count(*)::INT       AS count_blocks,
       min(trx_count)::INT AS min_trx,
       max(trx_count)::INT AS max_trx,
       max(block_num)::INT AS trx_block,
@@ -47,7 +47,7 @@ BEGIN
   group_by_month AS (
     SELECT 
       sum(trx_count)::INT AS sum_trx,
-      avg(trx_count)::INT AS avg_trx,
+      count(*)::INT       AS count_blocks,
       min(trx_count)::INT AS min_trx,
       max(trx_count)::INT AS max_trx,
       max(block_num)::INT AS trx_block,
@@ -58,10 +58,10 @@ BEGIN
   ),
   insert_trx_stats_by_day AS (
     INSERT INTO hafbe_app.transaction_stats_by_day AS trx_agg
-      (trx_count, avg_trx, min_trx, max_trx, last_block_num, updated_at)
+      (trx_count, count_blocks, min_trx, max_trx, last_block_num, updated_at)
     SELECT 
       sum_trx,
-      avg_trx,
+      count_blocks,
       min_trx,
       max_trx,
       trx_block,
@@ -70,7 +70,7 @@ BEGIN
     ON CONFLICT ON CONSTRAINT pk_transaction_stats_by_day DO 
     UPDATE SET 
       trx_count = trx_agg.trx_count + EXCLUDED.trx_count,
-      avg_trx = ((EXCLUDED.avg_trx + trx_agg.avg_trx) / 2)::INT,
+      count_blocks = EXCLUDED.count_blocks + trx_agg.count_blocks,
       min_trx = LEAST(EXCLUDED.min_trx, trx_agg.min_trx)::INT,
       max_trx = GREATEST(EXCLUDED.max_trx, trx_agg.max_trx)::INT,
       last_block_num = EXCLUDED.last_block_num
@@ -78,10 +78,10 @@ BEGIN
   ),
   insert_trx_stats_by_month AS (
     INSERT INTO hafbe_app.transaction_stats_by_month AS trx_agg
-      (trx_count, avg_trx, min_trx, max_trx, last_block_num, updated_at)
+      (trx_count, count_blocks, min_trx, max_trx, last_block_num, updated_at)
     SELECT 
       sum_trx,
-      avg_trx,
+      count_blocks,
       min_trx,
       max_trx,
       trx_block,
@@ -90,7 +90,7 @@ BEGIN
     ON CONFLICT ON CONSTRAINT pk_transaction_stats_by_month DO 
     UPDATE SET 
       trx_count = trx_agg.trx_count + EXCLUDED.trx_count,
-      avg_trx = ((EXCLUDED.avg_trx + trx_agg.avg_trx) / 2)::INT,
+      count_blocks = EXCLUDED.count_blocks + trx_agg.count_blocks,
       min_trx = LEAST(EXCLUDED.min_trx, trx_agg.min_trx)::INT,
       max_trx = GREATEST(EXCLUDED.max_trx, trx_agg.max_trx)::INT,
       last_block_num = EXCLUDED.last_block_num
