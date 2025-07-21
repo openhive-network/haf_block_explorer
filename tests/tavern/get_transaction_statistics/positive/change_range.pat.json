@@ -50,7 +50,7 @@
   {
     "date": "2016-09-10T00:00:00",
     "trx_count": 83659,
-    "avg_trx": 3,
+    "avg_trx": 2,
     "min_trx": 0,
     "max_trx": 25,
     "last_block_num": 4833139
@@ -122,7 +122,7 @@
   {
     "date": "2016-09-01T00:00:00",
     "trx_count": 84881,
-    "avg_trx": 3,
+    "avg_trx": 2,
     "min_trx": 0,
     "max_trx": 21,
     "last_block_num": 4574687
@@ -146,7 +146,7 @@
   {
     "date": "2016-08-29T00:00:00",
     "trx_count": 84524,
-    "avg_trx": 3,
+    "avg_trx": 2,
     "min_trx": 0,
     "max_trx": 19,
     "last_block_num": 4488510
@@ -242,7 +242,7 @@
   {
     "date": "2016-08-17T00:00:00",
     "trx_count": 96987,
-    "avg_trx": 4,
+    "avg_trx": 3,
     "min_trx": 0,
     "max_trx": 19,
     "last_block_num": 4145711
@@ -258,7 +258,7 @@
   {
     "date": "2016-08-15T00:00:00",
     "trx_count": 85477,
-    "avg_trx": 3,
+    "avg_trx": 2,
     "min_trx": 0,
     "max_trx": 23,
     "last_block_num": 4088397

@@ -34,7 +34,7 @@
   {
     "date": "2016-08-01T00:00:00",
     "trx_count": 2194211,
-    "avg_trx": 3,
+    "avg_trx": 2,
     "min_trx": 0,
     "max_trx": 38,
     "last_block_num": 3687262

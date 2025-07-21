@@ -133,7 +133,7 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month
   (
     trx_count INT NOT NULL,
-    avg_trx INT NOT NULL,
+    count_blocks INT NOT NULL,
     min_trx INT NOT NULL,
     max_trx INT NOT NULL,
     last_block_num INT NOT NULL,
@@ -146,7 +146,7 @@ BEGIN
   CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day
   (
     trx_count INT NOT NULL,
-    avg_trx INT NOT NULL,
+    count_blocks INT NOT NULL,
     min_trx INT NOT NULL,
     max_trx INT NOT NULL,
     last_block_num INT NOT NULL,
