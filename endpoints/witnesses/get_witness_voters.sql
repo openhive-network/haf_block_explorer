@@ -130,7 +130,7 @@ SET jit = OFF
 AS
 $$
 DECLARE
-  _witness_id INT        := hafah_backend.get_account_id("account-name", TRUE);
+  _witness_id INT        := hafbe_backend.get_witness_id("account-name");
   _filter_account_id INT := hafah_backend.get_account_id("voter-name", FALSE);
   _ops_count INT;
   _total_pages INT;
@@ -140,7 +140,6 @@ BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_witness(_witness_id, "account-name");
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
