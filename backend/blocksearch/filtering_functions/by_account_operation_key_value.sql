@@ -153,7 +153,7 @@ BEGIN
     SELECT 
       bo.block_num,
       bo.created_at, 
-      hafbe_backend.get_account_name(bo.producer_account_id) AS producer_account,
+      hafah_backend.get_account_name(bo.producer_account_id) AS producer_account,
       hafbe_backend.get_producer_reward(bo.block_num)::TEXT AS producer_reward,
       hafbe_backend.get_trx_count(bo.block_num) AS trx_count,
       encode(bo.hash, 'hex') AS hash,
