@@ -143,27 +143,17 @@ SET plan_cache_mode = force_custom_plan -- FIXME
 AS
 $$
 DECLARE
-  _account_id INT := hafbe_backend.get_account_id("account-name");
+  _account_id INT                := hafah_backend.get_account_id("account-name", TRUE);
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
-  _head_block_num INT := (SELECT bv.num FROM hive.blocks_view bv ORDER BY bv.num DESC LIMIT 1);
-  __from INT;
-  __to INT;
+  _head_block_num INT            := hafbe_backend.get_haf_head_block();
+
+  __block_range hafbe_backend.blocksearch_filter_return;
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 100);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
-
-  IF _block_range.first_block IS NOT NULL AND _head_block_num < _block_range.first_block THEN
-    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _head_block_num);
-  END IF;
-
-  IF _account_id IS NULL THEN 
-    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
-  END IF;
-
-  IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
-    RAISE EXCEPTION 'Commentsearch indexes are not installed';
-  END IF;
+  PERFORM hafbe_exceptions.validate_comment_search_indexes();
+  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
@@ -171,17 +161,15 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_block_range.first_block, _block_range.last_block, _head_block_num);
+  __block_range := hafbe_backend.blocksearch_range(_block_range.first_block, _block_range.last_block, _head_block_num);
 
   RETURN hafbe_backend.get_comment_permlinks(
     "account-name",
     "comment-type",
     "page",
     "page-size",
-    __from,
-    __to
+    __block_range.from_block,
+    __block_range.to_block
   );
 
 END
