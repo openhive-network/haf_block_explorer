@@ -49,4 +49,3 @@ END
 $$;
 
 RESET ROLE;
-
