@@ -302,67 +302,27 @@ DECLARE
   _block_range hive.blocks_range    := hive.convert_to_blocks_range("from-block","to-block");
   _account_id INT                   := hafah_backend.get_account_id("account-name", FALSE);
   _head_block_num INT               := hafbe_backend.get_hafbe_head_block();
-  _operation_types INT[] := NULL;
-  _key_content TEXT[] := NULL;
-  _set_of_keys JSON := NULL;
-  _is_key_incorrect BOOLEAN := FALSE;
-  _invalid_key TEXT := NULL;
+  _operation_types INT[]            := hafah_backend.get_operation_types("operation-types", TRUE);
+
+  _key_content TEXT[]               := NULL;
+  _set_of_keys JSON                 := NULL;
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
   PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
-  IF "path-filter" IS NOT NULL AND "path-filter" != '{}' THEN
-    --using path-filter requires indexes on hive.operations
-    IF NOT hafbe_app.isBlockSearchIndexesCreated() THEN
-      RAISE EXCEPTION 'Block search indexes are not installed';
-    END IF;
+  IF hafah_backend.is_path_filter_not_empty("path-filter") THEN
+    -- if path-filter is not empty, validate if extra indexes are available
+    -- and if the operation type is single
+    PERFORM hafbe_exceptions.validate_block_search_indexes();
+    PERFORM hafbe_exceptions.validate_single_operation_type(_operation_types);
 
-    --ensure operation-type is provided when key-value is used
-    IF "operation-types" IS NULL THEN
-      RAISE EXCEPTION 'Operation type not specified';
-    END IF;
+    SELECT param_json::JSON, param_text::TEXT[]
+    INTO _set_of_keys, _key_content
+    FROM hafah_backend.parse_path_filters("path-filter");
 
-    --decode key-value
-    SELECT 
-      pvpf.param_json::JSON,
-      pvpf.param_text::TEXT[],
-      string_to_array("operation-types", ',')::INT[]
-    INTO _set_of_keys, _key_content, _operation_types
-    FROM hafah_backend.parse_path_filters("path-filter") pvpf;
-
-    --ensure that one operation is selected when keys are used
-    IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
-      RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
-    END IF;
-    
-    --check if provided keys are correct
-    WITH user_provided_keys AS
-    (
-      SELECT json_array_elements_text(_set_of_keys) AS given_key
-    ),
-    haf_keys AS
-    (
-      SELECT json_array_elements_text(hafah_endpoints.get_operation_keys((SELECT unnest(_operation_types)))) AS keys
-    ),
-    check_if_given_keys_are_correct AS
-    (
-      SELECT up.given_key, hk.keys IS NULL AS incorrect_key
-      FROM user_provided_keys up
-      LEFT JOIN haf_keys hk ON replace(replace(hk.keys, ' ', ''),'\','') = replace(replace(up.given_key, ' ', ''),'\','')
-    )
-    SELECT given_key, incorrect_key INTO _invalid_key, _is_key_incorrect
-    FROM check_if_given_keys_are_correct
-    WHERE incorrect_key LIMIT 1;
-    
-    IF _is_key_incorrect THEN
-      RAISE EXCEPTION 'Invalid key %', _invalid_key;
-    END IF;
-  ELSE 
-    IF "operation-types" IS NOT NULL THEN
-      _operation_types := string_to_array("operation-types", ',')::INT[];
-    END IF;
+    PERFORM hafbe_exceptions.validate_path_filter_keys(_operation_types, _set_of_keys);
   END IF;
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
