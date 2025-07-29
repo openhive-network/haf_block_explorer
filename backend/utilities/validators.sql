@@ -11,8 +11,7 @@ BEGIN
     PERFORM hafbe_exceptions.rest_raise_missing_witness(_account_name);
   END IF;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_comment_search_indexes()
 RETURNS VOID
@@ -25,8 +24,7 @@ BEGIN
     RAISE EXCEPTION 'Comment search indexes are not installed';
   END IF;
 END
-$$
-;
+$$;
 
 CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_block_num_too_high(_first_block INT, _current_block INT)
 RETURNS VOID
@@ -39,7 +37,6 @@ BEGIN
     PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_first_block::NUMERIC, _current_block);
   END IF;
 END
-$$
-;
+$$;
 
 RESET ROLE;
