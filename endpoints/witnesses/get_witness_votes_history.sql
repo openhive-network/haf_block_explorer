@@ -145,7 +145,7 @@ $$
 DECLARE 
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
-  _witness_id INT                := hafah_backend.get_account_id("account-name", TRUE);
+  _witness_id INT                := hafbe_backend.get_witness_id("account-name");
   _filter_account_id INT         := hafah_backend.get_account_id("voter-name", FALSE);
   _ops_count INT;
   _total_pages INT;
@@ -155,7 +155,6 @@ BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_witness(_witness_id, "account-name");
   PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);

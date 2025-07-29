@@ -70,11 +70,9 @@ SET jit = OFF
 AS
 $$
 DECLARE
-  _witness_id INT := hafah_backend.get_account_id("account-name", TRUE);
+  _witness_id INT := hafbe_backend.get_witness_id("account-name");
   _result hafbe_types.witness;
 BEGIN
-  PERFORM hafbe_exceptions.validate_witness(_witness_id, "account-name");
-
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   RETURN hafbe_backend.get_witness(_witness_id);
