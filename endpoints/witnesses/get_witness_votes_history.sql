@@ -144,52 +144,26 @@ AS
 $$
 DECLARE 
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
-  _hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  _witness_id INT = hafbe_backend.get_account_id("account-name");
-  _filter_account_id INT = hafbe_backend.get_account_id("voter-name");
+  _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
+  _witness_id INT                := hafah_backend.get_account_id("account-name", TRUE);
+  _filter_account_id INT         := hafah_backend.get_account_id("voter-name", FALSE);
   _ops_count INT;
-  __total_pages INT;
+  _total_pages INT;
 
   _result hafbe_types.witness_votes_history_record[];
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
   PERFORM hafbe_exceptions.validate_negative_limit("page-size");
   PERFORM hafbe_exceptions.validate_negative_page("page");
-
-  IF _block_range.first_block IS NOT NULL AND _hafbe_current_block < _block_range.first_block THEN
-    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_block_range.first_block::NUMERIC, _hafbe_current_block);
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses WHERE witness_id = _witness_id) THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_witness("account-name");
-  END IF;
-
-  IF "voter-name" IS NOT NULL AND _filter_account_id IS NULL THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_account("voter-name");
-  END IF;
+  PERFORM hafbe_exceptions.validate_witness(_witness_id, "account-name");
+  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _ops_count := (
-    SELECT COUNT(*) 
-    FROM hafbe_app.witness_votes_history 
-    WHERE 
-      witness_id = _witness_id AND
-      (_block_range.first_block IS NULL OR source_op_block >= _block_range.first_block) AND
-      (_block_range.last_block IS NULL OR source_op_block <= _block_range.last_block) AND
-      (_filter_account_id IS NULL OR voter_id = _filter_account_id)
-  );
+  _ops_count   := hafbe_backend.get_witness_votes_history_count(_witness_id, _filter_account_id, _block_range);
+  _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-  __total_pages := (
-    CASE 
-      WHEN (_ops_count % "page-size") = 0 THEN 
-        _ops_count/"page-size" 
-      ELSE 
-        (_ops_count/"page-size") + 1
-    END
-  );
-
-  PERFORM hafbe_exceptions.validate_page("page", __total_pages);
+  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -212,7 +186,7 @@ BEGIN
 
   RETURN (
     COALESCE(_ops_count,0),
-    COALESCE(__total_pages,0),
+    COALESCE(_total_pages,0),
     COALESCE(_result, '{}'::hafbe_types.witness_votes_history_record[])
   )::hafbe_types.witness_votes_history;
 

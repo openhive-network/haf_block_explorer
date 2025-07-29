@@ -155,7 +155,7 @@ AS
 $$
 DECLARE
   _ops_count INT;
-  __total_pages INT;
+  _total_pages INT;
   _result hafbe_types.witness[];
 BEGIN
   PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
@@ -164,21 +164,10 @@ BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _ops_count := (
-    SELECT COUNT(*)
-    FROM hafbe_app.current_witnesses
-  );
+  _ops_count   := hafbe_backend.get_witnesses_count();
+  _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-  __total_pages := (
-    CASE 
-      WHEN (_ops_count % "page-size") = 0 THEN 
-        _ops_count/"page-size" 
-      ELSE 
-        (_ops_count/"page-size") + 1
-    END
-  );
-
-  PERFORM hafbe_exceptions.validate_page("page", __total_pages);
+  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -209,7 +198,7 @@ BEGIN
 
   RETURN (
     COALESCE(_ops_count,0),
-    COALESCE(__total_pages,0),
+    COALESCE(_total_pages,0),
     COALESCE(_result, '{}'::hafbe_types.witness[])
   )::hafbe_types.witnesses_return;
 

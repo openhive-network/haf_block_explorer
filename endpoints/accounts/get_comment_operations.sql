@@ -173,86 +173,55 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  _account_id INT := hafbe_backend.get_account_id("account-name");
-  allowed_ids INT[] := ARRAY[0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73];
-  _operation_types INT[];
-  __total_pages INT;
+  _account_id INT        := hafah_backend.get_account_id("account-name", TRUE);
+  _operation_types INT[] := hafbe_backend.get_comment_history_operation_types("operation-types");
+  _total_pages INT;
   _ops_count INT;
 
   _result hafbe_types.operation[];
 BEGIN
+  PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
+  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
+  PERFORM hafbe_exceptions.validate_negative_page("page");
+  PERFORM hafbe_exceptions.validate_comment_search_indexes();
 
-PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
-PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-PERFORM hafbe_exceptions.validate_negative_page("page");
+  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-IF _account_id IS NULL THEN 
-  PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
-END IF;
+  _ops_count   := hafbe_backend.get_comment_operations_count("account-name", "permlink", _operation_types);
+  _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-IF NOT hafbe_app.isCommentSearchIndexesCreated() THEN
-  RAISE EXCEPTION 'Comment search indexes are not installed';
-END IF;
+  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
 
-IF "operation-types" IS NULL THEN
-  "operation-types" := '0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73'::TEXT;
-END IF;
+  _result := array_agg(row ORDER BY
+      (CASE WHEN "direction" = 'desc' THEN row.operation_id::BIGINT ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc' THEN row.operation_id::BIGINT ELSE NULL END) ASC
+    ) FROM (
+      SELECT 
+        ba.op,
+        ba.block,
+        ba.trx_id,
+        ba.op_pos,
+        ba.op_type_id,
+        ba.timestamp,
+        ba.virtual_op,
+        ba.operation_id,
+        ba.trx_in_block
+      FROM hafbe_backend.get_comment_operations(
+        "account-name",
+        "permlink",
+        _operation_types,
+        "page",
+        "page-size",
+        "direction",
+        "data-size-limit"
+        ) ba
+  ) row;
 
-_operation_types := (SELECT string_to_array("operation-types", ',')::INT[]);
-
-IF NOT _operation_types <@ allowed_ids THEN
-  RAISE EXCEPTION 'Invalid operation ID detected. Allowed IDs are: %', allowed_ids;
-END IF;
-
-PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-
-_ops_count := hafbe_backend.get_comment_operations_count(
-  "account-name",
-  "permlink",
-  _operation_types
-);
-
-__total_pages := (
-  CASE 
-    WHEN (_ops_count % "page-size") = 0 THEN 
-      _ops_count/"page-size" 
-    ELSE 
-      (_ops_count/"page-size") + 1
-  END
-);
-
-PERFORM hafbe_exceptions.validate_page("page", __total_pages);
-
-_result := array_agg(row ORDER BY
-    (CASE WHEN "direction" = 'desc' THEN row.operation_id::BIGINT ELSE NULL END) DESC,
-    (CASE WHEN "direction" = 'asc' THEN row.operation_id::BIGINT ELSE NULL END) ASC
-  ) FROM (
-    SELECT 
-      ba.op,
-      ba.block,
-      ba.trx_id,
-      ba.op_pos,
-      ba.op_type_id,
-      ba.timestamp,
-      ba.virtual_op,
-      ba.operation_id,
-      ba.trx_in_block
-    FROM hafbe_backend.get_comment_operations(
-      "account-name",
-      "permlink",
-      _operation_types,
-      "page",
-      "page-size",
-      "direction",
-      "data-size-limit"
-      ) ba
-) row;
-
-RETURN (
-  COALESCE(_ops_count,0),
-  COALESCE(__total_pages,0),
-  COALESCE(_result, '{}'::hafbe_types.operation[])
-)::hafbe_types.operation_history;
+  RETURN (
+    COALESCE(_ops_count,0),
+    COALESCE(_total_pages,0),
+    COALESCE(_result, '{}'::hafbe_types.operation[])
+  )::hafbe_types.operation_history;
 
 END
 $$;

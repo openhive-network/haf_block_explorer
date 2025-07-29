@@ -109,14 +109,11 @@ DECLARE
   __json_metadata JSON;
   __posting_json_metadata JSON;
   __profile_image TEXT;
-  _account_id INT = hafbe_backend.get_account_id("account-name");
+  
+  _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
 BEGIN
   -- 2s because this endpoint result is live account parameters and balances 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
-
-  IF _account_id IS NULL THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
-  END IF;
 
   RETURN (
       --general
