@@ -454,19 +454,37 @@ declare
           }
         }
       },
+      "hafbe_types.auth_with_weight": {
+        "type": "array",
+        "x-sql-datatype": "JSON",
+        "items": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
       "hafbe_types.authority_type": {
         "type": "object",
         "properties": {
           "key_auths": {
             "type": "array",
+            "x-sql-datatype": "JSON",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/hafbe_types.auth_with_weight"
             }
           },
           "account_auths": {
             "type": "array",
+            "x-sql-datatype": "JSON",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/hafbe_types.auth_with_weight"
             }
           },
           "weight_threshold": {
@@ -625,8 +643,7 @@ declare
             "description": "creation date"
           },
           "operation_id": {
-            "type": "integer",
-            "x-sql-datatype": "TEXT",
+            "type": "string",
             "description": "unique operation identifier with an encoded block number and operation type id"
           }
         }
@@ -1413,7 +1430,7 @@ declare
                     "key_auths": [
                       [
                         "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
-                        "1"
+                        1
                       ]
                     ],
                     "account_auths": [],
@@ -1423,7 +1440,7 @@ declare
                     "key_auths": [
                       [
                         "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
-                        "1"
+                        1
                       ]
                     ],
                     "account_auths": [],
@@ -1433,7 +1450,7 @@ declare
                     "key_auths": [
                       [
                         "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
-                        "1"
+                        1
                       ]
                     ],
                     "account_auths": [],
