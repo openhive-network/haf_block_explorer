@@ -22,6 +22,7 @@ DEFAULT_TYPES="
 ../$types/witnesses/witness_votes_history_record.sql
 ../$types/accounts/account.sql
 ../$types/accounts/account_authority.sql
+../$types/accounts/proxy_power.sql
 ../$types/blocks/blocksearch.sql
 ../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
@@ -39,6 +40,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/witnesses/get_witness_votes_history.sql
 ../$endpoints/accounts/get_account.sql
 ../$endpoints/accounts/get_account_authority.sql
+../$endpoints/accounts/get_account_proxies_power.sql
 ../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/block-search/get_block_by_op.sql
