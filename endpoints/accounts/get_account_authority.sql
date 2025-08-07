@@ -37,7 +37,7 @@ SET ROLE hafbe_owner;
                 "key_auths": [
                   [
                     "STM7WdrxF6iuSiHUB4maoLGXXBKXbqAJ9AZbzACX1MPK2AkuCh23S",
-                    "1"
+                    1
                   ]
                 ],
                 "account_auths": [],
@@ -47,7 +47,7 @@ SET ROLE hafbe_owner;
                 "key_auths": [
                   [
                     "STM5vgGoHBrUuDCspAPYi3dLwSyistyrz61NWkZNUAXAifZJaDLPF",
-                    "1"
+                    1
                   ]
                 ],
                 "account_auths": [],
@@ -57,7 +57,7 @@ SET ROLE hafbe_owner;
                 "key_auths": [
                   [
                     "STM5SaNVKJgy6ghnkNoMAprTxSDG55zps21Bo8qe1rnHmwAR4LzzC",
-                    "1"
+                    1
                   ]
                 ],
                 "account_auths": [],
@@ -92,7 +92,7 @@ BEGIN
   RETURN (
     hafbe_backend.get_account_authority(_account_id, 'OWNER'),
     hafbe_backend.get_account_authority(_account_id, 'ACTIVE'),
-    hafbe_backend.get_account_authority(_account_id, 'POSTING'),   
+    hafbe_backend.get_account_authority(_account_id, 'POSTING'),
     hafbe_backend.get_account_memo(_account_id),
     hafbe_backend.get_account_witness_signing(_account_id)
   )::hafbe_types.account_authority;

@@ -1,5 +1,19 @@
 SET ROLE hafbe_owner;
 
+CREATE OR REPLACE FUNCTION hafbe_backend.create_authority_object(
+    _key TEXT,
+    _weight INT
+)
+RETURNS JSON -- noqa: LT01, CP05
+LANGUAGE 'plpgsql'
+IMMUTABLE
+AS
+$$
+BEGIN
+  RETURN ('[' || _weight || ',' || '"' || _key || '"' || ']')::JSON;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
     _account_id INT,
     _key_kind hafd.key_type -- noqa: LT01, CP05
@@ -16,43 +30,55 @@ DECLARE
   _result hafbe_types.authority_type;
 BEGIN
 RETURN (
-  WITH get_key_auth AS 
+  WITH get_key_auth AS
   (
-    SELECT ARRAY[hive.public_key_to_string(keys.key), active_key_auths.w::TEXT] as key_auth
+    SELECT hafbe_backend.create_authority_object(
+      hive.public_key_to_string(keys.key),
+      active_key_auths.w
+    ) as key_auth
     FROM hafd.hafbe_app_keyauth_a active_key_auths
     JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-    WHERE active_key_auths.account_id = _account_id 
-    AND active_key_auths.key_kind = _key_kind
-    AND (active_key_auths.key_kind != 'MEMO' OR active_key_auths.key_kind != 'WITNESS_SIGNING')
+    WHERE
+      active_key_auths.account_id = _account_id
+      AND active_key_auths.key_kind = _key_kind
+      AND (
+        active_key_auths.key_kind != 'MEMO' 
+        OR active_key_auths.key_kind != 'WITNESS_SIGNING'
+      )
     ORDER BY hive.public_key_to_string(keys.key)
   ),
-  get_account_auth AS 
+  get_account_auth AS
   (
-    SELECT ARRAY[av.name, active_account_auths.w::TEXT] AS key_auth
+    SELECT hafbe_backend.create_authority_object(
+      av.name,
+      active_account_auths.w
+    ) AS key_auth
     FROM hafd.hafbe_app_accountauth_a active_account_auths
     JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
-    WHERE active_account_auths.account_id = _account_id
-    AND active_account_auths.key_kind = _key_kind
+    WHERE
+      active_account_auths.account_id = _account_id
+      AND active_account_auths.key_kind = _key_kind
     ORDER BY av.name
   ),
-  get_weight_threshold AS 
+  get_weight_threshold AS
   (
     SELECT wt.weight_threshold
     FROM hafd.hafbe_app_authority_definition wt
-    WHERE wt.account_id = _account_id
-    AND wt.key_kind = _key_kind
+    WHERE
+      wt.account_id = _account_id
+      AND wt.key_kind = _key_kind
   )
   SELECT ROW(
       COALESCE(
         (
-          SELECT array_agg(gka.key_auth) AS key_auth
+          SELECT json_agg(gka.key_auth) AS key_auth
           FROM get_key_auth gka
-        ), '{}')::TEXT[],
+        ), '{}')::JSON,
       COALESCE(
         (
-          SELECT array_agg(gaa.key_auth) 
-          FROM get_account_auth gaa 
-        ), '{}')::TEXT[],
+          SELECT json_agg(gaa.key_auth)
+          FROM get_account_auth gaa
+        ), '{}')::JSON,
       COALESCE(
         (
           SELECT wt.weight_threshold FROM get_weight_threshold wt
