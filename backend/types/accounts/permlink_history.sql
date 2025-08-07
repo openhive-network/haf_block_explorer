@@ -19,8 +19,7 @@ hafbe_types.permlink:
       format: date-time
       description: creation date
     operation_id:
-      type: integer
-      x-sql-datatype: TEXT
+      type: string
       description: >-
         unique operation identifier with
         an encoded block number and operation type id
