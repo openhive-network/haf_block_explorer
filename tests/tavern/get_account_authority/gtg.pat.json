@@ -2,8 +2,8 @@
   "owner": {
     "key_auths": [
       [
-        "STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh",
-        "1"
+        1,
+        "STM5RLQ1Jh8Kf56go3xpzoodg4vRsgCeWhANXoEXrYH7bLEwSVyjh"
       ]
     ],
     "account_auths": [],
@@ -12,8 +12,8 @@
   "active": {
     "key_auths": [
       [
-        "STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX",
-        "1"
+        1,
+        "STM4vuEE8F2xyJhwiNCnHxjUVLNXxdFXtVxgghBq5LVLt49zLKLRX"
       ]
     ],
     "account_auths": [],
@@ -22,8 +22,8 @@
   "posting": {
     "key_auths": [
       [
-        "STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC",
-        "1"
+        1,
+        "STM5tp5hWbGLL1R3tMVsgYdYxLPyAQFdKoYFbT2hcWUmrU42p1MQC"
       ]
     ],
     "account_auths": [],
