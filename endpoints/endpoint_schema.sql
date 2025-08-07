@@ -499,6 +499,23 @@ declare
           }
         }
       },
+      "hafbe_types.proxy_power": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "proxy_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "proxied_vests": {
+            "type": "number",
+            "format": "double",
+            "description": "Own vesting shares plus sum of proxied vesting shares (levels 1\u20134)"
+          }
+        }
+      },
       "hafbe_types.block_range": {
         "type": "object",
         "properties": {
@@ -799,6 +816,12 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_types.transaction_stats"
+        }
+      },
+      "hafbe_types.array_of_proxy_power": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_types.proxy_power"
         }
       }
     }
@@ -1420,6 +1443,60 @@ declare
                   "memo": "STM7EAUbNf1CdTrMbydPoBTRMG4afXCoAErBJYevhgne6zEP6rVBT",
                   "witness_signing": "STM4vmVc3rErkueyWNddyGfmjmLs3Rr4i7YJi8Z7gFeWhakXM4nEz"
                 }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account in the database"
+          }
+        }
+      }
+    },
+    "/accounts/{account-name}/proxy-power": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get delegators and total vested power they contribute via witness-proxy",
+        "description": "Lists every account that has set **{account-name}** as its witness proxy,\nthe date the proxy was set, and the total vested power contributed\n(own vesting_shares plus sum of proxied vesting shares levels 1\u20134).\n\nSQL example:\n* `SELECT * FROM hafbe_endpoints.get_account_proxies_power(''gtg'', 1);`\n\nREST call example:\n* `GET ''https://%1$s/hafbe-api/accounts/gtg/proxy-power?page=1''`\n",
+        "operationId": "hafbe_endpoints.get_account_proxies_power",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account-name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name of the proxy account"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "1-based page number (100 rows per page)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of delegators and their total vested power",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_types.array_of_proxy_power"
+                },
+                "exaxmple": [
+                  {
+                    "account": "geoffrey",
+                    "proxied_vests": 30847126195440,
+                    "proxy_date": "2016-08-09T06:52:03"
+                  }
+                ]
               }
             }
           },
