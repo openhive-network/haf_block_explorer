@@ -73,12 +73,12 @@ RETURN (
         (
           SELECT json_agg(gka.key_auth) AS key_auth
           FROM get_key_auth gka
-        ), '{}')::JSON,
+        ), '[]')::JSON,
       COALESCE(
         (
           SELECT json_agg(gaa.key_auth)
           FROM get_account_auth gaa
-        ), '{}')::JSON,
+        ), '[]')::JSON,
       COALESCE(
         (
           SELECT wt.weight_threshold FROM get_weight_threshold wt

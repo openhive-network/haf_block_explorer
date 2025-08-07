@@ -22,12 +22,12 @@ hafbe_types.authority_type:
       type: array
       x-sql-datatype: JSON
       items:
-        $ref: '#/components/schemas/auth_with_weight'
+        $ref: '#/components/schemas/hafbe_types.auth_with_weight'
     account_auths:
       type: array
       x-sql-datatype: JSON
       items:
-        $ref: '#/components/schemas/auth_with_weight'
+        $ref: '#/components/schemas/hafbe_types.auth_with_weight'
     weight_threshold:
       type: integer
  */
