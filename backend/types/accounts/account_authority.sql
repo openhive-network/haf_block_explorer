@@ -3,25 +3,39 @@ SET ROLE hafbe_owner;
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_types.auth_with_weight:
+  type: array
+  x-sql-datatype: JSON
+  items:
+    anyOf:
+      - type: string
+      - type: integer
+  minItems: 2
+  maxItems: 2
+ */
+
+/** openapi:components:schemas
 hafbe_types.authority_type:
   type: object
   properties:
     key_auths:
       type: array
+      x-sql-datatype: JSON
       items:
-        type: string
+        $ref: '#/components/schemas/auth_with_weight'
     account_auths:
       type: array
+      x-sql-datatype: JSON
       items:
-        type: string
+        $ref: '#/components/schemas/auth_with_weight'
     weight_threshold:
       type: integer
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.authority_type CASCADE;
 CREATE TYPE hafbe_types.authority_type AS (
-    "key_auths" TEXT[],
-    "account_auths" TEXT[],
+    "key_auths" JSON,
+    "account_auths" JSON,
     "weight_threshold" INT
 );
 -- openapi-generated-code-end
