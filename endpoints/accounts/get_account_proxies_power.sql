@@ -75,7 +75,7 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  _account_id INT := hafbe_backend.get_account_id("account-name");
+  _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
 BEGIN
   -- validate that page ≥ 1
   PERFORM hafbe_exceptions.validate_negative_page(page);
@@ -86,11 +86,6 @@ BEGIN
     '[{"Cache-Control":"public, max-age=5"}]',
     true
   );
-
-  -- ensure account exists
-  IF _account_id IS NULL THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_account("account-name");
-  END IF;
 
   -- delegate to ID-based backend logic
   RETURN QUERY
