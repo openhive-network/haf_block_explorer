@@ -16,7 +16,7 @@ hafbe_types.array_of_proxy_power:
     description: |
       Lists every account that has set **{account-name}** as its witness proxy,
       the date the proxy was set, and the total vested power contributed
-      (own vesting_shares plus sum of proxied vesting shares levels 1–4).
+      (own vesting_shares plus sum of proxied vesting shares levels 1–4 and decreased by delayed vests).
 
       SQL example:
       * `SELECT * FROM hafbe_endpoints.get_account_proxies_power(''gtg'', 1);`
