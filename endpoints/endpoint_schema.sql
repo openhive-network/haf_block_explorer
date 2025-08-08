@@ -510,9 +510,8 @@ declare
             "format": "date-time"
           },
           "proxied_vests": {
-            "type": "number",
-            "format": "double",
-            "description": "Own vesting shares plus sum of proxied vesting shares (levels 1\u20134)"
+            "type": "string",
+            "description": "Own vesting shares plus sum of proxied vesting shares (levels 1\u20134) decreased by delayed vests"
           }
         }
       },
@@ -1458,7 +1457,7 @@ declare
           "Accounts"
         ],
         "summary": "Get delegators and total vested power they contribute via witness-proxy",
-        "description": "Lists every account that has set **{account-name}** as its witness proxy,\nthe date the proxy was set, and the total vested power contributed\n(own vesting_shares plus sum of proxied vesting shares levels 1\u20134).\n\nSQL example:\n* `SELECT * FROM hafbe_endpoints.get_account_proxies_power(''gtg'', 1);`\n\nREST call example:\n* `GET ''https://%1$s/hafbe-api/accounts/gtg/proxy-power?page=1''`\n",
+        "description": "Lists every account that has set **{account-name}** as its witness proxy,\nthe date the proxy was set, and the total vested power contributed\n(own vesting_shares plus sum of proxied vesting shares levels 1\u20134 and decreased by delayed vests).\n\nSQL example:\n* `SELECT * FROM hafbe_endpoints.get_account_proxies_power(''gtg'', 1);`\n\nREST call example:\n* `GET ''https://%1$s/hafbe-api/accounts/gtg/proxy-power?page=1''`\n",
         "operationId": "hafbe_endpoints.get_account_proxies_power",
         "parameters": [
           {
