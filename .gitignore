@@ -20,3 +20,7 @@ docker/*.env
 docker/srv
 .*
 *.out.json
+
+# Python - API package generation
+scripts/python_api_package/hafbe_api/hafbe_api_client
+scripts/python_api_package/dist

@@ -174,6 +174,34 @@ generate-wax-spec:
   tags:
   - public-runner-docker
 
+generate_python_api_client:
+  extends: .project_develop_configuration_template
+  stage: build
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+  needs:
+  - job: extract-swagger-json
+    artifacts: true
+  script:
+    - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
+  artifacts:
+    paths:
+      - "${PYPROJECT_DIR}/hafbe_api"
+      - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
+  tags:
+    - public-runner-docker
+
+build_python_api_client_wheel:
+  extends: .build_wheel_template
+  stage: build
+  needs:
+  - job: generate_python_api_client
+    artifacts: true
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+  tags:
+    - public-runner-docker
+
 sync:
   extends: .docker_image_builder_job_template
   stage: sync
@@ -293,6 +321,19 @@ sync:
     PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
     PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, reptracker_app
     HEALTHCHECK_TCP_PORT: 3000
+
+python_api_client_test:
+  extends: .project_develop_configuration_template
+  stage: test
+  needs:
+    - job: generate_python_api_client
+      artifacts: true
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+  script:
+    - pytest "${PYPROJECT_DIR}/tests"
+  tags:
+    - public-runner-docker
 
 regression-test:
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
@@ -434,6 +475,21 @@ build_and_publish_image:
   tags:
   - public-runner-docker
   - hived-for-tests
+
+deploy_python_api_packages_to_gitlab:
+  stage: publish
+  needs:
+    - job: build_python_api_client_wheel
+      artifacts: true
+    - job: generate_python_api_client
+      artifacts: true
+    - job: python_api_client_test
+  extends: .deploy_wheel_to_gitlab_template
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+  when: on_success
+  tags:
+    - public-runner-docker
 
 deploy-wax-spec-dev-package:
   extends: .npm_deploy_package_template
