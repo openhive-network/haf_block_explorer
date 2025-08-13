@@ -49,7 +49,7 @@ BEGIN
     WITH votes AS (
       SELECT 
         av.name AS vote
-      FROM hafbe_app.current_witness_votes cwvv
+      FROM hafbe_backend.current_witness_votes_view cwvv
       JOIN hive.accounts_view av ON av.id = cwvv.witness_id
       WHERE cwvv.voter_id = _account
     )
@@ -117,7 +117,7 @@ $$
 BEGIN
   RETURN 
     (SELECT av.name FROM hive.accounts_view av WHERE av.id = cap.proxy_id)
-  FROM hafbe_app.current_account_proxies cap
+  FROM hafbe_backend.current_account_proxies_view cap
   WHERE cap.account_id = _account;
 END
 $$;

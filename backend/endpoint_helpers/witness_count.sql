@@ -10,7 +10,7 @@ AS
 $$
 BEGIN
   RETURN COUNT(*) 
-  FROM hafbe_app.current_witness_votes 
+  FROM hafbe_backend.current_witness_votes_view 
   WHERE 
     witness_id = _witness_id AND
     (_filter_account_id IS NULL OR voter_id = _filter_account_id);
@@ -28,7 +28,7 @@ AS
 $$
 BEGIN
   RETURN COUNT(*) 
-  FROM hafbe_app.witness_votes_history 
+  FROM hafbe_backend.witness_votes_history_view 
   WHERE 
     witness_id = _witness_id AND
     (_block_range.first_block IS NULL OR source_op_block >= _block_range.first_block) AND

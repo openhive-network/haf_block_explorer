@@ -94,8 +94,8 @@ BEGIN
         cap.account_id,
         cap.source_op,
         -- block number extracted from operation id - the block_num column will be removed
-        hafd.operation_id_to_block_num(cap.source_op) AS source_op_block
-      FROM hafbe_app.current_account_proxies cap
+        cap.source_op_block
+      FROM hafbe_backend.current_account_proxies_view cap
       WHERE cap.proxy_id = _account_id
       ORDER BY cap.source_op DESC
       -- always calculate pages first before any joins if it is possible
