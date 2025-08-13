@@ -27,7 +27,7 @@ BEGIN
         avs.account_vests,
         avs.proxied_vests,
         bv.created_at
-      FROM hafbe_app.current_witness_votes cwv
+      FROM hafbe_backend.current_witness_votes_view cwv
       JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
       JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block
       JOIN hive.accounts_view av ON av.id = cwv.voter_id
@@ -92,7 +92,7 @@ BEGIN
         avs.proxied_vests,
         cwv.source_op_block,
         bv.created_at
-      FROM hafbe_app.witness_votes_history cwv
+      FROM hafbe_backend.witness_votes_history_view cwv
       -- this table holds vest stats for CURRENT voters (if a voter took out his vote and never voted again, his stats are not available in this table)
       LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
       JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block

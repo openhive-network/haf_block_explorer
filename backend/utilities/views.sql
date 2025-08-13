@@ -142,8 +142,51 @@ CREATE OR REPLACE VIEW hafbe_backend.time_logs_view AS
   	(time_json->>'state_provider')::NUMERIC AS state_provider
   FROM
     hafbe_app.sync_time_logs;
-    
+
 ------
+
+-- Views for endpoints
+CREATE OR REPLACE VIEW hafbe_backend.witness_votes_history_view AS
+  SELECT
+    t.witness_id,
+    t.voter_id,
+    t.approve,
+    t.source_op,
+    -- since extra column was removed, extract the block number from the operation ID
+    hafd.operation_id_to_block_num( t.source_op ) AS source_op_block,
+    hafd.operation_id_to_type_id( t.source_op ) AS op_type_id
+  FROM hafbe_app.witness_votes_history t;
+
+CREATE OR REPLACE VIEW hafbe_backend.current_witness_votes_view AS
+  SELECT
+    t.voter_id,
+    t.witness_id,
+    t.source_op,
+    -- since extra column was removed, extract the block number from the operation ID
+    hafd.operation_id_to_block_num( t.source_op ) AS source_op_block,
+    hafd.operation_id_to_type_id( t.source_op ) AS op_type_id
+  FROM hafbe_app.current_witness_votes t;
+
+CREATE OR REPLACE VIEW hafbe_backend.account_proxies_history_view AS
+  SELECT
+    t.account_id,
+    t.proxy_id,
+    t.proxy,
+    t.source_op,
+    -- since extra column was removed, extract the block number from the operation ID
+    hafd.operation_id_to_block_num( t.source_op ) AS source_op_block,
+    hafd.operation_id_to_type_id( t.source_op ) AS op_type_id
+  FROM hafbe_app.account_proxies_history t;
+
+CREATE OR REPLACE VIEW hafbe_backend.current_account_proxies_view AS
+  SELECT
+    t.account_id,
+    t.proxy_id,
+    t.source_op,
+    -- since extra column was removed, extract the block number from the operation ID
+    hafd.operation_id_to_block_num( t.source_op ) AS source_op_block,
+    hafd.operation_id_to_type_id( t.source_op ) AS op_type_id
+  FROM hafbe_app.current_account_proxies t;
 
 
 RESET ROLE;

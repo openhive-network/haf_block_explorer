@@ -92,8 +92,7 @@ BEGIN
     witness_id INT NOT NULL,
     voter_id INT NOT NULL,
     approve BOOLEAN NOT NULL,
-    source_op BIGINT NOT NULL,
-    source_op_block INT NOT NULL
+    source_op BIGINT NOT NULL
 
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'witness_votes_history', 'hafbe_app' );
@@ -102,7 +101,6 @@ BEGIN
     voter_id INT NOT NULL,
     witness_id INT NOT NULL,
     source_op BIGINT NOT NULL,
-    source_op_block INT NOT NULL,
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
   );
@@ -112,8 +110,7 @@ BEGIN
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
     proxy BOOLEAN NOT NULL,
-    source_op BIGINT NOT NULL,
-    source_op_block INT NOT NULL
+    source_op BIGINT NOT NULL
 
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'account_proxies_history', 'hafbe_app' );
@@ -122,7 +119,6 @@ BEGIN
     account_id INT NOT NULL,
     proxy_id INT NOT NULL,
     source_op BIGINT NOT NULL,
-    source_op_block INT NOT NULL,
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   );

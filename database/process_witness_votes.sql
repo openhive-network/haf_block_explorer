@@ -37,7 +37,7 @@ BEGIN
   balance_change AS (
     SELECT
       bc.id,
-      hafbe_backend.process_votes_and_proxies(bc.body, bc.op_type, bc.id, bc.block_num) AS result
+      hafbe_backend.process_votes_and_proxies(bc.body, bc.op_type, bc.id) AS result
     FROM proxy_ops bc
     ORDER BY bc.id
   )
@@ -76,7 +76,7 @@ BEGIN
       cwv.witness_id, 
       SUM(avs.vests)::BIGINT,
       COUNT(*)
-    FROM hafbe_app.current_witness_votes cwv
+    FROM hafbe_backend.current_witness_votes_view cwv
     JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
     GROUP BY cwv.witness_id;
 --------------------------------------------------------
@@ -96,7 +96,7 @@ BEGIN
       wvhc.witness_id,
       SUM(CASE WHEN wvhc.approve THEN avs.vests ELSE -1 * (avs.vests) END)::BIGINT,
       SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT
-    FROM hafbe_app.witness_votes_history wvhc
+    FROM hafbe_backend.witness_votes_history_view wvhc
     JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = wvhc.voter_id
     WHERE wvhc.source_op_block >= _first_block_num
     GROUP BY wvhc.witness_id;

@@ -53,7 +53,7 @@ BEGIN
   RETURN COALESCE(
     (
       SELECT COUNT(*) 
-      FROM hafbe_app.current_witness_votes 
+      FROM hafbe_backend.current_witness_votes_view 
       WHERE witness_id = _witness_id
     ), 0
   );
