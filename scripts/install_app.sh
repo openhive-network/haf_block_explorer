@@ -25,6 +25,7 @@ cat <<EOF
     --schema-only                     Only creates schema, but not indexes (ignored when --only-apps is specified)
     --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
     --swagger-url=URL        Allows to specify a server URL
+    --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
 
 EOF
 }
@@ -32,6 +33,8 @@ EOF
 ONLY_APPS=0
 ONLY_HAFBE=0
 POSTGRES_APP_NAME=block_explorer_install
+
+IS_FORKING=${IS_FORKING:-"true"}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -53,6 +56,9 @@ while [ $# -gt 0 ]; do
     --swagger-url=*)
         SWAGGER_URL="${1#*=}"
         ;;
+  --is_forking=*)
+    IS_FORKING="${1#*=}"
+    ;;
     --help|-h|-\?)
         print_help
         exit 0
@@ -130,7 +136,7 @@ setup_api() {
   # setup db schema
 
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/builtin_roles.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/database_schema.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET custom.is_forking = '$IS_FORKING';" -f "$db_dir/database_schema.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes/hafbe_app_indexes.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/main_loop.sql"
