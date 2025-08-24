@@ -32,10 +32,10 @@ BEGIN
   synchronization_stages := ARRAY[hive.stage( 'MASSIVE_PROCESSING', 101, 10000, '20 seconds' ), hive.live_stage()]::hive.application_stages;
 
   PERFORM hive.app_create_context(
-    _name =>'hafbe_app',
-    _schema => 'hafbe_app',
-    _is_forking => TRUE,
-    _stages => synchronization_stages
+     _name =>'hafbe_app',
+     _schema => 'hafbe_app',
+     _is_forking => current_setting('custom.is_forking')::BOOLEAN,
+     _stages => synchronization_stages
   );
 
   END IF;
