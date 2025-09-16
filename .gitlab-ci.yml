@@ -25,7 +25,7 @@ variables:
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 - project: hive/haf
-  ref: b077291d37d71d482fd22fa68ab23c905a5c0912   # develop
+  ref: d4bca1524076323418802ea33995d8f7948b929c   # develop
   file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Haf/Hive repos
 
@@ -166,6 +166,7 @@ generate-wax-spec:
   stage: build
   variables:
     INPUT_JSON_SWAGGER_FILE: "${BUILT_JSON_SWAGGER_FILE}"
+    API_TYPE: "rest"
     NPM_PACKAGE_SCOPE: "@hiveio"
     NPM_PACKAGE_NAME: "wax-api-hafbe"
   needs:
@@ -183,13 +184,13 @@ generate_python_api_client:
   - job: extract-swagger-json
     artifacts: true
   script:
-    - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
+  - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
   artifacts:
     paths:
-      - "${PYPROJECT_DIR}/hafbe_api"
-      - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
+    - "${PYPROJECT_DIR}/hafbe_api"
+    - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 build_python_api_client_wheel:
   extends: .build_wheel_template
@@ -200,7 +201,7 @@ build_python_api_client_wheel:
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 sync:
   extends: .docker_image_builder_job_template
@@ -326,14 +327,14 @@ python_api_client_test:
   extends: .project_develop_configuration_template
   stage: test
   needs:
-    - job: generate_python_api_client
-      artifacts: true
+  - job: generate_python_api_client
+    artifacts: true
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
   script:
-    - pytest "${PYPROJECT_DIR}/tests"
+  - pytest "${PYPROJECT_DIR}/tests"
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 regression-test:
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
@@ -479,17 +480,17 @@ build_and_publish_image:
 deploy_python_api_packages_to_gitlab:
   stage: publish
   needs:
-    - job: build_python_api_client_wheel
-      artifacts: true
-    - job: generate_python_api_client
-      artifacts: true
-    - job: python_api_client_test
+  - job: build_python_api_client_wheel
+    artifacts: true
+  - job: generate_python_api_client
+    artifacts: true
+  - job: python_api_client_test
   extends: .deploy_wheel_to_gitlab_template
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
   when: on_success
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 deploy-wax-spec-dev-package:
   extends: .npm_deploy_package_template
