@@ -8,7 +8,7 @@ STABLE
 AS
 $$
 DECLARE
-  __max_page_size INT := 100; -- max page size for pagination
+  __max_page_size INT := 1000; -- max page size for pagination
 BEGIN
 
   /*
