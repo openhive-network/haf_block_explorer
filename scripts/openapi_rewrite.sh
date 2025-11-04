@@ -49,7 +49,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql
-../$endpoints/other/get_latest_blocks.sql"
+../$endpoints/other/get_latest_blocks.sql
 ../$endpoints/other/get_total_value_locked.sql"
 
 # Function to reverse the lines
