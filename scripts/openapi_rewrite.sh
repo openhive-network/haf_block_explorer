@@ -27,6 +27,7 @@ DEFAULT_TYPES="
 ../$types/accounts/permlink_history.sql
 ../$types/blocks/latest_blocks.sql
 ../$types/other/input_type.sql
+../$types/other/total_value_locked.sql
 ../$types/operations/operation.sql
 ../$types/transactions/granularity.sql
 ../$types/transactions/transaction_stats.sql"
@@ -49,6 +50,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql
 ../$endpoints/other/get_latest_blocks.sql"
+../$endpoints/other/get_total_value_locked.sql"
 
 # Function to reverse the lines
 reverse_lines() {
