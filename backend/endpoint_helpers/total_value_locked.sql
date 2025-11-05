@@ -34,8 +34,8 @@ BEGIN
 
   -- Savings HIVE & HBD from hafbe_bal.account_savings
   SELECT
-    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HIVE THEN asv.saving_balance ELSE 0 END), 0)::BIGINT,
-    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HBD  THEN asv.saving_balance ELSE 0 END), 0)::BIGINT
+    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HIVE THEN asv.balance ELSE 0 END), 0)::BIGINT,
+    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HBD  THEN asv.balance ELSE 0 END), 0)::BIGINT
   INTO
     _sum_sav_hive,
     _sum_sav_hbd
