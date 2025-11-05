@@ -26,10 +26,6 @@ BEGIN
   ORDER  BY bv.num DESC
   LIMIT  1;
 
-  IF _head_block IS NULL THEN
-    RAISE EXCEPTION 'No blocks in database';
-  END IF;
-
   -- VESTS from hafbe_bal.current_account_balances
   SELECT COALESCE(SUM(cab.balance), 0)::BIGINT
   INTO   _sum_vests
@@ -38,8 +34,8 @@ BEGIN
 
   -- Savings HIVE & HBD from hafbe_bal.account_savings
   SELECT
-    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HIVE THEN asv.balance  ELSE 0 END), 0)::BIGINT,
-    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HBD  THEN asv.balance  ELSE 0 END), 0)::BIGINT
+    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HIVE THEN asv.saving_balance ELSE 0 END), 0)::BIGINT,
+    COALESCE(SUM(CASE WHEN asv.nai = _NAI_HBD  THEN asv.saving_balance ELSE 0 END), 0)::BIGINT
   INTO
     _sum_sav_hive,
     _sum_sav_hbd

@@ -714,6 +714,30 @@ declare
           }
         }
       },
+      "hafbe_types.total_value_locked": {
+        "type": "object",
+        "properties": {
+          "block_num": {
+            "type": "integer",
+            "description": "Head block number at which the snapshot was computed"
+          },
+          "total_vests": {
+            "type": "integer",
+            "x-sql-datatype": "BIGINT",
+            "description": "Global sum of VESTS from hafbe_bal.current_account_balances (nai=37)"
+          },
+          "savings_hive": {
+            "type": "integer",
+            "x-sql-datatype": "BIGINT",
+            "description": "Total number of HIVE in savings from hafbe_bal.account_savings (nai=21)"
+          },
+          "savings_hbd": {
+            "type": "integer",
+            "x-sql-datatype": "BIGINT",
+            "description": "Total number of HIVE backed dollars the chain has in savings (hafbe_bal.account_savings nai=13)"
+          }
+        }
+      },
       "hafbe_types.operation_body": {
         "type": "object",
         "x-sql-datatype": "JSON",
@@ -2295,6 +2319,37 @@ declare
                     ]
                   }
                 ]
+              }
+            }
+          },
+          "404": {
+            "description": "No blocks in the database"
+          }
+        }
+      }
+    },
+    "/total-value-locked": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "summary": "Returns Total Value Locked (VESTS + HIVE savings + HBD savings)",
+        "description": "Computes the current chain totals of VESTS, HIVE savings, and HBD savings at the head block.\n",
+        "operationId": "hafbe_endpoints.get_total_value_locked",
+        "responses": {
+          "200": {
+            "description": "TVL snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_types.total_value_locked"
+                },
+                "example": {
+                  "block_num": 5000000,
+                  "total_vests": 448144916705468383,
+                  "savings_hive": 0,
+                  "savings_hbd": 0
+                }
               }
             }
           },

@@ -20,14 +20,14 @@ hafbe_types.total_value_locked:
       x-sql-datatype: BIGINT
       description: Total number of HIVE backed dollars the chain has in savings (hafbe_bal.account_savings nai=13)
 */
-/* openapi-generated-code-begin */
+-- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_types.total_value_locked CASCADE;
 CREATE TYPE hafbe_types.total_value_locked AS (
-    "block_num"    INT,
-    "total_vests"  BIGINT,
+    "block_num" INT,
+    "total_vests" BIGINT,
     "savings_hive" BIGINT,
-    "savings_hbd"  BIGINT
+    "savings_hbd" BIGINT
 );
-/* openapi-generated-code-end */
+-- openapi-generated-code-end
 
 RESET ROLE;

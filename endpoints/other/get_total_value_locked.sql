@@ -44,10 +44,6 @@ BEGIN
 
   _row := hafbe_backend.get_total_value_locked();
 
-  IF _row.block_num IS NULL THEN
-    RAISE EXCEPTION 'No data available';
-  END IF;
-
   RETURN _row;
 END
 $$;
