@@ -26,11 +26,11 @@ SET ROLE hafbe_owner;
       '404':
         description: No blocks in the database
 */
-/* openapi-generated-code-begin */
+-- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_total_value_locked;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_total_value_locked()
 RETURNS hafbe_types.total_value_locked
-/* openapi-generated-code-end */
+-- openapi-generated-code-end
 LANGUAGE plpgsql STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
