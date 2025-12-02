@@ -80,6 +80,7 @@ prepare_haf_image:
   tags:
   - public-runner-docker
   - hived-for-tests
+  - hived
 
 prepare_haf_data:
   extends: .prepare_haf_data_5m
@@ -135,6 +136,7 @@ prepare_haf_data:
   tags:
   - public-runner-docker
   - hived-for-tests
+  - hived
 
 docker-ci-runner-build:
   extends: .docker-base-build-template
@@ -482,6 +484,7 @@ build_and_publish_image:
   tags:
   - public-runner-docker
   - hived-for-tests
+  - hived
 
 deploy_python_api_packages_to_gitlab:
   stage: publish
