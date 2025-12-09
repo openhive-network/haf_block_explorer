@@ -347,6 +347,12 @@ sync:
     if [[ -x "$CACHE_MANAGER" ]]; then
       echo "Pushing sync data to NFS cache: ${SYNC_CACHE_TYPE}/${SYNC_CACHE_KEY}"
       "$CACHE_MANAGER" put "${SYNC_CACHE_TYPE}" "${SYNC_CACHE_KEY}" "${LOCAL_SYNC_CACHE}" || echo "Warning: Failed to push to NFS cache"
+      # Restore pgdata permissions on local cache (cache-manager put relaxes them for NFS copy)
+      PGDATA_PATH="${LOCAL_SYNC_CACHE}/datadir/haf_db_store/pgdata"
+      if [[ -d "$PGDATA_PATH" ]]; then
+        echo "Restoring local cache pgdata permissions to mode 700"
+        sudo chmod 700 "$PGDATA_PATH"
+      fi
     fi
 
     sudo rm -rf ${CI_PROJECT_DIR}/${CI_JOB_ID}
