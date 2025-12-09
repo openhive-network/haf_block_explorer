@@ -306,7 +306,7 @@ sync:
     fi
 
     rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
-    cp -a "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
+    cp -a -L "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
 
     "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh"
 
