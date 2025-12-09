@@ -15,17 +15,24 @@ variables:
   GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
   # HAF configuration
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
+  # NFS cache configuration for sync data sharing across builders
+  DATA_CACHE_NFS_PREFIX: "/nfs/ci-cache"
+  SYNC_CACHE_KEY: "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
+  SYNC_CACHE_TYPE: "haf_sync"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
   # uses registry.gitlab.syncad.com/hive/haf/ci-base-image:ubuntu24.04-1
   BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
+  # HAF submodule commit - must match the 'ref:' in the include section below
+  # This is needed for service containers which can't access dotenv artifacts
+  HAF_COMMIT: "2c55a49ab1661a184a8bd6e9cf1434d88209a5b8"
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 - project: hive/haf
-  ref: bf820442979eff6c7cb7e387f26cd4ccf9345f3c   # develop
+  ref: 2c55a49ab1661a184a8bd6e9cf1434d88209a5b8   # feature/nfs-cache-manager
   file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Haf/Hive repos
 
@@ -68,6 +75,34 @@ lint_sql_scripts:
     paths:
     - sql-lint.yaml
 
+validate_haf_commit:
+  stage: build
+  image: alpine:latest
+  script:
+  - |
+    set -e
+    apk add --no-cache git
+    SUBMODULE_COMMIT=$(cat .git/modules/submodules/haf/HEAD 2>/dev/null || git -C submodules/haf rev-parse HEAD)
+    INCLUDE_REF=$(grep -A2 "project:.*hive/haf" .gitlab-ci.yml | grep "ref:" | head -1 | sed 's/.*ref: *\([a-f0-9]*\).*/\1/' || true)
+    echo "HAF_COMMIT variable: $HAF_COMMIT"
+    echo "HAF submodule HEAD:  $SUBMODULE_COMMIT"
+    echo "Include ref:         $INCLUDE_REF"
+    ERRORS=0
+    if [ "$HAF_COMMIT" != "$SUBMODULE_COMMIT" ]; then
+      echo "ERROR: HAF_COMMIT variable does not match submodule commit!"
+      ERRORS=1
+    fi
+    if [ "$HAF_COMMIT" != "$INCLUDE_REF" ]; then
+      echo "ERROR: HAF_COMMIT variable does not match include ref!"
+      ERRORS=1
+    fi
+    if [ $ERRORS -eq 1 ]; then
+      exit 1
+    fi
+    echo "All HAF commit references are consistent"
+  tags:
+  - public-runner-docker
+
 prepare_haf_image:
   stage: build
   extends: .prepare_haf_image
@@ -88,13 +123,14 @@ prepare_haf_data:
   - job: prepare_haf_image
     artifacts: true
   stage: build
+  timeout: 80m
   variables:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/submodules/haf/docker/config_5M.ini"
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
 .docker-base-build-template:
   extends: .docker_image_builder_job_template
@@ -223,7 +259,7 @@ sync:
     HAF_SHM_DIRECTORY: ${SHM_DIR}
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
-    COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/dev.yml
+    COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
       --ansi never
   timeout: 1 hours
   before_script:
@@ -235,15 +271,42 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
+  - |
+    # Ensure HAF replay data is available locally (fetch from NFS if needed)
+    LOCAL_HAF_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+    if [[ -d "${LOCAL_HAF_CACHE}/datadir" ]]; then
+      echo "Local HAF cache found at ${LOCAL_HAF_CACHE}"
+    else
+      echo "Local HAF cache not found, checking NFS..."
+      CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
+      if [[ -x "$CACHE_MANAGER" ]]; then
+        if "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
+          echo "Fetched HAF replay data from NFS cache"
+        else
+          echo "ERROR: Failed to fetch HAF replay data from NFS cache"
+          exit 1
+        fi
+      else
+        echo "ERROR: cache-manager.sh not found and local cache missing"
+        exit 1
+      fi
+    fi
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=true]\r\e[0KStarting the test environment..."
 
-    cp "${BLOCK_LOG_SOURCE_DIR_5M}/block_log" "${CI_PROJECT_DIR}/docker/blockchain/block_log"
-    cp "${BLOCK_LOG_SOURCE_DIR_5M}/block_log.artifacts" "${CI_PROJECT_DIR}/docker/blockchain/block_log.artifacts"
-    chmod a+w docker/blockchain/block_log
-
     "${CI_PROJECT_DIR}/submodules/haf/scripts/copy_datadir.sh"
+
+    PGDATA_PATH="${DATADIR}/haf_db_store/pgdata"
+    if [[ -d "$PGDATA_PATH" ]]; then
+      echo "Restoring pgdata permissions to mode 700"
+      sudo chmod 700 "$PGDATA_PATH"
+      sudo chown -R 105:105 "${DATADIR}/haf_db_store"
+      ls -la "${DATADIR}/haf_db_store/"
+    fi
+
+    rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
+    cp -a "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
 
     "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh"
 
@@ -272,21 +335,20 @@ sync:
 
     tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
     cp -a "${SHM_DIR}" "${DATADIR}/shm_dir"
-    cp -a "${CI_PROJECT_DIR}/docker/blockchain/block_log" "${DATADIR}/blockchain/block_log"
-    cp -a "${CI_PROJECT_DIR}/docker/blockchain/block_log.artifacts" "${DATADIR}/blockchain/block_log.artifacts"
 
-    mkdir -p "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}"
-    sudo cp -a "${DATADIR}" "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}"
+    LOCAL_SYNC_CACHE="${DATA_CACHE_HAF_PREFIX}_${SYNC_CACHE_KEY}"
+    mkdir -p "${LOCAL_SYNC_CACHE}"
+    sudo cp -a "${DATADIR}" "${LOCAL_SYNC_CACHE}"
 
     ls -lah "${DATADIR}"
-    ls -lah "${DATADIR}/blockchain"
-    ls -lah "${DATADIR}/shm_dir"
+    ls -lah "${LOCAL_SYNC_CACHE}" || true
 
-    ls -lah "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}"
-    ls -lah "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}/blockchain"
-    ls -lah "${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}/shm_dir"
+    CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
+    if [[ -x "$CACHE_MANAGER" ]]; then
+      echo "Pushing sync data to NFS cache: ${SYNC_CACHE_TYPE}/${SYNC_CACHE_KEY}"
+      "$CACHE_MANAGER" put "${SYNC_CACHE_TYPE}" "${SYNC_CACHE_KEY}" "${LOCAL_SYNC_CACHE}" || echo "Warning: Failed to push to NFS cache"
+    fi
 
-    # Manually remove the copy of the replay data to preserve disk space on the replay server
     sudo rm -rf ${CI_PROJECT_DIR}/${CI_JOB_ID}
 
     echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
@@ -297,19 +359,40 @@ sync:
     when: always
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
-.hfm-only-service: &hfm-only-service
-  name: $HAF_IMAGE_NAME
-  alias: hfm-only-instance
+.haf-instance-with-nfs-fallback: &haf-instance-with-nfs-fallback
+  name: ${HAF_IMAGE_NAME}
+  alias: haf-instance
   variables:
-    PGCTLTIMEOUT: 600 # give PostgreSQL more time to start if GitLab shut it down improperly after the sync job
+    PGCTLTIMEOUT: 600
     PG_ACCESS: |
       "host    all              haf_admin        0.0.0.0/0    trust"
       "host    all              hived            0.0.0.0/0    trust"
       "host    all              hafbe_user       0.0.0.0/0    trust"
       "host    all              hafbe_owner      0.0.0.0/0    trust"
       "host    all              all              0.0.0.0/0    scram-sha-256"
+    DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${SYNC_CACHE_KEY}"
+    DATA_SOURCE_NFS_PREFIX: "${DATA_CACHE_NFS_PREFIX}"
+    DATA_SOURCE_NFS_TYPE: "${SYNC_CACHE_TYPE}"
+    DATA_SOURCE_NFS_KEY: "${SYNC_CACHE_KEY}"
+  entrypoint:
+    - '/bin/bash'
+    - '-c'
+    - |
+      set -xeuo pipefail
+      ORIGINAL_SOURCE="${DATA_SOURCE}"
+      NFS_PREFIX="${DATA_SOURCE_NFS_PREFIX:-/nfs/ci-cache}"
+      NFS_TYPE="${DATA_SOURCE_NFS_TYPE:-haf_sync}"
+      NFS_KEY="${DATA_SOURCE_NFS_KEY}"
+      if [[ ! -d "${ORIGINAL_SOURCE}/datadir" ]]; then
+        NFS_PATH="${NFS_PREFIX}/${NFS_TYPE}/${NFS_KEY}"
+        if [[ -d "${NFS_PATH}/datadir" ]]; then
+          export DATA_SOURCE="$NFS_PATH"
+        fi
+      fi
+      exec /home/haf_admin/docker_entrypoint.sh "$@"
+    - '/bin/bash'
   command: ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
 
 .postgrest-service: &postgrest-service
@@ -318,8 +401,7 @@ sync:
   variables:
     PGRST_ADMIN_SERVER_PORT: 3001
     PGRST_SERVER_PORT: 3000
-    # Pointing to the PostgreSQL service running in hfm-only-instance
-    PGRST_DB_URI: postgresql://haf_admin@hfm-only-instance:5432/haf_block_log
+    PGRST_DB_URI: postgresql://haf_admin@haf-instance:5432/haf_block_log
     PGRST_DB_SCHEMA: hafbe_endpoints
     PGRST_DB_ANON_ROLE: hafbe_user
     PGRST_DB_POOL: 20
@@ -351,18 +433,16 @@ regression-test:
   - job: prepare_haf_image
     artifacts: true
   services:
-  - *hfm-only-service
-  variables:
-    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
+  - *haf-instance-with-nfs-fallback
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
 
     cd tests/account_parameters
-    ./accounts_dump_test.sh --host=hfm-only-instance
+    ./accounts_dump_test.sh --host=haf-instance
 
     cd ../witness_parameters
-    ./witnesses_dump_test.sh --host=hfm-only-instance
+    ./witnesses_dump_test.sh --host=haf-instance
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
@@ -372,7 +452,7 @@ regression-test:
     when: always
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
 setup-scripts-test:
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
@@ -385,20 +465,18 @@ setup-scripts-test:
   - job: prepare_haf_image
     artifacts: true
   services:
-  - *hfm-only-service
-  variables:
-    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
+  - *haf-instance-with-nfs-fallback
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
 
     cd tests/functional
-    ./test_scripts.sh --host=hfm-only-instance
+    ./test_scripts.sh --host=haf-instance
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
 performance-test:
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
@@ -411,15 +489,13 @@ performance-test:
   - job: prepare_haf_image
     artifacts: true
   services:
-  - *hfm-only-service
+  - *haf-instance-with-nfs-fallback
   - *postgrest-service
-  variables:
-    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
 
-    timeout -k 1m 15m  ./tests/run_performance_tests.sh --postgresql-host=hfm-only-instance --postgrest-host=postgrest-server --database-size=6000 --test-loop-count=1000
+    timeout -k 1m 15m  ./tests/run_performance_tests.sh --postgresql-host=haf-instance --postgrest-host=postgrest-server --database-size=6000 --test-loop-count=1000
     tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
     cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
     m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
@@ -435,7 +511,7 @@ performance-test:
       junit: tests/performance/junit-result.xml
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
 pattern-test:
   extends: .pytest_based_template
@@ -448,10 +524,9 @@ pattern-test:
   - job: prepare_haf_image
     artifacts: true
   services:
-  - *hfm-only-service
+  - *haf-instance-with-nfs-fallback
   - *postgrest-service
   variables:
-    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}_${CI_PIPELINE_ID}
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     PYTEST_BASED_IMAGE_NAME: $BUILDER_IMAGE_PATH
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
@@ -467,7 +542,7 @@ pattern-test:
     - "**/*.out.json"
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
 
 build_and_publish_image:
   stage: publish
@@ -535,4 +610,4 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_*"
   tags:
   - data-cache-storage
-  - hive-builder-9
+  - fast
