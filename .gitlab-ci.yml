@@ -387,16 +387,47 @@ sync:
     - '-c'
     - |
       set -xeuo pipefail
+      echo "Checking data source availability..."
       ORIGINAL_SOURCE="${DATA_SOURCE}"
       NFS_PREFIX="${DATA_SOURCE_NFS_PREFIX:-/nfs/ci-cache}"
       NFS_TYPE="${DATA_SOURCE_NFS_TYPE:-haf_sync}"
       NFS_KEY="${DATA_SOURCE_NFS_KEY}"
+
+      # If original path doesn't exist, try NFS fallback
       if [[ ! -d "${ORIGINAL_SOURCE}/datadir" ]]; then
+        echo "Local cache not found: ${ORIGINAL_SOURCE}/datadir"
         NFS_PATH="${NFS_PREFIX}/${NFS_TYPE}/${NFS_KEY}"
+        NFS_TAR="${NFS_PATH}.tar"
+
         if [[ -d "${NFS_PATH}/datadir" ]]; then
+          echo "Found data on NFS directory: $NFS_PATH"
           export DATA_SOURCE="$NFS_PATH"
+        elif [[ -f "${NFS_TAR}" ]]; then
+          echo "Found NFS tar archive: $NFS_TAR"
+          echo "Extracting to: ${ORIGINAL_SOURCE}"
+          mkdir -p "${ORIGINAL_SOURCE}"
+          tar xf "${NFS_TAR}" -C "${ORIGINAL_SOURCE}"
+          # Restore pgdata ownership and permissions for PostgreSQL
+          # PostgreSQL requires pgdata to be owned by postgres (UID 105) with mode 700
+          if [[ -d "${ORIGINAL_SOURCE}/datadir/haf_db_store" ]]; then
+            echo "Fixing PostgreSQL data permissions..."
+            sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_db_store"
+            sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
+            sudo chmod 700 "${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
+          fi
+          echo "Extracted NFS cache successfully"
+          export DATA_SOURCE="${ORIGINAL_SOURCE}"
+        else
+          echo "WARNING: Data not found in local or NFS cache"
+          echo "Checked: ${ORIGINAL_SOURCE}/datadir"
+          echo "Checked: ${NFS_PATH}/datadir"
+          echo "Checked: ${NFS_TAR}"
         fi
+      else
+        echo "Using local cache: ${ORIGINAL_SOURCE}"
       fi
+
+      # Run original entrypoint
       exec /home/haf_admin/docker_entrypoint.sh "$@"
     - '/bin/bash'
   command: ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
