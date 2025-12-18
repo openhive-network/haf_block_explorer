@@ -111,10 +111,10 @@ $$
 BEGIN
   IF hive.get_current_stage_name(_context_name) = 'MASSIVE_PROCESSING' THEN
     CALL hafbe_app.massive_processing(_block_range.first_block, _block_range.last_block, _logs);
-    PERFORM hive.app_request_table_vacuum('hafbe_app.current_witness_votes', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app.current_witnesses', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app.current_account_proxies', interval '30 minutes');
-    
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witness_votes', interval '30 minutes');
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witnesses', interval '30 minutes');
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_account_proxies', interval '30 minutes');
+
     RETURN;
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
@@ -122,10 +122,10 @@ BEGIN
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
   -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
-  PERFORM hive.app_request_table_vacuum('hafbe_app.account_vest_stats_cache',   interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app.witness_votes_cache',        interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app.witness_rank_cache',         interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app.witness_votes_change_cache', interval '10 minutes');   
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'account_vest_stats_cache',   interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_cache',        interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');   
 END
 $$;
 
