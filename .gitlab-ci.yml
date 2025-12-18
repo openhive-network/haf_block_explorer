@@ -17,8 +17,8 @@ variables:
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   # NFS cache configuration for sync data sharing across builders
   DATA_CACHE_NFS_PREFIX: "/nfs/ci-cache"
-  SYNC_CACHE_KEY: "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
-  SYNC_CACHE_TYPE: "haf_sync"
+  HAFBE_CACHE_KEY: "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
+  HAFBE_SYNC_CACHE_TYPE: "hafbe_sync"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
@@ -27,12 +27,14 @@ variables:
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
   # HAF submodule commit - must match the 'ref:' in the include section below
   # This is needed for service containers which can't access dotenv artifacts
-  HAF_COMMIT: "465036e77ceb78cd71d1daeb377b6d0c0a21b857"
+  HAF_COMMIT: "48407d1a5c08bef22d4cab7262e96e4202b8d99a"
+  # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
+  HAF_CI_MODE: "1"
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 - project: hive/haf
-  ref: 465036e77ceb78cd71d1daeb377b6d0c0a21b857   # feature/nfs-cache-manager
+  ref: 48407d1a5c08bef22d4cab7262e96e4202b8d99a   # develop
   file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Haf/Hive repos
 
@@ -280,7 +282,7 @@ sync:
       echo "Local HAF cache not found, checking NFS..."
       CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
       if [[ -x "$CACHE_MANAGER" ]]; then
-        if "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
+        if CACHE_HANDLING=haf "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
           echo "Fetched HAF replay data from NFS cache"
         else
           echo "ERROR: Failed to fetch HAF replay data from NFS cache"
@@ -336,19 +338,19 @@ sync:
     tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
     cp -a "${SHM_DIR}" "${DATADIR}/shm_dir"
 
-    LOCAL_SYNC_CACHE="${DATA_CACHE_HAF_PREFIX}_${SYNC_CACHE_KEY}"
-    mkdir -p "${LOCAL_SYNC_CACHE}"
-    sudo cp -a "${DATADIR}" "${LOCAL_SYNC_CACHE}"
+    LOCAL_HAFBE_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
+    mkdir -p "${LOCAL_HAFBE_CACHE}"
+    sudo cp -a "${DATADIR}" "${LOCAL_HAFBE_CACHE}"
 
     ls -lah "${DATADIR}"
-    ls -lah "${LOCAL_SYNC_CACHE}" || true
+    ls -lah "${LOCAL_HAFBE_CACHE}" || true
 
     CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
     if [[ -x "$CACHE_MANAGER" ]]; then
-      echo "Pushing sync data to NFS cache: ${SYNC_CACHE_TYPE}/${SYNC_CACHE_KEY}"
-      "$CACHE_MANAGER" put "${SYNC_CACHE_TYPE}" "${SYNC_CACHE_KEY}" "${LOCAL_SYNC_CACHE}" || echo "Warning: Failed to push to NFS cache"
+      echo "Pushing sync data to NFS cache: ${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}"
+      CACHE_HANDLING=haf "$CACHE_MANAGER" put "${HAFBE_SYNC_CACHE_TYPE}" "${HAFBE_CACHE_KEY}" "${LOCAL_HAFBE_CACHE}" || echo "Warning: Failed to push to NFS cache"
       # Restore pgdata permissions on local cache (cache-manager put relaxes them for NFS copy)
-      PGDATA_PATH="${LOCAL_SYNC_CACHE}/datadir/haf_db_store/pgdata"
+      PGDATA_PATH="${LOCAL_HAFBE_CACHE}/datadir/haf_db_store/pgdata"
       if [[ -d "$PGDATA_PATH" ]]; then
         echo "Restoring local cache pgdata permissions to mode 700"
         sudo chmod 700 "$PGDATA_PATH"
@@ -378,10 +380,10 @@ sync:
       "host    all              hafbe_user       0.0.0.0/0    trust"
       "host    all              hafbe_owner      0.0.0.0/0    trust"
       "host    all              all              0.0.0.0/0    scram-sha-256"
-    DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${SYNC_CACHE_KEY}"
+    DATA_SOURCE: "${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
     DATA_SOURCE_NFS_PREFIX: "${DATA_CACHE_NFS_PREFIX}"
-    DATA_SOURCE_NFS_TYPE: "${SYNC_CACHE_TYPE}"
-    DATA_SOURCE_NFS_KEY: "${SYNC_CACHE_KEY}"
+    DATA_SOURCE_NFS_TYPE: "${HAFBE_SYNC_CACHE_TYPE}"
+    DATA_SOURCE_NFS_KEY: "${HAFBE_CACHE_KEY}"
   entrypoint:
     - '/bin/bash'
     - '-c'
@@ -460,6 +462,7 @@ python_api_client_test:
   - public-runner-docker
 
 regression-test:
+  extends: .wait-for-haf-postgres
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
@@ -469,6 +472,8 @@ regression-test:
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
+  variables:
+    HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
   script:
@@ -492,6 +497,7 @@ regression-test:
   - fast
 
 setup-scripts-test:
+  extends: .wait-for-haf-postgres
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
@@ -501,6 +507,8 @@ setup-scripts-test:
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
+  variables:
+    HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
   script:
@@ -516,6 +524,7 @@ setup-scripts-test:
   - fast
 
 performance-test:
+  extends: .wait-for-haf-postgres
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
   stage: test
   needs:
@@ -525,6 +534,8 @@ performance-test:
     artifacts: true
   - job: prepare_haf_image
     artifacts: true
+  variables:
+    HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
   - *postgrest-service
@@ -570,6 +581,10 @@ pattern-test:
     HAFBE_ADDRESS: postgrest-server
     HAFBE_PORT: 3000
     TAVERN_DIR: $CI_PROJECT_DIR/tests/tavern
+    HAF_APP_SCHEMA: "hafbe_app"
+  before_script:
+  - !reference [.pytest_based_template, before_script]
+  - !reference [.wait-for-haf-postgres, before_script]
   script:
   - |
     cd $CI_PROJECT_DIR/tests/tavern
