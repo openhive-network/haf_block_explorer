@@ -639,9 +639,10 @@ sync:
       "host    all              all              0.0.0.0/0    scram-sha-256"
     # DATA_SOURCE format for HAF NFS fallback: /cache/{type}_{key}
     # HAF parses this to find NFS tar at /nfs/ci-cache/{type}/{key}.tar
-    DATA_SOURCE: "/cache/${HAFBE_SYNC_CACHE_TYPE}_${HAFBE_CACHE_KEY}"
+    # Note: Must use HAF_COMMIT directly (not HAFBE_CACHE_KEY) for proper expansion in services
+    DATA_SOURCE: "/cache/hafbe_sync_${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
     # NFS path where cache-manager.sh looks for tars
-    CACHE_NFS_PATH: "${DATA_CACHE_NFS_PREFIX}"
+    CACHE_NFS_PATH: "/nfs/ci-cache"
 
 .postgrest-service: &postgrest-service
   name: registry.gitlab.syncad.com/hive/common-ci-configuration/postgrest:v12.0.2
@@ -664,14 +665,15 @@ sync:
   before_script:
   - |
     # Log cache path info for debugging
-    LOCAL_CACHE="/cache/${HAFBE_SYNC_CACHE_TYPE}_${HAFBE_CACHE_KEY}"
+    LOCAL_CACHE="/cache/hafbe_sync_${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
     PGDATA_DIR="${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
-    NFS_TAR="${DATA_CACHE_NFS_PREFIX}/${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}.tar"
+    NFS_TAR="/nfs/ci-cache/hafbe_sync/${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}.tar"
     echo "Main job: cache info"
     echo "  LOCAL_CACHE: ${LOCAL_CACHE}"
     echo "  NFS_TAR: ${NFS_TAR}"
     echo "  PGDATA would be at: ${PGDATA_DIR}"
-    ls -la "${LOCAL_CACHE}/" 2>&1 | head -5 || echo "  Cache dir not visible to main job (normal - service volume)"
+    echo "  NFS tar exists: $(test -f "$NFS_TAR" && echo 'yes' || echo 'no')"
+    ls -la "${LOCAL_CACHE}/" 2>&1 | head -5 || echo "  Cache dir not visible to main job yet"
   - !reference [.wait-for-haf-postgres, before_script]
 
 python_api_client_test:
