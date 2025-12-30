@@ -378,6 +378,8 @@ generate_python_api_client:
     - when: on_success
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   needs:
   - job: extract-swagger-json
     artifacts: true
@@ -404,6 +406,8 @@ build_python_api_client_wheel:
     artifacts: true
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   tags:
   - public-runner-docker
 
@@ -635,6 +639,8 @@ python_api_client_test:
     artifacts: true
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   script:
   - pytest "${PYPROJECT_DIR}/tests"
   tags:
@@ -835,6 +841,8 @@ deploy_python_api_packages_to_gitlab:
   extends: .deploy_wheel_to_gitlab_template
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   when: on_success
   tags:
   - public-runner-docker
@@ -846,6 +854,8 @@ deploy-wax-spec-dev-package:
     SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
     PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
     NPM_PACKAGE_SCOPE: "@hiveio"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   needs:
   - job: generate-wax-spec
     artifacts: true
@@ -860,6 +870,8 @@ deploy-wax-spec-production-public-npm:
     NPM_PACKAGE_NAME: "wax-api-hafbe"
     SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
     PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   needs:
   - job: generate-wax-spec
     artifacts: true
