@@ -100,10 +100,13 @@ default:
 
             # Clean nested submodule configs with file:// URLs (causes 'transport file not allowed' errors)
             # This happens when workspaces have stale submodule state from previous runs
-            # Use find to recursively remove ALL nested modules directories at any depth
+            # Remove nested modules directories - loop to handle any depth
             if [ -d ".git/modules/submodules" ]; then
               echo "pre_get_sources: removing all nested submodule state under .git/modules/submodules"
-              find .git/modules/submodules -type d -name "modules" -exec rm -rf {} + 2>/dev/null || true
+              # Remove any 'modules' subdirectory within each top-level submodule (e.g., btracker/modules, hafah/modules)
+              for submod_dir in .git/modules/submodules/*/; do
+                [ -d "${submod_dir}modules" ] && rm -rf "${submod_dir}modules"
+              done
             fi
 
             # Handle directory-to-submodule transitions: fetch target ref's .gitmodules
