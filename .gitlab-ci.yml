@@ -749,8 +749,8 @@ sync:
         sudo rm -rf "${LOCAL_CACHE}/datadir"
       fi
       echo "Extracting NFS cache for service container..."
-      mkdir -p "${LOCAL_CACHE}"
-      tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
+      sudo mkdir -p "${LOCAL_CACHE}"
+      sudo tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
       # Restore pgdata ownership and permissions for PostgreSQL
       if [[ -d "${LOCAL_CACHE}/datadir/haf_db_store" ]]; then
         echo "Fixing PostgreSQL data permissions..."
