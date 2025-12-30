@@ -205,6 +205,9 @@ validate_haf_commit:
   - |
     set -e
     apk add --no-cache git
+    # Clean stale submodule state that may have file:// URLs
+    rm -rf .git/modules/submodules
+    git submodule deinit -f --all 2>/dev/null || true
     # Manually init just the haf submodule (no recursion)
     git submodule update --init submodules/haf
     SUBMODULE_COMMIT=$(git -C submodules/haf rev-parse HEAD)
