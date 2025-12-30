@@ -288,9 +288,11 @@ prepare_haf_data:
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-    # Manually init just the haf submodule without nested submodules
+    # Clean up any stale submodule state
     - rm -rf .git/modules/submodules 2>/dev/null || true
-    - git submodule update --init submodules/haf
+    - rm -rf submodules/haf 2>/dev/null || true
+    # Manually init just the haf submodule without nested submodules
+    - git submodule update --init --force submodules/haf
     # HAF scripts are symlinks to hive submodule - init it without recursion
     - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
   tags:
@@ -484,9 +486,11 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
-    # Manually init submodules without nested recursion
+    # Clean up any stale submodule state
     rm -rf .git/modules/submodules 2>/dev/null || true
-    git submodule update --init submodules/haf
+    rm -rf submodules/haf 2>/dev/null || true
+    # Manually init submodules without nested recursion
+    git submodule update --init --force submodules/haf
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
   - |
