@@ -88,7 +88,8 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${HAF_DATA_DIRECTORY:-/tmp/haf_data}
+      # Cache structure: HAF_DATA_DIRECTORY/datadir/haf_db_store/pgdata
+      device: ${HAF_DATA_DIRECTORY:-/tmp/haf_data}/datadir
   haf_shmdir:
     driver: local
     driver_opts:

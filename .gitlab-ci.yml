@@ -674,6 +674,9 @@ python_api_client_test:
       when: never
     - when: on_success
   variables:
+    # Docker-in-docker connection (disable TLS for simplicity)
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: "tcp://docker:2375"
     # Test data directories - extracted from sync cache
     HAF_DATA_DIRECTORY: "${CI_PROJECT_DIR}/test-data"
     HAF_SHM_DIRECTORY: "${CI_PROJECT_DIR}/test-shm"
@@ -685,7 +688,14 @@ python_api_client_test:
     GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
   before_script:
-    - !reference [.docker_image_builder_job_template, before_script]
+    # Git setup (from docker_image_builder_job_template, without buildx)
+    - git config --global --add safe.directory '*'
+    # Install Python if not available (Alpine-based ci-runner image)
+    - |
+      if ! command -v python3 &> /dev/null; then
+        echo "Installing Python3..."
+        apk add --no-cache python3 py3-pip
+      fi
     # Fetch cache-manager
     - !reference [.fetch_cache_manager, before_script]
     # Create data directories
@@ -729,8 +739,6 @@ python_api_client_test:
 
 regression-test:
   extends: .hafbe_test_base
-  # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for data_insertion_script.py)
-  image: $BUILDER_IMAGE_PATH
   script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning regression tests..."
@@ -762,8 +770,6 @@ setup-scripts-test:
 
 performance-test:
   extends: .hafbe_test_base
-  # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for generate_db.py)
-  image: $BUILDER_IMAGE_PATH
   script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning performance tests..."
@@ -788,16 +794,16 @@ pattern-test:
   extends:
     - .hafbe_test_base
     - .pytest_based_template
-  image: $BUILDER_IMAGE_PATH
   variables:
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
-    PYTEST_BASED_IMAGE_NAME: $BUILDER_IMAGE_PATH
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
     HAFBE_ADDRESS: ${POSTGREST_HOST}
     HAFBE_PORT: 3000
     TAVERN_DIR: $CI_PROJECT_DIR/tests/tavern
   before_script:
     - !reference [.hafbe_test_base, before_script]
+    # Install poetry for pytest template (Alpine packages)
+    - pip3 install --break-system-packages poetry
     - !reference [.pytest_based_template, before_script]
   script:
     - |
