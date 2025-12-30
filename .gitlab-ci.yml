@@ -14,7 +14,8 @@ variables:
   GIT_STRATEGY: fetch
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
-  GIT_SUBMODULE_STRATEGY: recursive
+  # Use 'normal' not 'recursive' - recursive causes file:// URL errors for nested submodules
+  GIT_SUBMODULE_STRATEGY: normal
   # Temporary: separate clone path prevents clone-strategy jobs from erasing
   # fetch workspaces during transition. Remove once all projects use fetch.
   GIT_CLONE_PATH: $CI_BUILDS_DIR/fetch/$CI_RUNNER_SHORT_TOKEN/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
@@ -346,6 +347,8 @@ extract-swagger-json:
     - when: on_success
   variables:
     INPUT_SQL_SWAGGER_FILE: "${CI_PROJECT_DIR}/endpoints/endpoint_schema.sql"
+    # Job only needs main repo files, not submodules
+    GIT_SUBMODULE_STRATEGY: none
   tags:
   - public-runner-docker
 
@@ -361,6 +364,8 @@ generate-wax-spec:
     API_TYPE: "rest"
     NPM_PACKAGE_SCOPE: "@hiveio"
     NPM_PACKAGE_NAME: "wax-api-hafbe"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
   needs:
   - job: extract-swagger-json
     artifacts: true
