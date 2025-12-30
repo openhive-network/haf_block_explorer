@@ -649,9 +649,12 @@ sync:
       NFS_TYPE="${DATA_SOURCE_NFS_TYPE:-haf_sync}"
       NFS_KEY="${DATA_SOURCE_NFS_KEY}"
 
-      # If original path doesn't exist, try NFS fallback or wait for main job extraction
-      if [[ ! -d "${ORIGINAL_SOURCE}/datadir" ]]; then
-        echo "Local cache not found: ${ORIGINAL_SOURCE}/datadir"
+      # Check for complete extraction using PG_VERSION as marker
+      PGDATA_DIR="${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
+
+      # If cache is not complete, try NFS fallback or wait for main job extraction
+      if [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; then
+        echo "Cache not complete (PG_VERSION missing): ${PGDATA_DIR}/PG_VERSION"
         NFS_PATH="${NFS_PREFIX}/${NFS_TYPE}/${NFS_KEY}"
         NFS_TAR="${NFS_PATH}.tar"
 
@@ -683,7 +686,6 @@ sync:
           # NFS not available in this container - wait for main job to extract cache
           # The main job's before_script will extract NFS cache to local /cache/ path
           # Wait for PG_VERSION as completion marker (main job may remove partial extractions)
-          PGDATA_DIR="${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
           echo "NFS tar not found - waiting for main job to extract cache..."
           echo "Waiting for completion marker: ${PGDATA_DIR}/PG_VERSION"
           WAIT_TIMEOUT=600
@@ -703,7 +705,7 @@ sync:
           export DATA_SOURCE="${ORIGINAL_SOURCE}"
         fi
       else
-        echo "Using local cache: ${ORIGINAL_SOURCE}"
+        echo "Cache complete, using local cache: ${ORIGINAL_SOURCE}"
         # Ensure PostgreSQL data permissions are correct
         if [[ -d "${ORIGINAL_SOURCE}/datadir/haf_db_store" ]]; then
           echo "Fixing PostgreSQL data permissions..."
