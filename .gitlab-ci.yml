@@ -704,6 +704,13 @@ sync:
         fi
       else
         echo "Using local cache: ${ORIGINAL_SOURCE}"
+        # Ensure PostgreSQL data permissions are correct
+        if [[ -d "${ORIGINAL_SOURCE}/datadir/haf_db_store" ]]; then
+          echo "Fixing PostgreSQL data permissions..."
+          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_db_store"
+          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
+          sudo chmod 700 "${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
+        fi
       fi
 
       # Run original entrypoint
