@@ -638,46 +638,8 @@ sync:
     DATA_SOURCE_NFS_PREFIX: "${DATA_CACHE_NFS_PREFIX}"
     DATA_SOURCE_NFS_TYPE: "${HAFBE_SYNC_CACHE_TYPE}"
     DATA_SOURCE_NFS_KEY: "${HAFBE_CACHE_KEY}"
-  entrypoint:
-    - /bin/bash
-    - -c
-    - |
-      set -euo pipefail
-      PGDATA_DIR="${DATA_SOURCE}/datadir/haf_db_store/pgdata"
-      NFS_TAR="${DATA_SOURCE_NFS_PREFIX}/${DATA_SOURCE_NFS_TYPE}/${DATA_SOURCE_NFS_KEY}.tar"
-      LOCK_FILE="${DATA_SOURCE}.extracting"
-      echo "Service: checking cache at ${PGDATA_DIR}"
-      if [[ -f "${PGDATA_DIR}/PG_VERSION" ]]; then
-        echo "Service: local cache ready"
-      elif [[ -f "$NFS_TAR" ]]; then
-        echo "Service: extracting from NFS: $NFS_TAR"
-        if sudo mkdir "$LOCK_FILE" 2>/dev/null; then
-          echo "Service: acquired lock, extracting..."
-          sudo mkdir -p "${DATA_SOURCE}"
-          sudo tar xf "$NFS_TAR" -C "${DATA_SOURCE}"
-          sudo rmdir "$LOCK_FILE"
-          echo "Service: extraction complete"
-        else
-          echo "Service: waiting for extraction to complete..."
-          WAIT_TIMEOUT=300
-          ELAPSED=0
-          while [[ -d "$LOCK_FILE" ]] && [[ $ELAPSED -lt $WAIT_TIMEOUT ]]; do
-            sleep 5
-            ELAPSED=$((ELAPSED + 5))
-          done
-          if [[ -d "$LOCK_FILE" ]]; then
-            echo "Service: lock timeout, cleaning stale lock"
-            sudo rmdir "$LOCK_FILE" 2>/dev/null || true
-          fi
-        fi
-      else
-        echo "Service: ERROR - no local cache and no NFS tar at $NFS_TAR"
-        exit 1
-      fi
-      sudo chown -R 105:109 "${DATA_SOURCE}/datadir/haf_db_store" 2>/dev/null || true
-      sudo chown -R 105:109 "${DATA_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
-      sudo chmod 700 "${PGDATA_DIR}" 2>/dev/null || true
-      exec /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh
+  entrypoint: ["/bin/bash", "-c", "set -euo pipefail; PGDATA_DIR=${DATA_SOURCE}/datadir/haf_db_store/pgdata; NFS_TAR=${DATA_SOURCE_NFS_PREFIX}/${DATA_SOURCE_NFS_TYPE}/${DATA_SOURCE_NFS_KEY}.tar; LOCK_FILE=${DATA_SOURCE}.extracting; echo Service: checking cache at $PGDATA_DIR; if [ -f $PGDATA_DIR/PG_VERSION ]; then echo Service: local cache ready; elif [ -f $NFS_TAR ]; then echo Service: extracting from NFS $NFS_TAR; if sudo mkdir $LOCK_FILE 2>/dev/null; then echo Service: acquired lock extracting; sudo mkdir -p ${DATA_SOURCE}; sudo tar xf $NFS_TAR -C ${DATA_SOURCE}; sudo rmdir $LOCK_FILE; echo Service: extraction complete; else echo Service: waiting for extraction; WAIT_TIMEOUT=300; ELAPSED=0; while [ -d $LOCK_FILE ] && [ $ELAPSED -lt $WAIT_TIMEOUT ]; do sleep 5; ELAPSED=$((ELAPSED + 5)); done; if [ -d $LOCK_FILE ]; then echo Service: lock timeout; sudo rmdir $LOCK_FILE 2>/dev/null || true; fi; fi; else echo Service: ERROR no local cache and no NFS tar; exit 1; fi; sudo chown -R 105:109 ${DATA_SOURCE}/datadir/haf_db_store 2>/dev/null || true; sudo chown -R 105:109 ${DATA_SOURCE}/datadir/haf_postgresql_conf.d 2>/dev/null || true; sudo chmod 700 $PGDATA_DIR 2>/dev/null || true; exec /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
+  command: [""]
 
 .postgrest-service: &postgrest-service
   name: registry.gitlab.syncad.com/hive/common-ci-configuration/postgrest:v12.0.2
