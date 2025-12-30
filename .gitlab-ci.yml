@@ -285,6 +285,8 @@ prepare_haf_data:
     # Avoid nested submodule issues
     GIT_SUBMODULE_STRATEGY: none
   before_script:
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
     # Manually init just the haf submodule without nested submodules
     - rm -rf .git/modules/submodules 2>/dev/null || true
     - git submodule update --init submodules/haf
