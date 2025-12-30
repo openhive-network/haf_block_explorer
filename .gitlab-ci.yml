@@ -98,6 +98,17 @@ default:
               done
             fi
 
+            # Clean nested submodule configs with file:// URLs (causes 'transport file not allowed' errors)
+            # This happens when workspaces have stale submodule state from previous runs
+            if [ -d ".git/modules/submodules" ]; then
+              for nested_modules in .git/modules/submodules/*/modules; do
+                if [ -d "$nested_modules" ]; then
+                  echo "pre_get_sources: removing nested submodule state: $nested_modules"
+                  rm -rf "$nested_modules"
+                fi
+              done
+            fi
+
             # Handle directory-to-submodule transitions: fetch target ref's .gitmodules
             # and remove any paths that exist as regular directories (not submodules)
             if [ -n "$CI_COMMIT_REF_NAME" ]; then
@@ -844,6 +855,8 @@ pattern-test:
   - *haf-instance-with-nfs-fallback
   - *postgrest-service
   variables:
+    # Need recursive for nested haf/hive submodule (hive-local-tools)
+    GIT_SUBMODULE_STRATEGY: recursive
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     PYTEST_BASED_IMAGE_NAME: $BUILDER_IMAGE_PATH
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
