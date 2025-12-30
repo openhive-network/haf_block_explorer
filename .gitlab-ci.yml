@@ -778,7 +778,8 @@ python_api_client_test:
 
 regression-test:
   extends: .wait-for-haf-postgres-with-nfs
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
+  # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for data_insertion_script.py)
+  image: $BUILDER_IMAGE_PATH
   stage: test
   needs:
     - job: quick_test_setup
