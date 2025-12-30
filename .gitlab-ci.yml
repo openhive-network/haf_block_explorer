@@ -489,9 +489,9 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
     # Clean up any stale submodule state (may have wrong permissions from previous runs)
     sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
-    rm -rf submodules/haf 2>/dev/null || true
-    # Manually init submodules without nested recursion
-    git submodule update --init --force submodules/haf
+    rm -rf submodules 2>/dev/null || true
+    # Manually init all submodules - HAF with its nested hive, plus btracker, hafah, reptracker
+    git submodule update --init --force
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
   - |
