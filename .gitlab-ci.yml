@@ -257,10 +257,10 @@ prepare_haf_image:
   - git config --global --add safe.directory $CI_PROJECT_DIR
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-  # Clean up any stale submodule state - remove everything and reinit cleanly
+  # Clean up any stale submodule state - deinit first, then remove
+  - git submodule deinit -f --all 2>/dev/null || true
   - sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
   - rm -rf submodules 2>/dev/null || true
-  - git checkout -- submodules 2>/dev/null || true
   # Manually init submodules without nested recursion
   - git submodule update --init --force submodules/haf
   # HAF scripts are symlinks to hive submodule - init it without recursion
@@ -290,10 +290,10 @@ prepare_haf_data:
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-    # Clean up any stale submodule state - remove everything and reinit cleanly
+    # Clean up any stale submodule state - deinit first, then remove
+    - git submodule deinit -f --all 2>/dev/null || true
     - sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
     - rm -rf submodules 2>/dev/null || true
-    - git checkout -- submodules 2>/dev/null || true
     # Manually init just the haf submodule without nested submodules
     - git submodule update --init --force submodules/haf
     # HAF scripts are symlinks to hive submodule - init it without recursion
@@ -489,10 +489,10 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
-    # Clean up any stale submodule state - remove everything and reinit cleanly
+    # Clean up any stale submodule state - deinit first, then remove
+    git submodule deinit -f --all 2>/dev/null || true
     sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
     rm -rf submodules 2>/dev/null || true
-    git checkout -- submodules 2>/dev/null || true
     # Manually init all submodules - HAF with its nested hive, plus btracker, hafah, reptracker
     git submodule update --init --force
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
