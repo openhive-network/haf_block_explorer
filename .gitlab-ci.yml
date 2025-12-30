@@ -331,6 +331,8 @@ docker-ci-runner-build:
     BASE_TAG: "docker-26.1.4-1"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
+    # Only builds Dockerfile, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
 
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
