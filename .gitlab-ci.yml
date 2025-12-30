@@ -690,11 +690,18 @@ python_api_client_test:
   before_script:
     # Git setup (from docker_image_builder_job_template, without buildx)
     - git config --global --add safe.directory '*'
-    # Install Python if not available (Alpine-based ci-runner image)
+    # Install docker-compose if not available (for non-docker images like BUILDER_IMAGE)
     - |
-      if ! command -v python3 &> /dev/null; then
-        echo "Installing Python3..."
-        apk add --no-cache python3 py3-pip
+      if ! command -v docker &> /dev/null; then
+        echo "Installing Docker CLI and Compose..."
+        DOCKER_VERSION="27.3.1"
+        curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | tar xz -C /tmp
+        mv /tmp/docker/docker /usr/local/bin/
+
+        COMPOSE_VERSION="v2.30.3"
+        curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        ln -sf /usr/local/bin/docker-compose /usr/local/bin/docker-compose
       fi
     # Fetch cache-manager
     - !reference [.fetch_cache_manager, before_script]
@@ -739,6 +746,7 @@ python_api_client_test:
 
 regression-test:
   extends: .hafbe_test_base
+  image: $BUILDER_IMAGE_PATH
   script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning regression tests..."
@@ -770,6 +778,7 @@ setup-scripts-test:
 
 performance-test:
   extends: .hafbe_test_base
+  image: $BUILDER_IMAGE_PATH
   script:
     - |
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning performance tests..."
@@ -794,6 +803,7 @@ pattern-test:
   extends:
     - .hafbe_test_base
     - .pytest_based_template
+  image: $BUILDER_IMAGE_PATH
   variables:
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
