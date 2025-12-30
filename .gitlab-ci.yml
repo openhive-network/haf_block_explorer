@@ -254,9 +254,12 @@ prepare_haf_image:
   before_script:
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-  # Clean stale git modules state (may have wrong permissions)
-  - rm -rf .git/modules/submodules/haf/modules 2>/dev/null || true
-  - rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || true
+  # Clean stale git modules state (may have wrong permissions from previous runs)
+  - sudo rm -rf .git/modules/submodules/haf 2>/dev/null || rm -rf .git/modules/submodules/haf 2>/dev/null || true
+  - sudo rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || true
+  # Deinit and reinit the haf submodule to get clean state
+  - git submodule deinit -f submodules/haf 2>/dev/null || true
+  - git submodule update --init submodules/haf
   # HAF scripts are symlinks to hive submodule - init it without recursion
   - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
   tags:
