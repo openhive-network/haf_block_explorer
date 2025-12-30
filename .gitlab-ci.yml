@@ -862,6 +862,10 @@ deploy-wax-spec-dev-package:
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   before_script:
+    # Replicate template's before_script setup
+    - git config --global --add safe.directory '*'
+    - . "${NVM_DIR}/nvm.sh"
+    - nvm use "${NODEJS_VERSION}"
     # Fix PACKAGE_TGZ_PATH - dotenv has runner-specific path, need to find actual file
     - export PACKAGE_TGZ_PATH=$(ls ${CI_PROJECT_DIR}/build/*.tgz 2>/dev/null | head -1)
     - echo "Using PACKAGE_TGZ_PATH=$PACKAGE_TGZ_PATH"
@@ -882,6 +886,10 @@ deploy-wax-spec-production-public-npm:
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   before_script:
+    # Replicate template's before_script setup
+    - git config --global --add safe.directory '*'
+    - . "${NVM_DIR}/nvm.sh"
+    - nvm use "${NODEJS_VERSION}"
     # Fix PACKAGE_TGZ_PATH - dotenv has runner-specific path, need to find actual file
     - export PACKAGE_TGZ_PATH=$(ls ${CI_PROJECT_DIR}/build/*.tgz 2>/dev/null | head -1)
     - echo "Using PACKAGE_TGZ_PATH=$PACKAGE_TGZ_PATH"
