@@ -251,16 +251,17 @@ prepare_haf_image:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     REGISTRY_USER: "$HAF_DEPLOY_USERNAME"
     REGISTRY_PASS: "$HAF_DEPLOY_TOKEN"
+    # Avoid nested submodule issues
+    GIT_SUBMODULE_STRATEGY: none
   before_script:
   - git config --global --add safe.directory $CI_PROJECT_DIR
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-  # Clean stale git modules state (may have wrong permissions from previous runs)
-  - sudo rm -rf .git/modules/submodules/haf 2>/dev/null || rm -rf .git/modules/submodules/haf 2>/dev/null || true
-  - sudo rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || true
-  # Deinit and reinit the haf submodule to get clean state
-  - git submodule deinit -f submodules/haf 2>/dev/null || true
-  - git submodule update --init submodules/haf
+  # Clean up any stale submodule state
+  - sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
+  - rm -rf submodules/haf 2>/dev/null || true
+  # Manually init submodules without nested recursion
+  - git submodule update --init --force submodules/haf
   # HAF scripts are symlinks to hive submodule - init it without recursion
   - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
   tags:
