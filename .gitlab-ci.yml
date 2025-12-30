@@ -729,6 +729,8 @@ regression-test:
       when: never
     - when: on_success
   variables:
+    # Use recursive to properly handle nested submodules (haf/hive)
+    GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
@@ -772,6 +774,8 @@ setup-scripts-test:
       when: never
     - when: on_success
   variables:
+    # Use recursive to properly handle nested submodules (haf/hive)
+    GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
@@ -807,6 +811,8 @@ performance-test:
       when: never
     - when: on_success
   variables:
+    # Use recursive to properly handle nested submodules (haf/hive)
+    GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
   services:
   - *haf-instance-with-nfs-fallback
