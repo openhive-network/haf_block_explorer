@@ -642,55 +642,30 @@ sync:
     - '/bin/bash'
     - '-c'
     - |
-      set -xeuo pipefail
-      echo "Checking data source availability..."
-      ORIGINAL_SOURCE="${DATA_SOURCE}"
-      NFS_PREFIX="${DATA_SOURCE_NFS_PREFIX:-/nfs/ci-cache}"
-      NFS_TYPE="${DATA_SOURCE_NFS_TYPE:-haf_sync}"
-      NFS_KEY="${DATA_SOURCE_NFS_KEY}"
+      set -euo pipefail
+      # Wait for main job to extract cache, then start PostgreSQL
+      PGDATA_DIR="${DATA_SOURCE}/datadir/haf_db_store/pgdata"
+      echo "Service container waiting for cache: ${PGDATA_DIR}/PG_VERSION"
 
-      # Check for complete extraction using PG_VERSION as marker
-      PGDATA_DIR="${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
-
-      # If cache is not complete, wait for main job to extract it
-      # NOTE: Do NOT extract from NFS here - main job handles extraction to avoid race conditions
-      if [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; then
-        echo "Cache not complete (PG_VERSION missing): ${PGDATA_DIR}/PG_VERSION"
-        echo "Waiting for main job to extract cache..."
-        echo "Waiting for completion marker: ${PGDATA_DIR}/PG_VERSION"
-        WAIT_TIMEOUT=600
-        ELAPSED=0
-        while [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; do
-          if [[ $ELAPSED -ge $WAIT_TIMEOUT ]]; then
-            echo "ERROR: Timeout waiting for cache extraction"
-            echo "Main job should have extracted NFS cache to: ${ORIGINAL_SOURCE}"
-            ls -la "${ORIGINAL_SOURCE}/" 2>&1 | head -10 || echo "Cannot list cache dir"
-            exit 1
-          fi
-          sleep 5
-          ELAPSED=$((ELAPSED + 5))
-          echo "Waiting for cache extraction... (${ELAPSED}s/${WAIT_TIMEOUT}s)"
-        done
-        echo "Cache ready after ${ELAPSED}s"
-        # Ensure PostgreSQL data permissions are correct after main job extraction
-        if [[ -d "${ORIGINAL_SOURCE}/datadir/haf_db_store" ]]; then
-          echo "Fixing PostgreSQL data permissions..."
-          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_db_store"
-          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
-          sudo chmod 700 "${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
+      # Wait for PG_VERSION to appear (main job handles extraction)
+      WAIT_TIMEOUT=600
+      ELAPSED=0
+      while [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; do
+        if [[ $ELAPSED -ge $WAIT_TIMEOUT ]]; then
+          echo "ERROR: Timeout waiting for cache (${WAIT_TIMEOUT}s)"
+          ls -la "${DATA_SOURCE}/" 2>&1 || true
+          exit 1
         fi
-      else
-        echo "Cache complete, using local cache: ${ORIGINAL_SOURCE}"
-        # Ensure PostgreSQL data permissions are correct
-        if [[ -d "${ORIGINAL_SOURCE}/datadir/haf_db_store" ]]; then
-          echo "Fixing PostgreSQL data permissions..."
-          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_db_store"
-          sudo chown -R 105:109 "${ORIGINAL_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
-          sudo chmod 700 "${ORIGINAL_SOURCE}/datadir/haf_db_store/pgdata"
-        fi
-      fi
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+      done
+      echo "Cache ready after ${ELAPSED}s, starting PostgreSQL..."
 
-      # Run original entrypoint
+      # Fix permissions and start PostgreSQL
+      sudo chown -R 105:109 "${DATA_SOURCE}/datadir/haf_db_store" 2>/dev/null || true
+      sudo chown -R 105:109 "${DATA_SOURCE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
+      sudo chmod 700 "${PGDATA_DIR}" 2>/dev/null || true
+
       exec /home/haf_admin/docker_entrypoint.sh "$@"
     - '/bin/bash'
   command: ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
