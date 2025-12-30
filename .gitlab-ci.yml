@@ -687,7 +687,7 @@ python_api_client_test:
   before_script:
     - !reference [.docker_image_builder_job_template, before_script]
     # Fetch cache-manager
-    - !reference [.fetch_cache_manager, script]
+    - !reference [.fetch_cache_manager, before_script]
     # Create data directories
     - mkdir -p "${HAF_DATA_DIRECTORY}" "${HAF_SHM_DIRECTORY}"
     # Extract sync cache
