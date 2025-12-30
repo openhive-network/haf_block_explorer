@@ -472,6 +472,8 @@ sync:
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
       --ansi never
+    # Avoid nested submodule issues
+    GIT_SUBMODULE_STRATEGY: none
   timeout: 1 hours
   before_script:
   - |
@@ -481,6 +483,11 @@ sync:
     echo -e "\e[0Ksection_start:$(date +%s):git[collapsed=true]\r\e[0KConfiguring Git..."
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
+    git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
+    # Manually init submodules without nested recursion
+    rm -rf .git/modules/submodules 2>/dev/null || true
+    git submodule update --init submodules/haf
+    git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
   - |
     # Ensure HAF replay data is available locally (fetch from NFS if needed)
