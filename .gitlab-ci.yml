@@ -496,6 +496,10 @@ sync:
     # Manually init all submodules - HAF with its nested hive, plus btracker, hafah, reptracker
     git submodule update --init --force
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
+    # Init nested haf submodule in hafah, btracker, reptracker (they all depend on haf scripts)
+    git -C "$CI_PROJECT_DIR/submodules/hafah" submodule update --init haf
+    git -C "$CI_PROJECT_DIR/submodules/btracker" submodule update --init haf
+    git -C "$CI_PROJECT_DIR/submodules/reptracker" submodule update --init haf
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
   - |
     # Ensure HAF replay data is available locally (fetch from NFS if needed)
