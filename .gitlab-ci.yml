@@ -501,16 +501,15 @@ sync:
       echo "Local HAF cache found at ${LOCAL_HAF_CACHE}"
     else
       echo "Local HAF cache not found, checking NFS..."
-      CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
-      if [[ -x "$CACHE_MANAGER" ]]; then
-        if CACHE_HANDLING=haf "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
-          echo "Fetched HAF replay data from NFS cache"
-        else
-          echo "ERROR: Failed to fetch HAF replay data from NFS cache"
-          exit 1
-        fi
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      if [[ ! -x "$CACHE_MANAGER" ]]; then
+        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+        chmod +x "$CACHE_MANAGER"
+      fi
+      if CACHE_HANDLING=haf "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
+        echo "Fetched HAF replay data from NFS cache"
       else
-        echo "ERROR: cache-manager.sh not found and local cache missing"
+        echo "ERROR: Failed to fetch HAF replay data from NFS cache"
         exit 1
       fi
     fi
