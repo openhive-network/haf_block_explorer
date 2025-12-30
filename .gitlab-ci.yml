@@ -800,7 +800,8 @@ setup-scripts-test:
 
 performance-test:
   extends: .wait-for-haf-postgres
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
+  # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for generate_db.py)
+  image: $BUILDER_IMAGE_PATH
   stage: test
   needs:
     - job: quick_test_setup
