@@ -276,6 +276,12 @@ prepare_haf_data:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/submodules/haf/docker/config_5M.ini"
+    # Avoid nested submodule issues
+    GIT_SUBMODULE_STRATEGY: none
+  before_script:
+    # Manually init just the haf submodule without nested submodules
+    - rm -rf .git/modules/submodules 2>/dev/null || true
+    - git submodule update --init submodules/haf
   tags:
   - data-cache-storage
   - fast
