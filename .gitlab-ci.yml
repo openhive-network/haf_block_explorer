@@ -27,16 +27,24 @@ variables:
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/haf/ci-base-image${BUILDER_IMAGE_TAG}"
   # HAF submodule commit - must match the 'ref:' in the include section below
   # This is needed for service containers which can't access dotenv artifacts
-  HAF_COMMIT: "48407d1a5c08bef22d4cab7262e96e4202b8d99a"
+  HAF_COMMIT: "b4225f9d2591195b0e6aadf36bbef921d95f92b9"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
+
+  # Quick Test Mode - uses cached HAF data from previous pipeline, skips HAF rebuild/replay
+  # Usage: Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT to a commit with cached data
+  # Find available cache keys: ssh hive-builder-10 'ls -lt /nfs/ci-cache/haf/*.tar | head -5'
+  QUICK_TEST: "false"
+  QUICK_TEST_HAF_COMMIT: ""
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 - project: hive/haf
-  ref: 48407d1a5c08bef22d4cab7262e96e4202b8d99a   # develop
+  ref: b4225f9d2591195b0e6aadf36bbef921d95f92b9   # develop
   file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
   # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Haf/Hive repos
+# Skip rules for docs-only changes and QUICK_TEST mode
+- local: '/scripts/ci-helpers/skip_rules.yml'
 
 .lint_job:
   extends: .job-defaults
@@ -77,6 +85,36 @@ lint_sql_scripts:
     paths:
     - sql-lint.yaml
 
+# Quick Test Mode Setup - overrides HAF_COMMIT with cached version
+quick_test_setup:
+  stage: lint
+  image: alpine:latest
+  needs: []
+  script:
+    - |
+      echo "Quick Test Mode enabled"
+      echo "Using cached HAF data from commit: $QUICK_TEST_HAF_COMMIT"
+
+      if [ -z "$QUICK_TEST_HAF_COMMIT" ]; then
+        echo "ERROR: QUICK_TEST_HAF_COMMIT must be set when QUICK_TEST=true"
+        echo "Find available cache keys: ssh hive-builder-10 'ls -lt /nfs/ci-cache/haf/*.tar | head -5'"
+        exit 1
+      fi
+
+      # Override HAF_COMMIT with the cached version
+      echo "HAF_COMMIT=$QUICK_TEST_HAF_COMMIT" > quick_test.env
+      echo "HAFBE_CACHE_KEY=${QUICK_TEST_HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}" >> quick_test.env
+      cat quick_test.env
+  artifacts:
+    reports:
+      dotenv: quick_test.env
+  rules:
+    - if: $QUICK_TEST == "true"
+      when: always
+    - when: never
+  tags:
+    - public-runner-docker
+
 validate_haf_commit:
   stage: build
   image: alpine:latest
@@ -102,12 +140,25 @@ validate_haf_commit:
       exit 1
     fi
     echo "All HAF commit references are consistent"
+  rules:
+    # Skip in QUICK_TEST mode - we're using cached data from a different commit
+    - if: $QUICK_TEST == "true"
+      when: never
+    # Skip for docs-only changes
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   tags:
   - public-runner-docker
 
 prepare_haf_image:
   stage: build
-  extends: .prepare_haf_image
+  extends:
+    - .prepare_haf_image
+    - .skip_on_docs_only_or_quick_test
+  needs:
+    - job: detect_changes
+      optional: true  # Not needed on protected branches
   variables:
     SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     REGISTRY_USER: "$HAF_DEPLOY_USERNAME"
@@ -120,10 +171,15 @@ prepare_haf_image:
   - hived
 
 prepare_haf_data:
-  extends: .prepare_haf_data_5m
+  extends:
+    - .prepare_haf_data_5m
+    - .skip_on_docs_only_or_quick_test
   needs:
-  - job: prepare_haf_image
-    artifacts: true
+    - job: detect_changes
+      optional: true
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true  # Not needed if build was skipped
   stage: build
   timeout: 80m
   variables:
@@ -178,14 +234,22 @@ prepare_haf_data:
 
 docker-ci-runner-build:
   extends: .docker-base-build-template
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     BASE_REPO_NAME: ""
-    BASE_TAG: "docker-24.0.1-5"
+    BASE_TAG: "docker-26.1.4-1"
     NAME: "ci-runner"
     TARGET: "ci-runner-ci"
 
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     GIT_SUBMODULE_STRATEGY: none
     GIT_DEPTH: 1
@@ -197,6 +261,10 @@ docker-setup-docker-image-build:
 extract-swagger-json:
   extends: .filter_out_swagger_json
   stage: build
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     INPUT_SQL_SWAGGER_FILE: "${CI_PROJECT_DIR}/endpoints/endpoint_schema.sql"
   tags:
@@ -205,6 +273,10 @@ extract-swagger-json:
 generate-wax-spec:
   extends: .generate_swagger_package
   stage: build
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     INPUT_JSON_SWAGGER_FILE: "${BUILT_JSON_SWAGGER_FILE}"
     API_TYPE: "rest"
@@ -219,6 +291,10 @@ generate-wax-spec:
 generate_python_api_client:
   extends: .project_develop_configuration_template
   stage: build
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
   needs:
@@ -236,6 +312,10 @@ generate_python_api_client:
 build_python_api_client_wheel:
   extends: .build_wheel_template
   stage: build
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   needs:
   - job: generate_python_api_client
     artifacts: true
@@ -247,12 +327,22 @@ build_python_api_client_wheel:
 sync:
   extends: .docker_image_builder_job_template
   stage: sync
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   needs:
-  - prepare_haf_image
-  - prepare_haf_data
-  - docker-setup-docker-image-build
-  - docker-ci-runner-build
+    - job: quick_test_setup
+      artifacts: true
+      optional: true  # Only runs in QUICK_TEST mode
+    - job: prepare_haf_image
+      optional: true  # Skipped in QUICK_TEST mode
+    - job: prepare_haf_data
+      optional: true  # Skipped in QUICK_TEST mode
+    - job: docker-setup-docker-image-build
+    - job: docker-ci-runner-build
+  rules:
+    # Skip for docs-only changes
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
     DATADIR: ${CI_PROJECT_DIR}/${CI_JOB_ID}/datadir
@@ -435,7 +525,7 @@ sync:
   command: ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]
 
 .postgrest-service: &postgrest-service
-  name: registry.gitlab.syncad.com/hive/haf_api_node/postgrest:latest
+  name: registry.gitlab.syncad.com/hive/common-ci-configuration/postgrest:v12.0.2
   alias: postgrest-server
   variables:
     PGRST_ADMIN_SERVER_PORT: 3001
@@ -451,6 +541,10 @@ sync:
 python_api_client_test:
   extends: .project_develop_configuration_template
   stage: test
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   needs:
   - job: generate_python_api_client
     artifacts: true
@@ -463,15 +557,23 @@ python_api_client_test:
 
 regression-test:
   extends: .wait-for-haf-postgres
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   stage: test
   needs:
-  - job: sync
-    artifacts: true
-  - job: docker-setup-docker-image-build
-    artifacts: true
-  - job: prepare_haf_image
-    artifacts: true
+    - job: quick_test_setup
+      artifacts: true
+      optional: true
+    - job: sync
+      artifacts: true
+    - job: docker-setup-docker-image-build
+      artifacts: true
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true  # Not needed in QUICK_TEST mode
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     HAF_APP_SCHEMA: "hafbe_app"
   services:
@@ -498,15 +600,23 @@ regression-test:
 
 setup-scripts-test:
   extends: .wait-for-haf-postgres
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   stage: test
   needs:
-  - job: sync
-    artifacts: true
-  - job: docker-setup-docker-image-build
-    artifacts: true
-  - job: prepare_haf_image
-    artifacts: true
+    - job: quick_test_setup
+      artifacts: true
+      optional: true
+    - job: sync
+      artifacts: true
+    - job: docker-setup-docker-image-build
+      artifacts: true
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     HAF_APP_SCHEMA: "hafbe_app"
   services:
@@ -525,15 +635,23 @@ setup-scripts-test:
 
 performance-test:
   extends: .wait-for-haf-postgres
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-24.0.1-5
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   stage: test
   needs:
-  - job: sync
-    artifacts: true
-  - job: docker-setup-docker-image-build
-    artifacts: true
-  - job: prepare_haf_image
-    artifacts: true
+    - job: quick_test_setup
+      artifacts: true
+      optional: true
+    - job: sync
+      artifacts: true
+    - job: docker-setup-docker-image-build
+      artifacts: true
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   variables:
     HAF_APP_SCHEMA: "hafbe_app"
   services:
@@ -565,12 +683,20 @@ pattern-test:
   extends: .pytest_based_template
   stage: test
   needs:
-  - job: sync
-    artifacts: true
-  - job: docker-setup-docker-image-build
-    artifacts: true
-  - job: prepare_haf_image
-    artifacts: true
+    - job: quick_test_setup
+      artifacts: true
+      optional: true
+    - job: sync
+      artifacts: true
+    - job: docker-setup-docker-image-build
+      artifacts: true
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   services:
   - *haf-instance-with-nfs-fallback
   - *postgrest-service
