@@ -255,8 +255,6 @@ prepare_haf_image:
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
   tags:
   - public-runner-docker
-  - hived-for-tests
-  - hived
 
 prepare_haf_data:
   extends:
@@ -317,8 +315,6 @@ prepare_haf_data:
     echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
   - public-runner-docker
-  - hived-for-tests
-  - hived
 
 docker-ci-runner-build:
   extends: .docker-base-build-template
@@ -840,8 +836,6 @@ build_and_publish_image:
     fi
   tags:
   - public-runner-docker
-  - hived-for-tests
-  - hived
 
 deploy_python_api_packages_to_gitlab:
   stage: publish
