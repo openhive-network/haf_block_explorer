@@ -1,0 +1,97 @@
+# Lightweight Docker Compose for running tests against pre-synced data.
+# This compose file is used by CI test jobs that have already extracted
+# the synced HAF + haf_block_explorer data from cache.
+#
+# Unlike the main docker-compose.yml, this does NOT:
+# - Run HAF replay (data is pre-synced)
+# - Run app-setup, backend-setup, or block-processing services
+# - Include dev tools (swagger, pghero, pgadmin)
+#
+# Usage:
+#   export HAF_DATA_DIRECTORY=/path/to/extracted/cache
+#   export HAF_SHM_DIRECTORY=/path/to/shm
+#   docker compose -f docker-compose-test.yml up -d
+#
+# The HAF_DATA_DIRECTORY should contain:
+#   - datadir/pgdata (PostgreSQL database with synced data)
+#   - datadir/blockchain (block_log files)
+
+name: 'haf-be-test'
+
+services:
+  haf:
+    image: ${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf/instance:latest}
+    # No replay - just start PostgreSQL with existing data
+    entrypoint: /home/haf_admin/docker_entrypoint.sh
+    command: ""
+    environment:
+      HIVED_UID: ${HIVED_UID:-0}
+      DATADIR: /home/hived/datadir
+      SHM_DIR: /home/hived/shm_dir
+      PGCTLTIMEOUT: 600
+      # Trust all connections in test environment
+      PG_ACCESS: |
+        host    all    haf_admin        all    trust
+        host    all    haf_app_admin    all    trust
+        host    all    hafbe_owner      all    trust
+        host    all    hafbe_user       all    trust
+        host    all    btracker_owner   all    trust
+        host    all    reptracker_owner all    trust
+        host    all    pghero           all    trust
+    volumes:
+      - haf_datadir:/home/hived/datadir
+      - haf_shmdir:/home/hived/shm_dir
+    networks:
+      - haf-network-test
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U haf_admin -d haf_block_log -c 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    ports:
+      - "5432:5432"
+
+  postgrest:
+    image: ${POSTGREST_REGISTRY:-postgrest/postgrest}:${POSTGREST_VERSION:-latest}
+    depends_on:
+      haf:
+        condition: service_healthy
+    environment:
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_SERVER_PORT: 3000
+      PGRST_DB_URI: postgresql://hafbe_owner@haf:5432/haf_block_log
+      PGRST_DB_SCHEMA: hafbe_endpoints
+      PGRST_DB_ANON_ROLE: hafbe_user
+      PGRST_DB_POOL: 20
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
+      PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, reptracker_app
+    networks:
+      - haf-network-test
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3001/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+networks:
+  haf-network-test:
+    name: haf-network-test-${CI_JOB_ID:-local}
+
+volumes:
+  haf_datadir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_DATA_DIRECTORY:-/tmp/haf_data}
+  haf_shmdir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_SHM_DIRECTORY:-/tmp/haf_shm}

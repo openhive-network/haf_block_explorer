@@ -1,4 +1,5 @@
 stages:
+- detect
 - lint
 - build
 - sync
@@ -25,7 +26,8 @@ variables:
   # NFS cache configuration for sync data sharing across builders
   DATA_CACHE_NFS_PREFIX: "/nfs/ci-cache"
   HAFBE_CACHE_KEY: "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
-  HAFBE_SYNC_CACHE_TYPE: "hafbe_sync"
+  # Cache type prefixed with haf_ for automatic pgdata permission handling by cache-manager
+  HAFBE_SYNC_CACHE_TYPE: "haf_hafbe_sync"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
@@ -49,8 +51,11 @@ include:
 - project: hive/haf
   ref: b4225f9d2591195b0e6aadf36bbef921d95f92b9   # develop
   file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
-  # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Haf/Hive repos
-# Skip rules for docs-only changes and QUICK_TEST mode
+# HAF app testing templates - provides change detection, sync helpers, test base templates
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/haf_app_testing.gitlab-ci.yml
+# Skip rules for docs-only changes and QUICK_TEST mode (to be replaced by common templates)
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
 default:
@@ -623,59 +628,6 @@ sync:
   - data-cache-storage
   - fast
 
-# HAF service container with NFS fallback
-# Uses HAF's built-in NFS cache extraction (in copy_datadir.sh)
-# DATA_SOURCE format: /cache/{type}_{key} -> looks for /nfs/ci-cache/{type}/{key}.tar
-.haf-instance-with-nfs-fallback: &haf-instance-with-nfs-fallback
-  name: ${HAF_IMAGE_NAME}
-  alias: haf-instance
-  variables:
-    PGCTLTIMEOUT: 600
-    PG_ACCESS: |
-      "host    all              haf_admin        0.0.0.0/0    trust"
-      "host    all              hived            0.0.0.0/0    trust"
-      "host    all              hafbe_user       0.0.0.0/0    trust"
-      "host    all              hafbe_owner      0.0.0.0/0    trust"
-      "host    all              all              0.0.0.0/0    scram-sha-256"
-    # DATA_SOURCE format for HAF NFS fallback: /cache/{type}_{key}
-    # HAF parses this to find NFS tar at /nfs/ci-cache/{type}/{key}.tar
-    # Note: Must use HAF_COMMIT directly (not HAFBE_CACHE_KEY) for proper expansion in services
-    DATA_SOURCE: "/cache/hafbe_sync_${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
-    # NFS path where cache-manager.sh looks for tars
-    CACHE_NFS_PATH: "/nfs/ci-cache"
-
-.postgrest-service: &postgrest-service
-  name: registry.gitlab.syncad.com/hive/common-ci-configuration/postgrest:v12.0.2
-  alias: postgrest-server
-  variables:
-    PGRST_ADMIN_SERVER_PORT: 3001
-    PGRST_SERVER_PORT: 3000
-    PGRST_DB_URI: postgresql://haf_admin@haf-instance:5432/haf_block_log
-    PGRST_DB_SCHEMA: hafbe_endpoints
-    PGRST_DB_ANON_ROLE: hafbe_user
-    PGRST_DB_POOL: 20
-    PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
-    PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, reptracker_app
-    HEALTHCHECK_TCP_PORT: 3000
-
-# Extension for jobs using HAF service with NFS fallback
-# HAF entrypoint handles NFS extraction automatically via copy_datadir.sh
-.wait-for-haf-postgres-with-nfs:
-  extends: .wait-for-haf-postgres
-  before_script:
-  - |
-    # Log cache path info for debugging
-    LOCAL_CACHE="/cache/hafbe_sync_${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
-    PGDATA_DIR="${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
-    NFS_TAR="/nfs/ci-cache/hafbe_sync/${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}.tar"
-    echo "Main job: cache info"
-    echo "  LOCAL_CACHE: ${LOCAL_CACHE}"
-    echo "  NFS_TAR: ${NFS_TAR}"
-    echo "  PGDATA would be at: ${PGDATA_DIR}"
-    echo "  NFS tar exists: $(test -f "$NFS_TAR" && echo 'yes' || echo 'no')"
-    ls -la "${LOCAL_CACHE}/" 2>&1 | head -5 || echo "  Cache dir not visible to main job yet"
-  - !reference [.wait-for-haf-postgres, before_script]
-
 python_api_client_test:
   extends: .project_develop_configuration_template
   # Use Python 3.12 for consistency with generate_python_api_client
@@ -697,182 +649,171 @@ python_api_client_test:
   tags:
   - public-runner-docker
 
+# =============================================================================
+# TEST JOB BASE TEMPLATE (Docker Compose)
+# =============================================================================
+# All test jobs use docker-compose-test.yml instead of service containers.
+# This provides better control over container lifecycle and cache extraction.
+
+.hafbe_test_base:
+  extends: .docker_image_builder_job_template
+  stage: test
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
+  needs:
+    - job: quick_test_setup
+      artifacts: true
+      optional: true
+    - job: sync
+      artifacts: true
+    - job: docker-ci-runner-build
+    - job: prepare_haf_image
+      artifacts: true
+      optional: true
+  rules:
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
+  variables:
+    # Test data directories - extracted from sync cache
+    HAF_DATA_DIRECTORY: "${CI_PROJECT_DIR}/test-data"
+    HAF_SHM_DIRECTORY: "${CI_PROJECT_DIR}/test-shm"
+    COMPOSE_FILE: "docker/docker-compose-test.yml"
+    # Container hostnames in docker-compose network
+    HAF_HOST: "haf"
+    POSTGREST_HOST: "postgrest"
+    # Use recursive for nested submodules (haf/hive)
+    GIT_SUBMODULE_STRATEGY: recursive
+    HAF_APP_SCHEMA: "hafbe_app"
+  before_script:
+    - !reference [.docker_image_builder_job_template, before_script]
+    # Fetch cache-manager
+    - !reference [.fetch_cache_manager, script]
+    # Create data directories
+    - mkdir -p "${HAF_DATA_DIRECTORY}" "${HAF_SHM_DIRECTORY}"
+    # Extract sync cache
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):extract_cache[collapsed=true]\r\e[0KExtracting sync cache..."
+      export SKIP_WAIT=true  # Don't wait for postgres yet
+      ./scripts/ci-helpers/extract-cache-and-wait.sh "${HAFBE_SYNC_CACHE_TYPE}" "${HAFBE_CACHE_KEY}" "${HAF_DATA_DIRECTORY}"
+      echo -e "\e[0Ksection_end:$(date +%s):extract_cache\r\e[0K"
+    # Start docker-compose
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):compose_up[collapsed=true]\r\e[0KStarting test environment..."
+      docker compose -f "${COMPOSE_FILE}" up -d
+      echo -e "\e[0Ksection_end:$(date +%s):compose_up\r\e[0K"
+    # Wait for services to be ready
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):wait_services[collapsed=true]\r\e[0KWaiting for services..."
+      ./scripts/ci-helpers/wait-for-postgrest.sh
+      echo -e "\e[0Ksection_end:$(date +%s):wait_services\r\e[0K"
+  after_script:
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):compose_down[collapsed=true]\r\e[0KStopping test environment..."
+      docker compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" logs > docker/container-logs.txt 2>&1 || true
+      docker compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" down -v || true
+      # Cleanup test data
+      sudo rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" "${HAF_SHM_DIRECTORY:-/tmp/test-shm}" || true
+      echo -e "\e[0Ksection_end:$(date +%s):compose_down\r\e[0K"
+  artifacts:
+    paths:
+      - docker/container-logs.txt
+    when: always
+    expire_in: 1 week
+  tags:
+    - data-cache-storage
+    - fast
+
+# =============================================================================
+# TEST JOBS
+# =============================================================================
+
 regression-test:
-  extends: .wait-for-haf-postgres-with-nfs
+  extends: .hafbe_test_base
   # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for data_insertion_script.py)
   image: $BUILDER_IMAGE_PATH
-  stage: test
-  needs:
-    - job: quick_test_setup
-      artifacts: true
-      optional: true
-    - job: sync
-      artifacts: true
-    - job: docker-setup-docker-image-build
-      artifacts: true
-    - job: prepare_haf_image
-      artifacts: true
-      optional: true  # Not needed in QUICK_TEST mode
-  rules:
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  variables:
-    # Use recursive to properly handle nested submodules (haf/hive)
-    GIT_SUBMODULE_STRATEGY: recursive
-    HAF_APP_SCHEMA: "hafbe_app"
-  services:
-  - *haf-instance-with-nfs-fallback
   script:
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning regression tests..."
 
-    cd tests/account_parameters
-    ./accounts_dump_test.sh --host=haf-instance
+      cd tests/account_parameters
+      ./accounts_dump_test.sh --host=${HAF_HOST}
 
-    cd ../witness_parameters
-    ./witnesses_dump_test.sh --host=haf-instance
+      cd ../witness_parameters
+      ./witnesses_dump_test.sh --host=${HAF_HOST}
 
-    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+      echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-    - tests/account_parameters/account_dump_test.log
-    - tests/witness_parameters/witness_dump_test.log
+      - docker/container-logs.txt
+      - tests/account_parameters/account_dump_test.log
+      - tests/witness_parameters/witness_dump_test.log
     when: always
-  tags:
-  - data-cache-storage
-  - fast
 
 setup-scripts-test:
-  extends: .wait-for-haf-postgres-with-nfs
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
-  stage: test
-  needs:
-    - job: quick_test_setup
-      artifacts: true
-      optional: true
-    - job: sync
-      artifacts: true
-    - job: docker-setup-docker-image-build
-      artifacts: true
-    - job: prepare_haf_image
-      artifacts: true
-      optional: true
-  rules:
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  variables:
-    # Use recursive to properly handle nested submodules (haf/hive)
-    GIT_SUBMODULE_STRATEGY: recursive
-    HAF_APP_SCHEMA: "hafbe_app"
-  services:
-  - *haf-instance-with-nfs-fallback
+  extends: .hafbe_test_base
   script:
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning functional tests..."
 
-    cd tests/functional
-    ./test_scripts.sh --host=haf-instance
+      cd tests/functional
+      ./test_scripts.sh --host=${HAF_HOST}
 
-    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
-  tags:
-  - data-cache-storage
-  - fast
+      echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
 performance-test:
-  extends: .wait-for-haf-postgres-with-nfs
+  extends: .hafbe_test_base
   # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for generate_db.py)
   image: $BUILDER_IMAGE_PATH
-  stage: test
-  needs:
-    - job: quick_test_setup
-      artifacts: true
-      optional: true
-    - job: sync
-      artifacts: true
-    - job: docker-setup-docker-image-build
-      artifacts: true
-    - job: prepare_haf_image
-      artifacts: true
-      optional: true
-  rules:
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  variables:
-    # Use recursive to properly handle nested submodules (haf/hive)
-    GIT_SUBMODULE_STRATEGY: recursive
-    HAF_APP_SCHEMA: "hafbe_app"
-  services:
-  - *haf-instance-with-nfs-fallback
-  - *postgrest-service
   script:
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning tests..."
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning performance tests..."
 
-    timeout -k 1m 15m  ./tests/run_performance_tests.sh --postgresql-host=haf-instance --postgrest-host=postgrest-server --database-size=6000 --test-loop-count=1000
-    tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
-    cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
-    m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
+      timeout -k 1m 15m ./tests/run_performance_tests.sh --postgresql-host=${HAF_HOST} --postgrest-host=${POSTGREST_HOST} --database-size=6000 --test-loop-count=1000
+      tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
+      cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
+      m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
 
-    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+      echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-    - tests/performance/result/result_report/
-    - tests/performance/results.tar.7z
-    - jmeter.log
+      - docker/container-logs.txt
+      - tests/performance/result/result_report/
+      - tests/performance/results.tar.7z
+      - jmeter.log
     when: always
     reports:
       junit: tests/performance/junit-result.xml
-  tags:
-  - data-cache-storage
-  - fast
 
 pattern-test:
-  extends: .pytest_based_template
-  stage: test
-  needs:
-    - job: quick_test_setup
-      artifacts: true
-      optional: true
-    - job: sync
-      artifacts: true
-    - job: docker-setup-docker-image-build
-      artifacts: true
-    - job: prepare_haf_image
-      artifacts: true
-      optional: true
-  rules:
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  services:
-  - *haf-instance-with-nfs-fallback
-  - *postgrest-service
+  extends:
+    - .hafbe_test_base
+    - .pytest_based_template
+  image: $BUILDER_IMAGE_PATH
   variables:
-    # Need recursive for nested haf/hive submodule (hive-local-tools)
-    GIT_SUBMODULE_STRATEGY: recursive
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     PYTEST_BASED_IMAGE_NAME: $BUILDER_IMAGE_PATH
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
-    HAFBE_ADDRESS: postgrest-server
+    HAFBE_ADDRESS: ${POSTGREST_HOST}
     HAFBE_PORT: 3000
     TAVERN_DIR: $CI_PROJECT_DIR/tests/tavern
-    HAF_APP_SCHEMA: "hafbe_app"
   before_script:
-  - !reference [.pytest_based_template, before_script]
-  - !reference [.wait-for-haf-postgres-with-nfs, before_script]
+    - !reference [.hafbe_test_base, before_script]
+    - !reference [.pytest_based_template, before_script]
   script:
-  - |
-    cd $CI_PROJECT_DIR/tests/tavern
-    pytest -n $PYTEST_NUMBER_OF_PROCESSES --junitxml report.xml .
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning Tavern API tests..."
+
+      cd $CI_PROJECT_DIR/tests/tavern
+      pytest -n $PYTEST_NUMBER_OF_PROCESSES --junitxml report.xml .
+
+      echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
-    - "**/*.out.json"
-  tags:
-  - data-cache-storage
-  - fast
+      - docker/container-logs.txt
+      - "**/*.out.json"
+    when: always
+    reports:
+      junit: $CI_PROJECT_DIR/tests/tavern/report.xml
 
 build_and_publish_image:
   stage: publish
