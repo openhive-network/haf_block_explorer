@@ -11,8 +11,8 @@ RUN <<-EOF
     sudo
 EOF
 
-# Create hived user for compatibility with existing scripts
-RUN adduser -D -s /bin/bash hived && \
-    echo "hived ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Create hived user for compatibility with existing scripts (if not exists)
+RUN id hived 2>/dev/null || adduser -D -s /bin/bash hived && \
+    grep -q "^hived " /etc/sudoers || echo "hived ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER hived
