@@ -730,28 +730,50 @@ sync:
   before_script:
   - |
     # Extract NFS cache to local /cache/ so service container can find it
+    # Check for pgdata (not just datadir) to ensure extraction is complete
     LOCAL_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
     NFS_TAR="${DATA_CACHE_NFS_PREFIX}/${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}.tar"
+    PGDATA_DIR="${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
     echo "Checking cache: LOCAL_CACHE=${LOCAL_CACHE}, NFS_TAR=${NFS_TAR}"
-    if [[ ! -d "${LOCAL_CACHE}/datadir" ]]; then
+    # Wait for complete extraction (check for pgdata/PG_VERSION as completion marker)
+    if [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; then
+      echo "Cache not ready (pgdata/PG_VERSION missing), checking NFS..."
       if [[ -f "$NFS_TAR" ]]; then
-        echo "Extracting NFS cache for service container..."
-        mkdir -p "${LOCAL_CACHE}"
-        tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
-        # Restore pgdata ownership and permissions for PostgreSQL
-        if [[ -d "${LOCAL_CACHE}/datadir/haf_db_store" ]]; then
-          echo "Fixing PostgreSQL data permissions..."
-          sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_db_store"
-          sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
-          sudo chmod 700 "${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
+        # Check if service is already extracting (datadir exists but pgdata incomplete)
+        if [[ -d "${LOCAL_CACHE}/datadir" ]] && [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; then
+          echo "Extraction in progress by service container, waiting for completion..."
+          WAIT_TIMEOUT=300
+          ELAPSED=0
+          while [[ ! -f "${PGDATA_DIR}/PG_VERSION" ]]; do
+            if [[ $ELAPSED -ge $WAIT_TIMEOUT ]]; then
+              echo "ERROR: Timeout waiting for cache extraction to complete"
+              ls -la "${LOCAL_CACHE}/datadir/" 2>&1 || true
+              exit 1
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+            echo "Waiting for extraction... (${ELAPSED}s/${WAIT_TIMEOUT}s)"
+          done
+          echo "Extraction completed after ${ELAPSED}s"
+        else
+          echo "Extracting NFS cache for service container..."
+          mkdir -p "${LOCAL_CACHE}"
+          tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
+          # Restore pgdata ownership and permissions for PostgreSQL
+          if [[ -d "${LOCAL_CACHE}/datadir/haf_db_store" ]]; then
+            echo "Fixing PostgreSQL data permissions..."
+            sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_db_store"
+            sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
+            sudo chmod 700 "${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
+          fi
+          echo "NFS cache extracted to: ${LOCAL_CACHE}"
         fi
-        echo "NFS cache extracted to: ${LOCAL_CACHE}"
       else
         echo "WARNING: NFS cache not found: $NFS_TAR"
         ls -la "${DATA_CACHE_NFS_PREFIX}/${HAFBE_SYNC_CACHE_TYPE}/" 2>&1 | head -5 || echo "Cannot list NFS directory"
       fi
     else
-      echo "Local cache already exists: ${LOCAL_CACHE}"
+      echo "Local cache ready: ${LOCAL_CACHE}"
     fi
   - !reference [.wait-for-haf-postgres, before_script]
 
