@@ -856,8 +856,9 @@ deploy-wax-spec-dev-package:
   extends: .npm_deploy_package_template
   stage: publish
   variables:
-    SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
-    PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
+    # Use CI_PROJECT_DIR instead of PACKAGE_SOURCE_DIR which has runner-specific paths
+    SOURCE_DIR: "${CI_PROJECT_DIR}/build/generated"
+    PACKAGE_TGZ_PATH: "${CI_PROJECT_DIR}/build/wax-api-hafbe.tgz"
     NPM_PACKAGE_SCOPE: "@hiveio"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
@@ -873,8 +874,9 @@ deploy-wax-spec-production-public-npm:
   variables:
     NPM_PUBLISH_TOKEN: "$INTERNAL_HIDDEN_PUBLISH_TOKEN"
     NPM_PACKAGE_NAME: "wax-api-hafbe"
-    SOURCE_DIR: "${PACKAGE_SOURCE_DIR}"
-    PACKAGE_TGZ_PATH: "${BUILT_PACKAGE_PATH}"
+    # Use CI_PROJECT_DIR instead of PACKAGE_SOURCE_DIR which has runner-specific paths
+    SOURCE_DIR: "${CI_PROJECT_DIR}/build/generated"
+    PACKAGE_TGZ_PATH: "${CI_PROJECT_DIR}/build/wax-api-hafbe.tgz"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   needs:
