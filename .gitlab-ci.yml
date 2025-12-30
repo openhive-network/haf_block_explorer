@@ -198,11 +198,16 @@ quick_test_setup:
 validate_haf_commit:
   stage: build
   image: alpine:latest
+  variables:
+    # Avoid nested submodule issues - manually init just haf submodule
+    GIT_SUBMODULE_STRATEGY: none
   script:
   - |
     set -e
     apk add --no-cache git
-    SUBMODULE_COMMIT=$(cat .git/modules/submodules/haf/HEAD 2>/dev/null || git -C submodules/haf rev-parse HEAD)
+    # Manually init just the haf submodule (no recursion)
+    git submodule update --init submodules/haf
+    SUBMODULE_COMMIT=$(git -C submodules/haf rev-parse HEAD)
     INCLUDE_REF=$(grep -A2 "project:.*hive/haf" .gitlab-ci.yml | grep "ref:" | head -1 | sed 's/.*ref: *\([a-f0-9]*\).*/\1/' || true)
     echo "HAF_COMMIT variable: $HAF_COMMIT"
     echo "HAF submodule HEAD:  $SUBMODULE_COMMIT"
