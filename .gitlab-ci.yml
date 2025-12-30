@@ -369,6 +369,8 @@ generate-wax-spec:
 
 generate_python_api_client:
   extends: .project_develop_configuration_template
+  # Override image to Python 3.12 - api_client_generator doesn't support Python 3.14 yet
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1
   stage: build
   rules:
     - if: $DOCS_ONLY == "true"
@@ -390,6 +392,8 @@ generate_python_api_client:
 
 build_python_api_client_wheel:
   extends: .build_wheel_template
+  # Use Python 3.12 for consistency with generate_python_api_client
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1
   stage: build
   rules:
     - if: $DOCS_ONLY == "true"
@@ -619,6 +623,8 @@ sync:
 
 python_api_client_test:
   extends: .project_develop_configuration_template
+  # Use Python 3.12 for consistency with generate_python_api_client
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1
   stage: test
   rules:
     - if: $DOCS_ONLY == "true"
