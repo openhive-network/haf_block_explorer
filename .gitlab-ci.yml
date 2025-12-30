@@ -287,9 +287,12 @@ prepare_haf_data:
   before_script:
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
+    - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
     # Manually init just the haf submodule without nested submodules
     - rm -rf .git/modules/submodules 2>/dev/null || true
     - git submodule update --init submodules/haf
+    # HAF scripts are symlinks to hive submodule - init it without recursion
+    - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
   tags:
   - data-cache-storage
   - fast
