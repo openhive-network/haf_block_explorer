@@ -289,8 +289,8 @@ prepare_haf_data:
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-    # Clean up any stale submodule state
-    - rm -rf .git/modules/submodules 2>/dev/null || true
+    # Clean up any stale submodule state (may have wrong permissions from previous runs)
+    - sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
     - rm -rf submodules/haf 2>/dev/null || true
     # Manually init just the haf submodule without nested submodules
     - git submodule update --init --force submodules/haf
@@ -487,8 +487,8 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
-    # Clean up any stale submodule state
-    rm -rf .git/modules/submodules 2>/dev/null || true
+    # Clean up any stale submodule state (may have wrong permissions from previous runs)
+    sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
     rm -rf submodules/haf 2>/dev/null || true
     # Manually init submodules without nested recursion
     git submodule update --init --force submodules/haf
