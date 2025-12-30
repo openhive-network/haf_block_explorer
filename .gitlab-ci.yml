@@ -649,17 +649,23 @@ sync:
       NFS_TYPE="${DATA_SOURCE_NFS_TYPE:-haf_sync}"
       NFS_KEY="${DATA_SOURCE_NFS_KEY}"
 
-      # If original path doesn't exist, try NFS fallback
+      # If original path doesn't exist, try NFS fallback or wait for main job extraction
       if [[ ! -d "${ORIGINAL_SOURCE}/datadir" ]]; then
         echo "Local cache not found: ${ORIGINAL_SOURCE}/datadir"
         NFS_PATH="${NFS_PREFIX}/${NFS_TYPE}/${NFS_KEY}"
         NFS_TAR="${NFS_PATH}.tar"
 
+        # Debug: show what we're looking for
+        echo "NFS_PREFIX=${NFS_PREFIX} NFS_TYPE=${NFS_TYPE} NFS_KEY=${NFS_KEY}"
+        echo "Checking NFS path: ${NFS_PATH}"
+        echo "Checking NFS tar: ${NFS_TAR}"
+        ls -la "${NFS_PREFIX}/${NFS_TYPE}/" 2>&1 | head -5 || echo "Cannot list NFS directory (NFS may not be mounted in container)"
+
         if [[ -d "${NFS_PATH}/datadir" ]]; then
           echo "Found data on NFS directory: $NFS_PATH"
           export DATA_SOURCE="$NFS_PATH"
         elif [[ -f "${NFS_TAR}" ]]; then
-          echo "Found NFS tar archive: $NFS_TAR"
+          echo "Found NFS tar archive: $NFS_TAR ($(stat -c%s "$NFS_TAR" 2>/dev/null || echo 'size unknown') bytes)"
           echo "Extracting to: ${ORIGINAL_SOURCE}"
           mkdir -p "${ORIGINAL_SOURCE}"
           tar xf "${NFS_TAR}" -C "${ORIGINAL_SOURCE}"
@@ -674,10 +680,25 @@ sync:
           echo "Extracted NFS cache successfully"
           export DATA_SOURCE="${ORIGINAL_SOURCE}"
         else
-          echo "WARNING: Data not found in local or NFS cache"
-          echo "Checked: ${ORIGINAL_SOURCE}/datadir"
-          echo "Checked: ${NFS_PATH}/datadir"
-          echo "Checked: ${NFS_TAR}"
+          # NFS not available in this container - wait for main job to extract cache
+          # The main job's before_script will extract NFS cache to local /cache/ path
+          echo "NFS tar not found - waiting for main job to extract cache..."
+          echo "Expected location: ${ORIGINAL_SOURCE}/datadir"
+          WAIT_TIMEOUT=300
+          ELAPSED=0
+          while [[ ! -d "${ORIGINAL_SOURCE}/datadir" ]]; do
+            if [[ $ELAPSED -ge $WAIT_TIMEOUT ]]; then
+              echo "ERROR: Timeout waiting for cache extraction"
+              echo "Main job should have extracted NFS cache to: ${ORIGINAL_SOURCE}"
+              ls -la /cache/ 2>&1 | head -10 || echo "Cannot list /cache/"
+              exit 1
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+            echo "Waiting for cache... (${ELAPSED}s/${WAIT_TIMEOUT}s)"
+          done
+          echo "Cache appeared after ${ELAPSED}s"
+          export DATA_SOURCE="${ORIGINAL_SOURCE}"
         fi
       else
         echo "Using local cache: ${ORIGINAL_SOURCE}"
@@ -702,6 +723,38 @@ sync:
     PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, reptracker_app
     HEALTHCHECK_TCP_PORT: 3000
 
+# Extension that extracts NFS cache before waiting for PostgreSQL
+# Service container waits for this extraction to complete
+.wait-for-haf-postgres-with-nfs:
+  extends: .wait-for-haf-postgres
+  before_script:
+  - |
+    # Extract NFS cache to local /cache/ so service container can find it
+    LOCAL_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
+    NFS_TAR="${DATA_CACHE_NFS_PREFIX}/${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}.tar"
+    echo "Checking cache: LOCAL_CACHE=${LOCAL_CACHE}, NFS_TAR=${NFS_TAR}"
+    if [[ ! -d "${LOCAL_CACHE}/datadir" ]]; then
+      if [[ -f "$NFS_TAR" ]]; then
+        echo "Extracting NFS cache for service container..."
+        mkdir -p "${LOCAL_CACHE}"
+        tar xf "$NFS_TAR" -C "${LOCAL_CACHE}"
+        # Restore pgdata ownership and permissions for PostgreSQL
+        if [[ -d "${LOCAL_CACHE}/datadir/haf_db_store" ]]; then
+          echo "Fixing PostgreSQL data permissions..."
+          sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_db_store"
+          sudo chown -R 105:109 "${LOCAL_CACHE}/datadir/haf_postgresql_conf.d" 2>/dev/null || true
+          sudo chmod 700 "${LOCAL_CACHE}/datadir/haf_db_store/pgdata"
+        fi
+        echo "NFS cache extracted to: ${LOCAL_CACHE}"
+      else
+        echo "WARNING: NFS cache not found: $NFS_TAR"
+        ls -la "${DATA_CACHE_NFS_PREFIX}/${HAFBE_SYNC_CACHE_TYPE}/" 2>&1 | head -5 || echo "Cannot list NFS directory"
+      fi
+    else
+      echo "Local cache already exists: ${LOCAL_CACHE}"
+    fi
+  - !reference [.wait-for-haf-postgres, before_script]
+
 python_api_client_test:
   extends: .project_develop_configuration_template
   # Use Python 3.12 for consistency with generate_python_api_client
@@ -724,7 +777,7 @@ python_api_client_test:
   - public-runner-docker
 
 regression-test:
-  extends: .wait-for-haf-postgres
+  extends: .wait-for-haf-postgres-with-nfs
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   stage: test
   needs:
@@ -769,7 +822,7 @@ regression-test:
   - fast
 
 setup-scripts-test:
-  extends: .wait-for-haf-postgres
+  extends: .wait-for-haf-postgres-with-nfs
   image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   stage: test
   needs:
@@ -806,7 +859,7 @@ setup-scripts-test:
   - fast
 
 performance-test:
-  extends: .wait-for-haf-postgres
+  extends: .wait-for-haf-postgres-with-nfs
   # Use BUILDER_IMAGE with Python (ci-runner doesn't have python3 needed for generate_db.py)
   image: $BUILDER_IMAGE_PATH
   stage: test
@@ -887,7 +940,7 @@ pattern-test:
     HAF_APP_SCHEMA: "hafbe_app"
   before_script:
   - !reference [.pytest_based_template, before_script]
-  - !reference [.wait-for-haf-postgres, before_script]
+  - !reference [.wait-for-haf-postgres-with-nfs, before_script]
   script:
   - |
     cd $CI_PROJECT_DIR/tests/tavern
