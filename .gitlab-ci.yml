@@ -583,7 +583,13 @@ sync:
     ls -lah "${DATADIR}"
     ls -lah "${LOCAL_HAFBE_CACHE}" || true
 
+    # Download cache-manager if not available in submodule (may have been cleaned)
     CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
+    if [[ ! -x "$CACHE_MANAGER" ]]; then
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+      chmod +x "$CACHE_MANAGER"
+    fi
     if [[ -x "$CACHE_MANAGER" ]]; then
       echo "Pushing sync data to NFS cache: ${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}"
       CACHE_HANDLING=haf "$CACHE_MANAGER" put "${HAFBE_SYNC_CACHE_TYPE}" "${HAFBE_CACHE_KEY}" "${LOCAL_HAFBE_CACHE}" || echo "Warning: Failed to push to NFS cache"
