@@ -858,10 +858,13 @@ deploy-wax-spec-dev-package:
   variables:
     # Use CI_PROJECT_DIR instead of PACKAGE_SOURCE_DIR which has runner-specific paths
     SOURCE_DIR: "${CI_PROJECT_DIR}/build/generated"
-    PACKAGE_TGZ_PATH: "${CI_PROJECT_DIR}/build/wax-api-hafbe.tgz"
     NPM_PACKAGE_SCOPE: "@hiveio"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
+  before_script:
+    # Fix PACKAGE_TGZ_PATH - dotenv has runner-specific path, need to find actual file
+    - export PACKAGE_TGZ_PATH=$(ls ${CI_PROJECT_DIR}/build/*.tgz 2>/dev/null | head -1)
+    - echo "Using PACKAGE_TGZ_PATH=$PACKAGE_TGZ_PATH"
   needs:
   - job: generate-wax-spec
     artifacts: true
@@ -876,9 +879,12 @@ deploy-wax-spec-production-public-npm:
     NPM_PACKAGE_NAME: "wax-api-hafbe"
     # Use CI_PROJECT_DIR instead of PACKAGE_SOURCE_DIR which has runner-specific paths
     SOURCE_DIR: "${CI_PROJECT_DIR}/build/generated"
-    PACKAGE_TGZ_PATH: "${CI_PROJECT_DIR}/build/wax-api-hafbe.tgz"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
+  before_script:
+    # Fix PACKAGE_TGZ_PATH - dotenv has runner-specific path, need to find actual file
+    - export PACKAGE_TGZ_PATH=$(ls ${CI_PROJECT_DIR}/build/*.tgz 2>/dev/null | head -1)
+    - echo "Using PACKAGE_TGZ_PATH=$PACKAGE_TGZ_PATH"
   needs:
   - job: generate-wax-spec
     artifacts: true
