@@ -253,9 +253,11 @@ prepare_haf_image:
     REGISTRY_PASS: "$HAF_DEPLOY_TOKEN"
   before_script:
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
-  # HAF scripts are symlinks to hive submodule - init it without recursion
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
+  # Clean stale git modules state (may have wrong permissions)
+  - rm -rf .git/modules/submodules/haf/modules 2>/dev/null || true
   - rm -rf $CI_PROJECT_DIR/submodules/haf/.git/modules 2>/dev/null || true
+  # HAF scripts are symlinks to hive submodule - init it without recursion
   - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
   tags:
   - public-runner-docker
