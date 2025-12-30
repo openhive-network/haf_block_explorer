@@ -267,9 +267,9 @@ prepare_haf_image:
   - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
   # Clean up any stale submodule state - deinit first, then remove
   - git submodule deinit -f --all 2>/dev/null || true
+  # Remove with sudo, then recreate with sudo and fix ownership so git can use them
   - sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
-  # Recreate directories with proper permissions for git submodule operations
-  - mkdir -p .git/modules/submodules submodules
+  - sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
   # Manually init submodules without nested recursion
   - git submodule update --init --force submodules/haf
   # HAF scripts are symlinks to hive submodule - init it without recursion
@@ -301,8 +301,9 @@ prepare_haf_data:
     - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
     # Clean up any stale submodule state - deinit first, then remove
     - git submodule deinit -f --all 2>/dev/null || true
-    - sudo rm -rf .git/modules/submodules 2>/dev/null || rm -rf .git/modules/submodules 2>/dev/null || true
-    - sudo rm -rf submodules 2>/dev/null || rm -rf submodules 2>/dev/null || true
+    # Remove with sudo, then recreate with sudo and fix ownership so git can use them
+    - sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
+    - sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
     # Manually init just the haf submodule without nested submodules
     - git submodule update --init --force submodules/haf
     # HAF scripts are symlinks to hive submodule - init it without recursion
@@ -500,9 +501,9 @@ sync:
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
     # Clean up any stale submodule state - deinit first, then remove
     git submodule deinit -f --all 2>/dev/null || true
+    # Remove with sudo, then recreate with sudo and fix ownership so git can use them
     sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
-    # Recreate directories with proper permissions for git submodule operations
-    mkdir -p .git/modules/submodules submodules
+    sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
     # Manually init all submodules - HAF with its nested hive, plus btracker, hafah, reptracker
     git submodule update --init --force
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
