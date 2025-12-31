@@ -740,6 +740,7 @@ python_api_client_test:
       echo -e "\e[0Ksection_end:$(date +%s):compose_up\r\e[0K"
     # Wait for services to be ready
     - |
+      export PATH="$LOCAL_BIN:$PATH"
       echo -e "\e[0Ksection_start:$(date +%s):wait_services[collapsed=true]\r\e[0KWaiting for services..."
       ./scripts/ci-helpers/wait-for-postgrest.sh
       echo -e "\e[0Ksection_end:$(date +%s):wait_services\r\e[0K"
