@@ -463,7 +463,7 @@ sync:
   extends: .docker_image_builder_job_template
   stage: sync
   # Shared HAF app test runner from common-ci-configuration
-  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.0
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
   needs:
     - job: quick_test_setup
       artifacts: true
@@ -650,7 +650,7 @@ python_api_client_test:
   stage: test
   # Shared HAF app test runner from common-ci-configuration
   # Has: Python 3.14, Poetry, Docker CLI, docker-compose, JMeter, m2u
-  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.0
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
   needs:
     - job: quick_test_setup
       artifacts: true
@@ -798,7 +798,7 @@ pattern-test:
     - .hafbe_test_base
     - .pytest_based_template
   # Explicit image needed to override .pytest_based_template (which sets docker:latest)
-  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.0
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
   variables:
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
