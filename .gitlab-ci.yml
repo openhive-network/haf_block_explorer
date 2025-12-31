@@ -552,7 +552,8 @@ sync:
     rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
     cp -a -L "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
 
-    "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh"
+    # Run app-setup as root to allow writing to the container's scripts directory
+    "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh" --setup-uid=0
 
     echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
     echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for HAF BE startup..."
