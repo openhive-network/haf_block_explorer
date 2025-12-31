@@ -579,10 +579,10 @@ sync:
     popd
 
     tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
-    cp -a "${SHM_DIR}" "${DATADIR}/shm_dir"
+    sudo cp -a "${SHM_DIR}" "${DATADIR}/shm_dir"
 
     LOCAL_HAFBE_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
-    mkdir -p "${LOCAL_HAFBE_CACHE}"
+    sudo mkdir -p "${LOCAL_HAFBE_CACHE}"
     sudo cp -a "${DATADIR}" "${LOCAL_HAFBE_CACHE}"
 
     ls -lah "${DATADIR}"
