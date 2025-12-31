@@ -731,6 +731,10 @@ python_api_client_test:
     # Start docker-compose
     - |
       export PATH="$LOCAL_BIN:$PATH"
+      export HIVED_UID="${HIVED_UID:-0}"
+      echo "HIVED_UID=$HIVED_UID (container will run as this UID)"
+      # Ensure container can write to extracted data (HAF runs as UID 4000 by default)
+      sudo chmod -R 777 "${HAF_DATA_DIRECTORY}" || chmod -R 777 "${HAF_DATA_DIRECTORY}" || true
       echo -e "\e[0Ksection_start:$(date +%s):compose_up[collapsed=true]\r\e[0KStarting test environment..."
       docker-compose -f "${COMPOSE_FILE}" up -d
       echo -e "\e[0Ksection_end:$(date +%s):compose_up\r\e[0K"
