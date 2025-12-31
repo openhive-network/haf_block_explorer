@@ -50,7 +50,7 @@ echo ""
 
 # Wait for PostgREST - in DinD, exposed ports are available at 'docker' host
 echo "--- Waiting for PostgREST ---"
-while ! curl -sf "http://${POSTGREST_HOST}:${POSTGREST_PORT}/" >/dev/null 2>&1; do
+while ! curl -sf --connect-timeout 5 "http://${POSTGREST_HOST}:${POSTGREST_PORT}/" >/dev/null 2>&1; do
     sleep 5
     WAITED=$((WAITED + 5))
     if [[ $WAITED -ge $TIMEOUT ]]; then
