@@ -7,8 +7,8 @@
 #
 # In DinD (Docker-in-Docker) environments:
 # - HAF check uses 'docker-compose exec' to run pg_isready inside the container
-# - PostgREST check uses 'docker-compose exec' to run curl inside the container
-#   (external curl from CI job cannot reach containers running inside dind)
+# - PostgREST check uses 'docker-compose ps' to check container health status
+#   (the postgrest image is minimal and has no curl, but the healthcheck works)
 #
 # Environment variables:
 #   COMPOSE_FILE        - Docker compose file path (required)
@@ -44,13 +44,22 @@ done
 echo "HAF ready after ${WAITED}s"
 echo ""
 
-# Wait for PostgREST using docker-compose exec (in DinD, external curl can't reach containers)
+# Wait for PostgREST by checking container health status
+# Use docker-compose ps output which shows (healthy) status
 echo "--- Waiting for PostgREST ---"
-while ! docker-compose -f "${COMPOSE_FILE}" exec -T postgrest curl -sf http://localhost:3000/ >/dev/null 2>&1; do
+while true; do
+    # Check if container shows as healthy in docker-compose ps output
+    PS_OUTPUT=$(docker-compose -f "${COMPOSE_FILE}" ps postgrest 2>/dev/null || echo "")
+    if echo "$PS_OUTPUT" | grep -q "(healthy)"; then
+        break
+    fi
     sleep 5
     WAITED=$((WAITED + 5))
     if [[ $WAITED -ge $TIMEOUT ]]; then
         echo "ERROR: PostgREST not ready after ${TIMEOUT}s"
+        echo ""
+        echo "Container status:"
+        docker-compose -f "${COMPOSE_FILE}" ps postgrest 2>/dev/null || true
         echo ""
         echo "Container logs:"
         docker-compose -f "${COMPOSE_FILE}" logs postgrest | tail -50
