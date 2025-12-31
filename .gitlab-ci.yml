@@ -681,9 +681,9 @@ python_api_client_test:
     HAF_DATA_DIRECTORY: "${CI_PROJECT_DIR}/test-data"
     HAF_SHM_DIRECTORY: "${CI_PROJECT_DIR}/test-shm"
     COMPOSE_FILE: "docker/docker-compose-test.yml"
-    # Service hostnames - use localhost since ports are exposed to dind host
-    HAF_HOST: "localhost"
-    POSTGREST_HOST: "localhost"
+    # Service hostnames - use 'docker' since that's the dind service where containers run
+    HAF_HOST: "docker"
+    POSTGREST_HOST: "docker"
     # Use recursive for nested submodules (haf/hive)
     GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
