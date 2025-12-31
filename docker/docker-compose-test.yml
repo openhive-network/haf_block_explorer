@@ -71,13 +71,8 @@ services:
     ports:
       - "3000:3000"
       - "3001:3001"
-    healthcheck:
-      # Use wget instead of curl - postgrest image is minimal and doesn't have curl
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001/ready || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-      start_period: 30s
+    # Note: The postgrest image is minimal and has no curl/wget, so we can't use healthcheck.
+    # The wait-for-postgrest.sh script uses the HAF container to curl PostgREST instead.
 
 networks:
   haf-network-test:
