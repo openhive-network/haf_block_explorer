@@ -7,25 +7,21 @@
 #
 # In DinD (Docker-in-Docker) environments:
 # - HAF check uses 'docker-compose exec' to run pg_isready inside the container
-# - PostgREST check uses 'docker' hostname (the dind service host)
+# - PostgREST check uses 'docker-compose exec' to run curl inside the container
+#   (external curl from CI job cannot reach containers running inside dind)
 #
 # Environment variables:
 #   COMPOSE_FILE        - Docker compose file path (required)
-#   POSTGREST_HOST      - Host for PostgREST HTTP checks (default: docker)
-#   POSTGREST_PORT      - PostgREST port (default: 3000)
 #   WAIT_TIMEOUT        - Total timeout in seconds (default: 300)
 
 set -euo pipefail
 
 # Configuration
 COMPOSE_FILE="${COMPOSE_FILE:?COMPOSE_FILE must be set}"
-POSTGREST_HOST="${POSTGREST_HOST:-docker}"
-POSTGREST_PORT="${POSTGREST_PORT:-3000}"
 TIMEOUT="${WAIT_TIMEOUT:-300}"
 
 echo "=== Waiting for Test Services ==="
 echo "Compose file: ${COMPOSE_FILE}"
-echo "PostgREST:    http://${POSTGREST_HOST}:${POSTGREST_PORT}"
 echo "Timeout:      ${TIMEOUT}s"
 echo ""
 
@@ -48,9 +44,9 @@ done
 echo "HAF ready after ${WAITED}s"
 echo ""
 
-# Wait for PostgREST - in DinD, exposed ports are available at 'docker' host
+# Wait for PostgREST using docker-compose exec (in DinD, external curl can't reach containers)
 echo "--- Waiting for PostgREST ---"
-while ! curl -sf --connect-timeout 5 "http://${POSTGREST_HOST}:${POSTGREST_PORT}/" >/dev/null 2>&1; do
+while ! docker-compose -f "${COMPOSE_FILE}" exec -T postgrest curl -sf http://localhost:3000/ >/dev/null 2>&1; do
     sleep 5
     WAITED=$((WAITED + 5))
     if [[ $WAITED -ge $TIMEOUT ]]; then

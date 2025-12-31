@@ -822,6 +822,8 @@ pattern-test:
   extends:
     - .hafbe_test_base
     - .pytest_based_template
+  # Explicit image needed to override .pytest_based_template (which sets docker:latest)
+  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-1
   variables:
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
