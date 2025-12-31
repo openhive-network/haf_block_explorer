@@ -677,9 +677,8 @@ python_api_client_test:
     # Docker-in-docker connection (disable TLS for simplicity)
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: "tcp://docker:2375"
-    # Test data directories - extracted from sync cache
+    # Test data directory - extracted from sync cache
     HAF_DATA_DIRECTORY: "${CI_PROJECT_DIR}/test-data"
-    HAF_SHM_DIRECTORY: "${CI_PROJECT_DIR}/test-shm"
     COMPOSE_FILE: "docker/docker-compose-test.yml"
     # Service hostnames - use 'docker' since that's the dind service where containers run
     HAF_HOST: "docker"
@@ -720,8 +719,8 @@ python_api_client_test:
       echo "docker-compose path: $(command -v docker-compose)"
     # Fetch cache-manager
     - !reference [.fetch_cache_manager, before_script]
-    # Create data directories
-    - mkdir -p "${HAF_DATA_DIRECTORY}" "${HAF_SHM_DIRECTORY}"
+    # Create data directory
+    - mkdir -p "${HAF_DATA_DIRECTORY}"
     # Extract sync cache
     - |
       echo -e "\e[0Ksection_start:$(date +%s):extract_cache[collapsed=true]\r\e[0KExtracting sync cache..."
@@ -751,7 +750,7 @@ python_api_client_test:
       docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" logs > docker/container-logs.txt 2>&1 || true
       docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" down -v || true
       # Cleanup test data
-      sudo rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" "${HAF_SHM_DIRECTORY:-/tmp/test-shm}" || true
+      sudo rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" || true
       echo -e "\e[0Ksection_end:$(date +%s):compose_down\r\e[0K"
   artifacts:
     paths:

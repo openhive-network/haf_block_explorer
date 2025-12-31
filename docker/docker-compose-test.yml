@@ -90,9 +90,6 @@ volumes:
       type: none
       # Cache structure: HAF_DATA_DIRECTORY/datadir/haf_db_store/pgdata
       device: ${HAF_DATA_DIRECTORY:-/tmp/haf_data}/datadir
+  # SHM directory - use simple named volume (not bind mount)
+  # In test mode with --skip-hived, we don't need persistent shm
   haf_shmdir:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${HAF_SHM_DIRECTORY:-/tmp/haf_shm}
