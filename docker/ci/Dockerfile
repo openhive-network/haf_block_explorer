@@ -9,6 +9,7 @@ RUN <<-EOF
     7zip \
     curl \
     postgresql16-client \
+    python3 \
     py3-psycopg2 \
     sudo
 EOF
