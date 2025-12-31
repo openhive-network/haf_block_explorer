@@ -7,7 +7,9 @@ RUN <<-EOF
   # Install additional CI dependencies
   apk add --no-cache \
     7zip \
+    curl \
     postgresql16-client \
+    py3-psycopg2 \
     sudo
 EOF
 
