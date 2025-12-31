@@ -811,18 +811,15 @@ pattern-test:
     - !reference [.pytest_based_template, before_script]
   script:
     - |
-      echo -e "\e[0Ksection_start:$(date +%s):debug\r\e[0KDebug: Testing failing endpoint..."
+      echo -e "\e[0Ksection_start:$(date +%s):warmup[collapsed=true]\r\e[0KWarming up database..."
 
-      # Debug the failing get_witness_votes_history endpoint
-      echo "=== Debug: get_witness_votes_history with wefdi filter ==="
-      curl -s -X POST "http://${POSTGREST_HOST}:3000/rpc/get_witness_votes_history" \
+      # Warmup: Run a complex query to warm PostgreSQL caches
+      # This helps avoid statement timeouts on cold database (hafbe_user has 10s timeout)
+      curl -s --max-time 15 -X POST "http://${POSTGREST_HOST}:3000/rpc/get_witness_votes_history" \
         -H "Content-Type: application/json" \
-        -d '{"account-name":"blocktrades","voter-name":"wefdi","direction":"desc","page-size":20}' \
-        | tee /tmp/debug-witness-votes-history.json || true
-      echo ""
-      echo "=== Response above ==="
+        -d '{"account-name":"blocktrades","page-size":5}' > /dev/null 2>&1 || true
 
-      echo -e "\e[0Ksection_end:$(date +%s):debug\r\e[0K"
+      echo -e "\e[0Ksection_end:$(date +%s):warmup\r\e[0K"
 
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning Tavern API tests..."
 
