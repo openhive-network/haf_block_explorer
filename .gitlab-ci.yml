@@ -367,20 +367,6 @@ prepare_haf_data:
   tags:
   - public-runner-docker
 
-docker-ci-runner-build:
-  extends: .docker-base-build-template
-  rules:
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  variables:
-    BASE_REPO_NAME: ""
-    BASE_TAG: "docker-26.1.4-4"
-    NAME: "ci-runner"
-    TARGET: "ci-runner-ci"
-    # Only builds Dockerfile, doesn't need submodules
-    GIT_SUBMODULE_STRATEGY: none
-
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
   rules:
@@ -476,7 +462,8 @@ build_python_api_client_wheel:
 sync:
   extends: .docker_image_builder_job_template
   stage: sync
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-4
+  # Shared HAF app test runner from common-ci-configuration
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:feature-haf-app-test-runner
   needs:
     - job: quick_test_setup
       artifacts: true
@@ -486,7 +473,6 @@ sync:
     - job: prepare_haf_data
       optional: true  # Skipped in QUICK_TEST mode
     - job: docker-setup-docker-image-build
-    - job: docker-ci-runner-build
   rules:
     # Skip for docs-only changes
     - if: $DOCS_ONLY == "true"
@@ -658,14 +644,15 @@ python_api_client_test:
 .hafbe_test_base:
   extends: .docker_image_builder_job_template
   stage: test
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-4
+  # Shared HAF app test runner from common-ci-configuration
+  # Has: Python 3.14, Poetry, Docker CLI, docker-compose, JMeter, m2u
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:feature-haf-app-test-runner
   needs:
     - job: quick_test_setup
       artifacts: true
       optional: true
     - job: sync
       artifacts: true
-    - job: docker-ci-runner-build
     - job: prepare_haf_image
       artifacts: true
       optional: true
@@ -693,30 +680,14 @@ python_api_client_test:
   before_script:
     # Git setup (from docker_image_builder_job_template, without buildx)
     - git config --global --add safe.directory '*'
-    # Install docker and docker-compose if not available (use $LOCAL_BIN for non-root images)
+    # Create docker-compose wrapper for 'docker compose' plugin (haf-app-test-runner has docker-compose-v2)
     - |
       mkdir -p "$LOCAL_BIN"
       export PATH="$LOCAL_BIN:$PATH"
-      if ! command -v docker &> /dev/null; then
-        echo "Installing Docker CLI to $LOCAL_BIN..."
-        DOCKER_VERSION="27.3.1"
-        curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | tar xz -C /tmp
-        mv /tmp/docker/docker "$LOCAL_BIN/"
-      fi
-      # Ensure docker-compose command is available (standalone or wrapper for plugin)
       if ! command -v docker-compose &> /dev/null; then
-        if docker compose version &> /dev/null; then
-          echo "Creating docker-compose wrapper for docker compose plugin..."
-          printf '#!/bin/sh\nexec docker compose "$@"\n' > "$LOCAL_BIN/docker-compose"
-          chmod +x "$LOCAL_BIN/docker-compose"
-        else
-          echo "Installing docker-compose standalone to $LOCAL_BIN..."
-          COMPOSE_VERSION="v2.30.3"
-          curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" -o "$LOCAL_BIN/docker-compose"
-          chmod +x "$LOCAL_BIN/docker-compose"
-        fi
+        printf '#!/bin/sh\nexec docker compose "$@"\n' > "$LOCAL_BIN/docker-compose"
+        chmod +x "$LOCAL_BIN/docker-compose"
       fi
-      echo "docker-compose path: $(command -v docker-compose)"
     # Fetch cache-manager
     - !reference [.fetch_cache_manager, before_script]
     # Create data directory
@@ -823,7 +794,7 @@ pattern-test:
     - .hafbe_test_base
     - .pytest_based_template
   # Explicit image needed to override .pytest_based_template (which sets docker:latest)
-  image: registry.gitlab.syncad.com/hive/haf_block_explorer/ci-runner:docker-26.1.4-4
+  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:feature-haf-app-test-runner
   variables:
     JUNIT_REPORT: $CI_PROJECT_DIR/tests/tavern/report.xml
     POETRY_INSTALL_ROOT_DIR: $CI_PROJECT_DIR/submodules/haf/hive/tests/python/hive-local-tools
@@ -832,10 +803,7 @@ pattern-test:
     TAVERN_DIR: $CI_PROJECT_DIR/tests/tavern
   before_script:
     - !reference [.hafbe_test_base, before_script]
-    # Install poetry for pytest template (Alpine packages)
-    - pip3 install --break-system-packages poetry
-    # Add pip user bin to PATH (poetry installs here)
-    - export PATH="$HOME/.local/bin:$PATH"
+    # Poetry is pre-installed in haf-app-test-runner image
     - !reference [.pytest_based_template, before_script]
   script:
     - |
