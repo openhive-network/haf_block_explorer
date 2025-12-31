@@ -7,8 +7,8 @@
 #
 # In DinD (Docker-in-Docker) environments:
 # - HAF check uses 'docker-compose exec' to run pg_isready inside the container
-# - PostgREST check uses 'docker-compose exec haf curl' to reach PostgREST
-#   (the postgrest image is minimal and has no curl/wget, so we use the HAF container)
+# - PostgREST check uses 'docker-compose exec haf bash -c /dev/tcp/...' to verify port
+#   (uses bash built-in TCP feature, no external tools like curl/wget needed)
 #
 # Environment variables:
 #   COMPOSE_FILE        - Docker compose file path (required)
@@ -44,10 +44,10 @@ done
 echo "HAF ready after ${WAITED}s"
 echo ""
 
-# Wait for PostgREST by using HAF container to curl the API
-# The HAF container (Ubuntu-based) has curl and can reach postgrest via docker network
+# Wait for PostgREST by checking if port 3000 is open from HAF container
+# Using bash /dev/tcp which doesn't require external tools (curl/wget/nc)
 echo "--- Waiting for PostgREST ---"
-while ! docker-compose -f "${COMPOSE_FILE}" exec -T haf curl -sf http://postgrest:3000/ >/dev/null 2>&1; do
+while ! docker-compose -f "${COMPOSE_FILE}" exec -T haf bash -c 'echo > /dev/tcp/postgrest/3000' 2>/dev/null; do
     sleep 5
     WAITED=$((WAITED + 5))
     if [[ $WAITED -ge $TIMEOUT ]]; then
