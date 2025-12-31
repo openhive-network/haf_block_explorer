@@ -23,7 +23,7 @@ services:
     image: ${HAF_IMAGE_NAME:-registry.gitlab.syncad.com/hive/haf/instance:latest}
     # No replay - just start PostgreSQL with existing data
     entrypoint: /home/haf_admin/docker_entrypoint.sh
-    command: ""
+    command: ["--skip-hived"]
     environment:
       HIVED_UID: ${HIVED_UID:-0}
       DATADIR: /home/hived/datadir
