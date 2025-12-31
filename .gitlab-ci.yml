@@ -687,30 +687,35 @@ python_api_client_test:
     # Use recursive for nested submodules (haf/hive)
     GIT_SUBMODULE_STRATEGY: recursive
     HAF_APP_SCHEMA: "hafbe_app"
+    # Local bin for non-root docker/compose installation
+    LOCAL_BIN: "${CI_PROJECT_DIR}/.local-bin"
   before_script:
     # Git setup (from docker_image_builder_job_template, without buildx)
     - git config --global --add safe.directory '*'
-    # Install docker and docker-compose if not available
+    # Install docker and docker-compose if not available (use $LOCAL_BIN for non-root images)
     - |
+      mkdir -p "$LOCAL_BIN"
+      export PATH="$LOCAL_BIN:$PATH"
       if ! command -v docker &> /dev/null; then
-        echo "Installing Docker CLI..."
+        echo "Installing Docker CLI to $LOCAL_BIN..."
         DOCKER_VERSION="27.3.1"
         curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | tar xz -C /tmp
-        mv /tmp/docker/docker /usr/local/bin/
+        mv /tmp/docker/docker "$LOCAL_BIN/"
       fi
       # Ensure docker-compose command is available (standalone or wrapper for plugin)
       if ! command -v docker-compose &> /dev/null; then
         if docker compose version &> /dev/null; then
           echo "Creating docker-compose wrapper for docker compose plugin..."
-          printf '#!/bin/sh\nexec docker compose "$@"\n' > /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
+          printf '#!/bin/sh\nexec docker compose "$@"\n' > "$LOCAL_BIN/docker-compose"
+          chmod +x "$LOCAL_BIN/docker-compose"
         else
-          echo "Installing docker-compose standalone..."
+          echo "Installing docker-compose standalone to $LOCAL_BIN..."
           COMPOSE_VERSION="v2.30.3"
-          curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
+          curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" -o "$LOCAL_BIN/docker-compose"
+          chmod +x "$LOCAL_BIN/docker-compose"
         fi
       fi
+      echo "docker-compose path: $(command -v docker-compose)"
     # Fetch cache-manager
     - !reference [.fetch_cache_manager, before_script]
     # Create data directories
@@ -723,6 +728,7 @@ python_api_client_test:
       echo -e "\e[0Ksection_end:$(date +%s):extract_cache\r\e[0K"
     # Start docker-compose
     - |
+      export PATH="$LOCAL_BIN:$PATH"
       echo -e "\e[0Ksection_start:$(date +%s):compose_up[collapsed=true]\r\e[0KStarting test environment..."
       docker-compose -f "${COMPOSE_FILE}" up -d
       echo -e "\e[0Ksection_end:$(date +%s):compose_up\r\e[0K"
@@ -733,6 +739,7 @@ python_api_client_test:
       echo -e "\e[0Ksection_end:$(date +%s):wait_services\r\e[0K"
   after_script:
     - |
+      export PATH="$LOCAL_BIN:$PATH"
       echo -e "\e[0Ksection_start:$(date +%s):compose_down[collapsed=true]\r\e[0KStopping test environment..."
       docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" logs > docker/container-logs.txt 2>&1 || true
       docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" down -v || true
