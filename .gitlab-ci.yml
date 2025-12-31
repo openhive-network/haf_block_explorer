@@ -689,6 +689,8 @@ python_api_client_test:
     HAF_APP_SCHEMA: "hafbe_app"
     # Local bin for non-root docker/compose installation
     LOCAL_BIN: "${CI_PROJECT_DIR}/.local-bin"
+    # Run HAF container as root to access CI-extracted data
+    HIVED_UID: "0"
   before_script:
     # Git setup (from docker_image_builder_job_template, without buildx)
     - git config --global --add safe.directory '*'
