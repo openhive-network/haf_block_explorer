@@ -1,0 +1,2 @@
+# Exclude submodules directory (populated by other jobs using fetch strategy)
+submodules/
