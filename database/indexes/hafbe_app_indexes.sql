@@ -15,6 +15,9 @@ BEGIN
   --Can only vote once every 3 seconds, so sorting by block_num is sufficient
   CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id_source_op ON hafbe_app.witness_votes_history USING btree (witness_id, hafd.operation_id_to_block_num( source_op ));
 
+  -- Index for efficient voter filtering in get_witness_votes_history endpoint
+  CREATE INDEX IF NOT EXISTS witness_votes_history_witness_voter ON hafbe_app.witness_votes_history USING btree (witness_id, voter_id);
+
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_source_op ON hafbe_app.account_proxies_history USING btree (account_id, source_op);
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id ON hafbe_app.account_proxies_history USING btree (account_id);
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
