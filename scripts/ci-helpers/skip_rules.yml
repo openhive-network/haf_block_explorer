@@ -1,0 +1,177 @@
+# Skip rules for CI job optimization based on changed files
+# Include this file and use the patterns/templates in job rules
+#
+# Features:
+#   1. Skip builds AND tests for docs-only changes
+#   2. QUICK_TEST mode - use cached HAF data to skip prepare_haf_data job
+#   3. Run full pipeline for source code changes
+#
+# Usage:
+#   Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT=<commit> to skip HAF rebuild/replay
+
+variables:
+  # Control variable to force full pipeline regardless of changes
+  FORCE_FULL_PIPELINE: "false"
+  # Set by detect_changes job - indicates only docs/non-source files changed
+  DOCS_ONLY: "false"
+
+# ============================================================================
+# Change Detection Job
+# ============================================================================
+# Uses the common-ci-configuration .haf_app_detect_changes template with
+# customizations for backward compatibility.
+
+detect_changes:
+  extends: .haf_app_detect_changes
+  variables:
+    # Skip patterns: files matching these don't require HAF sync
+    # (tests, docs, markdown, readme, changelog, license, claude instructions)
+    HAF_APP_SKIP_PATTERNS: '^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE|^CLAUDE'
+  script:
+    # Run the parent template's detection first
+    - !reference [.haf_app_detect_changes, script]
+    # Add backward-compatible DOCS_ONLY variable for existing rule templates
+    # AUTO_SKIP_SYNC from common template = DOCS_ONLY in our rule templates
+    - |
+      if [ -f detect_changes.env ]; then
+        AUTO_SKIP=$(grep "AUTO_SKIP_SYNC=" detect_changes.env | cut -d= -f2)
+        echo "DOCS_ONLY=${AUTO_SKIP}" >> detect_changes.env
+        echo ""
+        echo "=== Backward Compatibility ==="
+        echo "DOCS_ONLY=${AUTO_SKIP} (alias for AUTO_SKIP_SYNC)"
+      fi
+  rules:
+    # Skip detection on protected branches - always run full pipeline
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: never
+    # Skip on tags (common template handles this too, but explicit for clarity)
+    - if: $CI_COMMIT_TAG
+      when: never
+    # Skip if forcing full pipeline
+    - if: $FORCE_FULL_PIPELINE == "true"
+      when: never
+    # Run for all other cases
+    - when: on_success
+
+# ============================================================================
+# Rule Templates for Jobs
+# ============================================================================
+
+# Template: Skip build/sync jobs if only docs changed or QUICK_TEST enabled
+.skip_on_docs_only_or_quick_test:
+  rules:
+    # QUICK_TEST mode - skip builds
+    - if: $QUICK_TEST == "true"
+      when: never
+    # DOCS_ONLY mode - skip builds
+    - if: $DOCS_ONLY == "true"
+      when: never
+    # Force full pipeline if requested
+    - if: $FORCE_FULL_PIPELINE == "true"
+      when: on_success
+    # Always run on protected branches
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    # Always run on tags
+    - if: $CI_COMMIT_TAG
+      when: on_success
+    # Run if source files changed
+    - changes:
+        paths:
+          - backend/**/*
+          - endpoints/**/*
+          - docker/**/*
+          - scripts/**/*
+          - submodules/**/*
+          - Dockerfile
+          - .gitlab-ci.yml
+      when: on_success
+    # Skip otherwise (docs-only changes)
+    - when: never
+
+# Template: Skip test jobs if only docs changed
+.skip_test_on_docs_only:
+  rules:
+    # DOCS_ONLY mode - skip tests
+    - if: $DOCS_ONLY == "true"
+      when: never
+    # Force full pipeline if requested
+    - if: $FORCE_FULL_PIPELINE == "true"
+      when: on_success
+    # Always run on protected branches
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    # Always run on tags
+    - if: $CI_COMMIT_TAG
+      when: on_success
+    # Run if any non-doc files changed
+    - changes:
+        paths:
+          - backend/**/*
+          - endpoints/**/*
+          - docker/**/*
+          - scripts/**/*
+          - submodules/**/*
+          - tests/**/*
+          - Dockerfile
+          - .gitlab-ci.yml
+      when: on_success
+    # Skip otherwise (docs-only changes)
+    - when: never
+
+# Template: Skip test jobs if docs-only, with QUICK_TEST support
+# In QUICK_TEST mode, tests still run (using cached data)
+.skip_test_on_docs_only_with_quick_test:
+  rules:
+    # DOCS_ONLY mode - skip tests
+    - if: $DOCS_ONLY == "true"
+      when: never
+    # Force full pipeline if requested
+    - if: $FORCE_FULL_PIPELINE == "true"
+      when: on_success
+    # QUICK_TEST mode - run tests with cached data
+    - if: $QUICK_TEST == "true"
+      when: on_success
+    # Always run on protected branches
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    # Always run on tags
+    - if: $CI_COMMIT_TAG
+      when: on_success
+    # Run if any non-doc files changed
+    - changes:
+        paths:
+          - backend/**/*
+          - endpoints/**/*
+          - docker/**/*
+          - scripts/**/*
+          - submodules/**/*
+          - tests/**/*
+          - Dockerfile
+          - .gitlab-ci.yml
+      when: on_success
+    # Skip otherwise (docs-only changes)
+    - when: never
+
+# Template: Manual on feature branches, auto on integration branches
+.manual_on_feature_branches:
+  rules:
+    # Force full pipeline overrides everything
+    - if: $FORCE_FULL_PIPELINE == "true"
+      when: on_success
+    # DOCS_ONLY mode - skip entirely
+    - if: $DOCS_ONLY == "true"
+      when: never
+    # QUICK_TEST mode - make jobs manual
+    - if: $QUICK_TEST == "true"
+      when: manual
+      allow_failure: true
+    # Always run automatically on protected branches
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    # Always run automatically on tags
+    - if: $CI_COMMIT_TAG
+      when: on_success
+    # Feature branches: manual by default
+    - when: manual
+      allow_failure: true

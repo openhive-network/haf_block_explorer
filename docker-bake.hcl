@@ -15,7 +15,7 @@ variable "TAG" {
   default = "latest"
 }
 variable "TAG_CI" {
-  default = "docker-24.0.1-5"
+  default = "docker-26.1.4-1"
 }
 variable "PSQL_CLIENT_VERSION" {
   default = "14-1"
