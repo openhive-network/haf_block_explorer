@@ -488,6 +488,8 @@ sync:
     HAF_DATA_DIRECTORY: ${DATADIR}
     HAF_SHM_DIRECTORY: ${SHM_DIR}
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
+    # HAF image tag - use HAF_COMMIT to ensure correct image when prepare_haf_image is skipped
+    HAF_REGISTRY_TAG: "$HAF_COMMIT"
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
       --ansi never
