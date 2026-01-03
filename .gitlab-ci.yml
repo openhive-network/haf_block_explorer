@@ -149,44 +149,20 @@ default:
         fi
         )
 
-.lint_job:
-  extends: .job-defaults
-  stage: lint
-  variables:
-    GIT_SUBMODULE_STRATEGY: none
-  artifacts:
-    name: lint-results
-    when: always
-  tags:
-  - public-runner-docker
+# =============================================================================
+# LINT JOBS - Using common-ci-configuration templates
+# =============================================================================
 
 lint_bash_scripts:
-  extends: .lint_job
-  image: koalaman/shellcheck-alpine:latest
-  before_script:
-  - apk add xmlstarlet
-  script:
-  - find . -name .git -type d -prune -o -name submodules -type d -prune -o -type f -name \*.sh -exec shellcheck -f checkstyle
-    {} + | tee shellcheck-checkstyle-result.xml
-  after_script:
-  - xmlstarlet tr misc/checkstyle2junit.xslt shellcheck-checkstyle-result.xml > shellcheck-junit-result.xml
-  artifacts:
-    paths:
-    - shellcheck-checkstyle-result.xml
-    - shellcheck-junit-result.xml
-    reports:
-      junit: shellcheck-junit-result.xml
+  extends: .haf_app_lint_bash
+  stage: lint
+  variables:
+    LINT_SCRIPTS_DIR: "."
+    LINT_EXCLUDE_PATHS: "submodules"
 
 lint_sql_scripts:
-  extends: .lint_job
-  image:
-    name: sqlfluff/sqlfluff:2.1.4
-    entrypoint: [""]
-  script:
-  - sqlfluff lint --format yaml --write-output sql-lint.yaml
-  artifacts:
-    paths:
-    - sql-lint.yaml
+  extends: .haf_app_lint_sql
+  stage: lint
 
 # Quick Test Mode Setup - overrides HAF_COMMIT with cached version
 quick_test_setup:
