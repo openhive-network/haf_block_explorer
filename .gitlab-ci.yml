@@ -264,9 +264,7 @@ validate_haf_commit:
 
 prepare_haf_image:
   stage: build
-  extends:
-    - .prepare_haf_image
-    - .skip_on_docs_only_or_quick_test
+  extends: .prepare_haf_image
   needs:
     - job: detect_changes
       optional: true  # Not needed on protected branches
@@ -293,15 +291,10 @@ prepare_haf_image:
   - public-runner-docker
 
 prepare_haf_data:
-  extends:
-    - .prepare_haf_data_5m
-    - .skip_on_docs_only_or_quick_test
+  extends: .prepare_haf_data_5m
   needs:
-    - job: detect_changes
-      optional: true
     - job: prepare_haf_image
       artifacts: true
-      optional: true  # Not needed if build was skipped
   stage: build
   timeout: 80m
   variables:
