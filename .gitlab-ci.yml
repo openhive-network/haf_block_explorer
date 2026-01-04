@@ -387,15 +387,10 @@ sync:
     fi
     ls -la "${SHM_DIR}/" || true
 
-    # Docker Compose bind mounts docker/blockchain over datadir/blockchain.
-    # Copy blockchain files there so HAF can see them.
-    echo "Copying blockchain files to docker/blockchain..."
-    rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
-    cp -aL "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
-    ls -la "${CI_PROJECT_DIR}/docker/blockchain/"
-
-    # Remove blockchain dir from datadir so Docker volume mount doesn't conflict
-    sudo rm -rf "${DATADIR}/blockchain"
+    # ci.yml mounts datadir as volume without docker/blockchain bind mount,
+    # so blockchain stays in datadir. Just verify the symlinks work.
+    echo "Verifying blockchain symlinks in datadir..."
+    ls -la "${DATADIR}/blockchain/" | head -5
 
     # Run app-setup as root to allow writing to the container's scripts directory
     "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh" --setup-uid=0
