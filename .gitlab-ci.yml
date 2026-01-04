@@ -354,6 +354,8 @@ sync:
       when: never
     - when: on_success
   variables:
+    # Sync job needs hafah/btracker/reptracker submodules (but NOT haf submodule - it was removed)
+    GIT_SUBMODULE_STRATEGY: normal
     # Docker-in-docker connection - TLS enabled
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_TLS_VERIFY: "1"
