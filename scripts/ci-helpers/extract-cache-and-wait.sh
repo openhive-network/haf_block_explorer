@@ -90,24 +90,44 @@ fi
 # Create destination directory
 mkdir -p "${DEST_DIR}"
 
-# Extract cache using cache-manager
+# Extract cache using cache-manager (with fallback for cache reuse)
 echo ""
 echo "=== Extracting Cache ==="
-echo "Running: CACHE_HANDLING=haf \$CACHE_MANAGER get ${CACHE_TYPE} ${CACHE_KEY} ${DEST_DIR}"
+echo "Trying exact key: ${CACHE_TYPE}/${CACHE_KEY}"
 
-if ! CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${CACHE_KEY}" "${DEST_DIR}"; then
-    echo ""
-    echo "ERROR: Cache extraction failed"
-    echo ""
-    echo "Possible causes:"
-    echo "  - Cache does not exist for key: ${CACHE_KEY}"
-    echo "  - NFS not mounted or not accessible"
-    echo "  - Sync job did not complete successfully"
-    echo ""
-    echo "Debug commands:"
-    echo "  ls -la ${DATA_CACHE_NFS_PREFIX:-/nfs/ci-cache}/${CACHE_TYPE}/ | head -10"
-    echo "  ls -la /nfs/ci-cache/${CACHE_TYPE}/${CACHE_KEY}.tar"
-    exit 1
+if CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${CACHE_KEY}" "${DEST_DIR}" 2>/dev/null; then
+    echo "Found exact cache match"
+else
+    # Fallback: search for any cache with same HAF commit prefix
+    echo "Exact key not found, searching for compatible cache..."
+    # Extract HAF commit (first part before underscore) from cache key
+    HAF_COMMIT_PREFIX="${CACHE_KEY%%_*}"
+    NFS_CACHE_DIR="${DATA_CACHE_NFS_PREFIX:-/nfs/ci-cache}/${CACHE_TYPE}"
+    FOUND_CACHE=$(ls -t "${NFS_CACHE_DIR}/${HAF_COMMIT_PREFIX}_"*.tar 2>/dev/null | head -1 || true)
+
+    if [[ -n "$FOUND_CACHE" ]]; then
+        FOUND_KEY=$(basename "$FOUND_CACHE" .tar)
+        echo "Found compatible cache: ${FOUND_KEY}"
+        if ! CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${FOUND_KEY}" "${DEST_DIR}"; then
+            echo ""
+            echo "ERROR: Failed to extract compatible cache"
+            exit 1
+        fi
+        echo "Extracted compatible cache successfully"
+    else
+        echo ""
+        echo "ERROR: No compatible cache found"
+        echo ""
+        echo "Possible causes:"
+        echo "  - Cache does not exist for HAF commit: ${HAF_COMMIT_PREFIX}"
+        echo "  - NFS not mounted or not accessible"
+        echo "  - Sync job did not complete successfully"
+        echo ""
+        echo "Debug commands:"
+        echo "  ls -la ${NFS_CACHE_DIR}/ | head -10"
+        echo "  ls -la ${NFS_CACHE_DIR}/${HAF_COMMIT_PREFIX}_*.tar"
+        exit 1
+    fi
 fi
 
 echo "Cache extracted successfully"

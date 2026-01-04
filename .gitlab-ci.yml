@@ -15,13 +15,16 @@ variables:
   GIT_STRATEGY: fetch
   GIT_DEPTH: 0
   GIT_SUBMODULE_DEPTH: 0
-  # Use 'normal' not 'recursive' - recursive causes file:// URL errors for nested submodules
-  GIT_SUBMODULE_STRATEGY: normal
+  # HAF submodule no longer needed - use 'none' to skip submodule checkout by default
+  # Individual jobs can override to 'normal' if they need btracker/hafah/reptracker submodules
+  GIT_SUBMODULE_STRATEGY: none
   # Temporary: separate clone path prevents clone-strategy jobs from erasing
   # fetch workspaces during transition. Remove once all projects use fetch.
   GIT_CLONE_PATH: $CI_BUILDS_DIR/fetch/$CI_RUNNER_SHORT_TOKEN/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
   GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
-  # HAF configuration
+  # HAF configuration (no submodule needed)
+  # HAF_COMMIT: Used for data cache key lookup and Docker image tag (first 8 chars)
+  HAF_COMMIT: "219ef44775ee1ed85630cf513d8671f6ca4ccc49"  # Known cached HAF commit
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   # NFS cache configuration for sync data sharing across builders
   DATA_CACHE_NFS_PREFIX: "/nfs/ci-cache"
@@ -31,14 +34,13 @@ variables:
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
-  # uses registry.gitlab.syncad.com/hive/hive/ci-base-image:ubuntu24.04-py3.14-1 (via $TEST_HAF_IMAGE_TAG from HAF)
-  BUILDER_IMAGE_TAG: "$TEST_HAF_IMAGE_TAG"
+  # Builder image from hive registry
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
-  # HAF submodule commit - must match the 'ref:' in the include section below
-  # This is needed for service containers which can't access dotenv artifacts
-  HAF_COMMIT: "b4225f9d2591195b0e6aadf36bbef921d95f92b9"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
+  # Common CI configuration reference
+  COMMON_CI_REF: "develop"
 
   # Quick Test Mode - uses cached HAF data from previous pipeline, skips HAF rebuild/replay
   # Usage: Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT to a commit with cached data
@@ -53,9 +55,10 @@ variables:
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+# HAF templates for data preparation (fetched from HAF repo, doesn't require local submodule)
 - project: hive/haf
-  ref: b4225f9d2591195b0e6aadf36bbef921d95f92b9   # develop
-  file: /scripts/ci-helpers/prepare_data_image_job.yml   # implicitly pulls templates/base.gitlab-ci.yml from common-ci-configuration
+  ref: 219ef44775ee1ed85630cf513d8671f6ca4ccc49
+  file: /scripts/ci-helpers/prepare_data_image_job.yml
 # HAF app testing templates - provides change detection, sync helpers, test base templates
 - project: hive/common-ci-configuration
   ref: develop
@@ -63,28 +66,12 @@ include:
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
-# Use common git corruption cleanup hook with project-specific nested submodule handling
+# Use common git corruption cleanup hook
 default:
   hooks:
     pre_get_sources_script:
       # Base git corruption cleanup from common-ci-configuration
       - !reference [.haf_git_corruption_cleanup, hooks, pre_get_sources_script]
-      # Project-specific: Clean nested submodules (btracker/hafah/reptracker all have nested haf submodule)
-      - |
-        (
-        cd "${CI_PROJECT_DIR:-/builds}" 2>/dev/null || exit 0
-        if [ -d ".git/modules/submodules" ]; then
-          echo "pre_get_sources: removing nested submodule state under .git/modules/submodules"
-          rm -rf .git/modules/submodules/btracker/modules 2>/dev/null || true
-          rm -rf .git/modules/submodules/hafah/modules 2>/dev/null || true
-          rm -rf .git/modules/submodules/reptracker/modules 2>/dev/null || true
-          rm -rf .git/modules/submodules/haf/modules 2>/dev/null || true
-          rm -rf submodules/btracker/haf 2>/dev/null || true
-          rm -rf submodules/hafah/haf 2>/dev/null || true
-          rm -rf submodules/reptracker/haf 2>/dev/null || true
-          rm -rf submodules/haf/hive 2>/dev/null || true
-        fi
-        )
 
 # =============================================================================
 # LINT JOBS - Using common-ci-configuration templates
@@ -134,20 +121,7 @@ quick_test_setup:
 validate_haf_commit:
   extends: .haf_commit_validation
   stage: build
-  variables:
-    HAF_SUBMODULE_PATH: "submodules/haf"
-    GIT_SUBMODULE_STRATEGY: none
-  before_script:
-    - apk add --no-cache git
-    # Clean stale submodule state and init just haf submodule
-    - rm -rf .git/modules/submodules
-    - git submodule deinit -f --all 2>/dev/null || true
-    - git submodule update --init submodules/haf
-    # Extract include ref from .gitlab-ci.yml and set HAF_INCLUDE_REF
-    - |
-      INCLUDE_REF=$(grep -A2 "project:.*hive/haf" .gitlab-ci.yml | grep "ref:" | head -1 | sed 's/.*ref: *\([a-f0-9]*\).*/\1/' || true)
-      export HAF_INCLUDE_REF="$INCLUDE_REF"
-      echo "Extracted HAF_INCLUDE_REF=$HAF_INCLUDE_REF from .gitlab-ci.yml"
+  # Uses HAF_COMMIT from global variables
   rules:
     # Skip in QUICK_TEST mode - we're using cached data from a different commit
     - if: $QUICK_TEST == "true"
@@ -156,32 +130,36 @@ validate_haf_commit:
     - if: $DOCS_ONLY == "true"
       when: never
     - when: on_success
+  tags:
+  - public-runner-docker
 
+# Use existing HAF image from registry (no submodule needed)
 prepare_haf_image:
   stage: build
-  extends: .prepare_haf_image
+  image: alpine:latest
   needs:
-    - job: detect_changes
-      optional: true  # Not needed on protected branches
-  variables:
-    SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
-    REGISTRY_USER: "$HAF_DEPLOY_USERNAME"
-    REGISTRY_PASS: "$HAF_DEPLOY_TOKEN"
-    # Avoid nested submodule issues
-    GIT_SUBMODULE_STRATEGY: none
-  before_script:
-  - git config --global --add safe.directory $CI_PROJECT_DIR
-  - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
-  - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-  # Clean up any stale submodule state - deinit first, then remove
-  - git submodule deinit -f --all 2>/dev/null || true
-  # Remove with sudo, then recreate with sudo and fix ownership so git can use them
-  - sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
-  - sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
-  # Manually init submodules without nested recursion
-  - git submodule update --init --force submodules/haf
-  # HAF scripts are symlinks to hive submodule - init it without recursion
-  - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
+    - job: validate_haf_commit
+      artifacts: true
+  rules:
+    - if: $QUICK_TEST == "true"
+      when: never
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
+  script:
+    - |
+      # Derive image tag from HAF_COMMIT (first 8 characters)
+      HAF_SHORT_COMMIT="${HAF_COMMIT:0:8}"
+      HAF_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf:${HAF_SHORT_COMMIT}"
+      echo "Using HAF image: ${HAF_IMAGE_NAME}"
+      # Export image name and tag for Docker Compose scripts
+      echo "HAF_IMAGE_NAME=${HAF_IMAGE_NAME}" > docker_image_name.env
+      echo "HAF_REGISTRY_TAG=${HAF_SHORT_COMMIT}" >> docker_image_name.env
+  artifacts:
+    reports:
+      dotenv: docker_image_name.env
+    paths:
+      - docker_image_name.env
   tags:
   - public-runner-docker
 
@@ -193,24 +171,14 @@ prepare_haf_data:
   stage: build
   timeout: 80m
   variables:
-    SUBMODULE_DIR: "$CI_PROJECT_DIR/submodules/haf"
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
-    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/submodules/haf/docker/config_5M.ini"
-    # Avoid nested submodule issues
-    GIT_SUBMODULE_STRATEGY: none
-  before_script:
-    - git config --global --add safe.directory $CI_PROJECT_DIR
-    - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf
-    - git config --global --add safe.directory $CI_PROJECT_DIR/submodules/haf/hive
-    # Clean up any stale submodule state - deinit first, then remove
-    - git submodule deinit -f --all 2>/dev/null || true
-    # Remove with sudo, then recreate with sudo and fix ownership so git can use them
-    - sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
-    - sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
-    # Manually init just the haf submodule without nested submodules
-    - git submodule update --init --force submodules/haf
-    # HAF scripts are symlinks to hive submodule - init it without recursion
-    - git -C $CI_PROJECT_DIR/submodules/haf submodule update --init hive
+    # No submodule needed - template fetches scripts at runtime
+  rules:
+    - if: $QUICK_TEST == "true"
+      when: never
+    - if: $DOCS_ONLY == "true"
+      when: never
+    - when: on_success
   tags:
   - data-cache-storage
   - fast
@@ -372,118 +340,63 @@ sync:
     # Docker-in-docker connection (disable TLS for simplicity)
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: "tcp://docker:2375"
-    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
-    # HAF image tag - use HAF_COMMIT to ensure correct image when prepare_haf_image is skipped
-    HAF_REGISTRY_TAG: "$HAF_COMMIT"
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
       --ansi never
-    # Avoid nested submodule issues
-    GIT_SUBMODULE_STRATEGY: none
     # Use local block_log on each builder (faster than NFS)
     SHARED_BLOCK_LOG_DIR: /blockchain/block_log_5m
-  timeout: 1 hours
+  timeout: 2 hours  # NFS cache push can take 50+ minutes on slow days
   before_script:
   # Docker login and git setup from common template
   - !reference [.haf_app_sync_setup, script]
-  # Project-specific: Init nested submodules (btracker, hafah, reptracker each have nested haf)
-  - |
-    echo -e "\e[0Ksection_start:$(date +%s):submodules[collapsed=true]\r\e[0KInitializing submodules..."
-    git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
-    # Clean up any stale submodule state
-    git submodule deinit -f --all 2>/dev/null || true
-    sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
-    sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
-    # Init all submodules and their nested haf submodules
-    git submodule update --init --force
-    git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
-    git -C "$CI_PROJECT_DIR/submodules/hafah" submodule update --init haf
-    git -C "$CI_PROJECT_DIR/submodules/btracker" submodule update --init haf
-    git -C "$CI_PROJECT_DIR/submodules/reptracker" submodule update --init haf
-    echo -e "\e[0Ksection_end:$(date +%s):submodules\r\e[0K"
-  # Fetch cache-manager and HAF replay data from common template
-  - !reference [.fetch_cache_manager, before_script]
-  - !reference [.haf_app_fetch_haf_cache, script]
+  # Smart cache lookup (with fallback for cache reuse)
+  - !reference [.haf_app_smart_cache_lookup, script]
   script:
   - |
+    CACHE_HIT=$(cat /tmp/cache_hit 2>/dev/null || echo "false")
+
     echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=true]\r\e[0KStarting the test environment..."
 
-    "${CI_PROJECT_DIR}/submodules/haf/scripts/copy_datadir.sh"
+    # cache-manager extracted directly to job directory with block_log symlinks and pgdata permissions fixed
+    echo "Data ready at DATADIR=${DATADIR}"
+    ls -la "${DATADIR}/" || true
 
-    PGDATA_PATH="${DATADIR}/haf_db_store/pgdata"
-    if [[ -d "$PGDATA_PATH" ]]; then
-      echo "Restoring pgdata permissions to mode 700"
-      sudo chmod 700 "$PGDATA_PATH"
-      sudo chown -R 105:105 "${DATADIR}/haf_db_store"
-      ls -la "${DATADIR}/haf_db_store/"
+    # Relocate shm_dir from inside datadir to be a sibling (for old cache formats)
+    if [[ -d "${DATADIR}/shm_dir" ]] && [[ ! -d "${SHM_DIR}" ]]; then
+      echo "Relocating shm_dir to parallel location..."
+      mv "${DATADIR}/shm_dir" "${SHM_DIR}"
     fi
+    ls -la "${SHM_DIR}/" || true
 
+    # Docker Compose bind mounts docker/blockchain over datadir/blockchain.
+    # Copy blockchain files there so HAF can see them.
+    echo "Copying blockchain files to docker/blockchain..."
     rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
-    cp -a -L "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
+    cp -aL "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
+    ls -la "${CI_PROJECT_DIR}/docker/blockchain/"
+
+    # Remove blockchain dir from datadir so Docker volume mount doesn't conflict
+    sudo rm -rf "${DATADIR}/blockchain"
 
     # Run app-setup as root to allow writing to the container's scripts directory
     "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh" --setup-uid=0
 
     echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
-    echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for HAF BE startup..."
-
-    "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh"
-
-    psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache();"
-
-    echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
-  after_script:
   - |
-    echo -e "\e[0Ksection_start:$(date +%s):compose2[collapsed=true]\r\e[0KStopping test environment..."
-
-    pushd docker
-    IFS=" " read -ra COMPOSE_OPTIONS <<< $COMPOSE_OPTIONS_STRING
-    docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log
-    docker compose "${COMPOSE_OPTIONS[@]}" logs app-setup > app-setup.log
-    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-setup > backend-setup.log
-    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-rep-block-processing > backend-rep-block-processing.log
-    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log
-    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-postgrest > backend-postgrest.log
-    docker compose "${COMPOSE_OPTIONS[@]}" down --volumes
-    popd
-
-    tar -cf - $(pwd)/docker/*.log | 7z a -si -mx9 docker/container-logs.tar.7z
-    sudo cp -a "${SHM_DIR}" "${DATADIR}/shm_dir"
-
-    LOCAL_HAFBE_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAFBE_CACHE_KEY}"
-    sudo mkdir -p "${LOCAL_HAFBE_CACHE}"
-    sudo cp -a "${DATADIR}" "${LOCAL_HAFBE_CACHE}"
-
-    ls -lah "${DATADIR}"
-    ls -lah "${LOCAL_HAFBE_CACHE}" || true
-
-    # Download cache-manager if not available in submodule (may have been cleaned)
-    CACHE_MANAGER="${CI_PROJECT_DIR}/submodules/haf/scripts/ci-helpers/cache-manager.sh"
-    if [[ ! -x "$CACHE_MANAGER" ]]; then
-      CACHE_MANAGER="/tmp/cache-manager.sh"
-      curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
-      chmod +x "$CACHE_MANAGER"
+    if [[ "$CACHE_HIT" == "true" ]]; then
+      echo "Cache hit - HAF BE already synced, skipping wait"
+    else
+      echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for HAF BE startup..."
+      "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh"
+      psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache();"
+      echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
     fi
-    if [[ -x "$CACHE_MANAGER" ]]; then
-      echo "Pushing sync data to NFS cache: ${HAFBE_SYNC_CACHE_TYPE}/${HAFBE_CACHE_KEY}"
-      CACHE_HANDLING=haf "$CACHE_MANAGER" put "${HAFBE_SYNC_CACHE_TYPE}" "${HAFBE_CACHE_KEY}" "${LOCAL_HAFBE_CACHE}" || echo "Warning: Failed to push to NFS cache"
-      # Restore pgdata permissions on local cache (cache-manager put relaxes them for NFS copy)
-      PGDATA_PATH="${LOCAL_HAFBE_CACHE}/datadir/haf_db_store/pgdata"
-      if [[ -d "$PGDATA_PATH" ]]; then
-        echo "Restoring local cache pgdata permissions to mode 700"
-        sudo chmod 700 "$PGDATA_PATH"
-      fi
-    fi
-
-    sudo rm -rf ${CI_PROJECT_DIR}/${CI_JOB_ID}
-
-    echo -e "\e[0Ksection_end:$(date +%s):compose2\r\e[0K"
-  artifacts:
-    paths:
-    - docker/container-logs.tar.7z
-    expire_in: 1 week
-    when: always
+  # Shutdown and save cache
+  - !reference [.haf_app_sync_shutdown, script]
+  - !reference [.haf_app_sync_save_cache_conditional, script]
+  after_script: !reference [.haf_app_sync_cleanup, after_script]
+  artifacts: !reference [.haf_app_sync_artifacts, artifacts]
   tags:
   - data-cache-storage
   - fast
@@ -544,8 +457,8 @@ python_api_client_test:
     # Service hostnames - use 'docker' since that's the dind service where containers run
     HAF_HOST: "docker"
     POSTGREST_HOST: "docker"
-    # Use recursive for nested submodules (haf/hive)
-    GIT_SUBMODULE_STRATEGY: recursive
+    # No submodules needed for tests
+    GIT_SUBMODULE_STRATEGY: none
     HAF_APP_SCHEMA: "hafbe_app"
     # Local bin for non-root docker/compose installation
     LOCAL_BIN: "${CI_PROJECT_DIR}/.local-bin"

@@ -12,7 +12,7 @@ OPTIONS:
     --backend-version=VERSION   HAF BE version (default: latest)
     --haf-data-directory=PATH   HAF Data directory path (default: /srv/haf/data)
     --haf-shm-directory=PATH    HAF SHM directory path (default: /srv/haf/shm)
-    --haf-registry=REGISTRY     HAF registry to use (default: registry.gitlab.syncad.com/hive/haf/instance)
+    --haf-registry=REGISTRY     HAF registry to use (default: registry.gitlab.syncad.com/hive/haf)
     --haf-version=VERSION       HAF version to use (default: 9ec94375)
     --hived-uid=UID             UID that hived daemon should be running as (default: $(id -u))
     --setup-uid=UID             UID that HAF setup should be run as (default: $(id -u))
@@ -72,7 +72,7 @@ cat <<-EOF | tee ci.env
     HAF_COMMAND=--shared-file-size=1G --plugin database_api --replay --stop-at-block=5000000
     HAF_DATA_DIRECTORY=${HAF_DATA_DIRECTORY:-/srv/haf/data}
     HAF_SHM_DIRECTORY=${HAF_SHM_DIRECTORY:-/srv/haf/shm}
-    HAF_REGISTRY=${HAF_REGISTRY_PATH:-registry.gitlab.syncad.com/hive/haf/instance}
+    HAF_REGISTRY=${HAF_REGISTRY_PATH:-registry.gitlab.syncad.com/hive/haf}
     HAF_VERSION=${HAF_REGISTRY_TAG:-9ec94375}
     HIVED_UID=${HIVED_UID:-$(id -u)}
     SETUP_UID=${SETUP_UID:-$(id -u)}
