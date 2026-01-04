@@ -1,10 +1,14 @@
 # Skip rules for CI job optimization based on changed files
-# Include this file and use the patterns/templates in job rules
+#
+# This file provides:
+#   1. detect_changes job - extends .haf_app_detect_changes from common-ci-configuration
+#   2. Rule templates for jobs (.skip_on_docs_only_or_quick_test, .skip_test_on_docs_only, etc.)
 #
 # Features:
-#   1. Skip builds AND tests for docs-only changes
-#   2. QUICK_TEST mode - use cached HAF data to skip prepare_haf_data job
-#   3. Run full pipeline for source code changes
+#   - Skip builds AND tests for docs-only changes (DOCS_ONLY mode)
+#   - QUICK_TEST mode - use cached HAF data to skip prepare_haf_data job
+#   - Protected branch always-run behavior (develop, master)
+#   - Path-based change detection for fine-grained control
 #
 # Usage:
 #   Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT=<commit> to skip HAF rebuild/replay
