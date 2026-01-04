@@ -354,9 +354,7 @@ sync:
       when: never
     - when: on_success
   variables:
-    # Docker-in-docker connection (disable TLS for simplicity)
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_HOST: "tcp://docker:2375"
+    # Docker-in-docker connection (uses TLS from template defaults)
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
@@ -465,9 +463,7 @@ python_api_client_test:
       when: never
     - when: on_success
   variables:
-    # Docker-in-docker connection (disable TLS for simplicity)
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_HOST: "tcp://docker:2375"
+    # Docker-in-docker connection (uses TLS from template defaults)
     # Test data directory - extracted from sync cache
     HAF_DATA_DIRECTORY: "${CI_PROJECT_DIR}/test-data"
     COMPOSE_FILE: "docker/docker-compose-test.yml"
