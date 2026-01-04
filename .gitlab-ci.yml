@@ -72,6 +72,9 @@ include:
 - project: hive/common-ci-configuration
   ref: develop
   file: /templates/cache_cleanup.gitlab-ci.yml
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/test_jobs.gitlab-ci.yml
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
