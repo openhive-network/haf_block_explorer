@@ -55,10 +55,6 @@ variables:
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
-# HAF templates for data preparation (fetched from HAF repo, doesn't require local submodule)
-- project: hive/haf
-  ref: 219ef44775ee1ed85630cf513d8671f6ca4ccc49
-  file: /scripts/ci-helpers/prepare_data_image_job.yml
 # HAF app testing templates - provides change detection, sync helpers, test base templates
 - project: hive/common-ci-configuration
   ref: develop
@@ -163,25 +159,30 @@ prepare_haf_image:
   tags:
   - public-runner-docker
 
+# Use existing HAF cached replay data (no data preparation needed)
+# The sync job will fetch from NFS cache: /nfs/ci-cache/haf/${HAF_COMMIT}.tar
 prepare_haf_data:
-  extends: .prepare_haf_data_5m
+  stage: build
+  image: alpine:latest
   needs:
     - job: prepare_haf_image
       artifacts: true
-  stage: build
-  timeout: 80m
-  variables:
-    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
-    # No submodule needed - template fetches scripts at runtime
   rules:
     - if: $QUICK_TEST == "true"
       when: never
     - if: $DOCS_ONLY == "true"
       when: never
     - when: on_success
+  script:
+    - |
+      echo "Using pre-cached HAF replay data from NFS"
+      echo "HAF_COMMIT: ${HAF_COMMIT}"
+      echo "Cache location: /nfs/ci-cache/haf/${HAF_COMMIT}.tar"
+      echo ""
+      echo "Note: If the cache doesn't exist, the sync job will fail."
+      echo "To create a cache, run a full pipeline in the HAF repo with this commit."
   tags:
-  - data-cache-storage
-  - fast
+  - public-runner-docker
 
 .docker-base-build-template:
   extends: .docker_image_builder_job_template
