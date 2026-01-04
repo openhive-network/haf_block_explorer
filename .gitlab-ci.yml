@@ -59,6 +59,19 @@ include:
 - project: hive/common-ci-configuration
   ref: develop
   file: /templates/haf_app_testing.gitlab-ci.yml
+# Additional templates from common-ci-configuration
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/npm_projects.gitlab-ci.yml
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/python_projects.gitlab-ci.yml
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/docker_image_jobs.gitlab-ci.yml
+- project: hive/common-ci-configuration
+  ref: develop
+  file: /templates/cache_cleanup.gitlab-ci.yml
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
