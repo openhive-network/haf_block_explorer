@@ -34,10 +34,10 @@ services:
   app-setup:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     working_dir: /home/haf_admin/haf_block_explorer
-    entrypoint: 
+    entrypoint:
       - "/bin/bash"
       - "-c"
-      - "./scripts/install_app.sh $${APP_SETUP_OPTIONS}"
+      - "/home/haf_admin/haf_block_explorer/scripts/install_app.sh $${APP_SETUP_OPTIONS}"
     user: $SETUP_UID
     environment:
       POSTGRES_HOST: haf
