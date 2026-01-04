@@ -35,13 +35,13 @@ services:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     working_dir: /home/haf_admin/haf_block_explorer
     entrypoint:
-      - "/bin/bash"
-      - "-c"
-      - "/home/haf_admin/haf_block_explorer/scripts/install_app.sh $${APP_SETUP_OPTIONS}"
+      - "/home/haf_admin/haf_block_explorer/scripts/install_app.sh"
+    command:
+      - "--only-apps"
+      - "--host=${POSTGRES_HOST:-haf}"
     user: $SETUP_UID
     environment:
       POSTGRES_HOST: haf
-      APP_SETUP_OPTIONS: --only-apps
     volumes:
       - ../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
       - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
