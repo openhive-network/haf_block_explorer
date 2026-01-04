@@ -46,6 +46,11 @@ variables:
   QUICK_TEST: "false"
   QUICK_TEST_HAF_COMMIT: ""
 
+  # Aliases for common-ci-configuration template compatibility
+  APP_SYNC_CACHE_TYPE: "${HAFBE_SYNC_CACHE_TYPE}"
+  APP_CACHE_KEY: "${HAFBE_CACHE_KEY}"
+  HAF_APP_SCHEMA: "hafbe_app"
+
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 - project: hive/haf
@@ -55,97 +60,29 @@ include:
 - project: hive/common-ci-configuration
   ref: develop
   file: /templates/haf_app_testing.gitlab-ci.yml
-# Skip rules for docs-only changes and QUICK_TEST mode (to be replaced by common templates)
+# Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
+# Use common git corruption cleanup hook with project-specific nested submodule handling
 default:
   hooks:
     pre_get_sources_script:
-      # Clean corrupt git state left by cancelled pipelines (see GitLab #296638, #4600)
-      # Also handles directory-to-submodule transitions when switching branches
-      # Wrapped in subshell to avoid changing working directory for subsequent git operations
+      # Base git corruption cleanup from common-ci-configuration
+      - !reference [.haf_git_corruption_cleanup, hooks, pre_get_sources_script]
+      # Project-specific: Clean nested submodules (btracker/hafah/reptracker all have nested haf submodule)
       - |
         (
         cd "${CI_PROJECT_DIR:-/builds}" 2>/dev/null || exit 0
-        echo "pre_get_sources: checking $(pwd) for corrupt git state"
-        if [ -d ".git" ]; then
-          # Remove stale lock files that block git operations
-          find .git -name "*.lock" -delete 2>/dev/null || true
-
-          # Check if main repo is corrupt - if so, remove .git to force fresh clone
-          if ! git rev-parse HEAD >/dev/null 2>&1; then
-            echo "pre_get_sources: main repository corrupt, forcing fresh clone"
-            rm -rf .git
-          else
-            # Main repo OK - check and clean corrupt submodules
-            # Check both the working dir and .git/modules/ since either can be corrupt
-            if [ -f ".gitmodules" ]; then
-              git config --file .gitmodules --get-regexp path 2>/dev/null | awk '{print $2}' | while read submod; do
-                needs_clean=false
-                [ -z "$submod" ] && continue
-                # Check if submodule working directory exists but is corrupt
-                if [ -d "$submod" ] && [ -f "$submod/.git" ]; then
-                  if ! git -C "$submod" rev-parse HEAD >/dev/null 2>&1; then
-                    needs_clean=true
-                  fi
-                fi
-                # Check if .git/modules exists but is corrupt (even if working dir is gone)
-                if [ -d ".git/modules/$submod" ]; then
-                  if ! git --git-dir=".git/modules/$submod" rev-parse HEAD >/dev/null 2>&1; then
-                    echo "pre_get_sources: $submod corrupt (rev-parse failed)"
-                    needs_clean=true
-                  fi
-                fi
-                if [ "$needs_clean" = true ]; then
-                  echo "pre_get_sources: cleaning corrupt submodule: $submod"
-                  rm -rf "$submod" ".git/modules/$submod"
-                fi
-              done
-            fi
-
-            # Clean nested submodule configs with file:// URLs (causes 'transport file not allowed' errors)
-            # This happens when workspaces have stale submodule state from previous runs
-            # Remove both the .git/modules nested dirs AND the working tree nested submodule .git files
-            if [ -d ".git/modules/submodules" ]; then
-              echo "pre_get_sources: removing all nested submodule state under .git/modules/submodules"
-              # Remove nested modules directories in .git/modules
-              rm -rf .git/modules/submodules/btracker/modules 2>/dev/null || true
-              rm -rf .git/modules/submodules/hafah/modules 2>/dev/null || true
-              rm -rf .git/modules/submodules/reptracker/modules 2>/dev/null || true
-              rm -rf .git/modules/submodules/haf/modules 2>/dev/null || true
-              # Also remove nested submodule working directories that have stale .git files
-              # These point to the now-deleted modules directories
-              rm -rf submodules/btracker/haf 2>/dev/null || true
-              rm -rf submodules/hafah/haf 2>/dev/null || true
-              rm -rf submodules/reptracker/haf 2>/dev/null || true
-              rm -rf submodules/haf/hive 2>/dev/null || true
-            fi
-
-            # Handle directory-to-submodule transitions: fetch target ref's .gitmodules
-            # and remove any paths that exist as regular directories (not submodules)
-            if [ -n "$CI_COMMIT_REF_NAME" ]; then
-              echo "pre_get_sources: checking for directory-to-submodule transitions (ref: $CI_COMMIT_REF_NAME)"
-              # Fetch the target ref first (it may not exist locally yet)
-              git fetch origin "$CI_COMMIT_REF_NAME" --depth=1 2>&1 || true
-              target_gitmodules=$(git show "origin/$CI_COMMIT_REF_NAME:.gitmodules" 2>/dev/null) || true
-              if [ -n "$target_gitmodules" ]; then
-                echo "$target_gitmodules" | grep "path = " | sed 's/.*path = //' | while read submod; do
-                  [ -z "$submod" ] && continue
-                  # If path exists as a regular directory (not a submodule), remove it
-                  if [ -d "$submod" ] && [ ! -f "$submod/.git" ]; then
-                    echo "pre_get_sources: removing directory for submodule transition: $submod"
-                    rm -rf "$submod"
-                  fi
-                done
-              else
-                echo "pre_get_sources: no target gitmodules found"
-              fi
-            fi
-
-            echo "pre_get_sources: existing repo OK"
-          fi
-        else
-          echo "pre_get_sources: no .git directory (fresh workspace)"
+        if [ -d ".git/modules/submodules" ]; then
+          echo "pre_get_sources: removing nested submodule state under .git/modules/submodules"
+          rm -rf .git/modules/submodules/btracker/modules 2>/dev/null || true
+          rm -rf .git/modules/submodules/hafah/modules 2>/dev/null || true
+          rm -rf .git/modules/submodules/reptracker/modules 2>/dev/null || true
+          rm -rf .git/modules/submodules/haf/modules 2>/dev/null || true
+          rm -rf submodules/btracker/haf 2>/dev/null || true
+          rm -rf submodules/hafah/haf 2>/dev/null || true
+          rm -rf submodules/reptracker/haf 2>/dev/null || true
+          rm -rf submodules/haf/hive 2>/dev/null || true
         fi
         )
 
@@ -195,38 +132,22 @@ quick_test_setup:
     - public-runner-docker
 
 validate_haf_commit:
+  extends: .haf_commit_validation
   stage: build
-  image: alpine:latest
   variables:
-    # Avoid nested submodule issues - manually init just haf submodule
+    HAF_SUBMODULE_PATH: "submodules/haf"
     GIT_SUBMODULE_STRATEGY: none
-  script:
-  - |
-    set -e
-    apk add --no-cache git
-    # Clean stale submodule state that may have file:// URLs
-    rm -rf .git/modules/submodules
-    git submodule deinit -f --all 2>/dev/null || true
-    # Manually init just the haf submodule (no recursion)
-    git submodule update --init submodules/haf
-    SUBMODULE_COMMIT=$(git -C submodules/haf rev-parse HEAD)
-    INCLUDE_REF=$(grep -A2 "project:.*hive/haf" .gitlab-ci.yml | grep "ref:" | head -1 | sed 's/.*ref: *\([a-f0-9]*\).*/\1/' || true)
-    echo "HAF_COMMIT variable: $HAF_COMMIT"
-    echo "HAF submodule HEAD:  $SUBMODULE_COMMIT"
-    echo "Include ref:         $INCLUDE_REF"
-    ERRORS=0
-    if [ "$HAF_COMMIT" != "$SUBMODULE_COMMIT" ]; then
-      echo "ERROR: HAF_COMMIT variable does not match submodule commit!"
-      ERRORS=1
-    fi
-    if [ "$HAF_COMMIT" != "$INCLUDE_REF" ]; then
-      echo "ERROR: HAF_COMMIT variable does not match include ref!"
-      ERRORS=1
-    fi
-    if [ $ERRORS -eq 1 ]; then
-      exit 1
-    fi
-    echo "All HAF commit references are consistent"
+  before_script:
+    - apk add --no-cache git
+    # Clean stale submodule state and init just haf submodule
+    - rm -rf .git/modules/submodules
+    - git submodule deinit -f --all 2>/dev/null || true
+    - git submodule update --init submodules/haf
+    # Extract include ref from .gitlab-ci.yml and set HAF_INCLUDE_REF
+    - |
+      INCLUDE_REF=$(grep -A2 "project:.*hive/haf" .gitlab-ci.yml | grep "ref:" | head -1 | sed 's/.*ref: *\([a-f0-9]*\).*/\1/' || true)
+      export HAF_INCLUDE_REF="$INCLUDE_REF"
+      echo "Extracted HAF_INCLUDE_REF=$HAF_INCLUDE_REF from .gitlab-ci.yml"
   rules:
     # Skip in QUICK_TEST mode - we're using cached data from a different commit
     - if: $QUICK_TEST == "true"
@@ -235,8 +156,6 @@ validate_haf_commit:
     - if: $DOCS_ONLY == "true"
       when: never
     - when: on_success
-  tags:
-  - public-runner-docker
 
 prepare_haf_image:
   stage: build
@@ -429,7 +348,9 @@ build_python_api_client_wheel:
   - public-runner-docker
 
 sync:
-  extends: .docker_image_builder_job_template
+  extends:
+    - .docker_image_builder_job_template
+    - .haf_app_sync_variables
   stage: sync
   # Shared HAF app test runner from common-ci-configuration
   image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
@@ -452,10 +373,6 @@ sync:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: "tcp://docker:2375"
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}
-    DATADIR: ${CI_PROJECT_DIR}/${CI_JOB_ID}/datadir
-    SHM_DIR: ${CI_PROJECT_DIR}/${CI_JOB_ID}/shm_dir
-    HAF_DATA_DIRECTORY: ${DATADIR}
-    HAF_SHM_DIRECTORY: ${SHM_DIR}
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
     # HAF image tag - use HAF_COMMIT to ensure correct image when prepare_haf_image is skipped
     HAF_REGISTRY_TAG: "$HAF_COMMIT"
@@ -468,46 +385,26 @@ sync:
     SHARED_BLOCK_LOG_DIR: /blockchain/block_log_5m
   timeout: 1 hours
   before_script:
+  # Docker login and git setup from common template
+  - !reference [.haf_app_sync_setup, script]
+  # Project-specific: Init nested submodules (btracker, hafah, reptracker each have nested haf)
   - |
-    echo -e "\e[0Ksection_start:$(date +%s):login[collapsed=true]\r\e[0KLogging to Docker registry..."
-    docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-    echo -e "\e[0Ksection_end:$(date +%s):login\r\e[0K"
-    echo -e "\e[0Ksection_start:$(date +%s):git[collapsed=true]\r\e[0KConfiguring Git..."
-    git config --global --add safe.directory "$CI_PROJECT_DIR"
-    git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf"
+    echo -e "\e[0Ksection_start:$(date +%s):submodules[collapsed=true]\r\e[0KInitializing submodules..."
     git config --global --add safe.directory "$CI_PROJECT_DIR/submodules/haf/hive"
-    # Clean up any stale submodule state - deinit first, then remove
+    # Clean up any stale submodule state
     git submodule deinit -f --all 2>/dev/null || true
-    # Remove with sudo, then recreate with sudo and fix ownership so git can use them
     sudo rm -rf .git/modules/submodules submodules 2>/dev/null || rm -rf .git/modules/submodules submodules 2>/dev/null || true
     sudo mkdir -p .git/modules/submodules submodules && sudo chown -R $(id -u):$(id -g) .git/modules/submodules submodules
-    # Manually init all submodules - HAF with its nested hive, plus btracker, hafah, reptracker
+    # Init all submodules and their nested haf submodules
     git submodule update --init --force
     git -C "$CI_PROJECT_DIR/submodules/haf" submodule update --init hive
-    # Init nested haf submodule in hafah, btracker, reptracker (they all depend on haf scripts)
     git -C "$CI_PROJECT_DIR/submodules/hafah" submodule update --init haf
     git -C "$CI_PROJECT_DIR/submodules/btracker" submodule update --init haf
     git -C "$CI_PROJECT_DIR/submodules/reptracker" submodule update --init haf
-    echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
-  - |
-    # Ensure HAF replay data is available locally (fetch from NFS if needed)
-    LOCAL_HAF_CACHE="${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
-    if [[ -d "${LOCAL_HAF_CACHE}/datadir" ]]; then
-      echo "Local HAF cache found at ${LOCAL_HAF_CACHE}"
-    else
-      echo "Local HAF cache not found, checking NFS..."
-      CACHE_MANAGER="/tmp/cache-manager.sh"
-      if [[ ! -x "$CACHE_MANAGER" ]]; then
-        curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
-        chmod +x "$CACHE_MANAGER"
-      fi
-      if CACHE_HANDLING=haf "$CACHE_MANAGER" get haf "${HAF_COMMIT}" "${LOCAL_HAF_CACHE}"; then
-        echo "Fetched HAF replay data from NFS cache"
-      else
-        echo "ERROR: Failed to fetch HAF replay data from NFS cache"
-        exit 1
-      fi
-    fi
+    echo -e "\e[0Ksection_end:$(date +%s):submodules\r\e[0K"
+  # Fetch cache-manager and HAF replay data from common template
+  - !reference [.fetch_cache_manager, before_script]
+  - !reference [.haf_app_fetch_haf_cache, script]
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=true]\r\e[0KStarting the test environment..."
