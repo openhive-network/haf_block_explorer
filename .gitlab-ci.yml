@@ -390,10 +390,13 @@ sync:
     # Docker Compose merges volume arrays, so docker-compose.yml's blockchain
     # bind mount is still present even with ci.yml override. We need valid
     # content in docker/blockchain for the container to start.
-    echo "Copying blockchain symlinks to docker/blockchain..."
+    echo "Copying blockchain files to docker/blockchain..."
     rm -rf "${CI_PROJECT_DIR}/docker/blockchain"/*
     cp -aL "${DATADIR}/blockchain"/* "${CI_PROJECT_DIR}/docker/blockchain/"
     ls -la "${CI_PROJECT_DIR}/docker/blockchain/" | head -5
+
+    # Remove blockchain dir from datadir so Docker volume mount doesn't conflict
+    sudo rm -rf "${DATADIR}/blockchain"
 
     # Run app-setup as root to allow writing to the container's scripts directory
     "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh" --setup-uid=0
