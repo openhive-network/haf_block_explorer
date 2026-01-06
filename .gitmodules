@@ -4,9 +4,6 @@
 [submodule "submodules/hafah"]
 	path = submodules/hafah
 	url = ../HAfAH.git
-[submodule "submodules/haf"]
-	path = submodules/haf
-	url = ../haf.git
 [submodule "submodules/reptracker"]
 	path = submodules/reptracker
 	url = ../reputation_tracker.git

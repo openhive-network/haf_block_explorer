@@ -34,7 +34,7 @@ services:
   app-setup:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     working_dir: /home/haf_admin/haf_block_explorer
-    entrypoint: 
+    entrypoint:
       - "/bin/bash"
       - "-c"
       - "./scripts/install_app.sh $${APP_SETUP_OPTIONS}"
@@ -42,12 +42,8 @@ services:
     environment:
       POSTGRES_HOST: haf
       APP_SETUP_OPTIONS: --only-apps
-    volumes:
-      - ../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
-      - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
-      - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
-      - ../scripts/generate_version_sql.sh:/home/haf_admin/haf_block_explorer/scripts/generate_version_sql.sh
-      - ../.git:/home/haf_admin/haf_block_explorer/.git
+    # No volume mounts in base config - the Docker image contains all submodules
+    # For local dev with live submodule changes, use dev.yml which adds the mounts
     networks:
       haf-network:
     depends_on:

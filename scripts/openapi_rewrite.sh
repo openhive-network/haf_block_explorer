@@ -5,7 +5,28 @@ set -o pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit 1; pwd -P )"
 
-haf_dir="../submodules/haf"
+# Download process_openapi.py from haf repo if not present locally
+HAF_SCRIPTS_DIR="$SCRIPTDIR/haf_scripts"
+HAF_REF="${HAF_REF:-develop}"
+PROCESS_OPENAPI_URL="https://gitlab.syncad.com/hive/haf/-/raw/${HAF_REF}/scripts/process_openapi.py"
+
+ensure_process_openapi() {
+    if [[ ! -f "$HAF_SCRIPTS_DIR/process_openapi.py" ]]; then
+        echo "process_openapi.py not found locally, downloading from haf repo (ref: $HAF_REF)..."
+        mkdir -p "$HAF_SCRIPTS_DIR"
+        if command -v curl &> /dev/null; then
+            curl -fsSL "$PROCESS_OPENAPI_URL" -o "$HAF_SCRIPTS_DIR/process_openapi.py"
+        elif command -v wget &> /dev/null; then
+            wget -q "$PROCESS_OPENAPI_URL" -O "$HAF_SCRIPTS_DIR/process_openapi.py"
+        else
+            echo "ERROR: Neither curl nor wget is available. Please install one to download HAF scripts."
+            exit 1
+        fi
+        chmod +x "$HAF_SCRIPTS_DIR/process_openapi.py"
+        echo "process_openapi.py downloaded successfully."
+    fi
+}
+
 endpoints="endpoints"
 types="backend/types"
 rewrite_dir="${endpoints}_openapi"
@@ -117,9 +138,12 @@ echo "Using endpoints and types directories"
 echo "$ENDPOINTS_IN_ORDER"
 echo "$DEFAULT_TYPES"
 
+# Ensure process_openapi.py is available
+ensure_process_openapi
+
 # run openapi rewrite script
 # shellcheck disable=SC2086
-python3 $haf_dir/scripts/process_openapi.py $OUTPUT $DEFAULT_TYPES $ENDPOINTS_IN_ORDER
+python3 "$HAF_SCRIPTS_DIR/process_openapi.py" $OUTPUT $DEFAULT_TYPES $ENDPOINTS_IN_ORDER
 
 # Create rewrite_rules.conf
 reverse_lines > "$temp_output_file"

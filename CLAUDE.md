@@ -35,7 +35,6 @@ tests/
   functional/      Script functionality tests
 docker/            Docker Compose deployment
 submodules/
-  haf/             Hive Application Framework
   btracker/        Balance Tracker
   hafah/           Account Authority History
   reptracker/      Reputation Tracker
@@ -129,8 +128,12 @@ docker compose down -v                      # Stop and remove volumes
 - `BLOCK_LOG_SOURCE_DIR`: Block log location
 - Test data: 5M blocks prepared via `prepare_haf_data` job
 
+### HAF Version
+HAF is pinned via `HAF_COMMIT` variable in `.gitlab-ci.yml` (not a submodule).
+Docker images are pulled from registry using this commit.
+
 ### Submodule Commits
-Submodules are pinned to specific commits. Update with:
+App submodules (btracker, hafah, reptracker) are pinned to specific commits:
 ```bash
 git submodule update --init --recursive
 ```
