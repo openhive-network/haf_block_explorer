@@ -24,3 +24,6 @@ docker/srv
 # Python - API package generation
 scripts/python_api_package/hafbe_api/hafbe_api_client
 scripts/python_api_package/dist
+
+# Downloaded HAF scripts (for openapi_rewrite.sh)
+scripts/haf_scripts/
