@@ -358,9 +358,9 @@ sync:
       when: never
     - when: on_success
   variables:
-    # Sync job mounts submodules from host into containers
-    # Normal strategy checkouts top-level submodules (hafah, btracker, reptracker)
-    GIT_SUBMODULE_STRATEGY: normal
+    # GitLab Runner 18.6+ doesn't inherit credentials to nested submodules (tests_api in btracker)
+    # Use manual init without recursion since this job doesn't need tests_api
+    GIT_SUBMODULE_STRATEGY: none
     # Docker-in-docker connection (disable TLS for simplicity - same as develop branch)
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: "tcp://docker:2375"
@@ -379,6 +379,15 @@ sync:
   before_script:
   # Docker login and git setup from common template
   - !reference [.haf_app_sync_setup, script]
+  # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
+  - |
+    for sub in hafah btracker reptracker; do
+      git submodule deinit -f submodules/$sub 2>/dev/null || true
+      rm -rf submodules/$sub .git/modules/submodules/$sub
+      git config --remove-section submodule.submodules/$sub 2>/dev/null || true
+    done
+    git submodule sync
+    git submodule update --init --depth=1 submodules/hafah submodules/btracker submodules/reptracker
   # Smart cache lookup (with fallback for cache reuse)
   - !reference [.haf_app_smart_cache_lookup, script]
   script:
@@ -577,10 +586,22 @@ regression-test:
 setup-scripts-test:
   extends: .hafbe_test_base
   variables:
-    # Need submodules for hafah, btracker, reptracker scripts
-    GIT_SUBMODULE_STRATEGY: normal
+    # GitLab Runner 18.6+ doesn't inherit credentials to nested submodules (tests_api in btracker)
+    # Use manual init without recursion since this job doesn't need tests_api
+    GIT_SUBMODULE_STRATEGY: none
   script:
     - |
+      echo -e "\e[0Ksection_start:$(date +%s):submodules\r\e[0KInitializing submodules..."
+      # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
+      for sub in hafah btracker reptracker; do
+        git submodule deinit -f submodules/$sub 2>/dev/null || true
+        rm -rf submodules/$sub .git/modules/submodules/$sub
+        git config --remove-section submodule.submodules/$sub 2>/dev/null || true
+      done
+      git submodule sync
+      git submodule update --init --depth=1 submodules/hafah submodules/btracker submodules/reptracker
+      echo -e "\e[0Ksection_end:$(date +%s):submodules\r\e[0K"
+
       echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning functional tests..."
 
       # Pre-create haf/scripts directory for hafah's setup_postgres.sh to download create_haf_app_role.sh
@@ -624,11 +645,19 @@ pattern-test:
     HAFBE_ADDRESS: ${POSTGREST_HOST}
     HAFBE_PORT: 3000
     TAVERN_DIR: $CI_PROJECT_DIR/tests/tavern
-    # Need btracker/tests_api (which is a nested submodule) for validate_response module
-    GIT_SUBMODULE_STRATEGY: recursive
+    # GitLab Runner 18.6+ doesn't inherit credentials to nested submodules
+    # Use manual init + direct clone for tests_api (credential inheritance unreliable with stale workspaces)
+    GIT_SUBMODULE_STRATEGY: none
   before_script:
     - !reference [.hafbe_test_base, before_script]
-    # Set up Python venv with pytest/tavern and validate_response from btracker's tests_api
+    # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
+    - git submodule deinit -f submodules/btracker 2>/dev/null || true
+    - rm -rf submodules/btracker .git/modules/submodules/btracker
+    - git config --remove-section submodule.submodules/btracker 2>/dev/null || true
+    - git submodule sync && git submodule update --init --depth=1 submodules/btracker
+    # Clone tests_api directly (nested submodule can't be fetched due to GitLab Runner 18.6+ credential inheritance)
+    - git clone --depth=1 https://gitlab.syncad.com/hive/tests_api.git $CI_PROJECT_DIR/submodules/btracker/tests_api
+    # Set up Python venv with pytest/tavern and validate_response from tests_api
     - python3 -m venv venv/ && . venv/bin/activate && pip install pytest tavern pytest-xdist pyyaml deepdiff
     - . venv/bin/activate && pip install $CI_PROJECT_DIR/submodules/btracker/tests_api
   script:
