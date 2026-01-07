@@ -22,25 +22,34 @@ variables:
   # fetch workspaces during transition. Remove once all projects use fetch.
   GIT_CLONE_PATH: $CI_BUILDS_DIR/fetch/$CI_RUNNER_SHORT_TOKEN/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
   GIT_SUBMODULE_UPDATE_FLAGS: --jobs 4
-  # HAF configuration (no submodule needed)
-  # HAF_COMMIT: Used for data cache key lookup and Docker image tag (first 8 chars)
-  HAF_COMMIT: "219ef44775ee1ed85630cf513d8671f6ca4ccc49"  # Known cached HAF commit
+  # =============================================================================
+  # Upstream Image Detection (No Submodules Required)
+  # =============================================================================
+  # HAF image is dynamically detected by find_haf_image job using
+  # common-ci-configuration scripts. No manual updates needed - always uses
+  # the latest built image from the HAF repo.
+  #
+  # Output variables (set by detect stage job):
+  #   HAF_UPSTREAM_IMAGE, HAF_UPSTREAM_COMMIT, HAF_UPSTREAM_TAG
+  # =============================================================================
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   # NFS cache configuration for sync data sharing across builders
   DATA_CACHE_NFS_PREFIX: "/nfs/ci-cache"
-  HAFBE_CACHE_KEY: "${HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
+  # HAFBE_CACHE_KEY is set by find_haf_image based on detected HAF commit
+  HAFBE_CACHE_KEY: "${HAF_UPSTREAM_COMMIT}_${CI_COMMIT_SHORT_SHA}"
   # Cache type prefixed with haf_ for automatic pgdata permission handling by cache-manager
   HAFBE_SYNC_CACHE_TYPE: "haf_hafbe_sync"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
-  # Builder image from hive registry
-  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-1"
-  BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/hive/ci-base-image${BUILDER_IMAGE_TAG}"
+  # Builder image from common-ci-configuration
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-2"
+  BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
-  # Common CI configuration reference
+  # Common CI configuration reference for fetching scripts
   COMMON_CI_REF: "develop"
+  COMMON_CI_URL: "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}"
   # Python 3.12 image for API client jobs (pydantic-core doesn't support 3.14 yet)
   PYTHON_COMPAT_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1"
 
@@ -57,26 +66,18 @@ variables:
 
 include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
-# HAF app testing templates - provides change detection, sync helpers, test base templates
+# Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
   ref: develop
-  file: /templates/haf_app_testing.gitlab-ci.yml
-# Additional templates from common-ci-configuration
-- project: hive/common-ci-configuration
-  ref: develop
-  file: /templates/npm_projects.gitlab-ci.yml
-- project: hive/common-ci-configuration
-  ref: develop
-  file: /templates/python_projects.gitlab-ci.yml
-- project: hive/common-ci-configuration
-  ref: develop
-  file: /templates/docker_image_jobs.gitlab-ci.yml
-- project: hive/common-ci-configuration
-  ref: develop
-  file: /templates/cache_cleanup.gitlab-ci.yml
-- project: hive/common-ci-configuration
-  ref: develop
-  file: /templates/test_jobs.gitlab-ci.yml
+  file:
+    - '/templates/haf_app_testing.gitlab-ci.yml'
+    - '/templates/haf_data_preparation.gitlab-ci.yml'
+    - '/templates/source_change_detection.gitlab-ci.yml'
+    - '/templates/npm_projects.gitlab-ci.yml'
+    - '/templates/python_projects.gitlab-ci.yml'
+    - '/templates/docker_image_jobs.gitlab-ci.yml'
+    - '/templates/cache_cleanup.gitlab-ci.yml'
+    - '/templates/test_jobs.gitlab-ci.yml'
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 
@@ -102,9 +103,53 @@ lint_sql_scripts:
   extends: .haf_app_lint_sql
   stage: lint
 
-# Quick Test Mode Setup - overrides HAF_COMMIT with cached version
+# =============================================================================
+# Upstream Image Detection Jobs
+# =============================================================================
+# Automatically find the latest built images from upstream repos (HAF) by
+# analyzing which commits changed source files. Uses .find_upstream_image template
+# from common-ci-configuration.
+# =============================================================================
+find_haf_image:
+  extends: .find_upstream_image
+  stage: detect
+  variables:
+    UPSTREAM_REPO_URL: "https://gitlab.syncad.com/hive/haf.git"
+    UPSTREAM_REGISTRY: "registry.gitlab.syncad.com/hive/haf"
+    UPSTREAM_BRANCH: "develop"
+    UPSTREAM_OUTPUT: "haf_image.env"
+  before_script:
+    - apk add --no-cache git bash curl
+    # Fetch source patterns from HAF's script (single source of truth)
+    - |
+      PATTERNS_URL="https://gitlab.syncad.com/hive/haf/-/raw/develop/scripts/ci-helpers/source-patterns.sh"
+      echo "Fetching source patterns from: $PATTERNS_URL"
+      if UPSTREAM_PATTERNS=$(curl -sf "$PATTERNS_URL" | sh); then
+        echo "Loaded patterns: $UPSTREAM_PATTERNS"
+        export UPSTREAM_PATTERNS
+      else
+        echo "ERROR: Could not fetch source-patterns.sh from HAF"
+        exit 1
+      fi
+  script:
+    - !reference [.find_upstream_image, script]
+    # Rename UPSTREAM_* to HAF_UPSTREAM_* to avoid collisions
+    - |
+      if [ -f "$UPSTREAM_OUTPUT" ]; then
+        sed -i 's/^UPSTREAM_/HAF_UPSTREAM_/' "$UPSTREAM_OUTPUT"
+        echo "Renamed variables in $UPSTREAM_OUTPUT:"
+        cat "$UPSTREAM_OUTPUT"
+      fi
+  artifacts:
+    reports:
+      dotenv: haf_image.env
+    expire_in: 1 day
+  tags:
+    - public-runner-docker
+
+# Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
-  stage: lint
+  stage: detect
   image: alpine:latest
   needs: []
   script:
@@ -118,8 +163,11 @@ quick_test_setup:
         exit 1
       fi
 
-      # Override HAF_COMMIT with the cached version
-      echo "HAF_COMMIT=$QUICK_TEST_HAF_COMMIT" > quick_test.env
+      # Override HAF_UPSTREAM_* with the cached version
+      HAF_SHORT="${QUICK_TEST_HAF_COMMIT:0:8}"
+      echo "HAF_UPSTREAM_COMMIT=$QUICK_TEST_HAF_COMMIT" > quick_test.env
+      echo "HAF_UPSTREAM_TAG=$HAF_SHORT" >> quick_test.env
+      echo "HAF_UPSTREAM_IMAGE=registry.gitlab.syncad.com/hive/haf:$HAF_SHORT" >> quick_test.env
       echo "HAFBE_CACHE_KEY=${QUICK_TEST_HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}" >> quick_test.env
       cat quick_test.env
   artifacts:
@@ -132,73 +180,29 @@ quick_test_setup:
   tags:
     - public-runner-docker
 
-validate_haf_commit:
-  extends: .haf_commit_validation
-  stage: build
-  # Uses HAF_COMMIT from global variables
-  rules:
-    # Skip in QUICK_TEST mode - we're using cached data from a different commit
-    - if: $QUICK_TEST == "true"
-      when: never
-    # Skip for docs-only changes
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  tags:
-  - public-runner-docker
-
-# Use existing HAF image from registry (no submodule needed)
-prepare_haf_image:
-  stage: build
-  image: alpine:latest
-  needs:
-    - job: validate_haf_commit
-      artifacts: true
-  rules:
-    - if: $QUICK_TEST == "true"
-      when: never
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  script:
-    - |
-      # Derive image tag from HAF_COMMIT (first 8 characters)
-      HAF_SHORT_COMMIT="${HAF_COMMIT:0:8}"
-      HAF_IMAGE_NAME="registry.gitlab.syncad.com/hive/haf:${HAF_SHORT_COMMIT}"
-      echo "Using HAF image: ${HAF_IMAGE_NAME}"
-      # Export image name and tag for Docker Compose scripts
-      echo "HAF_IMAGE_NAME=${HAF_IMAGE_NAME}" > docker_image_name.env
-      echo "HAF_REGISTRY_TAG=${HAF_SHORT_COMMIT}" >> docker_image_name.env
-  artifacts:
-    reports:
-      dotenv: docker_image_name.env
-    paths:
-      - docker_image_name.env
-  tags:
-  - public-runner-docker
-
-# Use existing HAF cached replay data (no data preparation needed)
-# The sync job will fetch from NFS cache: /nfs/ci-cache/haf/${HAF_COMMIT}.tar
+# =============================================================================
+# Data Preparation Jobs (use pre-built images from registry)
+# =============================================================================
 prepare_haf_data:
+  extends: .prepare_haf_data_5m
   stage: build
-  image: alpine:latest
   needs:
-    - job: prepare_haf_image
+    - job: find_haf_image
       artifacts: true
-  rules:
-    - if: $QUICK_TEST == "true"
-      when: never
-    - if: $DOCS_ONLY == "true"
-      when: never
-    - when: on_success
-  script:
-    - |
-      echo "Using pre-cached HAF replay data from NFS"
-      echo "HAF_COMMIT: ${HAF_COMMIT}"
-      echo "Cache location: /nfs/ci-cache/haf/${HAF_COMMIT}.tar"
-      echo ""
-      echo "Note: If the cache doesn't exist, the sync job will fail."
-      echo "To create a cache, run a full pipeline in the HAF repo with this commit."
+  variables:
+    BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
+    CONFIG_INI_SOURCE: "/tmp/haf-app-tools/config_5M.ini"
+    # Map HAF_UPSTREAM_* from find_haf_image to HAF_* expected by template
+    HAF_IMAGE_NAME: "${HAF_UPSTREAM_IMAGE}"
+    HAF_COMMIT: "${HAF_UPSTREAM_COMMIT}"
+    # No submodules needed - uses pre-built HAF image from registry
+    GIT_SUBMODULE_STRATEGY: none
+  before_script:
+    - !reference [.haf_docker_image_builder_job, before_script]
+    - mkdir -p /tmp/haf-app-tools
+    - curl -fsSL "${COMMON_CI_URL}/haf-app-tools/config/config_5M.ini" -o /tmp/haf-app-tools/config_5M.ini
+    # Log the mapped variables
+    - echo "Using HAF image:${HAF_IMAGE_NAME} (commit:${HAF_COMMIT})"
   tags:
   - public-runner-docker
 
@@ -340,11 +344,11 @@ sync:
   # Shared HAF app test runner from common-ci-configuration
   image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
   needs:
+    - job: find_haf_image
+      artifacts: true
     - job: quick_test_setup
       artifacts: true
       optional: true  # Only runs in QUICK_TEST mode
-    - job: prepare_haf_image
-      optional: true  # Skipped in QUICK_TEST mode
     - job: prepare_haf_data
       optional: true  # Skipped in QUICK_TEST mode
     - job: docker-setup-docker-image-build
@@ -360,7 +364,12 @@ sync:
     # Docker-in-docker connection (disable TLS for simplicity - same as develop branch)
     DOCKER_TLS_CERTDIR: ""
     DOCKER_HOST: "tcp://docker:2375"
+    # Map HAF_UPSTREAM_* from find_haf_image to HAF_* for cache lookup
+    HAF_COMMIT: "${HAF_UPSTREAM_COMMIT}"
+    DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_UPSTREAM_COMMIT}
     BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
+    # HAF image tag from dynamic detection
+    HAF_REGISTRY_TAG: "${HAF_UPSTREAM_TAG}"
     POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
     COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose.yml --file overrides/ci.yml
       --ansi never
@@ -455,14 +464,13 @@ python_api_client_test:
   # Has: Python 3.14, Poetry, Docker CLI, docker-compose, JMeter, m2u
   image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
   needs:
+    - job: find_haf_image
+      artifacts: true
     - job: quick_test_setup
       artifacts: true
       optional: true
     - job: sync
       artifacts: true
-    - job: prepare_haf_image
-      artifacts: true
-      optional: true
   rules:
     - if: $DOCS_ONLY == "true"
       when: never
@@ -481,6 +489,8 @@ python_api_client_test:
     # No submodules needed for tests
     GIT_SUBMODULE_STRATEGY: none
     HAF_APP_SCHEMA: "hafbe_app"
+    # Map HAF_UPSTREAM_IMAGE from find_haf_image to HAF_IMAGE_NAME for docker-compose
+    HAF_IMAGE_NAME: "${HAF_UPSTREAM_IMAGE}"
     # Local bin for non-root docker/compose installation
     LOCAL_BIN: "${CI_PROJECT_DIR}/.local-bin"
     # Run HAF container as root to access CI-extracted data
