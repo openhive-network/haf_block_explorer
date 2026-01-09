@@ -90,47 +90,27 @@ fi
 # Create destination directory
 mkdir -p "${DEST_DIR}"
 
-# Extract cache using cache-manager (with fallback for cache reuse)
+# Extract cache using cache-manager (exact key match only)
+# NOTE: No fallback to caches from different app versions to ensure schema compatibility
 echo ""
 echo "=== Extracting Cache ==="
-echo "Trying exact key: ${CACHE_TYPE}/${CACHE_KEY}"
+echo "Cache key: ${CACHE_TYPE}/${CACHE_KEY}"
 
-if CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${CACHE_KEY}" "${DEST_DIR}" 2>/dev/null; then
-    echo "Found exact cache match"
+if CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${CACHE_KEY}" "${DEST_DIR}"; then
+    echo "Cache extracted successfully"
 else
-    # Fallback: search for any cache with same HAF commit prefix
-    echo "Exact key not found, searching for compatible cache..."
-    # Extract HAF commit (first part before underscore) from cache key
-    HAF_COMMIT_PREFIX="${CACHE_KEY%%_*}"
-    NFS_CACHE_DIR="${DATA_CACHE_NFS_PREFIX:-/nfs/ci-cache}/${CACHE_TYPE}"
-    FOUND_CACHE=$(ls -t "${NFS_CACHE_DIR}/${HAF_COMMIT_PREFIX}_"*.tar 2>/dev/null | head -1 || true)
-
-    if [[ -n "$FOUND_CACHE" ]]; then
-        FOUND_KEY=$(basename "$FOUND_CACHE" .tar)
-        echo "Found compatible cache: ${FOUND_KEY}"
-        if ! CACHE_HANDLING=haf "$CACHE_MANAGER" get "${CACHE_TYPE}" "${FOUND_KEY}" "${DEST_DIR}"; then
-            echo ""
-            echo "ERROR: Failed to extract compatible cache"
-            exit 1
-        fi
-        echo "Extracted compatible cache successfully"
-    else
-        echo ""
-        echo "ERROR: No compatible cache found"
-        echo ""
-        echo "Possible causes:"
-        echo "  - Cache does not exist for HAF commit: ${HAF_COMMIT_PREFIX}"
-        echo "  - NFS not mounted or not accessible"
-        echo "  - Sync job did not complete successfully"
-        echo ""
-        echo "Debug commands:"
-        echo "  ls -la ${NFS_CACHE_DIR}/ | head -10"
-        echo "  ls -la ${NFS_CACHE_DIR}/${HAF_COMMIT_PREFIX}_*.tar"
-        exit 1
-    fi
+    echo ""
+    echo "ERROR: Cache not found for key: ${CACHE_KEY}"
+    echo ""
+    echo "The sync job must complete successfully before test jobs can run."
+    echo "Cache key includes both HAF commit and app commit to ensure schema compatibility."
+    echo ""
+    echo "Possible causes:"
+    echo "  - Sync job did not complete successfully"
+    echo "  - NFS not mounted or not accessible"
+    echo "  - Cache was cleaned up"
+    exit 1
 fi
-
-echo "Cache extracted successfully"
 
 # Fix PostgreSQL permissions (must be 700 for pg_ctl to work)
 if [[ -d "$PGDATA" ]]; then
