@@ -387,7 +387,7 @@ sync:
   - |
     for sub in hafah btracker reptracker; do
       git submodule deinit -f submodules/$sub 2>/dev/null || true
-      rm -rf submodules/$sub .git/modules/submodules/$sub
+      sudo rm -rf submodules/$sub .git/modules/submodules/$sub
       git config --remove-section submodule.submodules/$sub 2>/dev/null || true
     done
     git submodule sync
@@ -602,7 +602,7 @@ setup-scripts-test:
     # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
     for sub in hafah btracker reptracker; do
       git submodule deinit -f submodules/$sub 2>/dev/null || true
-      rm -rf submodules/$sub .git/modules/submodules/$sub
+      sudo rm -rf submodules/$sub .git/modules/submodules/$sub
       git config --remove-section submodule.submodules/$sub 2>/dev/null || true
     done
     git submodule sync
