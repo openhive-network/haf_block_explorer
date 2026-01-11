@@ -143,11 +143,8 @@ quick_test_setup:
 # Data Preparation Jobs (use pre-built images from registry)
 # =============================================================================
 prepare_haf_data:
-  extends: .prepare_haf_data_5m
+  extends: .haf_app_prepare_data_with_find
   stage: build
-  needs:
-  - job: find_haf_image
-    artifacts: true
   variables:
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "/tmp/haf-app-tools/config_5M.ini"
