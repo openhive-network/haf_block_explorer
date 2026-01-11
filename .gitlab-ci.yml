@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: 4e60cec43a1c72b5faebf5d34e8b5b6caa9fa159
+  ref: feature/centralized-needs-templates  # TODO: change to develop after MR !184 merges
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -186,11 +186,8 @@ quick_test_setup:
 # Data Preparation Jobs (use pre-built images from registry)
 # =============================================================================
 prepare_haf_data:
-  extends: .prepare_haf_data_5m
+  extends: .haf_app_prepare_data_with_find
   stage: build
-  needs:
-  - job: find_haf_image
-    artifacts: true
   variables:
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "/tmp/haf-app-tools/config_5M.ini"
