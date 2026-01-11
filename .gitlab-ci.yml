@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: 4e60cec43a1c72b5faebf5d34e8b5b6caa9fa159
+  ref: 9152ee88869ff750eb9645a7949b80a41d74df94
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -590,15 +590,12 @@ python_api_client_test:
     - !reference [.hafbe_test_base, before_script]
     # Clone tests_api directly (nested submodule can't be fetched due to GitLab Runner 18.6+ credential inheritance)
     - git clone --depth=1 https://gitlab.syncad.com/hive/tests_api.git "${CI_PROJECT_DIR}/tests_api"
-    # Set up Python venv with pytest/tavern - use latest versions for Python 3.14 compatibility
-    # (common-ci's .tavern_install_deps pins tavern 2.2.0 which is incompatible with Python 3.14)
+    # Set up Python venv with pytest/tavern and validate_response from tests_api
+    - !reference [.tavern_install_deps, script]
     - |
-      echo -e "\e[0Ksection_start:$(date +%s):tavern_deps[collapsed=true]\r\e[0KInstalling Tavern dependencies..."
-      python3 -m venv venv
+      # venv created by tavern_install_deps is in current dir (project root)
       . venv/bin/activate
-      pip install --quiet pytest tavern pytest-xdist pyyaml requests deepdiff prettytable
       pip install --quiet "${CI_PROJECT_DIR}/tests_api"
-      echo -e "\e[0Ksection_end:$(date +%s):tavern_deps\r\e[0K"
   artifacts:
     paths:
       - docker/container-logs.txt
