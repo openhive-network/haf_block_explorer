@@ -529,8 +529,8 @@ python_api_client_test:
   - .tavern_test_variables
   variables:
     # Override tavern variables for haf_block_explorer
-    TAVERN_DIR: "${CI_PROJECT_DIR}/tests/tavern"
-    JUNIT_REPORT: "${CI_PROJECT_DIR}/tests/tavern/report.xml"
+    TAVERN_DIR: "${CI_PROJECT_DIR}/tests/tavern/patterns-mainnet"
+    JUNIT_REPORT: "${CI_PROJECT_DIR}/tests/tavern/patterns-mainnet/report.xml"
     # PostgREST host for tests (docker DinD host)
     HAFBE_ADDRESS: "${POSTGREST_HOST}"
     HAFBE_PORT: "3000"
@@ -550,7 +550,7 @@ python_api_client_test:
     - "**/*.out.json"
     when: always
     reports:
-      junit: "${CI_PROJECT_DIR}/tests/tavern/report.xml"
+      junit: "${CI_PROJECT_DIR}/tests/tavern/patterns-mainnet/report.xml"
 
 # =============================================================================
 # TEST JOBS
@@ -562,18 +562,14 @@ regression-test:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning regression tests..."
 
-    cd tests/account_parameters
-    ./accounts_dump_test.sh --host=${HAF_HOST}
-
-    cd ../witness_parameters
-    ./witnesses_dump_test.sh --host=${HAF_HOST}
+    cd tests/regression
+    ./run_test.sh --host=${HAF_HOST} --type=all
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
     paths:
     - docker/container-logs.txt
-    - tests/account_parameters/account_dump_test.log
-    - tests/witness_parameters/witness_dump_test.log
+    - tests/regression/regression_test.log
     when: always
 
 setup-scripts-test:

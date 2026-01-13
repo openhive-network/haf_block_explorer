@@ -30,7 +30,9 @@ scripts/           Operational scripts (install, process, start)
   ci-helpers/      CI/CD helper scripts
   python_api_package/  Python API client generation
 tests/
+  regression/      Regression tests (account/witness comparison vs hived)
   tavern/          YAML-based API pattern tests
+    patterns-mainnet/  Tests against synced mainnet data
   performance/     JMeter performance tests
   functional/      Script functionality tests
 docker/            Docker Compose deployment
@@ -56,8 +58,11 @@ submodules/
 
 ### Test
 ```bash
+# Regression tests (account/witness comparison)
+cd tests/regression && ./run_test.sh --host=localhost --type=all
+
 # Tavern API tests
-cd tests/tavern && pytest -n 8 --junitxml report.xml .
+cd tests/tavern/patterns-mainnet && pytest -n 8 --junitxml report.xml .
 
 # Performance tests
 ./tests/run_performance_tests.sh

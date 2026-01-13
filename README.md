@@ -4,7 +4,7 @@
 1. [Setup](#setup)
 1. [Block processing](#block-processing)
 1. [Startup](#startup)
-1. [Performance tests](#performance-tests)
+1. [Testing](#testing)
 
 ## About
 
@@ -66,16 +66,54 @@ You can type `./scripts/start_postgrest.sh --help` to see available options.
 
 The steps above can also be performed using Docker. The details are in a separate [README](docker/README.md).
 
-## Performance tests
+## Testing
 
-Run tests by running the following commands (requires installing depencencies):
+HAF Block Explorer includes several types of tests:
+
+### Regression Tests
+
+Compares computed account and witness data against expected values from a hived node snapshot to detect regressions:
 
 ```bash
-source .tests/bin/activate
+cd tests/regression
+./run_test.sh --host=localhost --type=all
+```
+
+Options:
+- `--type=account` - Run only account comparison tests
+- `--type=witness` - Run only witness comparison tests
+- `--type=all` - Run both (default)
+
+### Tavern API Tests
+
+YAML-based API pattern tests that validate endpoint responses against expected patterns:
+
+```bash
+cd tests/tavern/patterns-mainnet
+pytest -n 8 --junitxml report.xml .
+```
+
+Requires:
+- PostgREST server running on port 3000
+- Environment variables: `HAFBE_ADDRESS`, `HAFBE_PORT`
+
+### Performance Tests
+
+JMeter-based performance tests (requires installing dependencies):
+
+```bash
 ./tests/run_performance_tests.sh
-deactivate
 ```
 
 You can see all test options using command `./tests/run_performance_tests.sh --help`
 
-After the tests are completed, a report will be generated at `tests/performance/result/result_report/index.html`
+After tests complete, a report is generated at `tests/performance/result/result_report/index.html`
+
+### Functional Tests
+
+Tests for installation and uninstallation scripts:
+
+```bash
+cd tests/functional
+./test_scripts.sh --host=localhost
+```
