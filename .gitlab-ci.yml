@@ -610,7 +610,7 @@ performance-test:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning performance tests..."
 
-    timeout -k 1m 15m ./tests/run_performance_tests.sh --postgresql-host=${HAF_HOST} --postgrest-host=${POSTGREST_HOST} --database-size=6000 --test-loop-count=1000
+    timeout -k 1m 15m ./tests/performance/run_performance_tests.sh --postgresql-host=${HAF_HOST} --postgrest-host=${POSTGREST_HOST} --database-size=6000 --test-loop-count=1000
     tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
     cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
     m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml

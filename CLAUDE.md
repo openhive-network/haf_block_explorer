@@ -53,7 +53,6 @@ submodules/
 ### Run
 ```bash
 ./scripts/process_blocks.sh    # Process/sync blocks
-./scripts/start_postgrest.sh   # Start API server (port 3000)
 ```
 
 ### Test
@@ -65,7 +64,7 @@ cd tests/regression && ./run_test.sh --host=localhost --type=all
 cd tests/tavern/patterns-mainnet && pytest -n 8 --junitxml report.xml .
 
 # Performance tests
-./tests/run_performance_tests.sh
+./tests/performance/run_performance_tests.sh
 
 # Functional tests
 ./tests/functional/test_scripts.sh --host=localhost
@@ -88,7 +87,6 @@ docker compose down -v                      # Stop and remove volumes
 | File | Purpose |
 |------|---------|
 | `.gitlab-ci.yml` | CI/CD pipeline (lint, build, sync, test, publish) |
-| `postgrest.conf` | PostgREST configuration (schema: hafbe_endpoints) |
 | `docker-bake.hcl` | Docker BuildKit configuration |
 | `database/database_schema.sql` | Core tables and schema |
 | `database/main_loop.sql` | Primary sync loop |
