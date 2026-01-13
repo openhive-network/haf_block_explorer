@@ -1,7 +1,7 @@
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/nginx:latest AS without_tag
 
 COPY docker/haf_block_explorer_nginx.conf.template /usr/local/openresty/nginx/conf/nginx.conf.template
-COPY rewrite_rules.conf /usr/local/openresty/nginx/conf/rewrite_rules.conf
+COPY endpoints/rewrite_rules.conf /usr/local/openresty/nginx/conf/rewrite_rules.conf
 COPY docker/rewriter_entrypoint.sh /entrypoint.sh
 
 CMD ["/entrypoint.sh"]

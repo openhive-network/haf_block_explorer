@@ -145,9 +145,9 @@ ensure_process_openapi
 # shellcheck disable=SC2086
 python3 "$HAF_SCRIPTS_DIR/process_openapi.py" $OUTPUT $DEFAULT_TYPES $ENDPOINTS_IN_ORDER
 
-# Create rewrite_rules.conf
+# Create rewrite_rules.conf in endpoints directory
 reverse_lines > "$temp_output_file"
-mv "$temp_output_file" "../$input_file"
+mv "$temp_output_file" "../endpoints/$input_file"
 rm "$input_file"
 
 # Move rewriten directory to /postgrest

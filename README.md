@@ -3,7 +3,6 @@
 1. [About](#about)
 1. [Setup](#setup)
 1. [Block processing](#block-processing)
-1. [Startup](#startup)
 1. [Testing](#testing)
 
 ## About
@@ -52,16 +51,6 @@ If you want to uninstall HAF Block Explorer and remove its data from the databas
 
 As before, use `./scripts/uninstall_app.sh --help` to see available options.
 
-## Startup
-
-After setup, start the postgREST server with:
-
-```bash
-./scripts/start_postgrest.sh
-```
-
-You can type `./scripts/start_postgrest.sh --help` to see available options.
-
 ## Dockerized setup
 
 The steps above can also be performed using Docker. The details are in a separate [README](docker/README.md).
@@ -102,10 +91,10 @@ Requires:
 JMeter-based performance tests (requires installing dependencies):
 
 ```bash
-./tests/run_performance_tests.sh
+./tests/performance/run_performance_tests.sh
 ```
 
-You can see all test options using command `./tests/run_performance_tests.sh --help`
+You can see all test options using command `./tests/performance/run_performance_tests.sh --help`
 
 After tests complete, a report is generated at `tests/performance/result/result_report/index.html`
 

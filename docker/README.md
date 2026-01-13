@@ -55,7 +55,7 @@ There's also `scripts/ci-helpers/build_instance.sh`, which can be used to build 
 
 Using `build_docker_image.sh` or `build_instance.sh` scripts to build the *full* target will result in a Docker image with properly set labels. Otherwise most of the labels will be set to `[unknown]`.
 
-Finally `scripts/build_ci-runner_image.sh [src_dir]` will build *ci-runner* image. Run `scripts/build_ci-runner_image.sh --help` to see all available options.
+Finally `scripts/ci-helpers/build_ci-runner_image.sh [src_dir]` will build *ci-runner* image. Run `scripts/ci-helpers/build_ci-runner_image.sh --help` to see all available options.
 
 ## Running HAF Block Explorer with Docker Compose
 
