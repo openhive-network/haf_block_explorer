@@ -28,29 +28,21 @@ ensure_process_openapi() {
 }
 
 endpoints="endpoints"
-types="backend/types"
+types="endpoints/types"
 rewrite_dir="${endpoints}_openapi"
-rewrite_types_dir="${types}_openapi"
+rewrite_types_dir="endpoints/types_openapi"
 input_file="rewrite_rules.conf"
 temp_output_file=$(mktemp)
 
 # Default directories with fixed order if none provided
 OUTPUT="$SCRIPTDIR/output"
 DEFAULT_TYPES="
-../$types/backend_types.sql
-../$types/witnesses/witness.sql
-../$types/witnesses/witness_voters.sql
-../$types/witnesses/witness_votes_history_record.sql
-../$types/accounts/account.sql
-../$types/accounts/account_authority.sql
-../$types/accounts/proxy_power.sql
-../$types/blocks/blocksearch.sql
-../$types/accounts/permlink_history.sql
-../$types/blocks/latest_blocks.sql
-../$types/other/input_type.sql
-../$types/operations/operation.sql
-../$types/transactions/granularity.sql
-../$types/transactions/transaction_stats.sql"
+../$types/enums.sql
+../$types/blocks.sql
+../$types/accounts.sql
+../$types/witnesses.sql
+../$types/operations.sql
+../$types/transactions.sql"
 
 ENDPOINTS_IN_ORDER="
 ../$endpoints/endpoint_schema.sql

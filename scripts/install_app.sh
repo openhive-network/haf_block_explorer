@@ -156,13 +156,13 @@ setup_api() {
   # setup backend schema (inline creation)
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS hafbe_backend AUTHORIZATION hafbe_owner;"
 
-  # openapi types (consolidated domain files)
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/enums.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/operations.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/transactions.sql"
+  # openapi types (consolidated domain files in endpoints/types/)
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/enums.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/blocks.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/accounts.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/witnesses.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints_types/transactions.sql"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/blocksearch.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/blocksearch_filters.sql"
@@ -231,7 +231,7 @@ SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 endpoints="$SCRIPT_DIR/../endpoints"
 backend="$SCRIPT_DIR/../backend"
-backend_types="$SCRIPT_DIR/../backend/types"
+endpoints_types="$SCRIPT_DIR/../endpoints/types"
 db_dir="$SCRIPT_DIR/../db"
 hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
