@@ -12,6 +12,7 @@ POSTGRES_USER=${POSTGRES_USER:-"haf_admin"}
 BTRACKER_SCHEMA=${BTRACKER_SCHEMA:-"hafbe_bal"}
 REPTRACKER_SCHEMA=${REPTRACKER_SCHEMA:-"reptracker_app"}
 SWAGGER_URL=${SWAGGER_URL:-"{hafbe-host}"}
+LOG_FILE=${LOG_FILE:-"install_app.log"}
 
 
 print_help () {
@@ -27,6 +28,7 @@ cat <<EOF
     --reptracker-schema=NAME          Reputation Tracker schema name (defaults to reptracker_app)
     --swagger-url=URL                 Allows to specify a server URL
     --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
+    --log-file=PATH                   Log file location (defaults to install_app.log, set to 'STDOUT' for no log file)
     --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
     --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
 
@@ -59,6 +61,9 @@ while [ $# -gt 0 ]; do
         ;;
     --is_forking=*)
         IS_FORKING="${1#*=}"
+        ;;
+    --log-file=*)
+        LOG_FILE="${1#*=}"
         ;;
     --help|-h|-\?)
         print_help
@@ -132,8 +137,8 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_stats.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_votes.sql"
 
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner; SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner; SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO hafbe_owner;"
 
   echo "Creating backend schema..."
@@ -211,11 +216,21 @@ setup_api() {
   echo "Installation complete."
 }
 
-if [ "$ONLY_HAFBE" -eq 0 ]; then
-  setup_apps
-fi
+main() {
+  if [ "$ONLY_HAFBE" -eq 0 ]; then
+    setup_apps
+  fi
 
-if [ "$ONLY_APPS" -eq 0 ]; then
-  setup_api
+  if [ "$ONLY_APPS" -eq 0 ]; then
+    setup_api
+  fi
+}
+
+# Run with logging
+if [[ "$LOG_FILE" == "STDOUT" ]]; then
+  main
+else
+  echo "Logging to: $LOG_FILE"
+  main 2>&1 | tee "$LOG_FILE"
 fi
 
