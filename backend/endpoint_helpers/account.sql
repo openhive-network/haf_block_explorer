@@ -1,5 +1,9 @@
 SET ROLE hafbe_owner;
 
+-- =============================================================================
+-- Account Helper Functions
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxied_vsf_votes(_account INT)
 RETURNS TEXT[] -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
@@ -36,6 +40,16 @@ RETURN (
 
 END
 $$;
+
+/**
+ * account_votes - Used by get_account_witness_votes() function
+ * Contains witness voting data for an account
+ */
+DROP TYPE IF EXISTS hafbe_backend.account_votes CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_backend.account_votes AS (
+    witnesses_voted_for INT,
+    witness_votes TEXT[]
+);
 
 -- ACCOUNT VOTES
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_votes(_account INT)
@@ -122,6 +136,20 @@ BEGIN
 END
 $$;
 
+/**
+ * account_parameters - Used by get_account_parameters() function
+ * Contains account configuration data retrieved from the blockchain
+ */
+DROP TYPE IF EXISTS hafbe_backend.account_parameters CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_backend.account_parameters AS (
+    can_vote BOOLEAN,
+    mined BOOLEAN,
+    recovery_account TEXT,
+    last_account_recovery TIMESTAMP,
+    created TIMESTAMP,
+    pending_claimed_accounts INT
+);
+
 -- ACCOUNT PARAMETERS
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_parameters(_account INT)
 RETURNS hafbe_backend.account_parameters -- noqa: LT01, CP05
@@ -156,6 +184,16 @@ BEGIN
   LIMIT 1;
 END
 $$;
+
+/**
+ * json_metadata - Used by get_json_metadata() function
+ * Contains account JSON metadata fields
+ */
+DROP TYPE IF EXISTS hafbe_backend.json_metadata CASCADE; -- noqa: LT01
+CREATE TYPE hafbe_backend.json_metadata AS (
+    json_metadata TEXT,
+    posting_json_metadata TEXT
+);
 
 -- ACCOUNT METADATA
 CREATE OR REPLACE FUNCTION hafbe_backend.get_json_metadata(_account INT)
