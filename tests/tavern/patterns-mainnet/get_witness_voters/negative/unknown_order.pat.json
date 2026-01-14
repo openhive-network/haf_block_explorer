@@ -2,5 +2,5 @@
   "code": "22P02",
   "details": null,
   "hint": null,
-  "message": "invalid input value for enum hafbe_types.order_by_votes: \"voters\""
+  "message": "invalid input value for enum hafbe_backend.order_by_votes: \"voters\""
 }
