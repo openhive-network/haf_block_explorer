@@ -61,7 +61,7 @@ COPY --chown=haf_admin:users docker/scripts/block-processing-healthcheck.sh /app
 
 COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend
 COPY --chown=haf_admin:users endpoints /home/haf_admin/haf_block_explorer/endpoints
-COPY --chown=haf_admin:users database /home/haf_admin/haf_block_explorer/database
+COPY --chown=haf_admin:users db /home/haf_admin/haf_block_explorer/db
 
 COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh
 COPY --chown=haf_admin:users scripts/process_blocks.sh /home/haf_admin/haf_block_explorer/scripts/process_blocks.sh
