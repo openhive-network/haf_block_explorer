@@ -119,6 +119,26 @@ case "$BUILD_IMAGE_TAG" in
     ;;
 esac
 
+# On CI push the images to the registry, locally load them
+if [[ -n ${CI:-} ]]; then
+  BUILD_MODE="--push"
+else
+  BUILD_MODE="--load"
+fi
+
+# Build rewriter tags
+REWRITER_TAGS=("--tag" "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG")
+
+# Add 'latest' tag on develop branch
+if [[ "${CI_COMMIT_BRANCH:-}" == "${CI_DEFAULT_BRANCH:-develop}" ]]; then
+  REWRITER_TAGS+=("--tag" "$REGISTRY/postgrest-rewriter:latest")
+fi
+
+# Add version tag on protected tags
+if [[ -n "${CI_COMMIT_TAG:-}" && "${CI_COMMIT_REF_PROTECTED:-}" == "true" ]]; then
+  REWRITER_TAGS+=("--tag" "$REGISTRY/postgrest-rewriter:${CI_COMMIT_TAG}")
+fi
+
 # shellcheck disable=SC2086
 docker buildx build \
     --build-arg BUILD_TIME="$BUILD_TIME" \
@@ -129,18 +149,13 @@ docker buildx build \
     --build-arg GIT_LAST_COMMIT_DATE="$GIT_LAST_COMMIT_DATE" \
     --target=$REWRITER_TARGET \
     $TAG_BUILD_ARGS \
-    --tag "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG" \
-    --load \
+    "${REWRITER_TAGS[@]}" \
+    $BUILD_MODE \
     --file Dockerfile.rewriter .
-
-docker push "$REGISTRY/postgrest-rewriter:$BUILD_IMAGE_TAG"
 
 popd
 
-# On CI pull the image form the registry since it's pushed directly to the registry after build
+# On CI pull the image from the registry since it's pushed directly to the registry after build
 if [[ -n ${CI:-} ]]; then
   docker pull "$REGISTRY:$BUILD_IMAGE_TAG"
 fi
-
-docker tag "$REGISTRY:$BUILD_IMAGE_TAG" "$REGISTRY/instance:$BUILD_IMAGE_TAG"
-docker tag "$REGISTRY:$BUILD_IMAGE_TAG" "$REGISTRY/minimal-instance:$BUILD_IMAGE_TAG"
