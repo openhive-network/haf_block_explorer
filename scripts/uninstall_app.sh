@@ -12,12 +12,14 @@ cat <<EOF
     --host=VALUE             PostgreSQL host location (defaults to localhost)
     --port=NUMBER            PostgreSQL operating port (defaults to 5432)
     --user=VALUE             PostgreSQL user (defaults to haf_admin)
+    --log-file=PATH          Log file location (defaults to uninstall_app.log, set to 'STDOUT' for no log file)
 EOF
 }
 
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_USER=${POSTGRES_USER:-"haf_admin"}
+LOG_FILE=${LOG_FILE:-"uninstall_app.log"}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +31,9 @@ while [ $# -gt 0 ]; do
         ;;
     --user=*)
         POSTGRES_USER="${1#*=}"
+        ;;
+    --log-file=*)
+        LOG_FILE="${1#*=}"
         ;;
     --help|-h|-\?)
         print_help
@@ -53,6 +58,7 @@ done
 POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_block_processing"
 
 uninstall_app() {
+    echo "Dropping hafbe schemas..."
     psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_views CASCADE;"
     psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=OFF" -c "do \$\$ BEGIN if hive.app_context_exists('hafbe_app') THEN PERFORM hive.app_state_provider_drop_all('hafbe_app'); PERFORM hive.app_remove_context('hafbe_app'); end if; END \$\$"
     psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_app CASCADE;"
@@ -61,11 +67,20 @@ uninstall_app() {
     psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_backend CASCADE;"
     psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=OFF" -c "DROP SCHEMA IF EXISTS hafbe_endpoints CASCADE;"
 
+    echo "Dropping hafbe roles..."
     psql "$POSTGRES_ACCESS"  -c "DROP OWNED BY hafbe_owner CASCADE" || true
     psql "$POSTGRES_ACCESS"  -c "DROP ROLE IF EXISTS hafbe_owner" || true
 
     psql "$POSTGRES_ACCESS" -c "DROP OWNED BY hafbe_user CASCADE" || true
     psql "$POSTGRES_ACCESS" -c "DROP ROLE IF EXISTS hafbe_user" || true
+
+    echo "Uninstall complete."
 }
 
-uninstall_app
+# Run with logging
+if [[ "$LOG_FILE" == "STDOUT" ]]; then
+  uninstall_app
+else
+  echo "Logging to: $LOG_FILE"
+  uninstall_app 2>&1 | tee "$LOG_FILE"
+fi
