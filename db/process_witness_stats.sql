@@ -16,10 +16,10 @@ BEGIN
   (
     SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
     FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id IN (12,42,11,7,14,30) 
+    WHERE ov.op_type_id IN (12,42,11,7,14,30)
     AND ov.block_num BETWEEN _from AND _to
   ),
-  select_witness_names AS MATERIALIZED ( 
+  select_witness_names AS MATERIALIZED (
     SELECT DISTINCT
       CASE WHEN op_type_id = 12 THEN
         value->>'witness'
@@ -28,16 +28,15 @@ BEGIN
       END AS name
     FROM ops_in_range
   )
-  
   INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT 
+  SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = swn.name) AS id,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL
   FROM select_witness_names swn
   ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
   -- insert witness node version
-  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM 
+  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM
   (
     SELECT witness_id, version, row_n
     FROM (
@@ -90,7 +89,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       url
     FROM (
@@ -111,7 +110,7 @@ BEGIN
     WHERE row_n = 1
   ) ops
   WHERE cw.witness_id = ops.witness_id;
-  
+
   -- parse witness exchange_rate
   WITH select_ops_with_exchange_rate_without_timestamp AS (
     SELECT witness, value, op_type_id, operation_id, block_num
@@ -198,7 +197,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       block_size
     FROM (
@@ -256,7 +255,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       signing_key
     FROM (
@@ -298,7 +297,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       signing_key
     FROM (
@@ -346,7 +345,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       hbd_interest_rate
     FROM (
@@ -394,7 +393,7 @@ BEGIN
   )
 
   UPDATE hafbe_app.current_witnesses cw SET account_creation_fee = ops.account_creation_fee FROM (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
       account_creation_fee
     FROM (
@@ -427,21 +426,21 @@ BEGIN
     FROM select_ops_with_missed
     GROUP BY witness
   )
-  INSERT INTO hafbe_app.current_witnesses AS cw 
+  INSERT INTO hafbe_app.current_witnesses AS cw
     (witness_id, missed_blocks)
-  SELECT 
+  SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = cm.witness),
     cm.missed_blocks
   FROM count_missed cm
-  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO 
-  UPDATE SET 
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
+  UPDATE SET
     missed_blocks = cw.missed_blocks + EXCLUDED.missed_blocks;
 
   -- parse last_created_block_num
   UPDATE hafbe_app.current_witnesses cw SET last_created_block_num = blocks.last_created_block_num FROM (
-    SELECT 
-      bv.producer_account_id AS witness_id, 
-      MAX(bv.num) AS last_created_block_num 
+    SELECT
+      bv.producer_account_id AS witness_id,
+      MAX(bv.num) AS last_created_block_num
     FROM hafbe_app.blocks_view bv
     WHERE num BETWEEN _from AND _to
     GROUP BY bv.producer_account_id

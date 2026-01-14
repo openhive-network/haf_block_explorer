@@ -27,11 +27,11 @@ SET ROLE hafbe_owner;
         description: |
           List of account''s authorities
 
-          * Returns `hafbe_types.account_authority`
+          * Returns `hafbe_backend.account_authority`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.account_authority'
+              $ref: '#/components/schemas/hafbe_backend.account_authority'
             example: {
               "owner": {
                 "key_auths": [
@@ -74,7 +74,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_account_authority;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authority(
     "account-name" TEXT
 )
-RETURNS hafbe_types.account_authority 
+RETURNS hafbe_backend.account_authority 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -95,7 +95,7 @@ BEGIN
     hafbe_backend.get_account_authority(_account_id, 'POSTING'),
     hafbe_backend.get_account_memo(_account_id),
     hafbe_backend.get_account_witness_signing(_account_id)
-  )::hafbe_types.account_authority;
+  )::hafbe_backend.account_authority;
 
 END
 $$;

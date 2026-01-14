@@ -15,7 +15,7 @@ BEGIN
   IF _operations IS NULL THEN
     RETURN _allowed_ids;
   END IF;
-  
+
   PERFORM hafah_backend.validate_operation_types(_operation_ids, _allowed_ids);
 
   RETURN _operation_ids;

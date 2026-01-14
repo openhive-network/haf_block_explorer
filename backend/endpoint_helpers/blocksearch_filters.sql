@@ -15,11 +15,11 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_no_filter(
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -39,7 +39,7 @@ DECLARE
   __offset INT;
   __limit INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   -----------PAGING LOGIC----------------
   SELECT count_blocks, from_block, to_block
@@ -56,9 +56,9 @@ BEGIN
     RETURN (
       __count,
       __total_pages,
-      (__from, __to)::hafbe_types.block_range,
-      '{}'::hafbe_types.blocksearch[]
-    )::hafbe_types.block_history;
+      (__from, __to)::hafbe_backend.block_range,
+      '{}'::hafbe_backend.blocksearch[]
+    )::hafbe_backend.block_history;
   END IF;
 
   _result := array_agg(row ORDER BY
@@ -89,9 +89,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -105,11 +105,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_single_op(
     _operation INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -126,7 +126,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -253,9 +253,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -269,13 +269,13 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_key_value(
     _operation INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT,
     _key_content TEXT [],
     _setof_keys JSON
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET plan_cache_mode = force_custom_plan
 SET from_collapse_limit = 16
@@ -294,7 +294,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
   -- keys must be declared in seperate variables
   -- otherwise planner will not use indexes
   _path1 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
@@ -435,9 +435,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -451,11 +451,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_multi_op(
     _operations INT[],
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -473,7 +473,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -496,7 +496,7 @@ BEGIN
         (
           op_type_id,
           op_count
-        )::hafbe_types.block_operations
+        )::hafbe_backend.block_operations
       ) AS operations
     FROM gather_operations gb
     GROUP BY gb.block_num
@@ -600,9 +600,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -616,11 +616,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account(
     _account_id INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -641,7 +641,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block, from_seq, to_seq
   INTO __from, __to, __from_seq, __to_seq
@@ -676,7 +676,7 @@ BEGIN
         (
           op_type_id,
           op_count
-        )::hafbe_types.block_operations
+        )::hafbe_backend.block_operations
       ) AS operations
     FROM group_by_type_and_block
     GROUP BY block_num
@@ -780,9 +780,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -797,11 +797,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_op(
     _account_id INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -819,7 +819,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -953,9 +953,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -970,13 +970,13 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_key_value(
     _account_id INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT,
     _key_content TEXT [],
     _setof_keys JSON
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET plan_cache_mode = force_custom_plan
 SET from_collapse_limit = 16
@@ -995,7 +995,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
   -- keys must be declared in seperate variables
   -- otherwise planner will not use indexes
   _path1 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
@@ -1159,9 +1159,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;
@@ -1176,11 +1176,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_multi_op(
     _account_id INT,
     _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _page INT,
     _limit INT
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -1198,7 +1198,7 @@ DECLARE
   __to INT;
   __total_pages INT;
 
-  _result hafbe_types.blocksearch[];
+  _result hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -1228,7 +1228,7 @@ BEGIN
         (
           op_type_id,
           op_count
-        )::hafbe_types.block_operations
+        )::hafbe_backend.block_operations
       ) AS operations
     FROM group_by_type_and_block
     GROUP BY block_num
@@ -1332,9 +1332,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (__from, __to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.blocksearch[])
-  )::hafbe_types.block_history;
+    (__from, __to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 
 END
 $$;

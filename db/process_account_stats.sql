@@ -11,7 +11,7 @@ $$
 BEGIN
   -- parse account parameters: mined, recovery_account, created
   WITH ops_in_range AS (
-    SELECT 
+    SELECT
       iap.account_name,
       iap.mined,
       iap.recovery_account,
@@ -23,17 +23,17 @@ BEGIN
     JOIN hafd.applied_hardforks ah ON ah.hardfork_num = 11
     JOIN hive.blocks_view hb ON hb.num = ho.block_num
     CROSS JOIN hafbe_backend.get_impacted_account_parameters(
-      ho.body, 
+      ho.body,
       ho.op_type_id,
       hb.created_at,
       ho.block_num > ah.block_num
     ) AS iap
-    WHERE 
-      ho.op_type_id IN (14, 30, 80, 9, 23, 41, 76) AND 
+    WHERE
+      ho.op_type_id IN (14, 30, 80, 9, 23, 41, 76) AND
       ho.block_num BETWEEN _from AND _to
   ),
   add_row_num AS MATERIALIZED (
-    SELECT 
+    SELECT
       (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = account_name) AS account_id,
       mined,
       recovery_account,
@@ -46,7 +46,7 @@ BEGIN
     FROM ops_in_range
   ),
   get_latest_parameters AS (
-    SELECT 
+    SELECT
       ar.account_id,
       ap.mined,
       ap.recovery_account,
@@ -61,7 +61,7 @@ BEGIN
     WHERE ar.row_num_asc = 1
   ),
   union_records AS MATERIALIZED (
-    SELECT 
+    SELECT
       account_id,
       mined,
       recovery_account,
@@ -72,10 +72,10 @@ BEGIN
       row_num_asc,
       row_num_desc
     FROM get_latest_parameters
-  
+
     UNION ALL
 
-    SELECT 
+    SELECT
       account_id,
       mined,
       recovery_account,
@@ -89,7 +89,7 @@ BEGIN
   ),
   recursive_params AS (
     WITH RECURSIVE account_parameters AS (
-      SELECT 
+      SELECT
         ed.account_id,
         ed.mined,
         ed.recovery_account,
@@ -104,7 +104,7 @@ BEGIN
 
       UNION ALL
 
-      SELECT 
+      SELECT
         prev.account_id,
         (
           CASE
@@ -138,8 +138,8 @@ BEGIN
         next_cp.row_num_asc,
         next_cp.row_num_desc
       FROM account_parameters prev
-      JOIN union_records next_cp ON 
-        next_cp.account_id  = prev.account_id AND 
+      JOIN union_records next_cp ON
+        next_cp.account_id  = prev.account_id AND
         next_cp.row_num_asc = prev.row_num_asc + 1
     )
     SELECT * FROM account_parameters
@@ -147,7 +147,7 @@ BEGIN
   )
   INSERT INTO hafbe_app.account_parameters AS rt
     (account, mined, recovery_account, created)
-  SELECT 
+  SELECT
     rp.account_id,
     COALESCE(rp.mined, TRUE::BOOLEAN),
     COALESCE(rp.recovery_account, ''::TEXT),
@@ -158,10 +158,10 @@ BEGIN
       mined = EXCLUDED.mined,
       recovery_account = EXCLUDED.recovery_account,
       created = EXCLUDED.created;
-  
+
   -- parse account parameters: last_account_recovery
   WITH select_ops_with_last_account_recovery AS (
-    SELECT 
+    SELECT
       hafbe_backend.process_recover_account_operation(ov.body) AS account_name,
       ov.block_num AS source_op_block,
       ov.id AS source_op
@@ -169,28 +169,28 @@ BEGIN
     WHERE ov.op_type_id = 25 AND ov.block_num BETWEEN _from AND _to
   ),
   add_row_num AS (
-    SELECT 
+    SELECT
       so.account_name,
       so.source_op_block,
       so.source_op,
       ROW_NUMBER() OVER (PARTITION BY so.account_name ORDER BY so.source_op DESC) AS row_num_desc
     FROM select_ops_with_last_account_recovery so
   )
-  INSERT INTO hafbe_app.account_parameters AS ap 
+  INSERT INTO hafbe_app.account_parameters AS ap
     (account, last_account_recovery)
-  SELECT 
+  SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = ar.account_name),
     bv.created_at
   FROM add_row_num ar
   JOIN hive.blocks_view bv ON bv.num = ar.source_op_block
   WHERE ar.row_num_desc = 1
-  ON CONFLICT ON CONSTRAINT pk_account_parameters DO 
-  UPDATE SET 
+  ON CONFLICT ON CONSTRAINT pk_account_parameters DO
+  UPDATE SET
     last_account_recovery = EXCLUDED.last_account_recovery;
 
   -- parse account parameters: can_vote
   WITH select_ops_with_can_vote AS (
-    SELECT 
+    SELECT
       cv.account_name,
       cv.can_vote,
       ov.block_num AS source_op_block,
@@ -200,7 +200,7 @@ BEGIN
     WHERE ov.op_type_id = 36 AND ov.block_num BETWEEN _from AND _to
   ),
   add_row_num AS (
-    SELECT 
+    SELECT
       so.account_name,
       so.can_vote,
       so.source_op_block,
@@ -208,20 +208,20 @@ BEGIN
       ROW_NUMBER() OVER (PARTITION BY so.account_name ORDER BY so.source_op DESC) AS row_num_desc
     FROM select_ops_with_can_vote so
   )
-  INSERT INTO hafbe_app.account_parameters AS ap 
+  INSERT INTO hafbe_app.account_parameters AS ap
     (account, can_vote)
-  SELECT 
+  SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = ar.account_name),
     ar.can_vote
   FROM add_row_num ar
   WHERE ar.row_num_desc = 1
-  ON CONFLICT ON CONSTRAINT pk_account_parameters DO 
-  UPDATE SET 
+  ON CONFLICT ON CONSTRAINT pk_account_parameters DO
+  UPDATE SET
     can_vote = EXCLUDED.can_vote;
 
   -- parse account parameters: pending_claimed_accounts
   WITH select_ops_with_claimed AS (
-    SELECT 
+    SELECT
       (body -> 'value' ->> 'creator') AS account,
       (
         CASE WHEN ov.op_type_id = 22 THEN
@@ -234,20 +234,20 @@ BEGIN
     WHERE ov.op_type_id IN (22,23) AND ov.block_num BETWEEN _from AND _to
   ),
   count_claimed AS (
-    SELECT 
+    SELECT
       so.account,
       SUM(so.claimed_account) AS claimed_account
     FROM select_ops_with_claimed so
     GROUP BY so.account
   )
-  INSERT INTO hafbe_app.account_parameters AS ap 
+  INSERT INTO hafbe_app.account_parameters AS ap
     (account, pending_claimed_accounts)
-  SELECT 
+  SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = cm.account),
     cm.claimed_account
   FROM count_claimed cm
-  ON CONFLICT ON CONSTRAINT pk_account_parameters DO 
-  UPDATE SET 
+  ON CONFLICT ON CONSTRAINT pk_account_parameters DO
+  UPDATE SET
     pending_claimed_accounts = ap.pending_claimed_accounts + EXCLUDED.pending_claimed_accounts;
 
 END

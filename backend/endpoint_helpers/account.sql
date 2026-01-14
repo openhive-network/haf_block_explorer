@@ -10,13 +10,13 @@ BEGIN
 RETURN (
   WITH proxy_levels AS MATERIALIZED
   (
-    SELECT 
-      vpvv.proxied_vests as proxy, 
-      vpvv.proxy_level 
-    FROM hafbe_backend.voters_proxied_vests_view vpvv 
-    WHERE 
+    SELECT
+      vpvv.proxied_vests as proxy,
+      vpvv.proxy_level
+    FROM hafbe_backend.voters_proxied_vests_view vpvv
+    WHERE
       vpvv.proxy_id= _account
-    ORDER BY vpvv.proxy_level 
+    ORDER BY vpvv.proxy_level
   ),
   populate_record AS MATERIALIZED
   (
@@ -28,8 +28,8 @@ RETURN (
     UNION ALL
     SELECT '0' as proxy, 4 as proxy_level
   )
-  SELECT 
-    array_agg(coalesce(s.proxy::TEXT,pr.proxy) ORDER BY pr.proxy_level) 
+  SELECT
+    array_agg(coalesce(s.proxy::TEXT,pr.proxy) ORDER BY pr.proxy_level)
   FROM populate_record pr
   LEFT JOIN proxy_levels s ON s.proxy_level = pr.proxy_level
 );
@@ -47,14 +47,14 @@ $$
 BEGIN
   RETURN (
     WITH votes AS (
-      SELECT 
+      SELECT
         av.name AS vote
       FROM hafbe_backend.current_witness_votes_view cwvv
       JOIN hive.accounts_view av ON av.id = cwvv.witness_id
       WHERE cwvv.voter_id = _account
     )
     SELECT (
-      COUNT(*)::INT, 
+      COUNT(*)::INT,
       array_agg(v.vote ORDER BY v.vote)
     )::hafbe_backend.account_votes
     FROM votes v
@@ -77,7 +77,7 @@ EXCEPTION WHEN invalid_text_representation THEN
   SELECT NULL INTO __profile_image_url;
 END;
 
-IF __profile_image_url IS NULL THEN 
+IF __profile_image_url IS NULL THEN
 BEGIN
   SELECT posting_json_metadata::JSON->'profile'->>'profile_image' INTO __profile_image_url;
 EXCEPTION WHEN invalid_text_representation THEN
@@ -101,7 +101,7 @@ $$
 BEGIN
   RETURN aov.account_op_seq_no + 1
   FROM hive.account_operations_view aov
-  WHERE aov.account_id = _account 
+  WHERE aov.account_id = _account
   ORDER BY aov.account_op_seq_no DESC LIMIT 1;
 END
 $$;
@@ -115,7 +115,7 @@ STABLE
 AS
 $$
 BEGIN
-  RETURN 
+  RETURN
     (SELECT av.name FROM hive.accounts_view av WHERE av.id = cap.proxy_id)
   FROM hafbe_backend.current_account_proxies_view cap
   WHERE cap.account_id = _account;
@@ -146,7 +146,7 @@ STABLE
 AS
 $$
 BEGIN
-  RETURN ov.timestamp 
+  RETURN ov.timestamp
   FROM hive.account_operations_view aov
   JOIN hive.operations_view_extended ov ON ov.id = aov.operation_id
   WHERE aov.op_type_id = 72 AND
@@ -167,7 +167,7 @@ $$
 BEGIN
 RETURN (
   SELECT ROW(
-    m.json_metadata, 
+    m.json_metadata,
     m.posting_json_metadata
   )
   FROM hafd.hafbe_app_metadata m

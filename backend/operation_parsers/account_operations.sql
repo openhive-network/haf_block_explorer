@@ -17,7 +17,7 @@ AS
 $BODY$
 BEGIN
   RETURN (
-    CASE 
+    CASE
       WHEN _op_type_id = 14 THEN
         hafbe_backend.process_pow_operation(_operation_body, _timestamp) -- on conflict do nothing
 
@@ -50,7 +50,7 @@ BEGIN
     TRUE,
     NULL,
     _timestamp
-  )::hafbe_backend.impacted_account_parameters; 
+  )::hafbe_backend.impacted_account_parameters;
 END
 $$;
 
@@ -80,7 +80,7 @@ DECLARE
   _recovery_account TEXT;
 BEGIN
   _recovery_account := (
-    CASE 
+    CASE
       WHEN _if_hf11 AND (_creator = _new_account_name OR _creator = 'temp') THEN
         ''
       WHEN NOT _if_hf11 THEN
@@ -157,7 +157,7 @@ WITH recover_account_operation AS (
   (
     account,
     last_account_recovery
-  ) 
+  )
   SELECT
     _account,
     _time
@@ -189,11 +189,11 @@ BEGIN
   RETURN (
     _operation_body->'value'->>'account',
     (
-      CASE 
+      CASE
         WHEN (_operation_body->'value'->>'decline')::BOOLEAN = TRUE THEN
-          FALSE 
-        ELSE 
-          TRUE 
+          FALSE
+        ELSE
+          TRUE
       END
   )
   )::hafbe_backend.impacted_account_voting_rights;
@@ -216,7 +216,7 @@ WITH decline_voting_rights_operation AS (
   (
     account,
     can_vote
-  ) 
+  )
   SELECT
     _account,
     _can_vote

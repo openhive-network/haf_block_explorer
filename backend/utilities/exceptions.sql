@@ -1,8 +1,8 @@
-CREATE SCHEMA IF NOT EXISTS hafbe_exceptions AUTHORIZATION hafbe_owner;
-
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_limit(given_limit BIGINT, expected_limit INT,given_limit_name TEXT DEFAULT 'page-size')
+-- Exception/validation functions for hafbe_backend
+
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_limit(given_limit BIGINT, expected_limit INT,given_limit_name TEXT DEFAULT 'page-size')
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -17,7 +17,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_page(given_page BIGINT, max_page INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_page(given_page BIGINT, max_page INT)
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -33,7 +33,7 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_negative_limit(given_limit BIGINT, given_limit_name TEXT DEFAULT 'page-size')
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_negative_limit(given_limit BIGINT, given_limit_name TEXT DEFAULT 'page-size')
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -48,7 +48,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_negative_page(given_page BIGINT)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_negative_page(given_page BIGINT)
 RETURNS VOID -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -63,7 +63,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.rest_raise_missing_account(_account_name TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.rest_raise_missing_account(_account_name TEXT)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -74,7 +74,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.rest_raise_missing_witness(_account_name TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.rest_raise_missing_witness(_account_name TEXT)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -85,7 +85,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.raise_block_num_too_high_exception(_block_num NUMERIC, _head_block_num INT)
 RETURNS VOID
 LANGUAGE 'plpgsql' IMMUTABLE
 AS
@@ -95,7 +95,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.raise_unknown_hash_exception(_hash TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.raise_unknown_hash_exception(_hash TEXT)
 RETURNS VOID
 LANGUAGE 'plpgsql' IMMUTABLE
 AS

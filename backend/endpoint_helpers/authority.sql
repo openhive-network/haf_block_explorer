@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
     _account_id INT,
     _key_kind hafd.key_type -- noqa: LT01, CP05
 )
-RETURNS hafbe_types.authority_type -- noqa: LT01, CP05
+RETURNS hafbe_backend.authority_type -- noqa: LT01, CP05
 LANGUAGE 'plpgsql'
 STABLE
 SET JIT = OFF
@@ -27,7 +27,7 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  _result hafbe_types.authority_type;
+  _result hafbe_backend.authority_type;
 BEGIN
 RETURN (
   WITH get_key_auth AS
@@ -42,7 +42,7 @@ RETURN (
       active_key_auths.account_id = _account_id
       AND active_key_auths.key_kind = _key_kind
       AND (
-        active_key_auths.key_kind != 'MEMO' 
+        active_key_auths.key_kind != 'MEMO'
         OR active_key_auths.key_kind != 'WITNESS_SIGNING'
       )
     ORDER BY hive.public_key_to_string(keys.key)
@@ -106,7 +106,7 @@ RETURN (
       SELECT hive.public_key_to_string(keys.key) as key_auth
       FROM hafd.hafbe_app_keyauth_a active_key_auths
       JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-      WHERE active_key_auths.account_id = _account_id 
+      WHERE active_key_auths.account_id = _account_id
       AND active_key_auths.key_kind = 'MEMO'
     ), ''
   )

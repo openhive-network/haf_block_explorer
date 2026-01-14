@@ -47,7 +47,7 @@ declare
 {
   "components": {
     "schemas": {
-      "hafbe_types.comment_type": {
+      "hafbe_backend.comment_type": {
         "type": "string",
         "enum": [
           "post",
@@ -55,14 +55,14 @@ declare
           "all"
         ]
       },
-      "hafbe_types.sort_direction": {
+      "hafbe_backend.sort_direction": {
         "type": "string",
         "enum": [
           "asc",
           "desc"
         ]
       },
-      "hafbe_types.order_by_votes": {
+      "hafbe_backend.order_by_votes": {
         "type": "string",
         "enum": [
           "voter",
@@ -72,7 +72,7 @@ declare
           "timestamp"
         ]
       },
-      "hafbe_types.order_by_witness": {
+      "hafbe_backend.order_by_witness": {
         "type": "string",
         "enum": [
           "witness",
@@ -90,7 +90,7 @@ declare
           "feed_updated_at"
         ]
       },
-      "hafbe_types.witness": {
+      "hafbe_backend.witness": {
         "type": "object",
         "properties": {
           "witness_name": {
@@ -165,7 +165,7 @@ declare
           }
         }
       },
-      "hafbe_types.witnesses_return": {
+      "hafbe_backend.witnesses_return": {
         "type": "object",
         "properties": {
           "total_witnesses": {
@@ -179,13 +179,13 @@ declare
           "witnesses": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.witness"
+              "$ref": "#/components/schemas/hafbe_backend.witness"
             },
             "description": "List of witness parameters"
           }
         }
       },
-      "hafbe_types.witness_voter": {
+      "hafbe_backend.witness_voter": {
         "type": "object",
         "properties": {
           "voter_name": {
@@ -211,7 +211,7 @@ declare
           }
         }
       },
-      "hafbe_types.witness_voter_history": {
+      "hafbe_backend.witness_voter_history": {
         "type": "object",
         "properties": {
           "total_votes": {
@@ -225,13 +225,13 @@ declare
           "voters": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.witness_voter"
+              "$ref": "#/components/schemas/hafbe_backend.witness_voter"
             },
             "description": "List of votes results"
           }
         }
       },
-      "hafbe_types.witness_votes_history_record": {
+      "hafbe_backend.witness_votes_history_record": {
         "type": "object",
         "properties": {
           "voter_name": {
@@ -261,7 +261,7 @@ declare
           }
         }
       },
-      "hafbe_types.witness_votes_history": {
+      "hafbe_backend.witness_votes_history": {
         "type": "object",
         "properties": {
           "total_votes": {
@@ -275,13 +275,13 @@ declare
           "votes_history": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.witness_votes_history_record"
+              "$ref": "#/components/schemas/hafbe_backend.witness_votes_history_record"
             },
             "description": "List of witness votes"
           }
         }
       },
-      "hafbe_types.account": {
+      "hafbe_backend.account": {
         "type": "object",
         "properties": {
           "id": {
@@ -454,7 +454,7 @@ declare
           }
         }
       },
-      "hafbe_types.auth_with_weight": {
+      "hafbe_backend.auth_with_weight": {
         "type": "array",
         "x-sql-datatype": "JSON",
         "items": {
@@ -470,21 +470,21 @@ declare
         "minItems": 2,
         "maxItems": 2
       },
-      "hafbe_types.authority_type": {
+      "hafbe_backend.authority_type": {
         "type": "object",
         "properties": {
           "key_auths": {
             "type": "array",
             "x-sql-datatype": "JSON",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.auth_with_weight"
+              "$ref": "#/components/schemas/hafbe_backend.auth_with_weight"
             }
           },
           "account_auths": {
             "type": "array",
             "x-sql-datatype": "JSON",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.auth_with_weight"
+              "$ref": "#/components/schemas/hafbe_backend.auth_with_weight"
             }
           },
           "weight_threshold": {
@@ -492,19 +492,19 @@ declare
           }
         }
       },
-      "hafbe_types.account_authority": {
+      "hafbe_backend.account_authority": {
         "type": "object",
         "properties": {
           "owner": {
-            "$ref": "#/components/schemas/hafbe_types.authority_type",
+            "$ref": "#/components/schemas/hafbe_backend.authority_type",
             "description": "the most powerful key because it can change any key of an account, including the owner key. Ideally it is meant to be stored offline, and only used to recover a compromised account"
           },
           "active": {
-            "$ref": "#/components/schemas/hafbe_types.authority_type",
+            "$ref": "#/components/schemas/hafbe_backend.authority_type",
             "description": "key meant for more sensitive tasks such as transferring funds, power up/down transactions, converting Hive Dollars, voting for witnesses, updating profile details and avatar, and placing a market order"
           },
           "posting": {
-            "$ref": "#/components/schemas/hafbe_types.authority_type",
+            "$ref": "#/components/schemas/hafbe_backend.authority_type",
             "description": "key allows accounts to post, comment, edit, vote, reblog and follow or mute other accounts"
           },
           "memo": {
@@ -517,7 +517,7 @@ declare
           }
         }
       },
-      "hafbe_types.proxy_power": {
+      "hafbe_backend.proxy_power": {
         "type": "object",
         "properties": {
           "account": {
@@ -533,7 +533,7 @@ declare
           }
         }
       },
-      "hafbe_types.block_range": {
+      "hafbe_backend.block_range": {
         "type": "object",
         "properties": {
           "from": {
@@ -544,7 +544,7 @@ declare
           }
         }
       },
-      "hafbe_types.block_operations": {
+      "hafbe_backend.block_operations": {
         "type": "object",
         "properties": {
           "op_type_id": {
@@ -557,7 +557,7 @@ declare
           }
         }
       },
-      "hafbe_types.blocksearch": {
+      "hafbe_backend.blocksearch": {
         "type": "object",
         "properties": {
           "block_num": {
@@ -592,13 +592,13 @@ declare
           "operations": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.block_operations"
+              "$ref": "#/components/schemas/hafbe_backend.block_operations"
             },
             "description": "List of block_operation"
           }
         }
       },
-      "hafbe_types.block_history": {
+      "hafbe_backend.block_history": {
         "type": "object",
         "properties": {
           "total_blocks": {
@@ -610,19 +610,19 @@ declare
             "description": "Total number of pages"
           },
           "block_range": {
-            "$ref": "#/components/schemas/hafbe_types.block_range",
+            "$ref": "#/components/schemas/hafbe_backend.block_range",
             "description": "Range of blocks that contains the returned pages"
           },
           "blocks_result": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.blocksearch"
+              "$ref": "#/components/schemas/hafbe_backend.blocksearch"
             },
             "description": "List of block results"
           }
         }
       },
-      "hafbe_types.permlink": {
+      "hafbe_backend.permlink": {
         "type": "object",
         "properties": {
           "permlink": {
@@ -648,7 +648,7 @@ declare
           }
         }
       },
-      "hafbe_types.permlink_history": {
+      "hafbe_backend.permlink_history": {
         "type": "object",
         "properties": {
           "total_permlinks": {
@@ -660,19 +660,19 @@ declare
             "description": "Total number of pages"
           },
           "block_range": {
-            "$ref": "#/components/schemas/hafbe_types.block_range",
+            "$ref": "#/components/schemas/hafbe_backend.block_range",
             "description": "Range of blocks that contains the returned pages"
           },
           "permlinks_result": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.permlink"
+              "$ref": "#/components/schemas/hafbe_backend.permlink"
             },
             "description": "List of permlinks"
           }
         }
       },
-      "hafbe_types.latest_blocks": {
+      "hafbe_backend.latest_blocks": {
         "type": "object",
         "properties": {
           "block_num": {
@@ -686,19 +686,19 @@ declare
           "operations": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.block_operations"
+              "$ref": "#/components/schemas/hafbe_backend.block_operations"
             },
             "description": "List of block_operation"
           }
         }
       },
-      "hafbe_types.array_of_latest_blocks": {
+      "hafbe_backend.array_of_latest_blocks": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/hafbe_types.latest_blocks"
+          "$ref": "#/components/schemas/hafbe_backend.latest_blocks"
         }
       },
-      "hafbe_types.input_type_return": {
+      "hafbe_backend.input_type_return": {
         "type": "object",
         "properties": {
           "input_type": {
@@ -714,7 +714,7 @@ declare
           }
         }
       },
-      "hafbe_types.operation_body": {
+      "hafbe_backend.operation_body": {
         "type": "object",
         "x-sql-datatype": "JSON",
         "properties": {
@@ -726,7 +726,7 @@ declare
           }
         }
       },
-      "hafbe_types.operation": {
+      "hafbe_backend.operation": {
         "type": "object",
         "properties": {
           "op": {
@@ -770,7 +770,7 @@ declare
           }
         }
       },
-      "hafbe_types.operation_history": {
+      "hafbe_backend.operation_history": {
         "type": "object",
         "properties": {
           "total_operations": {
@@ -784,13 +784,13 @@ declare
           "operations_result": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/hafbe_types.operation"
+              "$ref": "#/components/schemas/hafbe_backend.operation"
             },
             "description": "List of operation results"
           }
         }
       },
-      "hafbe_types.granularity": {
+      "hafbe_backend.granularity": {
         "type": "string",
         "enum": [
           "daily",
@@ -798,7 +798,7 @@ declare
           "yearly"
         ]
       },
-      "hafbe_types.transaction_stats": {
+      "hafbe_backend.transaction_stats": {
         "type": "object",
         "properties": {
           "date": {
@@ -828,16 +828,16 @@ declare
           }
         }
       },
-      "hafbe_types.array_of_transaction_stats": {
+      "hafbe_backend.array_of_transaction_stats": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/hafbe_types.transaction_stats"
+          "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
         }
       },
-      "hafbe_types.array_of_proxy_power": {
+      "hafbe_backend.array_of_proxy_power": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/hafbe_types.proxy_power"
+          "$ref": "#/components/schemas/hafbe_backend.proxy_power"
         }
       }
     }
@@ -918,7 +918,7 @@ declare
             "name": "sort",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.order_by_witness",
+              "$ref": "#/components/schemas/hafbe_backend.order_by_witness",
               "default": "votes"
             },
             "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `feed_updated_at` - feed update timestamp\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
@@ -928,7 +928,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
@@ -936,11 +936,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The list of witnesses\n\n* Returns `hafbe_types.witnesses_return`\n",
+            "description": "The list of witnesses\n\n* Returns `hafbe_backend.witnesses_return`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witnesses_return"
+                  "$ref": "#/components/schemas/hafbe_backend.witnesses_return"
                 },
                 "example": {
                   "total_witnesses": 731,
@@ -1013,11 +1013,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Various witness statistics\n\n* Returns `hafbe_types.witness_return`\n",
+            "description": "Various witness statistics\n\n* Returns `hafbe_backend.witness_return`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witness"
+                  "$ref": "#/components/schemas/hafbe_backend.witness"
                 },
                 "example": {
                   "witness_name": "blocktrades",
@@ -1100,7 +1100,7 @@ declare
             "name": "sort",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.order_by_votes",
+              "$ref": "#/components/schemas/hafbe_backend.order_by_votes",
               "default": "vests"
             },
             "description": "Sort order:\n\n * `voter` - account name of voter\n\n * `vests` - total voting power = account_vests + proxied_vests of voter\n\n * `account_vests` - direct vests of voter\n\n * `proxied_vests` - proxied vests of voter\n\n * `timestamp` - last time voter voted for the witness\n"
@@ -1110,7 +1110,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
@@ -1118,11 +1118,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_types.witness_voter_history`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_backend.witness_voter_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witness_voter_history"
+                  "$ref": "#/components/schemas/hafbe_backend.witness_voter_history"
                 },
                 "example": {
                   "total_votes": 263,
@@ -1243,7 +1243,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "desc"
             }
           },
@@ -1270,11 +1270,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_types.witness_votes_history`\n",
+            "description": "The number of voters currently voting for this witness\n\n* Returns `hafbe_backend.witness_votes_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.witness_votes_history"
+                  "$ref": "#/components/schemas/hafbe_backend.witness_votes_history"
                 },
                 "example": {
                   "total_votes": 263,
@@ -1328,11 +1328,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "The account''s parameters\n\n* Returns `hafbe_types.account`\n",
+            "description": "The account''s parameters\n\n* Returns `hafbe_backend.account`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.account"
+                  "$ref": "#/components/schemas/hafbe_backend.account"
                 },
                 "example": {
                   "id": 440,
@@ -1419,11 +1419,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "List of account''s authorities\n\n* Returns `hafbe_types.account_authority`\n",
+            "description": "List of account''s authorities\n\n* Returns `hafbe_backend.account_authority`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.account_authority"
+                  "$ref": "#/components/schemas/hafbe_backend.account_authority"
                 },
                 "example": {
                   "owner": {
@@ -1504,7 +1504,7 @@ declare
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_proxy_power"
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_proxy_power"
                 },
                 "exaxmple": [
                   {
@@ -1545,7 +1545,7 @@ declare
             "name": "comment-type",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.comment_type",
+              "$ref": "#/components/schemas/hafbe_backend.comment_type",
               "default": "all"
             },
             "description": "Sort order:\n\n * `post`    - permlinks related to root posts\n\n * `comment` - permlinks related to comments \n\n * `all`     - both, posts and comments\n"
@@ -1593,11 +1593,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_types.permlink_history`\n",
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_backend.permlink_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.permlink_history"
+                  "$ref": "#/components/schemas/hafbe_backend.permlink_history"
                 },
                 "example": {
                   "total_permlinks": 3,
@@ -1694,7 +1694,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "asc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
@@ -1712,11 +1712,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_types.operation_history `\n",
+            "description": "Result contains total number of operations,\ntotal pages, and the list of operations.\n\n* Returns `hafbe_backend.operation_history `\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.operation_history"
+                  "$ref": "#/components/schemas/hafbe_backend.operation_history"
                 },
                 "example": {
                   "total_operations": 350,
@@ -1844,7 +1844,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
@@ -1886,11 +1886,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Block number with filtered operations\n\n* Returns `hafbe_types.block_history`\n",
+            "description": "Block number with filtered operations\n\n* Returns `hafbe_backend.block_history`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.block_history"
+                  "$ref": "#/components/schemas/hafbe_backend.block_history"
                 },
                 "example": {
                   "total_blocks": 5000000,
@@ -2076,7 +2076,7 @@ declare
             "name": "granularity",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.granularity",
+              "$ref": "#/components/schemas/hafbe_backend.granularity",
               "default": "yearly"
             },
             "description": "granularity types:\n\n* daily\n\n* monthly\n\n* yearly\n"
@@ -2086,7 +2086,7 @@ declare
             "name": "direction",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/hafbe_types.sort_direction",
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from oldest to newest \n\n * `desc` - Descending, from newest to oldest \n"
@@ -2114,11 +2114,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Balance change\n\n* Returns array of `hafbe_types.transaction_stats`\n",
+            "description": "Balance change\n\n* Returns array of `hafbe_backend.transaction_stats`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_transaction_stats"
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_transaction_stats"
                 },
                 "example": [
                   {
@@ -2212,11 +2212,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `hafbe_types.input_type_return `\n",
+            "description": "Result contains total operations number,\ntotal pages and the list of operations\n\n* Returns `hafbe_backend.input_type_return `\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.input_type_return"
+                  "$ref": "#/components/schemas/hafbe_backend.input_type_return"
                 },
                 "example": {
                   "input_type": "account_name",
@@ -2265,11 +2265,11 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Operation counts for each block \n\n* Returns array of `hafbe_types.latest_blocks`\n",
+            "description": "Operation counts for each block \n\n* Returns array of `hafbe_backend.latest_blocks`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_types.array_of_latest_blocks"
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_latest_blocks"
                 },
                 "example": [
                   {

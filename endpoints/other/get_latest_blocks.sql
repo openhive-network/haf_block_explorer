@@ -48,11 +48,11 @@ SET ROLE hafbe_owner;
         description: |
           Operation counts for each block 
 
-          * Returns array of `hafbe_types.latest_blocks`
+          * Returns array of `hafbe_backend.latest_blocks`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_latest_blocks'
+              $ref: '#/components/schemas/hafbe_backend.array_of_latest_blocks'
             example:
               - {
                   "block_num": 5000000,
@@ -85,7 +85,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(
     "block-num" TEXT = NULL,
     "result-limit" INT = 20
 )
-RETURNS SETOF hafbe_types.latest_blocks 
+RETURNS SETOF hafbe_backend.latest_blocks 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
@@ -97,8 +97,8 @@ DECLARE
   __block INT := hive.convert_to_block_num("block-num");
   _is_block_filter BOOLEAN;
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("result-limit", 1000, 'result-limit');
-  PERFORM hafbe_exceptions.validate_negative_limit("result-limit",'result-limit');
+  PERFORM hafbe_backend.validate_limit("result-limit", 1000, 'result-limit');
+  PERFORM hafbe_backend.validate_negative_limit("result-limit",'result-limit');
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
@@ -130,7 +130,7 @@ BEGIN
         (
           jo.op_type_id,
           jo.count
-        )::hafbe_types.block_operations
+        )::hafbe_backend.block_operations
       )
     FROM join_operations jo
     GROUP BY jo.block_num, jo.witness

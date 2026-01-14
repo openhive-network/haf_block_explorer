@@ -51,7 +51,7 @@ SET ROLE hafbe_owner;
         name: direction
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
           default: desc
       - in: query
         name: from-block
@@ -92,11 +92,11 @@ SET ROLE hafbe_owner;
         description: |
           The number of voters currently voting for this witness
 
-          * Returns `hafbe_types.witness_votes_history`
+          * Returns `hafbe_backend.witness_votes_history`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.witness_votes_history'
+              $ref: '#/components/schemas/hafbe_backend.witness_votes_history'
             example: {
               "total_votes": 263,
               "total_pages": 132,
@@ -129,11 +129,11 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
     "voter-name" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
-    "direction" hafbe_types.sort_direction = 'desc',
+    "direction" hafbe_backend.sort_direction = 'desc',
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS hafbe_types.witness_votes_history 
+RETURNS hafbe_backend.witness_votes_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -150,19 +150,19 @@ DECLARE
   _ops_count INT;
   _total_pages INT;
 
-  _result hafbe_types.witness_votes_history_record[];
+  _result hafbe_backend.witness_votes_history_record[];
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
-  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-  PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
+  PERFORM hafbe_backend.validate_limit("page-size", 10000);
+  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count   := hafbe_backend.get_witness_votes_history_count(_witness_id, _filter_account_id, _block_range);
   _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page("page", _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -186,8 +186,8 @@ BEGIN
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(_total_pages,0),
-    COALESCE(_result, '{}'::hafbe_types.witness_votes_history_record[])
-  )::hafbe_types.witness_votes_history;
+    COALESCE(_result, '{}'::hafbe_backend.witness_votes_history_record[])
+  )::hafbe_backend.witness_votes_history;
 
 END
 $$;

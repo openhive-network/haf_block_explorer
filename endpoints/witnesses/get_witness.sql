@@ -28,11 +28,11 @@ SET ROLE hafbe_owner;
         description: |
           Various witness statistics
 
-          * Returns `hafbe_types.witness_return`
+          * Returns `hafbe_backend.witness_return`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.witness'
+              $ref: '#/components/schemas/hafbe_backend.witness'
             example: {
               "witness_name": "blocktrades",
               "rank": 8,
@@ -60,7 +60,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness(
     "account-name" TEXT
 )
-RETURNS hafbe_types.witness 
+RETURNS hafbe_backend.witness 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -71,7 +71,7 @@ AS
 $$
 DECLARE
   _witness_id INT := hafbe_backend.get_witness_id("account-name");
-  _result hafbe_types.witness;
+  _result hafbe_backend.witness;
 BEGIN
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 

@@ -57,7 +57,7 @@ SET ROLE hafbe_owner;
         name: direction
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
           default: asc
         description: |
           Sort order:
@@ -80,11 +80,11 @@ SET ROLE hafbe_owner;
           Result contains total number of operations,
           total pages, and the list of operations.
 
-          * Returns `hafbe_types.operation_history `
+          * Returns `hafbe_backend.operation_history `
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.operation_history'
+              $ref: '#/components/schemas/hafbe_backend.operation_history'
             example: {
               "total_operations": 350,
               "total_pages": 117,
@@ -159,10 +159,10 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
     "operation-types" TEXT = NULL,
     "page" INT = 1,
     "page-size" INT = 100,
-    "direction" hafbe_types.sort_direction = 'asc',
+    "direction" hafbe_backend.sort_direction = 'asc',
     "data-size-limit" INT = 200000
 )
-RETURNS hafbe_types.operation_history 
+RETURNS hafbe_backend.operation_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
@@ -178,19 +178,19 @@ DECLARE
   _total_pages INT;
   _ops_count INT;
 
-  _result hafbe_types.operation[];
+  _result hafbe_backend.operation[];
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("page-size", 10000);
-  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-  PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_comment_search_indexes();
+  PERFORM hafbe_backend.validate_limit("page-size", 10000);
+  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_comment_search_indexes();
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count   := hafbe_backend.get_comment_operations_count("account-name", "permlink", _operation_types);
   _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page("page", _total_pages);
 
   _result := array_agg(row ORDER BY
       (CASE WHEN "direction" = 'desc' THEN row.operation_id::BIGINT ELSE NULL END) DESC,
@@ -220,8 +220,8 @@ BEGIN
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(_total_pages,0),
-    COALESCE(_result, '{}'::hafbe_types.operation[])
-  )::hafbe_types.operation_history;
+    COALESCE(_result, '{}'::hafbe_backend.operation[])
+  )::hafbe_backend.operation_history;
 
 END
 $$;

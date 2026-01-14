@@ -26,7 +26,7 @@ SET ROLE hafbe_owner;
         name: comment-type
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.comment_type'
+          $ref: '#/components/schemas/hafbe_backend.comment_type'
           default: all
         description: |
           Sort order:
@@ -90,11 +90,11 @@ SET ROLE hafbe_owner;
           Result contains total number of operations,
           total pages, and the list of operations.
 
-          * Returns `hafbe_types.permlink_history`
+          * Returns `hafbe_backend.permlink_history`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.permlink_history'
+              $ref: '#/components/schemas/hafbe_backend.permlink_history'
             example: {
                 "total_permlinks": 3,
                 "total_pages": 2,
@@ -126,13 +126,13 @@ SET ROLE hafbe_owner;
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_comment_permlinks;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_permlinks(
     "account-name" TEXT,
-    "comment-type" hafbe_types.comment_type = 'all',
+    "comment-type" hafbe_backend.comment_type = 'all',
     "page" INT = 1,
     "page-size" INT = 100,
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS hafbe_types.permlink_history 
+RETURNS hafbe_backend.permlink_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
@@ -149,11 +149,11 @@ DECLARE
 
   __block_range hafbe_backend.blocksearch_filter_return;
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("page-size", 100);
-  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-  PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_comment_search_indexes();
-  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
+  PERFORM hafbe_backend.validate_limit("page-size", 100);
+  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_comment_search_indexes();
+  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);

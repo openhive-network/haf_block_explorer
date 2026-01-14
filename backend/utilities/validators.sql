@@ -1,6 +1,6 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_witness(_account_id INT, _account_name TEXT)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_witness(_account_id INT, _account_name TEXT)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 STABLE
@@ -8,12 +8,12 @@ AS
 $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses WHERE witness_id = _account_id) THEN
-    PERFORM hafbe_exceptions.rest_raise_missing_witness(_account_name);
+    PERFORM hafbe_backend.rest_raise_missing_witness(_account_name);
   END IF;
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_comment_search_indexes()
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_comment_search_indexes()
 RETURNS VOID
 LANGUAGE 'plpgsql'
 STABLE
@@ -26,7 +26,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_block_search_indexes()
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_block_search_indexes()
 RETURNS VOID
 LANGUAGE 'plpgsql'
 STABLE
@@ -39,7 +39,7 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_block_num_too_high(_first_block INT, _current_block INT)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_block_num_too_high(_first_block INT, _current_block INT)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 IMMUTABLE
@@ -47,18 +47,18 @@ AS
 $$
 BEGIN
   IF _first_block IS NOT NULL AND _current_block < _first_block THEN
-    PERFORM hafbe_exceptions.raise_block_num_too_high_exception(_first_block::NUMERIC, _current_block);
+    PERFORM hafbe_backend.raise_block_num_too_high_exception(_first_block::NUMERIC, _current_block);
   END IF;
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_path_filter_keys(_operation_types INT[], _set_of_keys JSON)
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_path_filter_keys(_operation_types INT[], _set_of_keys JSON)
 RETURNS VOID
 LANGUAGE 'plpgsql'
 IMMUTABLE
 AS
 $$
-DECLARE 
+DECLARE
   _is_key_incorrect BOOLEAN := FALSE;
   _invalid_key TEXT         := NULL;
 BEGIN
@@ -80,21 +80,21 @@ BEGIN
   SELECT given_key, incorrect_key INTO _invalid_key, _is_key_incorrect
   FROM check_if_given_keys_are_correct
   WHERE incorrect_key LIMIT 1;
-  
+
   IF _is_key_incorrect THEN
     RAISE EXCEPTION 'Invalid key %', _invalid_key;
   END IF;
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_exceptions.validate_single_operation_type(_operation_types INT[])
+CREATE OR REPLACE FUNCTION hafbe_backend.validate_single_operation_type(_operation_types INT[])
 RETURNS VOID
 LANGUAGE 'plpgsql'
 IMMUTABLE
 AS
 $$
 BEGIN
-  IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN 
+  IF array_length(_operation_types, 1) != 1 OR _operation_types IS NULL THEN
     RAISE EXCEPTION 'Invalid set of operations, use single operation. ';
   END IF;
 END

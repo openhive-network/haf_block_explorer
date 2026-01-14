@@ -3,20 +3,20 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_blocks_by_ops(
     _operations INT[],
     _account INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
-    _from INT, 
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
+    _from INT,
     _to INT,
     _page INT,
     _limit INT,
     _key_content TEXT [],
     _setof_keys JSON
 )
-RETURNS hafbe_types.block_history -- noqa: LT01, CP05
+RETURNS hafbe_backend.block_history -- noqa: LT01, CP05
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
-DECLARE 
-  result hafbe_types.block_history;
+DECLARE
+  result hafbe_backend.block_history;
 
   -- flags
   _filter_by_op BOOLEAN:= (_operations IS NOT NULL);
@@ -24,13 +24,13 @@ DECLARE
   _filter_by_account BOOLEAN := (_account IS NOT NULL);
   _filter_by_key BOOLEAN := (_key_content[1] IS NOT NULL);
 BEGIN
-  
+
   CASE
     WHEN (NOT _filter_by_op) AND (NOT _filter_by_account) AND (NOT _filter_by_key) THEN
       result := hafbe_backend.blocksearch_no_filter(
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -39,7 +39,7 @@ BEGIN
         _operations[1],
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -48,7 +48,7 @@ BEGIN
         _operations,
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -57,7 +57,7 @@ BEGIN
         _operations[1],
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit,
         _key_content,
@@ -68,7 +68,7 @@ BEGIN
         _account,
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -78,7 +78,7 @@ BEGIN
         _account,
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -88,7 +88,7 @@ BEGIN
         _account,
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit
       );
@@ -98,7 +98,7 @@ BEGIN
         _account,
         _from,
         _to,
-        _order_is, 
+        _order_is,
         _page,
         _limit,
         _key_content,

@@ -6,10 +6,10 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(
     "filter_account" INT,
     "page" INT,
     "page-size" INT,
-    "sort" hafbe_types.order_by_votes,
-    "direction" hafbe_types.sort_direction
+    "sort" hafbe_backend.order_by_votes,
+    "direction" hafbe_backend.sort_direction
 )
-RETURNS SETOF hafbe_types.witness_voter 
+RETURNS SETOF hafbe_backend.witness_voter
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -21,9 +21,9 @@ DECLARE
 BEGIN
   RETURN QUERY (
     WITH limited_set AS MATERIALIZED (
-      SELECT 
+      SELECT
         av.name,
-        avs.vests, 
+        avs.vests,
         avs.account_vests,
         avs.proxied_vests,
         bv.created_at
@@ -31,7 +31,7 @@ BEGIN
       JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
       JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block
       JOIN hive.accounts_view av ON av.id = cwv.voter_id
-      WHERE 
+      WHERE
         cwv.witness_id = "witness" AND
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account")
       ORDER BY
@@ -47,10 +47,10 @@ BEGIN
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'timestamp'      THEN cwv.source_op_block ELSE NULL END) ASC,
         (CASE WHEN "direction" = 'desc'                               THEN cwv.voter_id        ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'                                THEN cwv.voter_id        ELSE NULL END) ASC
-      OFFSET _offset  
+      OFFSET _offset
       LIMIT "page-size"
     )
-    SELECT 
+    SELECT
       ls.name::TEXT,
       ls.vests::TEXT,
       ls.account_vests::TEXT,
@@ -68,11 +68,11 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history(
     "filter_account" INT,
     "page" INT,
     "page-size" INT,
-    "direction" hafbe_types.sort_direction,
+    "direction" hafbe_backend.sort_direction,
     "from-block" INT,
-    "to-block" INT 
+    "to-block" INT
 )
-RETURNS SETOF hafbe_types.witness_votes_history_record 
+RETURNS SETOF hafbe_backend.witness_votes_history_record
 LANGUAGE 'plpgsql'
 STABLE
 SET plan_cache_mode = force_custom_plan
@@ -83,11 +83,11 @@ DECLARE
 BEGIN
   RETURN QUERY (
     WITH limited_set AS MATERIALIZED (
-      SELECT 
+      SELECT
         av.name,
         cwv.voter_id,
         cwv.approve,
-        avs.vests, 
+        avs.vests,
         avs.account_vests,
         avs.proxied_vests,
         cwv.source_op_block,
@@ -97,7 +97,7 @@ BEGIN
       LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
       JOIN hive.blocks_view bv ON bv.num = cwv.source_op_block
       JOIN hive.accounts_view av ON av.id = cwv.voter_id
-      WHERE 
+      WHERE
         cwv.witness_id = "witness" AND
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account"    ) AND
         ("from-block" IS NULL     OR cwv.source_op_block >= "from-block") AND
@@ -107,11 +107,11 @@ BEGIN
         (CASE WHEN "direction" = 'asc'  THEN cwv.source_op_block ELSE NULL END) ASC,
         (CASE WHEN "direction" = 'desc' THEN cwv.voter_id        ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  THEN cwv.voter_id        ELSE NULL END) ASC
-      OFFSET _offset  
+      OFFSET _offset
       LIMIT "page-size"
     ),
     empty_results AS (
-      SELECT 
+      SELECT
         ls.name,
         ls.voter_id,
         ls.approve,
@@ -125,7 +125,7 @@ BEGIN
       WHERE ls.vests IS NULL
     ),
     not_empty_results AS (
-      SELECT 
+      SELECT
         ls.name,
         ls.voter_id,
         ls.approve,
@@ -133,7 +133,7 @@ BEGIN
         ls.account_vests,
         ls.proxied_vests,
         ls.source_op_block,
-        ls.created_at 
+        ls.created_at
       FROM limited_set ls
       WHERE ls.vests IS NOT NULL
     ),
@@ -142,7 +142,7 @@ BEGIN
       UNION ALL
       SELECT * FROM not_empty_results
     )
-    SELECT 
+    SELECT
       ur.name::TEXT,
       ur.approve,
       ur.vests::TEXT,
@@ -163,10 +163,10 @@ DROP FUNCTION IF EXISTS hafbe_backend.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
     "page" INT,
     "page-size" INT,
-    "sort" hafbe_types.order_by_witness,
-    "direction" hafbe_types.sort_direction
+    "sort" hafbe_backend.order_by_witness,
+    "direction" hafbe_backend.sort_direction
 )
-RETURNS SETOF hafbe_types.witness 
+RETURNS SETOF hafbe_backend.witness
 LANGUAGE 'plpgsql'
 STABLE
 SET plan_cache_mode = force_custom_plan
@@ -176,10 +176,10 @@ DECLARE
   _offset INT := ((("page" - 1) * "page-size"));
 BEGIN
   RETURN QUERY (
-    WITH limited_set AS 
+    WITH limited_set AS
     (
       SELECT
-        cw.witness_id, 
+        cw.witness_id,
         av.name,
 		    a.rank,
         COALESCE(cw.url, '') AS url,
@@ -187,12 +187,12 @@ BEGIN
         COALESCE(cw.bias, 0) AS bias,
         COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
         COALESCE(cw.block_size, 0) AS block_size,
-        COALESCE(cw.signing_key, '') AS signing_key, 
+        COALESCE(cw.signing_key, '') AS signing_key,
         COALESCE(cw.version, '0.0.0') AS version,
         COALESCE(cw.missed_blocks, 0) AS missed_blocks,
-        COALESCE(b.votes,0) AS votes, 
-        COALESCE(b.voters_num,0) AS voters_num, 
-        COALESCE(c.votes_daily_change, 0) AS votes_daily_change, 
+        COALESCE(b.votes,0) AS votes,
+        COALESCE(b.voters_num,0) AS voters_num,
+        COALESCE(c.votes_daily_change, 0) AS votes_daily_change,
         COALESCE(c.voters_num_daily_change,0) AS voters_num_daily_change,
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
@@ -231,22 +231,22 @@ BEGIN
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'feed_updated_at'         THEN COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) ELSE NULL END) ASC,
         (CASE WHEN "direction" = 'desc'                                        THEN cw.witness_id                                                  ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'                                         THEN cw.witness_id                                                  ELSE NULL END) ASC
-      OFFSET _offset  
+      OFFSET _offset
       LIMIT "page-size"
     )
     SELECT
-      ls.name::TEXT, 
-      ls.rank, 
+      ls.name::TEXT,
+      ls.rank,
       ls.url,
       ls.votes::TEXT,
       ls.votes_daily_change::TEXT,
       ls.voters_num,
       ls.voters_num_daily_change,
-      ls.price_feed, 
-      ls.bias, 
+      ls.price_feed,
+      ls.bias,
       ls.feed_updated_at,
-      ls.block_size, 
-      ls.signing_key, 
+      ls.block_size,
+      ls.signing_key,
       ls.version,
       ls.missed_blocks,
       ls.hbd_interest_rate,
@@ -262,7 +262,7 @@ DROP FUNCTION IF EXISTS hafbe_backend.get_witness;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
     _witness_id INT
 )
-RETURNS hafbe_types.witness 
+RETURNS hafbe_backend.witness
 LANGUAGE 'plpgsql'
 STABLE
 SET plan_cache_mode = force_custom_plan
@@ -279,28 +279,28 @@ BEGIN
         COALESCE(cw.bias, 0) AS bias,
         COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) AS feed_updated_at,
         COALESCE(cw.block_size, 0) AS block_size,
-        COALESCE(cw.signing_key, '') AS signing_key, 
+        COALESCE(cw.signing_key, '') AS signing_key,
         COALESCE(cw.version, '0.0.0') AS version,
         COALESCE(cw.missed_blocks, 0) AS missed_blocks,
         COALESCE(cw.hbd_interest_rate,0) AS hbd_interest_rate,
         COALESCE(cw.last_created_block_num,0) AS last_created_block_num,
         COALESCE(cw.account_creation_fee,0) AS account_creation_fee
-      FROM hafbe_app.current_witnesses cw 
+      FROM hafbe_app.current_witnesses cw
       WHERE cw.witness_id = _witness_id
     )
     SELECT ROW(
-      ls.witness, 
+      ls.witness,
       a.rank,
       ls.url,
       COALESCE(all_votes.votes::TEXT, '0'),
       COALESCE(wvcc.votes_daily_change::TEXT, '0'),
       COALESCE(all_votes.voters_num, 0),
       COALESCE(wvcc.voters_num_daily_change, 0),
-      ls.price_feed, 
-      ls.bias, 
+      ls.price_feed,
+      ls.bias,
       ls.feed_updated_at,
-      ls.block_size, 
-      ls.signing_key, 
+      ls.block_size,
+      ls.signing_key,
       ls.version,
       ls.missed_blocks,
       ls.hbd_interest_rate,
@@ -309,12 +309,61 @@ BEGIN
     )
     FROM limited_set ls
 	  JOIN hafbe_app.witness_rank_cache a                 ON a.witness_id = ls.witness_id
-    LEFT JOIN hafbe_app.witness_votes_cache all_votes   ON all_votes.witness_id = ls.witness_id 
+    LEFT JOIN hafbe_app.witness_votes_cache all_votes   ON all_votes.witness_id = ls.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id
   );
 
 END
 $$;
 
+-- Count functions (merged from witness_count.sql)
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_count(
+    _witness_id INT,
+    _filter_account_id INT
+)
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN COUNT(*)
+  FROM hafbe_backend.current_witness_votes_view
+  WHERE
+    witness_id = _witness_id AND
+    (_filter_account_id IS NULL OR voter_id = _filter_account_id);
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history_count(
+    _witness_id INT,
+    _filter_account_id INT,
+    _block_range hive.blocks_range
+)
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN COUNT(*)
+  FROM hafbe_backend.witness_votes_history_view
+  WHERE
+    witness_id = _witness_id AND
+    (_block_range.first_block IS NULL OR source_op_block >= _block_range.first_block) AND
+    (_block_range.last_block IS NULL OR source_op_block <= _block_range.last_block) AND
+    (_filter_account_id IS NULL OR voter_id = _filter_account_id);
+END
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses_count()
+RETURNS INT -- noqa: LT01, CP05
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN COUNT(*)
+  FROM hafbe_app.current_witnesses;
+END
+$$;
 
 RESET ROLE;

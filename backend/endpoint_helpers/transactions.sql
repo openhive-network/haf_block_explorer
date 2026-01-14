@@ -60,7 +60,7 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_stats(
-    _granularity hafbe_types.granularity,
+    _granularity hafbe_backend.granularity,
     _from TIMESTAMP,
     _to TIMESTAMP
 )
@@ -71,8 +71,8 @@ AS
 $$
 BEGIN
   IF _granularity = 'daily' THEN
-    RETURN QUERY 
-      SELECT 
+    RETURN QUERY
+      SELECT
         bh.updated_at,
         bh.trx_count,
         bh.count_blocks,
@@ -83,8 +83,8 @@ BEGIN
       WHERE bh.updated_at BETWEEN _from AND _to;
 
   ELSIF _granularity = 'monthly' THEN
-    RETURN QUERY 
-      SELECT 
+    RETURN QUERY
+      SELECT
         bh.updated_at,
         bh.trx_count,
         bh.count_blocks,
@@ -95,8 +95,8 @@ BEGIN
       WHERE bh.updated_at BETWEEN _from AND _to;
 
   ELSIF _granularity = 'yearly' THEN
-    RETURN QUERY 
-      SELECT 
+    RETURN QUERY
+      SELECT
         bh.date,
         bh.trx_count,
         bh.count_blocks,
@@ -112,8 +112,8 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
-    _granularity hafbe_types.granularity,
-    _direction hafbe_types.sort_direction,
+    _granularity hafbe_backend.granularity,
+    _direction hafbe_backend.sort_direction,
     _from_block INT,
     _to_block INT
 )
@@ -137,7 +137,7 @@ BEGIN
   FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
 
   __granularity := (
-    CASE 
+    CASE
       WHEN _granularity = 'daily' THEN 'day'
       WHEN _granularity = 'monthly' THEN 'month'
       WHEN _granularity = 'yearly' THEN 'year'
@@ -156,7 +156,7 @@ BEGIN
       SELECT generate_series(__from_timestamp, __to_timestamp, __one_period) AS date
     ),
     get_daily_aggregation AS MATERIALIZED (
-      SELECT 
+      SELECT
         bh.date,
         bh.trx_count,
         bh.count_blocks,
@@ -166,7 +166,7 @@ BEGIN
       FROM hafbe_backend.get_transaction_stats(_granularity, __from_timestamp, __to_timestamp) bh
     ),
     transaction_records AS (
-      SELECT 
+      SELECT
         ds.date,
         COALESCE(bh.trx_count,0) AS trx_count,
         COALESCE(bh.count_blocks,0) AS count_blocks,
@@ -194,7 +194,7 @@ BEGIN
         LIMIT 1
       ) jl ON fb.last_block_num IS NULL
     )
-    SELECT 
+    SELECT
       LEAST(fb.date + __one_period, CURRENT_TIMESTAMP)::TIMESTAMP AS adjusted_date,
       fb.trx_count::INT,
       (CASE WHEN fb.count_blocks = 0 THEN 0 ELSE (fb.trx_count / fb.count_blocks) END)::INT,
