@@ -2,13 +2,10 @@
 .vscode/
 tests/performance/result
 build/
-block_processing.log
+*.log
 set_version_in_sql.pgsql
-hafbe_sync.log
 *.tar.xz*
 accounts_dump.json
-account_dump_test.log
-witness_dump_test.log
 endpoints_openapi
 backend/types_openapi
 
