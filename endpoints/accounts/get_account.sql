@@ -27,11 +27,11 @@ SET ROLE hafbe_owner;
         description: |
           The account''s parameters
       
-          * Returns `hafbe_types.account`
+          * Returns `hafbe_backend.account`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.account'
+              $ref: '#/components/schemas/hafbe_backend.account'
             example: {
               "id": 440,
               "name": "blocktrades",
@@ -95,7 +95,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_account;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(
     "account-name" TEXT
 )
-RETURNS hafbe_types.account 
+RETURNS hafbe_backend.account 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -176,7 +176,7 @@ BEGIN
       --hidden, shouldn't be shown on account page
       COALESCE(_result_count, 0)::INT,
       EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
-  )::hafbe_types.account
+  )::hafbe_backend.account
   FROM 
     btracker_endpoints.get_account_balances("account-name")      _result_balance,
     reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,

@@ -20,7 +20,7 @@ SET ROLE hafbe_owner;
         name: granularity
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.granularity'
+          $ref: '#/components/schemas/hafbe_backend.granularity'
           default: yearly
         description: |
           granularity types:
@@ -34,7 +34,7 @@ SET ROLE hafbe_owner;
         name: direction
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
           default: desc
         description: |
           Sort order:
@@ -81,11 +81,11 @@ SET ROLE hafbe_owner;
         description: |
           Balance change
 
-          * Returns array of `hafbe_types.transaction_stats`
+          * Returns array of `hafbe_backend.transaction_stats`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_transaction_stats'
+              $ref: '#/components/schemas/hafbe_backend.array_of_transaction_stats'
             example: [
               {
                 "date": "2017-01-01T00:00:00",
@@ -103,12 +103,12 @@ SET ROLE hafbe_owner;
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_transaction_statistics;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
-    "granularity" hafbe_types.granularity = 'yearly',
-    "direction" hafbe_types.sort_direction = 'desc',
+    "granularity" hafbe_backend.granularity = 'yearly',
+    "direction" hafbe_backend.sort_direction = 'desc',
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS SETOF hafbe_types.transaction_stats 
+RETURNS SETOF hafbe_backend.transaction_stats 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 SET jit = OFF
@@ -118,7 +118,7 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
 BEGIN
-  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
+  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);

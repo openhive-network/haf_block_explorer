@@ -14,18 +14,18 @@ BEGIN
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
   WITH proxy_ops_without_timestamp AS MATERIALIZED (
-    SELECT 
+    SELECT
       ov.body AS body,
       ov.id,
       ov.block_num,
       ov.op_type_id as op_type
     FROM hafbe_app.operations_view ov
-    WHERE 
+    WHERE
       ov.op_type_id IN (12,13,91,92,75) AND
       ov.block_num BETWEEN _from AND _to
   ),
   proxy_ops AS (
-    SELECT 
+    SELECT
       proxy_ops_w_t.body,
       proxy_ops_w_t.id,
       proxy_ops_w_t.block_num,
@@ -62,7 +62,7 @@ BEGIN
   DELETE FROM hafbe_app.account_vest_stats_cache;
 
   INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
-    SELECT 
+    SELECT
       account_id,
       vests,
       account_vests,
@@ -72,8 +72,8 @@ BEGIN
   DELETE FROM hafbe_app.witness_votes_cache;
 
   INSERT INTO hafbe_app.witness_votes_cache (witness_id, votes, voters_num)
-    SELECT 
-      cwv.witness_id, 
+    SELECT
+      cwv.witness_id,
       SUM(avs.vests)::BIGINT,
       COUNT(*)
     FROM hafbe_backend.current_witness_votes_view cwv
@@ -83,8 +83,8 @@ BEGIN
   DELETE FROM hafbe_app.witness_rank_cache;
 
   INSERT INTO hafbe_app.witness_rank_cache (witness_id, rank)
-    SELECT 
-      cw.witness_id, 
+    SELECT
+      cw.witness_id,
       ROW_NUMBER() OVER (ORDER BY COALESCE(wv.votes,0) DESC, COALESCE(wv.voters_num,0) DESC, cw.witness_id DESC)
     FROM hafbe_app.current_witnesses cw
     LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id;

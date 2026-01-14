@@ -51,7 +51,7 @@ SET ROLE hafbe_owner;
         name: direction
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
           default: desc
         description: |
           Sort order:
@@ -110,11 +110,11 @@ SET ROLE hafbe_owner;
         description: |
           Block number with filtered operations
 
-          * Returns `hafbe_types.block_history`
+          * Returns `hafbe_backend.block_history`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.block_history'
+              $ref: '#/components/schemas/hafbe_backend.block_history'
             example: {
               "total_blocks": 5000000,
               "total_pages": 1000000,
@@ -286,12 +286,12 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
     "account-name" TEXT = NULL,
     "page" INT = NULL,
     "page-size" INT = 100,
-    "direction" hafbe_types.sort_direction = 'desc',
+    "direction" hafbe_backend.sort_direction = 'desc',
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL,
     "path-filter" TEXT[] = NULL
 )
-RETURNS hafbe_types.block_history 
+RETURNS hafbe_backend.block_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET from_collapse_limit = 16
@@ -307,22 +307,22 @@ DECLARE
   _key_content TEXT[]               := NULL;
   _set_of_keys JSON                 := NULL;
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
-  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-  PERFORM hafbe_exceptions.validate_negative_page("page");
-  PERFORM hafbe_exceptions.validate_block_num_too_high(_block_range.first_block, _head_block_num);
+  PERFORM hafbe_backend.validate_limit("page-size", 1000);
+  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   IF hafah_backend.is_path_filter_not_empty("path-filter") THEN
     -- if path-filter is not empty, validate if extra indexes are available
     -- and if the operation type is single
-    PERFORM hafbe_exceptions.validate_block_search_indexes();
-    PERFORM hafbe_exceptions.validate_single_operation_type(_operation_types);
+    PERFORM hafbe_backend.validate_block_search_indexes();
+    PERFORM hafbe_backend.validate_single_operation_type(_operation_types);
 
     SELECT param_json::JSON, param_text::TEXT[]
     INTO _set_of_keys, _key_content
     FROM hafah_backend.parse_path_filters("path-filter");
 
-    PERFORM hafbe_exceptions.validate_path_filter_keys(_operation_types, _set_of_keys);
+    PERFORM hafbe_backend.validate_path_filter_keys(_operation_types, _set_of_keys);
   END IF;
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN

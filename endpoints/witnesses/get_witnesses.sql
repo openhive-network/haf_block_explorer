@@ -36,7 +36,7 @@ SET ROLE hafbe_owner;
         name: sort
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.order_by_witness'
+          $ref: '#/components/schemas/hafbe_backend.order_by_witness'
           default: votes
         description: |
           Sort key:
@@ -73,7 +73,7 @@ SET ROLE hafbe_owner;
         name: direction
         required: false
         schema:
-          $ref: '#/components/schemas/hafbe_types.sort_direction'
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
           default: desc
         description: |
           Sort order:
@@ -86,11 +86,11 @@ SET ROLE hafbe_owner;
         description: |
           The list of witnesses
 
-          * Returns `hafbe_types.witnesses_return`
+          * Returns `hafbe_backend.witnesses_return`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.witnesses_return'
+              $ref: '#/components/schemas/hafbe_backend.witnesses_return'
             example: {
               "total_witnesses": 731,
               "total_pages": 366,
@@ -141,10 +141,10 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
     "page" INT = 1,
     "page-size" INT = 100,
-    "sort" hafbe_types.order_by_witness = 'votes',
-    "direction" hafbe_types.sort_direction = 'desc'
+    "sort" hafbe_backend.order_by_witness = 'votes',
+    "direction" hafbe_backend.sort_direction = 'desc'
 )
-RETURNS hafbe_types.witnesses_return 
+RETURNS hafbe_backend.witnesses_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -156,18 +156,18 @@ $$
 DECLARE
   _ops_count INT;
   _total_pages INT;
-  _result hafbe_types.witness[];
+  _result hafbe_backend.witness[];
 BEGIN
-  PERFORM hafbe_exceptions.validate_limit("page-size", 1000);
-  PERFORM hafbe_exceptions.validate_negative_limit("page-size");
-  PERFORM hafbe_exceptions.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_limit("page-size", 1000);
+  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_negative_page("page");
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count   := hafbe_backend.get_witnesses_count();
   _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
-  PERFORM hafbe_exceptions.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page("page", _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -199,8 +199,8 @@ BEGIN
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(_total_pages,0),
-    COALESCE(_result, '{}'::hafbe_types.witness[])
-  )::hafbe_types.witnesses_return;
+    COALESCE(_result, '{}'::hafbe_backend.witness[])
+  )::hafbe_backend.witnesses_return;
 
 END
 $$;

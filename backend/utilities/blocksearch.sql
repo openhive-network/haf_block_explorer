@@ -9,25 +9,25 @@ $$
 BEGIN
 RETURN (ov.body->'value'->'vesting_shares'->>'amount')::BIGINT
 FROM hive.operations_view ov
-WHERE	
-  ov.block_num = _block_num AND 
+WHERE
+  ov.block_num = _block_num AND
 	ov.op_type_id = 64;
 END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_operation_aggregation(_block_num INT)
-RETURNS hafbe_types.block_operations[]
+RETURNS hafbe_backend.block_operations[]
 LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
 BEGIN
-RETURN 
+RETURN
   array_agg(
     (
       op_type_id,
       op_count
-    )::hafbe_types.block_operations
+    )::hafbe_backend.block_operations
 	)
 FROM hafbe_app.block_operations
 WHERE	block_num = _block_num;
@@ -35,7 +35,7 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.build_json_for_single_operation(_op_type_id INT, _op_count INT)
-RETURNS hafbe_types.block_operations[]
+RETURNS hafbe_backend.block_operations[]
 LANGUAGE 'plpgsql'
 IMMUTABLE
 AS
@@ -72,7 +72,7 @@ CREATE TYPE hafbe_backend.blocksearch_filter_return AS
 );
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_no_filter_count(
-    _from INT, 
+    _from INT,
     _to INT,
     _current_block INT
 )
@@ -81,28 +81,28 @@ LANGUAGE 'plpgsql' IMMUTABLE
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __to INT;
   __from INT;
   __count INT;
 BEGIN
   __to := (
-    CASE 
-      WHEN (_to IS NULL) THEN 
-        _current_block 
-      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN 
-        _current_block 
-      ELSE 
-        _to 
+    CASE
+      WHEN (_to IS NULL) THEN
+        _current_block
+      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN
+        _current_block
+      ELSE
+        _to
       END
   );
 
   __from := (
-    CASE 
-      WHEN (_from IS NULL) THEN 
-        1 
-      ELSE 
-        _from 
+    CASE
+      WHEN (_from IS NULL) THEN
+        1
+      ELSE
+        _from
       END
   );
 
@@ -113,7 +113,7 @@ END
 $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_range(
-    _from INT, 
+    _from INT,
     _to INT,
     _current_block INT
 )
@@ -122,27 +122,27 @@ LANGUAGE 'plpgsql' IMMUTABLE
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __to INT;
   __from INT;
 BEGIN
   __to := (
-    CASE 
-      WHEN (_to IS NULL) THEN 
-        _current_block 
-      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN 
-        _current_block 
-      ELSE 
-        _to 
+    CASE
+      WHEN (_to IS NULL) THEN
+        _current_block
+      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN
+        _current_block
+      ELSE
+        _to
       END
   );
 
   __from := (
-    CASE 
-      WHEN (_from IS NULL) THEN 
-        1 
-      ELSE 
-        _from 
+    CASE
+      WHEN (_from IS NULL) THEN
+        1
+      ELSE
+        _from
       END
   );
 
@@ -161,7 +161,7 @@ CREATE TYPE hafbe_backend.blocksearch_account_filter_return AS
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_range(
     _account_id INT,
-    _from INT, 
+    _from INT,
     _to INT,
     _current_block INT
 )
@@ -170,47 +170,47 @@ LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __to INT;
   __from INT;
   __to_seq INT;
   __from_seq INT;
 BEGIN
   __to := (
-    CASE 
-      WHEN (_to IS NULL) THEN 
-        _current_block 
-      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN 
-        _current_block 
-      ELSE 
-        _to 
+    CASE
+      WHEN (_to IS NULL) THEN
+        _current_block
+      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN
+        _current_block
+      ELSE
+        _to
       END
   );
 
   __from := (
-    CASE 
-      WHEN (_from IS NULL) THEN 
-        1 
-      ELSE 
-        _from 
+    CASE
+      WHEN (_from IS NULL) THEN
+        1
+      ELSE
+        _from
       END
   );
 
   __to_seq := (
-    SELECT 
+    SELECT
       aov.account_op_seq_no
     FROM hive.account_operations_view aov
-    WHERE 
+    WHERE
       aov.account_id = _account_id AND
       aov.block_num <= __to
     ORDER BY aov.account_op_seq_no DESC LIMIT 1
   );
 
   __from_seq := (
-    SELECT 
+    SELECT
       aov.account_op_seq_no
     FROM hive.account_operations_view aov
-    WHERE 
+    WHERE
       aov.account_id = _account_id AND
       aov.block_num >= __from
     ORDER BY aov.account_op_seq_no ASC LIMIT 1
@@ -224,10 +224,10 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_by_op_count(
     _operation INT,
-    _from INT, 
+    _from INT,
     _to INT,
     _current_block INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _limit INT
 )
 RETURNS hafbe_backend.blocksearch_filter_return -- noqa: LT01, CP05
@@ -237,38 +237,38 @@ SET join_collapse_limit = 16
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __to INT;
   __from INT;
 BEGIN
   __to := (
-    CASE 
-      WHEN (_to IS NULL) THEN 
-        _current_block 
-      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN 
-        _current_block 
-      ELSE 
-        _to 
+    CASE
+      WHEN (_to IS NULL) THEN
+        _current_block
+      WHEN (_to IS NOT NULL) AND (_current_block < _to) THEN
+        _current_block
+      ELSE
+        _to
       END
   );
 
   __from := (
-    CASE 
-      WHEN (_from IS NULL) THEN 
-        1 
-      ELSE 
-        _from 
+    CASE
+      WHEN (_from IS NULL) THEN
+        1
+      ELSE
+        _from
       END
   );
 
   RETURN (
     WITH blocks AS (
-      SELECT 
+      SELECT
         COUNT(*) AS count_blocks
       FROM (
         SELECT *
         FROM hafbe_app.block_operations ov
-        WHERE 
+        WHERE
           ov.op_type_id = _operation AND
           ov.block_num <= __to AND
           ov.block_num >= __from
@@ -301,7 +301,7 @@ CREATE TYPE hafbe_backend.calculate_pages_return AS
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_calculate_pages(
     _count INT,
     _page INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _limit INT
 )
 RETURNS hafbe_backend.calculate_pages_return -- noqa: LT01, CP05
@@ -309,7 +309,7 @@ LANGUAGE 'plpgsql' STABLE
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __rest_of_division INT;
   __total_pages INT;
   __page INT;
@@ -319,30 +319,30 @@ BEGIN
   __rest_of_division := (_count % _limit)::INT;
 
   __total_pages := (
-    CASE 
-      WHEN (__rest_of_division = 0) THEN 
-        _count / _limit 
-      ELSE 
+    CASE
+      WHEN (__rest_of_division = 0) THEN
+        _count / _limit
+      ELSE
         (_count / _limit) + 1
       END
   )::INT;
 
   __page := (
-    CASE 
-      WHEN (_page IS NULL) THEN 
+    CASE
+      WHEN (_page IS NULL) THEN
         1
-      WHEN (_page IS NOT NULL) AND _order_is = 'desc' THEN 
+      WHEN (_page IS NOT NULL) AND _order_is = 'desc' THEN
         __total_pages - _page + 1
-      ELSE 
-        _page 
+      ELSE
+        _page
       END
   );
 
   __offset := (
     CASE
-      WHEN _order_is = 'desc' AND __page != 1 AND __rest_of_division != 0 THEN 
+      WHEN _order_is = 'desc' AND __page != 1 AND __rest_of_division != 0 THEN
         ((__page - 2) * _limit) + __rest_of_division
-      WHEN __page = 1 THEN 
+      WHEN __page = 1 THEN
         0
       ELSE
         (__page - 1) * _limit
@@ -352,11 +352,11 @@ BEGIN
   __limit := (
       CASE
         WHEN _order_is = 'desc' AND __page = 1             AND __rest_of_division != 0 THEN
-          __rest_of_division 
+          __rest_of_division
         WHEN _order_is = 'asc'  AND __page = __total_pages AND __rest_of_division != 0 THEN
-          __rest_of_division 
-        ELSE 
-          _limit 
+          __rest_of_division
+        ELSE
+          _limit
         END
     );
 
@@ -376,9 +376,9 @@ CREATE TYPE hafbe_backend.find_blocks_with_op_return AS
 
 CREATE OR REPLACE FUNCTION hafbe_backend.find_blocks_with_op(
     _operation INT,
-    _from INT, 
+    _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _limit INT
 )
 RETURNS SETOF hafbe_backend.find_blocks_with_op_return -- noqa: LT01, CP05
@@ -390,7 +390,7 @@ AS
 $$
 BEGIN
   RETURN QUERY (
-    SELECT 
+    SELECT
       bo.block_num,
       bo.op_type_id,
       bo.op_count
@@ -410,9 +410,9 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.find_blocks_with_op_and_account(
     _operation INT,
     _account_id INT,
-    _from INT, 
+    _from INT,
     _to INT,
-    _order_is hafbe_types.sort_direction, -- noqa: LT01, CP05
+    _order_is hafbe_backend.sort_direction, -- noqa: LT01, CP05
     _limit INT
 )
 RETURNS SETOF hafbe_backend.find_blocks_with_op_return -- noqa: LT01, CP05
@@ -424,12 +424,12 @@ AS
 $$
 BEGIN
   RETURN QUERY (
-    SELECT 
+    SELECT
       aov.block_num,
       aov.op_type_id,
       NULL::int
     FROM hive.account_operations_view aov
-    WHERE 
+    WHERE
 	    aov.op_type_id = _operation AND
       aov.account_id = _account_id AND
       aov.block_num >= _from AND

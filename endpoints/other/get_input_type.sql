@@ -30,11 +30,11 @@ SET ROLE hafbe_owner;
           Result contains total operations number,
           total pages and the list of operations
 
-          * Returns `hafbe_types.input_type_return `
+          * Returns `hafbe_backend.input_type_return `
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.input_type_return'
+              $ref: '#/components/schemas/hafbe_backend.input_type_return'
             example: {
                   "input_type": "account_name",
                   "input_value": [
@@ -49,7 +49,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_input_type;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(
     "input-value" TEXT
 )
-RETURNS hafbe_types.input_type_return 
+RETURNS hafbe_backend.input_type_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 AS
@@ -72,7 +72,7 @@ BEGIN
     RETURN (
       'account_name',
       ARRAY[__input_value]
-    )::hafbe_types.input_type_return;
+    )::hafbe_backend.input_type_return;
   END IF;
 
   -- second, positive digit and not name is assumed to be block number
@@ -82,7 +82,7 @@ BEGIN
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      PERFORM hafbe_exceptions.raise_block_num_too_high_exception(__input_value::NUMERIC, __head_block_num);
+      PERFORM hafbe_backend.raise_block_num_too_high_exception(__input_value::NUMERIC, __head_block_num);
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
@@ -90,7 +90,7 @@ BEGIN
       RETURN (
         'block_num',
         ARRAY[__input_value]
-      )::hafbe_types.input_type_return;
+      )::hafbe_backend.input_type_return;
 
     END IF;
   END IF;
@@ -107,7 +107,7 @@ BEGIN
       RETURN (
         'transaction_hash',
         ARRAY[__input_value]
-      )::hafbe_types.input_type_return;
+      )::hafbe_backend.input_type_return;
 
     ELSE
       SELECT bv.num 
@@ -123,13 +123,13 @@ BEGIN
       RETURN (
         'block_hash',
         ARRAY[__block_num::TEXT]
-      )::hafbe_types.input_type_return;
+      )::hafbe_backend.input_type_return;
 
     ELSE
 
       PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-      PERFORM hafbe_exceptions.raise_unknown_hash_exception(__input_value);
+      PERFORM hafbe_backend.raise_unknown_hash_exception(__input_value);
     END IF;
   END IF;
 
@@ -162,7 +162,7 @@ BEGIN
     RETURN (
       'account_name_array',
       __accounts_array
-    )::hafbe_types.input_type_return;
+    )::hafbe_backend.input_type_return;
 
   ELSE
 
@@ -171,7 +171,7 @@ BEGIN
     RETURN (
       'invalid_input',
       ARRAY[__input_value]
-    )::hafbe_types.input_type_return;
+    )::hafbe_backend.input_type_return;
 
   END IF;
 END

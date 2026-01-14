@@ -2,20 +2,20 @@ SET ROLE hafbe_owner;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_permlinks(
     _author TEXT,
-    _comment_type hafbe_types.comment_type,
+    _comment_type hafbe_backend.comment_type,
     _page INT,
     _page_size INT,
     _from INT,
     _to INT
 )
-RETURNS hafbe_types.permlink_history
+RETURNS hafbe_backend.permlink_history
 LANGUAGE 'plpgsql' STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF
 AS
 $$
-DECLARE 
+DECLARE
   __max_page_count INT := 10;
 
   __min_block_num INT;
@@ -23,7 +23,7 @@ DECLARE
   __count INT;
   __total_pages INT;
 
-  _result hafbe_types.permlink[];
+  _result hafbe_backend.permlink[];
 BEGIN
   WITH gather_operations AS MATERIALIZED (
     SELECT
@@ -32,7 +32,7 @@ BEGIN
       ov.trx_in_block,
       ov.body_binary::jsonb->'value'->>'permlink' as permlink
     FROM hive.operations_view ov
-    WHERE 
+    WHERE
       ov.op_type_id = 1 AND
       ov.block_num <= _to AND
       ov.block_num >= _from AND
@@ -45,7 +45,7 @@ BEGIN
     LIMIT (__max_page_count * _page_size) -- by default operation filter is limited to 10 pages
   ),
   group_by_permlink AS (
-    SELECT 
+    SELECT
       block_num,
       id,
       trx_in_block,
@@ -54,7 +54,7 @@ BEGIN
     FROM gather_operations
   ),
   eliminate_duplicate_permlink AS MATERIALIZED (
-    SELECT 
+    SELECT
       block_num,
       id,
       trx_in_block,
@@ -64,25 +64,25 @@ BEGIN
   ),
   -----------PAGING LOGIC----------------
   -- Pages are counted differently compared to default.sql
-  -- The results are based on a set of blocks for each operation, 
+  -- The results are based on a set of blocks for each operation,
   -- so the count and total number of pages depend on the specific query inside this cte chain
   min_block_num AS (
-    SELECT 
+    SELECT
       MIN(block_num) AS block_num
     FROM eliminate_duplicate_permlink
   ),
   count_blocks AS MATERIALIZED (
-    SELECT 
+    SELECT
       COUNT(*) AS count
     FROM eliminate_duplicate_permlink
   ),
   count_pre_grouped_blocks AS (
-    SELECT 
+    SELECT
       COUNT(*) AS count
     FROM gather_operations
   ),
   calculate_pages AS MATERIALIZED (
-    SELECT 
+    SELECT
       total_pages,
       offset_filter,
       limit_filter
@@ -94,7 +94,7 @@ BEGIN
     )
   ),
   filter_page AS MATERIALIZED (
-    SELECT 
+    SELECT
       block_num,
       id,
       trx_in_block,
@@ -106,7 +106,7 @@ BEGIN
   ),
   ---------------------------------------
   result_query AS (
-    SELECT 
+    SELECT
       bo.block_num,
       bo.id,
       bo.permlink,
@@ -116,14 +116,14 @@ BEGIN
     JOIN hive.blocks_view bv ON bv.num = bo.block_num
     JOIN hive.transactions_view tr ON tr.block_num = bo.block_num AND tr.trx_in_block = bo.trx_in_block
   )
-  SELECT 
+  SELECT
     (SELECT count FROM count_blocks),
     (SELECT total_pages FROM calculate_pages),
     (SELECT block_num FROM min_block_num),
     (SELECT count FROM count_pre_grouped_blocks),
     (
       SELECT array_agg(rows ORDER BY id::BIGINT DESC) FROM (
-        SELECT 
+        SELECT
           s.permlink,
           s.block_num,
           s.trx_hash,
@@ -150,9 +150,9 @@ BEGIN
   RETURN (
     COALESCE(__count, 0),
     COALESCE(__total_pages, 0),
-    (_from, _to)::hafbe_types.block_range,
-    COALESCE(_result, '{}'::hafbe_types.permlink[])
-  )::hafbe_types.permlink_history;
+    (_from, _to)::hafbe_backend.block_range,
+    COALESCE(_result, '{}'::hafbe_backend.permlink[])
+  )::hafbe_backend.permlink_history;
 
 END
 $$;

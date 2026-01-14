@@ -1,10 +1,10 @@
 SET ROLE hafbe_owner;
 
 /** openapi:components:schemas
-hafbe_types.array_of_proxy_power:
+hafbe_backend.array_of_proxy_power:
   type: array
   items:
-    $ref: '#/components/schemas/hafbe_types.proxy_power'
+    $ref: '#/components/schemas/hafbe_backend.proxy_power'
 */
 
 /** openapi:paths
@@ -45,7 +45,7 @@ hafbe_types.array_of_proxy_power:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_types.array_of_proxy_power'
+              $ref: '#/components/schemas/hafbe_backend.array_of_proxy_power'
             exaxmple: [
               {
                 "account": "geoffrey",
@@ -62,7 +62,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_proxies_power(
     "account-name" TEXT,
     "page" INT = 1
 )
-RETURNS SETOF hafbe_types.proxy_power 
+RETURNS SETOF hafbe_backend.proxy_power 
 -- openapi-generated-code-end
 /*------------------------------------------
   hafbe_endpoints.get_account_proxies_power
@@ -78,7 +78,7 @@ DECLARE
   _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
 BEGIN
   -- validate that page ≥ 1
-  PERFORM hafbe_exceptions.validate_negative_page(page);
+  PERFORM hafbe_backend.validate_negative_page(page);
 
   -- set short public cache
   PERFORM set_config(

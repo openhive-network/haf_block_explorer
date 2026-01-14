@@ -8,7 +8,7 @@ AS
 $$
 BEGIN
   PERFORM (
-    CASE 
+    CASE
       WHEN _op_type_id = 12 THEN
       hafbe_backend.process_vote_op(_operation_body, source_op)
 
@@ -28,7 +28,7 @@ RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
-DECLARE 
+DECLARE
   _voter_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
   _witness_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness');
   _approve BOOLEAN := (_body->'value'->>'approve')::BOOLEAN;
@@ -45,7 +45,7 @@ BEGIN
     source_op = EXCLUDED.source_op;
 
   -- If the vote is not approved, delete it from the current votes table
-  DELETE FROM hafbe_app.current_witness_votes cwv 
+  DELETE FROM hafbe_app.current_witness_votes cwv
   WHERE cwv.witness_id = _witness_id AND cwv.voter_id = _voter_id AND NOT _approve;
 
 END
@@ -56,7 +56,7 @@ RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
-DECLARE 
+DECLARE
   _account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
   _proxy_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'proxy');
   _proxy BOOLEAN := (CASE WHEN _op_type = 13 THEN TRUE ELSE FALSE END);
@@ -75,19 +75,19 @@ BEGIN
     source_op = EXCLUDED.source_op;
 
   -- If the proxy is removed, delete it from the current proxy table
-  DELETE FROM hafbe_app.current_account_proxies cap 
-  WHERE 
-    cap.account_id = _account_id AND 
+  DELETE FROM hafbe_app.current_account_proxies cap
+  WHERE
+    cap.account_id = _account_id AND
     cap.proxy_id = _proxy_id AND
     NOT _proxy AND _proxy_id IS NOT NULL;
 
-  -- If the proxy is set, delete any existing witness votes for the account 
+  -- If the proxy is set, delete any existing witness votes for the account
   WITH delete_votes_if_proxy AS (
-    DELETE FROM hafbe_app.current_witness_votes cap 
+    DELETE FROM hafbe_app.current_witness_votes cap
     WHERE cap.voter_id = _account_id AND _proxy AND _proxy_id IS NOT NULL
     RETURNING cap.voter_id, cap.witness_id
   )
-  -- and insert them into the history table 
+  -- and insert them into the history table
   INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op)
   SELECT cap.witness_id, cap.voter_id, FALSE, _id
   FROM delete_votes_if_proxy cap;
@@ -116,7 +116,7 @@ BEGIN
 
   -- Delete the account from the current votes table
   WITH delete_votes AS (
-    DELETE FROM hafbe_app.current_witness_votes cap 
+    DELETE FROM hafbe_app.current_witness_votes cap
     WHERE cap.voter_id = _account_id
     RETURNING cap.voter_id, cap.witness_id
   )

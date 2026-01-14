@@ -59,9 +59,9 @@ CREATE OR REPLACE VIEW hafbe_backend.recursive_account_proxies_view AS
   ) rap;
 ------
 
--- list of accounts that voted on any witness 
+-- list of accounts that voted on any witness
 CREATE OR REPLACE VIEW hafbe_backend.witness_voters_list_view AS
-  SELECT 
+  SELECT
     cwv.voter_id AS account_id
   FROM hafbe_app.current_witness_votes cwv
   GROUP BY cwv.voter_id;
