@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: 9152ee88869ff750eb9645a7949b80a41d74df94
+  ref: develop
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -710,21 +710,13 @@ pattern-test:
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
-build_and_publish_image:
-  stage: publish
-  extends: .publish_docker_image_template
-  before_script:
-  - !reference [.publish_docker_image_template, before_script]
-  script:
-  - |
-    scripts/ci-helpers/build_and_publish_instance.sh
-    if [[ -n "$CI_COMMIT_TAG" ]]; then
-      docker tag "$CI_REGISTRY_IMAGE/postgrest-rewriter:$CI_COMMIT_TAG" "registry-upload.hive.blog/haf_block_explorer/postgrest-rewriter:$CI_COMMIT_TAG"
-      docker push "registry-upload.hive.blog/haf_block_explorer/postgrest-rewriter:$CI_COMMIT_TAG"
-    fi
-  tags:
-  - public-runner-docker
-  - standard
+# Publish to registry.hive.blog on protected tags only
+# Uses pull/retag/push pattern - no rebuild
+publish_images:
+  extends: .docker_publish_job_template
+  variables:
+    # haf_block_explorer root image + postgrest-rewriter
+    PUBLISH_IMAGES: "haf_block_explorer postgrest-rewriter"
 
 deploy_python_api_packages_to_gitlab:
   stage: publish
