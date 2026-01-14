@@ -5,7 +5,6 @@ set -euo pipefail
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 owner_role=hafbe_owner
-BLOCKSEARCH_INDEXES=false
 BTRACKER_SCHEMA=hafbe_bal
 REPTRACKER_SCHEMA=reptracker_app
 SWAGGER_URL="{hafbe-host}"
@@ -21,10 +20,7 @@ cat <<EOF
     --port=NUMBER                     PostgreSQL operating port (defaults to 5432)
     --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
     --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
-    --indexes-only                    Only creates indexes (ignored when --only-apps is specified)
-    --schema-only                     Only creates schema, but not indexes (ignored when --only-apps is specified)
-    --blocksearch-indexes=true/false  If true, blocksearch indexes will be created on setup (defaults to false)
-    --swagger-url=URL        Allows to specify a server URL
+    --swagger-url=URL                 Allows to specify a server URL
     --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
 
 EOF
@@ -44,9 +40,6 @@ while [ $# -gt 0 ]; do
     --port=*)
         POSTGRES_PORT="${1#*=}"
         ;;
-    --blocksearch-indexes=*)
-        BLOCKSEARCH_INDEXES="${1#*=}"
-        ;;
     --btracker-schema=*)
         BTRACKER_SCHEMA="${1#*=}"
         ;;
@@ -56,9 +49,9 @@ while [ $# -gt 0 ]; do
     --swagger-url=*)
         SWAGGER_URL="${1#*=}"
         ;;
-  --is_forking=*)
-    IS_FORKING="${1#*=}"
-    ;;
+    --is_forking=*)
+        IS_FORKING="${1#*=}"
+        ;;
     --help|-h|-\?)
         print_help
         exit 0
@@ -148,74 +141,52 @@ setup_apps() {
 
 setup_api() {
   # setup db schema
-
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/builtin_roles.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET custom.is_forking = '$IS_FORKING';" -f "$db_dir/database_schema.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$db_dir/hafbe_app_helpers.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes/hafbe_app_indexes.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/main_loop.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET custom.is_forking = '$IS_FORKING'; SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$db_dir/hafbe_app.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_account_stats.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_block_operations.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_transaction_stats.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_witness_stats.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$db_dir/process_witness_votes.sql"
 
-
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO $owner_role;"
 
-  # setup backend schema
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/backend_schema.sql"
+  # setup backend schema (inline creation)
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS hafbe_backend AUTHORIZATION hafbe_owner;"
 
-  # openapi types
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/backend_types.sql"
+  # openapi types (consolidated domain files)
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/enums.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/transactions.sql"
 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/account_authority.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/account.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/proxy_power.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks/blocksearch.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/accounts/permlink_history.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/blocks/latest_blocks.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/other/input_type.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/operations/operation.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_voters.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness_votes_history_record.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/witnesses/witness.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/transactions/granularity.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend_types/transactions/transaction_stats.sql"
-
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/blocksearch_backend.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/default.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_operation.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_operation_key_value.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_multiple_operations.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_operation.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_operation_key_value.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/filtering_functions/by_account_multi_operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/blocksearch.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/blocksearch_filters.sql"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/account.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/get_account_proxies_power.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/aggregated_transactions.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/proxies.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/transactions.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/authority.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/comment_operations.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/comment_permlinks.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/witness.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/witness_count.sql"
 
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$backend/utilities/views.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/exceptions.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/sync_time.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/validators.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/get_operation_types.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/operation_types.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/blocks.sql"
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/utilities/witness.sql"
 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/process_account_stats.sql"
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/process_witness_votes.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/operation_parsers/account_operations.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/operation_parsers/witness_operations.sql"
 
-  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/blocksearch/get_blocks_by_ops.sql"
+  psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$backend/endpoint_helpers/blocks.sql"
 
   # openapi endpoints
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -c "SET custom.swagger_url = '$SWAGGER_URL';" -f "$endpoints/endpoint_schema.sql"
@@ -237,25 +208,23 @@ setup_api() {
   psql "$POSTGRES_ACCESS_OWNER" -v "ON_ERROR_STOP=on" -f "$endpoints/witnesses/get_witnesses.sql"
 
   # must be done by admin
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$backend/hafbe_roles.sql"
   psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$hafbe_dir/scripts/set_version_in_sql.pgsql"
 
-}
+  # Role grants (inline, following btracker pattern)
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT USAGE ON SCHEMA hafbe_app TO hafbe_user;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT USAGE ON SCHEMA hafbe_endpoints TO hafbe_user;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT USAGE ON SCHEMA hafbe_backend TO hafbe_user;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_backend TO hafbe_user;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_endpoints TO hafbe_user;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT SELECT ON ALL TABLES IN SCHEMA hafbe_app TO hafbe_user;"
 
-# blockseach indexes are registered when flag is set to true
-register_blocksearch_indexes() {
-  echo 'Registering block search indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes/hafbe_blocksearch_indexes.sql"
-}
+  # Allow hived to fullfil vacuum full requests
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT MAINTAIN ON ALL TABLES IN SCHEMA hafbe_app TO hived_group;"
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT ALL ON SCHEMA hafbe_app TO hived_group;"
 
-register_commentsearch_indexes() {
-  echo 'Registering comment search indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes/hafbe_commentsearch_indexes.sql"
-}
-
-register_haf_indexes() {
-  echo 'Registering haf indexes...'
-  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes/haf_indexes.sql"
+  # Register HAF index dependencies
+  echo 'Registering HAF index dependencies...'
+  psql "$POSTGRES_ACCESS_ADMIN" -v "ON_ERROR_STOP=on" -f "$db_dir/indexes.sql"
 }
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
@@ -263,7 +232,7 @@ SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 endpoints="$SCRIPT_DIR/../endpoints"
 backend="$SCRIPT_DIR/../backend"
 backend_types="$SCRIPT_DIR/../backend/types"
-db_dir="$SCRIPT_DIR/../database"
+db_dir="$SCRIPT_DIR/../db"
 hafah_dir="$SCRIPT_DIR/../submodules/hafah"
 btracker_dir="$SCRIPT_DIR/../submodules/btracker"
 reptracker_dir="$SCRIPT_DIR/../submodules/reptracker"
@@ -275,10 +244,5 @@ fi
 
 if [ "$ONLY_APPS" -eq 0 ]; then
   setup_api
-  if [ "$BLOCKSEARCH_INDEXES" = "true" ]; then
-    register_blocksearch_indexes
-  fi
-  register_haf_indexes
-  register_commentsearch_indexes
 fi
 
