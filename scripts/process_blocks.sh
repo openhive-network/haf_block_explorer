@@ -23,7 +23,7 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_USER=${POSTGRES_USER:-"hafbe_owner"}
 PROCESS_BLOCK_LIMIT=${PROCESS_BLOCK_LIMIT:-null}
 LOG_FILE=${LOG_FILE:-"hafbe_sync.log"}
-BTRACKER_SCHEMA='hafbe_bal'
+BTRACKER_SCHEMA=${BTRACKER_SCHEMA:-"hafbe_bal"}
 
 while [ $# -gt 0 ]; do
   case "$1" in
