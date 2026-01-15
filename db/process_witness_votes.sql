@@ -9,35 +9,42 @@ SET jit = OFF
 AS
 $$
 DECLARE
-  _result INT;
+  -- Operation type IDs for witness votes and proxies
+  _op_account_witness_vote         INT := hafbe_backend.op_account_witness_vote();
+  _op_account_witness_proxy        INT := hafbe_backend.op_account_witness_proxy();
+  _op_proxy_cleared                INT := hafbe_backend.op_proxy_cleared();
+  _op_declined_voting_rights       INT := hafbe_backend.op_declined_voting_rights();
+  _op_expired_account_notification INT := hafbe_backend.op_expired_account_notification();
+  _result                          INT;
 BEGIN
 -- function used to calculate witness votes and proxies
 -- updates tables hafbe_app.current_account_proxies, hafbe_app.current_witness_votes, hafbe_app.witness_votes_history, hafbe_app.account_proxies_history
-  WITH proxy_ops_without_timestamp AS MATERIALIZED (
+  WITH proxy_ops AS MATERIALIZED (
     SELECT
       ov.body AS body,
       ov.id,
       ov.block_num,
-      ov.op_type_id as op_type
+      ov.op_type_id AS op_type
     FROM hafbe_app.operations_view ov
     WHERE
-      ov.op_type_id IN (12,13,91,92,75) AND
+      ov.op_type_id IN (_op_account_witness_vote, _op_account_witness_proxy, _op_proxy_cleared, _op_declined_voting_rights, _op_expired_account_notification) AND
       ov.block_num BETWEEN _from AND _to
-  ),
-  proxy_ops AS (
-    SELECT
-      proxy_ops_w_t.body,
-      proxy_ops_w_t.id,
-      proxy_ops_w_t.block_num,
-      proxy_ops_w_t.op_type,
-      hb.created_at timestamp
-    FROM proxy_ops_without_timestamp proxy_ops_w_t
-    JOIN hive.blocks_view hb ON hb.num = proxy_ops_w_t.block_num
   ),
   balance_change AS (
     SELECT
       bc.id,
-      hafbe_backend.process_votes_and_proxies(bc.body, bc.op_type, bc.id) AS result
+      (
+        CASE
+          WHEN bc.op_type = _op_account_witness_vote THEN
+            hafbe_backend.process_vote_op(bc.body, bc.id)
+          WHEN bc.op_type = _op_account_witness_proxy THEN
+            hafbe_backend.process_proxy_ops(bc.body, bc.id, TRUE)
+          WHEN bc.op_type = _op_proxy_cleared THEN
+            hafbe_backend.process_proxy_ops(bc.body, bc.id, FALSE)
+          WHEN bc.op_type = _op_declined_voting_rights OR bc.op_type = _op_expired_account_notification THEN
+            hafbe_backend.process_expired_accounts(bc.body, bc.id)
+        END
+      ) AS result
     FROM proxy_ops bc
     ORDER BY bc.id
   )
