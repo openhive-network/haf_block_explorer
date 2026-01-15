@@ -8,7 +8,8 @@ STABLE
 AS
 $$
 DECLARE
-  __max_page_size INT := 1000; -- max page size for pagination
+  __nai_vests     INT := btracker_backend.nai_vests();
+  __max_page_size INT := hafbe_backend.default_max_page_size();
 BEGIN
   RETURN QUERY
     WITH delegates AS MATERIALIZED (
@@ -39,7 +40,7 @@ BEGIN
     JOIN hive.accounts_view av        ON av.id = d.account_id
     JOIN hive.blocks_view bv          ON bv.num = d.source_op_block
     -- no need for grouping
-    LEFT JOIN current_account_balances cab ON cab.account = d.account_id AND cab.nai = 37
+    LEFT JOIN current_account_balances cab ON cab.account = d.account_id AND cab.nai = __nai_vests
     -- (without delayed vests the proxied power is not accurate)
     LEFT JOIN account_withdraws aw    ON aw.account = d.account_id
     -- use voters_proxied_vests_sum_view where the grouping is already done - simpler code

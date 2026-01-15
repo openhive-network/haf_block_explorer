@@ -123,12 +123,12 @@ STABLE
 AS
 $$
 DECLARE
-    __from INT;
-    __to INT;
-    __from_timestamp TIMESTAMP;
-    __to_timestamp TIMESTAMP;
-    __granularity TEXT;
-    __one_period INTERVAL;
+    __from                INT;
+    __to                  INT;
+    __from_timestamp      TIMESTAMP;
+    __to_timestamp        TIMESTAMP;
+    __granularity         TEXT;
+    __one_period          INTERVAL;
     -- Get the current block number from the context
     __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN

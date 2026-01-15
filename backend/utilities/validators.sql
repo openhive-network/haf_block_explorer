@@ -60,7 +60,7 @@ AS
 $$
 DECLARE
   _is_key_incorrect BOOLEAN := FALSE;
-  _invalid_key TEXT         := NULL;
+  _invalid_key      TEXT    := NULL;
 BEGIN
   --check if provided keys are correct
   WITH user_provided_keys AS

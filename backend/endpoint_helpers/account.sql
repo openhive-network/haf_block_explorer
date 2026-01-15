@@ -85,23 +85,19 @@ $$
 DECLARE
   __profile_image_url TEXT;
 BEGIN
-BEGIN
-  SELECT json_metadata::JSON->'profile'->>'profile_image' INTO __profile_image_url;
-EXCEPTION WHEN invalid_text_representation THEN
-  SELECT NULL INTO __profile_image_url;
-END;
+  BEGIN
+    __profile_image_url := json_metadata::JSON->'profile'->>'profile_image';
+    EXCEPTION WHEN invalid_text_representation THEN __profile_image_url := NULL;
+  END;
 
-IF __profile_image_url IS NULL THEN
-BEGIN
-  SELECT posting_json_metadata::JSON->'profile'->>'profile_image' INTO __profile_image_url;
-EXCEPTION WHEN invalid_text_representation THEN
-  SELECT NULL INTO __profile_image_url;
-END;
-END IF;
+  IF __profile_image_url IS NULL THEN
+    BEGIN
+      __profile_image_url := posting_json_metadata::JSON->'profile'->>'profile_image';
+    EXCEPTION WHEN invalid_text_representation THEN __profile_image_url := NULL;
+    END;
+  END IF;
 
-RETURN __profile_image_url
-;
-
+  RETURN __profile_image_url;
 END
 $$;
 
@@ -173,11 +169,13 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
+DECLARE
+  _op_effective_comment_vote INT := hafbe_backend.op_effective_comment_vote();
 BEGIN
   RETURN ov.timestamp
   FROM hive.account_operations_view aov
   JOIN hive.operations_view_extended ov ON ov.id = aov.operation_id
-  WHERE aov.op_type_id = 72 AND
+  WHERE aov.op_type_id = _op_effective_comment_vote AND
     aov.account_id = _account AND
     ov.body_binary::JSONB->'value'->>'voter'= (SELECT av.name FROM hive.accounts_view av WHERE av.id = _account)
   ORDER BY account_op_seq_no DESC

@@ -483,8 +483,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __start_ts timestamptz;
-  __end_ts   timestamptz;
+  __start_ts TIMESTAMPTZ;
+  __end_ts   TIMESTAMPTZ;
 BEGIN
   PERFORM set_config('synchronous_commit', 'OFF', false);
 
@@ -527,8 +527,8 @@ LANGUAGE 'plpgsql'
 AS
 $$
 DECLARE
-  __start_ts timestamptz;
-  __end_ts   timestamptz;
+  __start_ts TIMESTAMPTZ;
+  __end_ts   TIMESTAMPTZ;
 BEGIN
   PERFORM set_config('synchronous_commit', 'ON', false);
 
@@ -580,9 +580,9 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 DECLARE
-  __start_ts timestamptz;
-  __end_ts   timestamptz;
-  _time JSONB = '{}'::JSONB;
+  __start_ts TIMESTAMPTZ;
+  __end_ts   TIMESTAMPTZ;
+  _time      JSONB = '{}'::JSONB;
 BEGIN
   IF hive.get_current_stage_name(_context_hafbe) = 'MASSIVE_PROCESSING' THEN
     RAISE NOTICE '[MASSIVE] Attempting to process a block range: <%, %>', _block_range.first_block, _block_range.last_block;

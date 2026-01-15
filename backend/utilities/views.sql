@@ -75,7 +75,7 @@ CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_view AS
     SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests,
     rapv.proxy_level
   FROM hafbe_backend.recursive_account_proxies_view rapv
-  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = btracker_backend.nai_vests()
   LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
   GROUP BY rapv.proxy_id, rapv.proxy_level;
 
@@ -85,7 +85,7 @@ CREATE OR REPLACE VIEW hafbe_backend.voters_proxied_vests_sum_view AS
     rapv.proxy_id,
     SUM(cab.balance - COALESCE(dv.delayed_vests,0))::BIGINT AS proxied_vests
   FROM hafbe_backend.recursive_account_proxies_view rapv
-  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = 37
+  JOIN current_account_balances cab ON cab.account = rapv.account_id AND cab.nai = btracker_backend.nai_vests()
   LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
   GROUP BY rapv.proxy_id;
 
@@ -99,7 +99,7 @@ CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
     COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
     COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
   FROM hafbe_backend.witness_voters_list_view cw
-  LEFT JOIN current_account_balances cab ON cab.account = cw.account_id AND cab.nai = 37
+  LEFT JOIN current_account_balances cab ON cab.account = cw.account_id AND cab.nai = btracker_backend.nai_vests()
   LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
   LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
 
@@ -112,7 +112,7 @@ CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
       COALESCE(cab.balance::BIGINT, 0) AS account_vests
     FROM hafbe_backend.witness_voters_list_view wvl
     --LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = wvl.account_id
-    LEFT JOIN current_account_balances cab ON cab.account = wvl.account_id AND cab.nai = 37
+    LEFT JOIN current_account_balances cab ON cab.account = wvl.account_id AND cab.nai = btracker_backend.nai_vests()
   ) cw
   LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
   LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
@@ -127,7 +127,7 @@ CREATE OR REPLACE VIEW hafbe_backend.expired_voter_stats_view AS
     COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT,0) AS account_vests,
     COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
   FROM hive.accounts_view av
-  LEFT JOIN current_account_balances cab ON cab.account = av.id AND cab.nai = 37
+  LEFT JOIN current_account_balances cab ON cab.account = av.id AND cab.nai = btracker_backend.nai_vests()
   LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = av.id
   LEFT JOIN account_withdraws dv ON dv.account = av.id;
 
