@@ -28,18 +28,15 @@ AS
 $$
 DECLARE
   __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-
-  __count INT;
-  __from INT;
-  __to INT;
-
-  __rest_of_division INT;
-  __total_pages INT;
-  __page INT;
-  __offset INT;
-  __limit INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count               INT;
+  __from                INT;
+  __to                  INT;
+  __rest_of_division    INT;
+  __total_pages         INT;
+  __page                INT;
+  __offset              INT;
+  __limit               INT;
+  _result               hafbe_backend.blocksearch[];
 BEGIN
   -----------PAGING LOGIC----------------
   SELECT count_blocks, from_block, to_block
@@ -118,15 +115,13 @@ AS
 $$
 DECLARE
   __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := 10;
-
-  __min_block_num INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __max_page_count      INT := 10;
+  __min_block_num       INT;
+  __count               INT;
+  __from                INT;
+  __to                  INT;
+  __total_pages         INT;
+  _result               hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -284,22 +279,20 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := 10;
-
-  __min_block_num INT;
+  __hafbe_current_block      INT    := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT    := 10;
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
   -- keys must be declared in seperate variables
   -- otherwise planner will not use indexes
-  _path1 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
-  _path2 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
-  _path3 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
+  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
+  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -463,17 +456,15 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := array_length(_operations, 1);
-
-  __min_block_num INT;
+  __hafbe_current_block      INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT := array_length(_operations, 1);
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -628,20 +619,17 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := 10;
-
-  __from_seq INT;
-  __to_seq INT;
-
-  __min_block_num INT;
+  __hafbe_current_block      INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT := 10;
+  __from_seq                 INT;
+  __to_seq                   INT;
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block, from_seq, to_seq
   INTO __from, __to, __from_seq, __to_seq
@@ -809,17 +797,15 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := 10;
-
-  __min_block_num INT;
+  __hafbe_current_block      INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT := 10;
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -985,22 +971,20 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := 10;
-
-  __min_block_num INT;
+  __hafbe_current_block      INT    := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT    := 10;
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
   -- keys must be declared in seperate variables
   -- otherwise planner will not use indexes
-  _path1 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
-  _path2 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
-  _path3 TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
+  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
+  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -1188,17 +1172,15 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count INT := array_length(_operations, 1);
-
-  __min_block_num INT;
+  __hafbe_current_block      INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  __max_page_count           INT := array_length(_operations, 1);
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __from INT;
-  __to INT;
-  __total_pages INT;
-
-  _result hafbe_backend.blocksearch[];
+  __count                    INT;
+  __from                     INT;
+  __to                       INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.blocksearch[];
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to

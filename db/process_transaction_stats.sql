@@ -10,7 +10,7 @@ SET enable_bitmapscan = OFF
 AS
 $$
 DECLARE
-  __trx_by_day INT;
+  __trx_by_day   INT;
   __trx_by_month INT;
 BEGIN
   WITH gather_transactions AS MATERIALIZED (

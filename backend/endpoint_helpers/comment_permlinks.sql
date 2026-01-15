@@ -16,14 +16,13 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __max_page_count INT := 10;
-
-  __min_block_num INT;
+  __op_comment               INT := hafbe_backend.op_comment();
+  __max_page_count           INT := hafbe_backend.default_max_page_count();
+  __min_block_num            INT;
   __count_pre_grouped_blocks INT;
-  __count INT;
-  __total_pages INT;
-
-  _result hafbe_backend.permlink[];
+  __count                    INT;
+  __total_pages              INT;
+  _result                    hafbe_backend.permlink[];
 BEGIN
   WITH gather_operations AS MATERIALIZED (
     SELECT
@@ -33,7 +32,7 @@ BEGIN
       ov.body_binary::jsonb->'value'->>'permlink' as permlink
     FROM hive.operations_view ov
     WHERE
-      ov.op_type_id = 1 AND
+      ov.op_type_id = __op_comment AND
       ov.block_num <= _to AND
       ov.block_num >= _from AND
       ov.body_binary::jsonb->'value'->>'author' = _author AND (

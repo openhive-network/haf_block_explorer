@@ -16,13 +16,12 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  result hafbe_backend.block_history;
-
+  result                 hafbe_backend.block_history;
   -- flags
-  _filter_by_op BOOLEAN:= (_operations IS NOT NULL);
-  _filter_by_single_op BOOLEAN := (CASE WHEN (_operations IS NOT NULL) AND (array_length(_operations, 1) = 1) THEN TRUE ELSE FALSE END);
-  _filter_by_account BOOLEAN := (_account IS NOT NULL);
-  _filter_by_key BOOLEAN := (_key_content[1] IS NOT NULL);
+  _filter_by_op          BOOLEAN := (_operations IS NOT NULL);
+  _filter_by_single_op   BOOLEAN := (CASE WHEN (_operations IS NOT NULL) AND (array_length(_operations, 1) = 1) THEN TRUE ELSE FALSE END);
+  _filter_by_account     BOOLEAN := (_account IS NOT NULL);
+  _filter_by_key         BOOLEAN := (_key_content[1] IS NOT NULL);
 BEGIN
 
   CASE

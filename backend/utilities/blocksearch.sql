@@ -6,12 +6,14 @@ LANGUAGE 'plpgsql'
 STABLE
 AS
 $$
+DECLARE
+  _op_producer_reward INT := hafbe_backend.op_producer_reward();
 BEGIN
 RETURN (ov.body->'value'->'vesting_shares'->>'amount')::BIGINT
 FROM hive.operations_view ov
 WHERE
   ov.block_num = _block_num AND
-	ov.op_type_id = 64;
+	ov.op_type_id = _op_producer_reward;
 END
 $$;
 
@@ -82,9 +84,10 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __to INT;
-  __from INT;
-  __count INT;
+  __genesis_block INT := hafbe_backend.genesis_block_num();
+  __to            INT;
+  __from          INT;
+  __count         INT;
 BEGIN
   __to := (
     CASE
@@ -100,7 +103,7 @@ BEGIN
   __from := (
     CASE
       WHEN (_from IS NULL) THEN
-        1
+        __genesis_block
       ELSE
         _from
       END
@@ -123,8 +126,9 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __to INT;
-  __from INT;
+  __genesis_block INT := hafbe_backend.genesis_block_num();
+  __to            INT;
+  __from          INT;
 BEGIN
   __to := (
     CASE
@@ -140,7 +144,7 @@ BEGIN
   __from := (
     CASE
       WHEN (_from IS NULL) THEN
-        1
+        __genesis_block
       ELSE
         _from
       END
@@ -171,10 +175,11 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __to INT;
-  __from INT;
-  __to_seq INT;
-  __from_seq INT;
+  __genesis_block INT := hafbe_backend.genesis_block_num();
+  __to            INT;
+  __from          INT;
+  __to_seq        INT;
+  __from_seq      INT;
 BEGIN
   __to := (
     CASE
@@ -190,7 +195,7 @@ BEGIN
   __from := (
     CASE
       WHEN (_from IS NULL) THEN
-        1
+        __genesis_block
       ELSE
         _from
       END
@@ -238,8 +243,10 @@ SET JIT = OFF
 AS
 $$
 DECLARE
-  __to INT;
-  __from INT;
+  __genesis_block  INT := hafbe_backend.genesis_block_num();
+  __max_page_count INT := hafbe_backend.default_max_page_count();
+  __to             INT;
+  __from           INT;
 BEGIN
   __to := (
     CASE
@@ -255,7 +262,7 @@ BEGIN
   __from := (
     CASE
       WHEN (_from IS NULL) THEN
-        1
+        __genesis_block
       ELSE
         _from
       END
@@ -275,7 +282,7 @@ BEGIN
         ORDER BY
           (CASE WHEN _order_is = 'desc' THEN ov.block_num ELSE NULL END) DESC,
           (CASE WHEN _order_is = 'asc' THEN ov.block_num ELSE NULL END) ASC
-        LIMIT (10 * _limit) -- by default operation filter is limited to 10 pages
+        LIMIT (__max_page_count * _limit) -- by default operation filter is limited to max_page_count pages
       )
     )
     SELECT (
@@ -311,10 +318,10 @@ AS
 $$
 DECLARE
   __rest_of_division INT;
-  __total_pages INT;
-  __page INT;
-  __offset INT;
-  __limit INT;
+  __total_pages      INT;
+  __page             INT;
+  __offset           INT;
+  __limit            INT;
 BEGIN
   __rest_of_division := (_count % _limit)::INT;
 
