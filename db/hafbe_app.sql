@@ -88,6 +88,10 @@ BEGIN
 
   RAISE NOTICE 'Attempting to create an application schema tables...';
 
+  -- Register state providers for hafbe_app
+  PERFORM hive.app_state_provider_import('METADATA', 'hafbe_app');
+  PERFORM hive.app_state_provider_import('KEYAUTH',  'hafbe_app');
+
   ------------- CONTROL TABLES ----------------
 
   -- Application status table for processing control and timing
