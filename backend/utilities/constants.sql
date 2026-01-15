@@ -43,4 +43,63 @@ BEGIN
 END;
 $$;
 
+-- ============================================================================
+-- Account Parameters Defaults
+-- These provide single source of truth for account_parameters table defaults
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_can_vote()
+RETURNS BOOLEAN LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN TRUE;  -- Accounts can vote by default
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_mined()
+RETURNS BOOLEAN LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN TRUE;  -- Default assumption for legacy accounts
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_recovery_account()
+RETURNS TEXT LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN '';  -- Empty string means no recovery account set
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_timestamp()
+RETURNS TIMESTAMP LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN '1970-01-01T00:00:00'::TIMESTAMP;  -- Unix epoch as placeholder
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_pending_claimed_accounts()
+RETURNS INT LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN 0;  -- No pending claimed accounts by default
+END;
+$$;
+
+-- ============================================================================
+-- Blockchain-specific Account Names
+-- Special account names with semantic meaning in the Hive protocol
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION hafbe_backend.pre_hf11_recovery_account()
+RETURNS TEXT LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN 'steem';  -- Before HF11, all accounts defaulted to 'steem' as recovery
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.temp_creator_account()
+RETURNS TEXT LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN 'temp';  -- Special creator name indicating self-created account
+END;
+$$;
+
 RESET ROLE;

@@ -25,17 +25,26 @@ FIRST_VALUE(field) OVER (
 )
 ```
 
-#### 2. Replaced Correlated Subqueries with JOINs
-```sql
--- Before:
-SELECT (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = account_name) AS account_id
-FROM parsed_ops
+#### 2. accounts_view: Use Subqueries, NOT JOINs
 
--- After:
-SELECT av.id AS account_id
+**IMPORTANT:** Due to `hafbe_app.accounts_view` internal structure, subqueries perform
+BETTER than JOINs. This is opposite to general SQL advice.
+
+```sql
+-- CORRECT: Subquery pattern for accounts_view
+SELECT
+  (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = po.account_name) AS account_id,
+  po.field1
+FROM parsed_ops po
+
+-- WRONG: JOIN causes performance issues with this specific view
+SELECT av.id AS account_id, po.field1
 FROM parsed_ops po
 JOIN hafbe_app.accounts_view av ON av.name = po.account_name
 ```
+
+**Also apply "late binding"** - resolve account IDs on the SMALLEST CTE (after aggregation)
+to minimize the number of subquery lookups.
 
 #### 3. Cached Operation Type IDs in DECLARE Block
 ```sql
@@ -137,17 +146,37 @@ Document common SQL patterns inline:
  */
 ```
 
-#### UPSERT Pattern
+#### UPSERT Pattern - CRITICAL: Immutable vs Mutable Fields
+
+**This distinction is critical and caused a bug affecting 5778 accounts when done incorrectly.**
+
 ```sql
 /*
- * UPSERT with COALESCE for incremental updates:
- *   COALESCE(EXCLUDED.field, ap.field, DEFAULT)
+ * IMMUTABLE FIELDS (mined, created) - set once, never change:
+ *   COALESCE(ap.field, EXCLUDED.field, DEFAULT)
+ *   - EXISTING value takes precedence (ap.field first)
+ *   - Prevents subsequent operations from overwriting original values
+ *   - Example: pow operation after account creation won't overwrite created timestamp
  *
- * Three-argument COALESCE:
- *   1. EXCLUDED.field: New value from this batch
- *   2. ap.field: Existing value in table
- *   3. DEFAULT: Fallback if both are NULL
+ * MUTABLE FIELDS (recovery_account) - can be updated:
+ *   COALESCE(EXCLUDED.field, ap.field, DEFAULT)
+ *   - NEW value takes precedence (EXCLUDED.field first)
+ *   - Allows updates to take effect
  */
+```
+
+**The Bug Scenario (why order matters):**
+Account "admin" was created at block 1092, but later a pow operation at block 562881
+(just mining, not creating) was processed. With wrong COALESCE order:
+- `COALESCE(EXCLUDED.created, ap.created, ...)` → The later pow's timestamp overwrote the original
+- `COALESCE(EXCLUDED.mined, ap.mined, ...)` → Non-mined accounts became mined=TRUE
+
+**The Fix:**
+For immutable fields, put existing value FIRST:
+```sql
+DO UPDATE SET
+  mined   = COALESCE(ap.mined, EXCLUDED.mined, hafbe_backend.default_mined()),
+  created = COALESCE(ap.created, EXCLUDED.created, hafbe_backend.default_timestamp());
 ```
 
 #### Additive UPSERT Pattern
@@ -167,6 +196,30 @@ Document common SQL patterns inline:
 - **2 spaces** for SQL code body
 - **4 spaces** only for function parameter listings
 - Align DECLARE block variable names for readability
+
+---
+
+## Variable Naming Convention
+
+- **Single underscore prefix (`_var`)**: Function parameters
+- **Double underscore prefix (`__var`)**: Function-local variables in DECLARE
+
+```sql
+CREATE OR REPLACE FUNCTION hafbe_backend.parse_xyz(
+    _body      JSONB,      -- single underscore: parameter
+    _timestamp TIMESTAMP   -- single underscore: parameter
+)
+RETURNS hafbe_backend.result_type
+LANGUAGE 'plpgsql' STABLE
+AS $$
+DECLARE
+  __result hafbe_backend.result_type;  -- double underscore: local variable
+BEGIN
+  __result := (...);
+  RETURN __result;
+END
+$$;
+```
 
 ---
 
@@ -460,7 +513,7 @@ COALESCE(EXCLUDED.mined, ap.mined, hafbe_backend.default_mined())
 ## Common Issues to Look For
 
 1. **Recursive CTEs for sequential processing** → Replace with window functions
-2. **Correlated subqueries for general lookups** → Use JOINs (EXCEPT for accounts_view - see below)
+2. **Correlated subqueries for general lookups** → Use JOINs (EXCEPT for accounts_view - see above)
 3. **Repeated op_*() calls** → Cache in DECLARE
 4. **ROW_NUMBER partitioned by JSON field** → Aggregate first, partition by account_name
 5. **Missing MATERIALIZED** → Add to CTEs that are expensive or referenced multiple times
@@ -470,6 +523,7 @@ COALESCE(EXCLUDED.mined, ap.mined, hafbe_backend.default_mined())
 9. **JOIN on accounts_view** → Use subquery pattern instead (view structure issue)
 10. **Resolving account IDs early** → Resolve on smallest CTE (late binding)
 11. **Inline JSON parsing in CTEs** → Use helper functions from `backend/operation_parsers/`
+12. **CRITICAL: Wrong COALESCE order in UPSERT** → Immutable fields need `COALESCE(ap.field, EXCLUDED.field, ...)` to preserve existing values; mutable fields need `COALESCE(EXCLUDED.field, ap.field, ...)` to allow updates
 
 ---
 
