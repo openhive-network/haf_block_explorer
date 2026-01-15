@@ -146,7 +146,6 @@ find_haf_image:
     expire_in: 1 day
   tags:
   - public-runner-docker
-  - standard
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
@@ -180,7 +179,6 @@ quick_test_setup:
   - when: never
   tags:
   - public-runner-docker
-  - standard
 
 # =============================================================================
 # Data Preparation Jobs (use pre-built images from registry)
@@ -207,7 +205,6 @@ prepare_haf_data:
   - echo "Using HAF image:${HAF_IMAGE_NAME} (commit:${HAF_COMMIT})"
   tags:
   - public-runner-docker
-  - standard
 
 .docker-base-build-template:
   extends: .docker_image_builder_job_template
@@ -248,7 +245,6 @@ prepare_haf_data:
     echo -e "\e[0Ksection_end:$(date +%s):build\r\e[0K"
   tags:
   - public-runner-docker
-  - standard
 
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
@@ -277,7 +273,6 @@ extract-swagger-json:
     GIT_SUBMODULE_STRATEGY: none
   tags:
   - public-runner-docker
-  - standard
 
 generate-wax-spec:
   extends: .generate_swagger_package
@@ -298,7 +293,6 @@ generate-wax-spec:
     artifacts: true
   tags:
   - public-runner-docker
-  - standard
 
 generate_python_api_client:
   extends: .project_develop_configuration_template
@@ -323,7 +317,6 @@ generate_python_api_client:
     - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
   tags:
   - public-runner-docker
-  - standard
 
 build_python_api_client_wheel:
   extends: .build_wheel_template
@@ -342,7 +335,6 @@ build_python_api_client_wheel:
     GIT_SUBMODULE_STRATEGY: none
   tags:
   - public-runner-docker
-  - standard
 
 sync:
   extends:
@@ -445,7 +437,6 @@ sync:
   artifacts: !reference [.haf_app_sync_artifacts, artifacts]
   tags:
   - data-cache-storage
-  - standard
   - fast
 
 python_api_client_test:
@@ -467,7 +458,6 @@ python_api_client_test:
   - pytest "${PYPROJECT_DIR}/tests"
   tags:
   - public-runner-docker
-  - standard
 
 # =============================================================================
 # TEST JOB BASE TEMPLATE (Docker Compose)
@@ -566,7 +556,6 @@ python_api_client_test:
     expire_in: 1 week
   tags:
   - data-cache-storage
-  - standard
   - fast
 
 # =============================================================================
@@ -734,7 +723,6 @@ deploy_python_api_packages_to_gitlab:
   when: on_success
   tags:
   - public-runner-docker
-  - standard
 
 deploy-wax-spec-dev-package:
   extends: .npm_deploy_package_template
@@ -759,7 +747,6 @@ deploy-wax-spec-dev-package:
     artifacts: true
   tags:
   - public-runner-docker
-  - standard
 
 deploy-wax-spec-production-public-npm:
   extends: .registry_npmjs_org_deploy_package_template
@@ -785,7 +772,6 @@ deploy-wax-spec-production-public-npm:
     artifacts: true
   tags:
   - public-runner-docker
-  - standard
 
 cleanup_haf_cache_manual:
   extends: .cleanup_cache_manual_template
@@ -794,5 +780,4 @@ cleanup_haf_cache_manual:
     CLEANUP_PATH_PATTERN: "${DATA_CACHE_HAF_PREFIX}_*"
   tags:
   - data-cache-storage
-  - standard
   - fast
