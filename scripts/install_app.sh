@@ -110,18 +110,18 @@ get_submodule_git_dir() {
 setup_apps() {
   # Stage 1: Generate version SQL for all modules
   echo "Generating version SQL for all modules..."
-  "$HAFBE_DIR/submodules/hafah/scripts/generate_version_sql.bash" "$HAFBE_DIR/submodules/hafah" "$(get_submodule_git_dir hafah "$HAFBE_DIR/submodules/hafah")"
-  "$HAFBE_DIR/submodules/btracker/scripts/generate_version_sql.sh" "$HAFBE_DIR/submodules/btracker" "$(get_submodule_git_dir btracker "$HAFBE_DIR/submodules/btracker")"
+  "$HAFBE_DIR/submodules/hafah/scripts/generate_version_sql.bash"    "$HAFBE_DIR/submodules/hafah" "$(get_submodule_git_dir hafah "$HAFBE_DIR/submodules/hafah")"
+  "$HAFBE_DIR/submodules/btracker/scripts/generate_version_sql.sh"   "$HAFBE_DIR/submodules/btracker" "$(get_submodule_git_dir btracker "$HAFBE_DIR/submodules/btracker")"
   "$HAFBE_DIR/submodules/reptracker/scripts/generate_version_sql.sh" "$HAFBE_DIR/submodules/reptracker" "$(get_submodule_git_dir reptracker "$HAFBE_DIR/submodules/reptracker")"
   "$HAFBE_DIR/scripts/generate_version_sql.sh" "$HAFBE_DIR"
 
   # Stage 2: Install all apps
   echo "Installing HAfAH..."
-  "$HAFBE_DIR/submodules/hafah/scripts/setup_postgres.sh" --postgres-url="$POSTGRES_ACCESS"
-  "$HAFBE_DIR/submodules/hafah/scripts/install_app.sh" --postgres-url="$POSTGRES_ACCESS"
+  "$HAFBE_DIR/submodules/hafah/scripts/setup_postgres.sh"   --postgres-url="$POSTGRES_ACCESS"
+  "$HAFBE_DIR/submodules/hafah/scripts/install_app.sh"      --postgres-url="$POSTGRES_ACCESS"
 
   echo "Installing Balance Tracker..."
-  "$HAFBE_DIR/submodules/btracker/scripts/install_app.sh" --postgres-url="$POSTGRES_ACCESS" --schema="$BTRACKER_SCHEMA"
+  "$HAFBE_DIR/submodules/btracker/scripts/install_app.sh"   --postgres-url="$POSTGRES_ACCESS" --schema="$BTRACKER_SCHEMA"
 
   echo "Installing Reputation Tracker..."
   "$HAFBE_DIR/submodules/reptracker/scripts/install_app.sh" --postgres-url="$POSTGRES_ACCESS" --schema="$REPTRACKER_SCHEMA"
@@ -130,19 +130,15 @@ setup_apps() {
 setup_api() {
   echo "Setting up database roles..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/builtin_roles.sql"
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.is_forking = '$IS_FORKING'; SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$HAFBE_DIR/db/hafbe_app.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA}; SET custom.is_forking = '$IS_FORKING';" -f "$HAFBE_DIR/db/hafbe_app.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.swagger_url = '$SWAGGER_URL';" -f "$HAFBE_DIR/endpoints/endpoint_schema.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};"   -f "$HAFBE_DIR/backend/utilities/views.sql"
+
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_account_stats.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_block_operations.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_transaction_stats.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_stats.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_votes.sql"
-
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner; SELECT hive.app_state_provider_import('METADATA', 'hafbe_app');"
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner; SELECT hive.app_state_provider_import('KEYAUTH', 'hafbe_app');"
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "GRANT ALL ON TABLE hafbe_app.app_status TO hafbe_owner;"
-
-  echo "Creating backend schema..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "CREATE SCHEMA IF NOT EXISTS hafbe_backend AUTHORIZATION hafbe_owner;"
 
   echo "Installing OpenAPI types..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/types/enums.sql"
@@ -153,9 +149,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/types/transactions.sql"
 
   echo "Installing backend helpers..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocksearch.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/blocksearch_filters.sql"
-
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/account.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/proxies.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/transactions.sql"
@@ -163,22 +157,22 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/comment_operations.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/comment_permlinks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/witness.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/blocks.sql"
 
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -f "$HAFBE_DIR/backend/utilities/views.sql"
+  echo "Installing backend utilities..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/exceptions.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/sync_time.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/validators.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/operation_types.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/witness.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocksearch.sql"
 
+  echo "Installing operation parsers..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/account_operations.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/witness_operations.sql"
 
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/blocks.sql"
-
   echo "Installing REST API endpoints..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.swagger_url = '$SWAGGER_URL';" -f "$HAFBE_DIR/endpoints/endpoint_schema.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/accounts/get_account_authority.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/accounts/get_account.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/accounts/get_account_proxies_power.sql"
@@ -196,6 +190,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/witnesses/get_witness.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/witnesses/get_witnesses.sql"
 
+  echo "Setting application version..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/scripts/set_version_in_sql.pgsql"
 
   echo "Configuring permissions..."

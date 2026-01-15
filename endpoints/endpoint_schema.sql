@@ -31,13 +31,14 @@ servers:
  */
 
 CREATE SCHEMA IF NOT EXISTS hafbe_endpoints AUTHORIZATION hafbe_owner;
+CREATE SCHEMA IF NOT EXISTS hafbe_backend   AUTHORIZATION hafbe_owner;
 
 DO $__$
-DECLARE 
+DECLARE
   swagger_url TEXT;
 BEGIN
   swagger_url := current_setting('custom.swagger_url')::TEXT;
-  
+
 EXECUTE FORMAT(
 'create or replace function hafbe_endpoints.root() returns json as $_$
 declare
