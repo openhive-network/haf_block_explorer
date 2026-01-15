@@ -8,29 +8,64 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS
 $$
+DECLARE
+  -- Operation type IDs for account parameters
+  _op_pow                            INT := hafbe_backend.op_pow();
+  _op_pow2                           INT := hafbe_backend.op_pow2();
+  _op_account_created                INT := hafbe_backend.op_account_created();
+  _op_account_create                 INT := hafbe_backend.op_account_create();
+  _op_create_claimed_account         INT := hafbe_backend.op_create_claimed_account();
+  _op_account_create_with_delegation INT := hafbe_backend.op_account_create_with_delegation();
+  _op_changed_recovery_account       INT := hafbe_backend.op_changed_recovery_account();
+  -- Operation type IDs for other account stats
+  _op_recover_account                INT := hafbe_backend.op_recover_account();
+  _op_decline_voting_rights          INT := hafbe_backend.op_decline_voting_rights();
+  _op_claim_account                  INT := hafbe_backend.op_claim_account();
 BEGIN
   -- parse account parameters: mined, recovery_account, created
-  WITH ops_in_range AS (
+  -- First CTE: fetch operations with needed data
+  WITH ops_in_range AS MATERIALIZED (
+    SELECT
+      ho.body,
+      ho.op_type_id,
+      ho.id AS source_op,
+      ho.block_num AS source_op_block,
+      hb.created_at,
+      ho.block_num > ah.block_num AS is_after_hf11
+    FROM hafbe_app.operations_view ho
+    JOIN hafd.applied_hardforks ah ON ah.hardfork_num = 11
+    JOIN hive.blocks_view hb ON hb.num = ho.block_num
+    WHERE
+      ho.op_type_id IN (_op_pow, _op_pow2, _op_account_created, _op_account_create, _op_create_claimed_account, _op_account_create_with_delegation, _op_changed_recovery_account) AND
+      ho.block_num BETWEEN _from AND _to
+  ),
+  -- Second CTE: parse JSON once using helper functions
+  parsed_ops AS MATERIALIZED (
     SELECT
       iap.account_name,
       iap.mined,
       iap.recovery_account,
       iap.created,
-      ho.op_type_id,
-      ho.id AS source_op,
-      ho.block_num AS source_op_block
-    FROM hafbe_app.operations_view ho --- APP specific view must be used, to correctly handle reversible part of the data.
-    JOIN hafd.applied_hardforks ah ON ah.hardfork_num = 11
-    JOIN hive.blocks_view hb ON hb.num = ho.block_num
-    CROSS JOIN hafbe_backend.get_impacted_account_parameters(
-      ho.body,
-      ho.op_type_id,
-      hb.created_at,
-      ho.block_num > ah.block_num
+      o.op_type_id,
+      o.source_op,
+      o.source_op_block
+    FROM ops_in_range o
+    CROSS JOIN LATERAL (
+      SELECT (
+        CASE
+          WHEN o.op_type_id = _op_pow THEN
+            hafbe_backend.process_pow_operation(o.body, o.created_at)
+          WHEN o.op_type_id = _op_pow2 THEN
+            hafbe_backend.process_pow_two_operation(o.body, o.created_at)
+          WHEN o.op_type_id = _op_account_created THEN
+            hafbe_backend.process_created_account_operation(o.body, o.created_at, o.is_after_hf11)
+          WHEN o.op_type_id IN (_op_account_create, _op_create_claimed_account, _op_account_create_with_delegation) THEN
+            hafbe_backend.process_create_account_operation(o.body, o.created_at)
+          WHEN o.op_type_id = _op_changed_recovery_account THEN
+            hafbe_backend.process_changed_recovery_account_operation(o.body)
+        END
+      ).*
     ) AS iap
-    WHERE
-      ho.op_type_id IN (14, 30, 80, 9, 23, 41, 76) AND
-      ho.block_num BETWEEN _from AND _to
   ),
   add_row_num AS MATERIALIZED (
     SELECT
@@ -43,7 +78,7 @@ BEGIN
       source_op_block,
       ROW_NUMBER() OVER (PARTITION BY account_name ORDER BY source_op) AS row_num_asc,
       ROW_NUMBER() OVER (PARTITION BY account_name ORDER BY source_op DESC) AS row_num_desc
-    FROM ops_in_range
+    FROM parsed_ops
   ),
   get_latest_parameters AS (
     SELECT
@@ -124,9 +159,9 @@ BEGIN
         ) AS recovery_account,
         (
           CASE
-            WHEN next_cp.op_type_id = 80 THEN
+            WHEN next_cp.op_type_id = _op_account_created THEN
               next_cp.created
-            WHEN next_cp.op_type_id != 80 AND prev.created IS NOT NULL THEN
+            WHEN next_cp.op_type_id != _op_account_created AND prev.created IS NOT NULL THEN
               prev.created
             ELSE
               next_cp.created
@@ -160,13 +195,13 @@ BEGIN
       created = EXCLUDED.created;
 
   -- parse account parameters: last_account_recovery
-  WITH select_ops_with_last_account_recovery AS (
+  WITH select_ops_with_last_account_recovery AS MATERIALIZED (
     SELECT
-      hafbe_backend.process_recover_account_operation(ov.body) AS account_name,
+      ov.body->'value'->>'account_to_recover' AS account_name,
       ov.block_num AS source_op_block,
       ov.id AS source_op
     FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id = 25 AND ov.block_num BETWEEN _from AND _to
+    WHERE ov.op_type_id = _op_recover_account AND ov.block_num BETWEEN _from AND _to
   ),
   add_row_num AS (
     SELECT
@@ -189,15 +224,14 @@ BEGIN
     last_account_recovery = EXCLUDED.last_account_recovery;
 
   -- parse account parameters: can_vote
-  WITH select_ops_with_can_vote AS (
+  WITH select_ops_with_can_vote AS MATERIALIZED (
     SELECT
-      cv.account_name,
-      cv.can_vote,
+      ov.body->'value'->>'account' AS account_name,
+      CASE WHEN (ov.body->'value'->>'decline')::BOOLEAN = TRUE THEN FALSE ELSE TRUE END AS can_vote,
       ov.block_num AS source_op_block,
       ov.id AS source_op
     FROM hafbe_app.operations_view ov
-    CROSS JOIN hafbe_backend.process_decline_voting_rights_operation(ov.body) AS cv
-    WHERE ov.op_type_id = 36 AND ov.block_num BETWEEN _from AND _to
+    WHERE ov.op_type_id = _op_decline_voting_rights AND ov.block_num BETWEEN _from AND _to
   ),
   add_row_num AS (
     SELECT
@@ -220,18 +254,18 @@ BEGIN
     can_vote = EXCLUDED.can_vote;
 
   -- parse account parameters: pending_claimed_accounts
-  WITH select_ops_with_claimed AS (
+  WITH select_ops_with_claimed AS MATERIALIZED (
     SELECT
       (body -> 'value' ->> 'creator') AS account,
       (
-        CASE WHEN ov.op_type_id = 22 THEN
+        CASE WHEN ov.op_type_id = _op_claim_account THEN
           1
         ELSE
           -1
         END
       ) AS claimed_account
     FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id IN (22,23) AND ov.block_num BETWEEN _from AND _to
+    WHERE ov.op_type_id IN (_op_claim_account, _op_create_claimed_account) AND ov.block_num BETWEEN _from AND _to
   ),
   count_claimed AS (
     SELECT
