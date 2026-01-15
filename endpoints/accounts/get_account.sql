@@ -119,14 +119,14 @@ BEGIN
       --general
       _account_id,
       "account-name",
-      COALESCE(_result_parameters.can_vote, TRUE),
-      COALESCE(_result_parameters.mined, TRUE),
-      COALESCE(_result_proxy, ''),
-      COALESCE(_result_parameters.recovery_account, ''),
-      COALESCE(_result_parameters.last_account_recovery, '1970-01-01T00:00:00'),
-      COALESCE(_result_parameters.created,'1970-01-01T00:00:00'), 
+      COALESCE(_result_parameters.can_vote, hafbe_backend.default_can_vote()),
+      COALESCE(_result_parameters.mined, hafbe_backend.default_mined()),
+      COALESCE(_result_proxy, hafbe_backend.default_recovery_account()),
+      COALESCE(_result_parameters.recovery_account, hafbe_backend.default_recovery_account()),
+      COALESCE(_result_parameters.last_account_recovery, hafbe_backend.default_timestamp()),
+      COALESCE(_result_parameters.created, hafbe_backend.default_timestamp()),
       COALESCE(_result_reputation, 0)::INT,
-      COALESCE(_result_parameters.pending_claimed_accounts, 0)::INT, 
+      COALESCE(_result_parameters.pending_claimed_accounts, hafbe_backend.default_pending_claimed_accounts())::INT, 
 
       --metadata
       COALESCE(_result_json_metadata.json_metadata,''),

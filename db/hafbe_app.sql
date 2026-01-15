@@ -124,16 +124,20 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'block_operations', 'hafbe_app' );
 
   ------------- ACCOUNT PARAMETERS ----------------
+  -- Columns allow NULL to indicate "unknown/not yet processed".
+  -- API layer uses COALESCE with hafbe_backend constants to provide defaults.
+  -- See: hafbe_backend.default_can_vote(), default_mined(), default_recovery_account(),
+  --      default_timestamp(), default_pending_claimed_accounts()
 
   CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters
   (
-    account INT NOT NULL,
-    can_vote BOOLEAN DEFAULT TRUE,
-    mined BOOLEAN DEFAULT TRUE,
-    recovery_account TEXT DEFAULT '',
-    last_account_recovery TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-    created TIMESTAMP DEFAULT '1970-01-01T00:00:00',
-    pending_claimed_accounts INT DEFAULT 0,
+    account                  INT       NOT NULL,
+    can_vote                 BOOLEAN   NULL,
+    mined                    BOOLEAN   NULL,
+    recovery_account         TEXT      NULL,
+    last_account_recovery    TIMESTAMP NULL,
+    created                  TIMESTAMP NULL,
+    pending_claimed_accounts INT       NULL,
 
     CONSTRAINT pk_account_parameters PRIMARY KEY (account)
   );
