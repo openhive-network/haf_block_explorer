@@ -9,6 +9,14 @@ SET jit = OFF
 SET enable_bitmapscan = OFF
 AS
 $$
+DECLARE
+  _op_account_witness_vote   INT := hafbe_backend.op_account_witness_vote();
+  _op_witness_set_properties INT := hafbe_backend.op_witness_set_properties();
+  _op_witness_update         INT := hafbe_backend.op_witness_update();
+  _op_feed_publish           INT := hafbe_backend.op_feed_publish();
+  _op_pow                    INT := hafbe_backend.op_pow();
+  _op_pow2                   INT := hafbe_backend.op_pow2();
+  _op_producer_missed        INT := hafbe_backend.op_producer_missed();
 BEGIN
 -- function used for calculating witnesses
 -- updates table hafbe_app.current_witnesses
@@ -16,12 +24,12 @@ BEGIN
   (
     SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
     FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id IN (12,42,11,7,14,30)
+    WHERE ov.op_type_id IN (_op_account_witness_vote, _op_witness_set_properties, _op_witness_update, _op_feed_publish, _op_pow, _op_pow2)
     AND ov.block_num BETWEEN _from AND _to
   ),
   select_witness_names AS MATERIALIZED (
     SELECT DISTINCT
-      CASE WHEN op_type_id = 12 THEN
+      CASE WHEN op_type_id = _op_account_witness_vote THEN
         value->>'witness'
       ELSE
         (SELECT hive.get_impacted_accounts(body_binary))
@@ -67,7 +75,7 @@ BEGIN
   WITH select_ops_with_url AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update) AND block_num BETWEEN _from AND _to
   ),
 
   select_url_from_set_witness_properties AS (
@@ -79,13 +87,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sowu.value->>'props')
       WHERE prop_name = 'url'
     ) ex_prop ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_url_from_witness_update_op AS (
     SELECT value->>'url' AS url, operation_id, witness
     FROM select_ops_with_url
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
@@ -115,7 +123,7 @@ BEGIN
   WITH select_ops_with_exchange_rate_without_timestamp AS (
     SELECT witness, value, op_type_id, operation_id, block_num
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,7}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_feed_publish) AND block_num BETWEEN _from AND _to
   ),
 
   select_ops_with_exchange_rate AS (
@@ -133,13 +141,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sower.value->>'props')
       WHERE prop_name = 'hbd_exchange_rate'
     ) ex_prop ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_exchange_rate_from_feed_publish_op AS (
     SELECT value->>'exchange_rate' AS exchange_rate, operation_id, timestamp, witness
     FROM select_ops_with_exchange_rate
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET
@@ -175,7 +183,7 @@ BEGIN
   WITH select_ops_with_block_size AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11,30,14}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
   ),
 
   select_block_size_from_set_witness_properties AS (
@@ -187,13 +195,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sowbs.value->>'props')
       WHERE prop_name = 'maximum_block_size'
     ) ex_prop ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_block_size_from_witness_update_op AS (
     SELECT value->'props'->>'maximum_block_size' AS block_size, operation_id, witness
     FROM select_ops_with_block_size
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
@@ -223,7 +231,7 @@ BEGIN
   WITH select_ops_with_signing_key AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update) AND block_num BETWEEN _from AND _to
   ),
 
   select_signing_key_from_set_witness_properties AS (
@@ -245,13 +253,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sowsk.value->>'props')
       WHERE prop_name = 'key'
     ) ex_prop2 ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_signing_key_from_witness_update_op AS (
     SELECT value->>'block_signing_key' AS signing_key, operation_id, witness
     FROM select_ops_with_signing_key
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
@@ -277,23 +285,23 @@ BEGIN
   ) ops
   WHERE cw.witness_id = ops.witness_id;
 
-  -- parse witness signing_key
+  -- parse witness signing_key (from pow)
   WITH select_ops_with_signing_key AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{14,30}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
   ),
 
   select_signing_key_from_pow AS (
     SELECT value->'work'->>'worker' AS signing_key, operation_id, witness
     FROM select_ops_with_signing_key
-    WHERE op_type_id = 14
+    WHERE op_type_id = _op_pow
   ),
 
   select_signing_key_from_pow_two AS (
     SELECT value->>'new_owner_key' AS signing_key, operation_id, witness
     FROM select_ops_with_signing_key
-    WHERE op_type_id = 30
+    WHERE op_type_id = _op_pow2
   )
 
   UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
@@ -323,7 +331,7 @@ BEGIN
   WITH select_ops_with_hbd_interest_rate AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
   ),
 
   select_hbd_interest_rate_from_set_witness_properties AS (
@@ -335,13 +343,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sowu.value->>'props')
       WHERE prop_name = 'hbd_interest_rate'
     ) ex_prop ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_hbd_interest_rate_from_witness_update_op AS (
     SELECT (value->'props'->>'hbd_interest_rate')::INT AS hbd_interest_rate, operation_id, witness
     FROM select_ops_with_hbd_interest_rate
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
@@ -371,7 +379,7 @@ BEGIN
   WITH select_ops_with_account_creation_fee AS (
     SELECT witness, value, op_type_id, operation_id
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = ANY('{42,11,14,30}') AND block_num BETWEEN _from AND _to
+    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
   ),
 
   select_account_creation_fee_from_set_witness_properties AS (
@@ -383,13 +391,13 @@ BEGIN
       FROM hive.extract_set_witness_properties(sowu.value->>'props')
       WHERE prop_name = 'account_creation_fee'
     ) ex_prop ON TRUE
-    WHERE op_type_id = 42
+    WHERE op_type_id = _op_witness_set_properties
   ),
 
   select_account_creation_fee_from_witness_update_op AS (
     SELECT (value->'props'->'account_creation_fee'->>'amount')::INT AS account_creation_fee, operation_id, witness
     FROM select_ops_with_account_creation_fee
-    WHERE op_type_id != 42
+    WHERE op_type_id != _op_witness_set_properties
   )
 
   UPDATE hafbe_app.current_witnesses cw SET account_creation_fee = ops.account_creation_fee FROM (
@@ -419,7 +427,7 @@ BEGIN
   WITH select_ops_with_missed AS (
     SELECT witness
     FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = 86 AND block_num BETWEEN _from AND _to
+    WHERE op_type_id = _op_producer_missed AND block_num BETWEEN _from AND _to
   ),
   count_missed AS (
     SELECT COUNT(*) AS missed_blocks, witness

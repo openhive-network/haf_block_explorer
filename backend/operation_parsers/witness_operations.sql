@@ -1,27 +1,7 @@
 SET ROLE hafbe_owner;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.process_votes_and_proxies(IN _operation_body JSONB, IN _op_type_id INT, IN source_op BIGINT)
-RETURNS void
-LANGUAGE plpgsql
-VOLATILE
-AS
-$$
-BEGIN
-  PERFORM (
-    CASE
-      WHEN _op_type_id = 12 THEN
-      hafbe_backend.process_vote_op(_operation_body, source_op)
-
-      WHEN _op_type_id = 13 OR _op_type_id = 91 THEN
-      hafbe_backend.process_proxy_ops(_operation_body, source_op, _op_type_id)
-
-      WHEN _op_type_id = 92 OR _op_type_id = 75 THEN
-      hafbe_backend.process_expired_accounts(_operation_body, source_op)
-    END
-  );
-
-END;
-$$;
+-- Witness vote and proxy processing functions
+-- These are called from hafbe_app.process_witness_votes()
 
 CREATE OR REPLACE FUNCTION hafbe_backend.process_vote_op(_body jsonb, _id BIGINT)
 RETURNS void
@@ -29,9 +9,9 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 DECLARE
-  _voter_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
-  _witness_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness');
-  _approve BOOLEAN := (_body->'value'->>'approve')::BOOLEAN;
+  _voter_id   INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
+  _witness_id INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'witness');
+  _approve    BOOLEAN := (_body->'value'->>'approve')::BOOLEAN;
 BEGIN
   -- Insert the vote into the history table
   INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op)
@@ -51,15 +31,14 @@ BEGIN
 END
 $$;
 
-CREATE OR REPLACE FUNCTION hafbe_backend.process_proxy_ops(_body jsonb, _id BIGINT, _op_type int)
+CREATE OR REPLACE FUNCTION hafbe_backend.process_proxy_ops(_body jsonb, _id BIGINT, _proxy BOOLEAN)
 RETURNS void
 LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 DECLARE
   _account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'account');
-  _proxy_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'proxy');
-  _proxy BOOLEAN := (CASE WHEN _op_type = 13 THEN TRUE ELSE FALSE END);
+  _proxy_id   INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body->'value'->>'proxy');
 BEGIN
   -- Insert the proxy operation into the history table
   INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, source_op)
