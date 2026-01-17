@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: develop
+  ref: 0a1e1a9d53d6b1c8ae1bdc652e19740134a359b4
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -85,7 +85,6 @@ include:
 default:
   hooks:
     pre_get_sources_script:
-      # Base git corruption cleanup from common-ci-configuration
     - !reference [.haf_git_corruption_cleanup, hooks, pre_get_sources_script]
 
 # =============================================================================
@@ -566,8 +565,8 @@ python_api_client_test:
 
 .test-with-docker-compose-tavern:
   extends:
-    - .hafbe_test_base
-    - .tavern_test_variables
+  - .hafbe_test_base
+  - .tavern_test_variables
   variables:
     # Override tavern variables for haf_block_explorer
     TAVERN_DIR: "${CI_PROJECT_DIR}/tests/tavern"
@@ -576,19 +575,19 @@ python_api_client_test:
     HAFBE_ADDRESS: "${POSTGREST_HOST}"
     HAFBE_PORT: "3000"
   before_script:
-    - !reference [.hafbe_test_base, before_script]
+  - !reference [.hafbe_test_base, before_script]
     # Clone tests_api directly (nested submodule can't be fetched due to GitLab Runner 18.6+ credential inheritance)
-    - git clone --depth=1 https://gitlab.syncad.com/hive/tests_api.git "${CI_PROJECT_DIR}/tests_api"
+  - git clone --depth=1 https://gitlab.syncad.com/hive/tests_api.git "${CI_PROJECT_DIR}/tests_api"
     # Set up Python venv with pytest/tavern and validate_response from tests_api
-    - !reference [.tavern_install_deps, script]
-    - |
-      # venv created by tavern_install_deps is in current dir (project root)
-      . venv/bin/activate
-      pip install --quiet "${CI_PROJECT_DIR}/tests_api"
+  - !reference [.tavern_install_deps, script]
+  - |
+    # venv created by tavern_install_deps is in current dir (project root)
+    . venv/bin/activate
+    pip install --quiet "${CI_PROJECT_DIR}/tests_api"
   artifacts:
     paths:
-      - docker/container-logs.txt
-      - "**/*.out.json"
+    - docker/container-logs.txt
+    - "**/*.out.json"
     when: always
     reports:
       junit: "${CI_PROJECT_DIR}/tests/tavern/report.xml"
