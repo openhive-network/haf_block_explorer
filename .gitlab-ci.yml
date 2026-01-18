@@ -377,15 +377,12 @@ sync:
   timeout: 2 hours  # NFS cache push can take 50+ minutes on slow days
   before_script:
   - !reference [.haf_app_sync_setup, script]
-  # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
+  # Fetch submodules using common-ci-configuration script (handles root-owned files from Docker)
   - |
-    for sub in hafah btracker reptracker; do
-      git submodule deinit -f submodules/$sub 2>/dev/null || true
-      rm -rf submodules/$sub .git/modules/submodules/$sub
-      git config --remove-section submodule.submodules/$sub 2>/dev/null || true
-    done
-    git submodule sync
-    git submodule update --init --depth=1 submodules/hafah submodules/btracker submodules/reptracker
+    FETCH_SUBMODULES_REF="${COMMON_CI_REF:-develop}"
+    curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${FETCH_SUBMODULES_REF}/scripts/fetch-submodules.sh" -o /tmp/fetch-submodules.sh
+    chmod +x /tmp/fetch-submodules.sh
+    /tmp/fetch-submodules.sh --parallel submodules/hafah submodules/btracker submodules/reptracker
   # Smart cache lookup (with fallback for cache reuse)
   - !reference [.haf_app_smart_cache_lookup, script]
   script:
