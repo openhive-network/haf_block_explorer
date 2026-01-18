@@ -247,6 +247,7 @@ prepare_haf_data:
 
 docker-setup-docker-image-build:
   extends: .docker-base-build-template
+  timeout: 12 minutes
   rules:
   - if: $DOCS_ONLY == "true"
     when: never
