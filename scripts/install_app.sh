@@ -110,20 +110,34 @@ EOF
 )
 }
 
+# Get git directory for a submodule - handles both:
+# 1. git submodule update --init: .git/modules/submodules/<name>
+# 2. fetch-submodules.sh: submodules/<name>/.git
+get_submodule_git_dir() {
+  local submodule_name=$1
+  local submodule_dir=$2
+  local modules_path="$hafbe_dir/.git/modules/submodules/$submodule_name"
+  if [[ -d "$modules_path" ]]; then
+    echo "$modules_path"
+  else
+    echo "$submodule_dir/.git"
+  fi
+}
+
 setup_apps() {
   pushd "$hafah_dir"
   ./scripts/setup_postgres.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
-  ./scripts/generate_version_sql.bash "$hafah_dir" "$hafbe_dir/.git/modules/submodules/hafah"
+  ./scripts/generate_version_sql.bash "$hafah_dir" "$(get_submodule_git_dir hafah "$hafah_dir")"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN"
   popd
 
   pushd "$btracker_dir"
-  ./scripts/generate_version_sql.sh "$btracker_dir" "$hafbe_dir/.git/modules/submodules/btracker"
+  ./scripts/generate_version_sql.sh "$btracker_dir" "$(get_submodule_git_dir btracker "$btracker_dir")"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$BTRACKER_SCHEMA"
   popd
 
   pushd "$reptracker_dir"
-  ./scripts/generate_version_sql.sh "$reptracker_dir" "$hafbe_dir/.git/modules/submodules/reptracker"
+  ./scripts/generate_version_sql.sh "$reptracker_dir" "$(get_submodule_git_dir reptracker "$reptracker_dir")"
   ./scripts/install_app.sh --postgres-url="$POSTGRES_ACCESS_ADMIN" --schema="$REPTRACKER_SCHEMA"
   popd
 
