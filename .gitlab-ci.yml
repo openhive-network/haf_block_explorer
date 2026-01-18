@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: 0a1e1a9d53d6b1c8ae1bdc652e19740134a359b4
+  ref: b3f4fcfd79fe6c80dad8950c7a87fe0ed7860f78
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
