@@ -78,12 +78,20 @@ BEGIN
    *   1. For each operation, call the appropriate parser function
    *   2. Parser returns witness_properties composite type with pre-computed values
    *   3. Expand composite into individual columns with (.)*
+   *
+   * SIGNING_KEY PRE-FILTERING:
+   *   signing_key requires special handling because different operation types have
+   *   different priority rules:
+   *   - witness_update/witness_set_properties: explicit key updates (take LATEST)
+   *   - pow/pow2: initial key when witness created (take FIRST as fallback)
+   *   Pre-filtering here avoids complex nested CASE in window functions.
    */
   parsed_properties AS MATERIALIZED (
     SELECT
       apo.witness,
       apo.operation_id,
       apo.block_num,
+      apo.op_type_id,
       (CASE
         WHEN apo.op_type_id = _op_witness_set_properties THEN
           hafbe_backend.parse_witness_set_properties_operation(apo.value)
@@ -110,7 +118,19 @@ BEGIN
    *   - Prioritizes non-NULL values (0 sorts before 1)
    *   - Among non-NULLs, takes the latest by operation_id
    *
-   * SPECIAL: created_block uses MIN (earliest operation = witness creation).
+   * SPECIAL CASES:
+   *   - created_block: uses MIN (earliest operation = witness creation)
+   *   - signing_key: uses priority system (see SIGNING_KEY PRIORITY below)
+   *
+   * SIGNING_KEY PRIORITY:
+   *   witness_update and witness_set_properties are explicit key updates,
+   *   while pow/pow2 only set initial keys when a witness is first created.
+   *   Priority: witness_update/witness_set_properties (LATEST) > pow/pow2 (FIRST)
+   *
+   *   The CASE expressions filter signing_key by operation type, then:
+   *   - w_signing_key_update: takes LATEST from update operations (DESC)
+   *   - w_signing_key_pow: takes FIRST from pow operations (ASC)
+   *   COALESCE ensures update operations take priority over pow operations.
    *
    * WINDOW CLAUSE: Named windows for readability and to avoid repetition.
    */
@@ -122,7 +142,13 @@ BEGIN
       FIRST_VALUE(bias) OVER w_price_feed                 AS bias,
       FIRST_VALUE(block_num) OVER w_price_feed            AS price_feed_block,
       FIRST_VALUE(block_size) OVER w_block_size           AS block_size,
-      FIRST_VALUE(signing_key) OVER w_signing_key         AS signing_key,
+      -- signing_key priority: update operations (LATEST) > pow operations (FIRST)
+      COALESCE(
+        FIRST_VALUE(CASE WHEN op_type_id IN (_op_witness_update, _op_witness_set_properties)
+                         THEN signing_key END) OVER w_signing_key_update,
+        FIRST_VALUE(CASE WHEN op_type_id IN (_op_pow, _op_pow2)
+                         THEN signing_key END) OVER w_signing_key_pow
+      ) AS signing_key,
       FIRST_VALUE(hbd_interest_rate) OVER w_hbd           AS hbd_interest_rate,
       FIRST_VALUE(account_creation_fee) OVER w_fee        AS account_creation_fee,
       MIN(block_num) OVER (PARTITION BY witness)          AS created_block
@@ -132,7 +158,13 @@ BEGIN
       w_url         AS (PARTITION BY witness ORDER BY CASE WHEN url IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
       w_price_feed  AS (PARTITION BY witness ORDER BY CASE WHEN price_feed IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
       w_block_size  AS (PARTITION BY witness ORDER BY CASE WHEN block_size IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
-      w_signing_key AS (PARTITION BY witness ORDER BY CASE WHEN signing_key IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      -- signing_key windows: filter by op_type, then order by NULL-first pattern
+      w_signing_key_update AS (PARTITION BY witness ORDER BY
+        CASE WHEN op_type_id IN (_op_witness_update, _op_witness_set_properties) AND signing_key IS NOT NULL THEN 0 ELSE 1 END,
+        operation_id DESC),
+      w_signing_key_pow AS (PARTITION BY witness ORDER BY
+        CASE WHEN op_type_id IN (_op_pow, _op_pow2) AND signing_key IS NOT NULL THEN 0 ELSE 1 END,
+        operation_id ASC),
       w_hbd         AS (PARTITION BY witness ORDER BY CASE WHEN hbd_interest_rate IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
       w_fee         AS (PARTITION BY witness ORDER BY CASE WHEN account_creation_fee IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC)
     ORDER BY witness
@@ -195,26 +227,33 @@ BEGIN
    * Parse version from block extensions using parser function.
    * This comes from blocks_view, not operations.
    * The version is stored in the extensions field when a witness produces a block.
+   *
+   * BUG FIX: Filter NULL versions BEFORE ROW_NUMBER, not after.
+   * Old code took latest block with extensions, then checked if version IS NOT NULL.
+   * If latest block had only hardfork_version_vote (no version), witness was skipped.
+   * Fix: First filter to blocks with actual version, then take latest.
    */
   UPDATE hafbe_app.current_witnesses cw SET version = w_node.version
   FROM (
     SELECT witness_id, version
     FROM (
-      /*
-       * Extract version using parser function.
-       * "LAST BLOCK WINS" PATTERN:
-       *   ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY num DESC)
-       *   Take the most recent block's version for each witness.
-       */
       SELECT
-        hbv.producer_account_id AS witness_id,
-        hafbe_backend.parse_block_version(hbv.extensions) AS version,
-        ROW_NUMBER() OVER (PARTITION BY hbv.producer_account_id ORDER BY hbv.num DESC) AS row_n
-      FROM hafbe_app.blocks_view hbv
-      WHERE hbv.num BETWEEN _from AND _to
-        AND hbv.extensions IS NOT NULL
+        witness_id,
+        version,
+        ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY num DESC) AS row_n
+      FROM (
+        -- Extract version and filter NULLs BEFORE ranking
+        SELECT
+          hbv.producer_account_id AS witness_id,
+          hafbe_backend.parse_block_version(hbv.extensions) AS version,
+          hbv.num
+        FROM hafbe_app.blocks_view hbv
+        WHERE hbv.num BETWEEN _from AND _to
+          AND hbv.extensions IS NOT NULL
+      ) with_version
+      WHERE version IS NOT NULL  -- Filter NULLs BEFORE ROW_NUMBER
     ) ranked
-    WHERE row_n = 1 AND version IS NOT NULL
+    WHERE row_n = 1
   ) w_node
   WHERE cw.witness_id = w_node.witness_id;
 
