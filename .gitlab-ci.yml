@@ -623,14 +623,11 @@ setup-scripts-test:
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):submodules\r\e[0KInitializing submodules..."
-    # Clean stale submodule state to avoid "transport 'file' not allowed" errors in fetch workspaces
-    for sub in hafah btracker reptracker; do
-      git submodule deinit -f submodules/$sub 2>/dev/null || true
-      rm -rf submodules/$sub .git/modules/submodules/$sub
-      git config --remove-section submodule.submodules/$sub 2>/dev/null || true
-    done
-    git submodule sync
-    git submodule update --init --depth=1 submodules/hafah submodules/btracker submodules/reptracker
+    # Fetch submodules using common-ci-configuration script (handles root-owned files from Docker)
+    FETCH_SUBMODULES_REF="${COMMON_CI_REF:-develop}"
+    curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${FETCH_SUBMODULES_REF}/scripts/fetch-submodules.sh" -o /tmp/fetch-submodules.sh
+    chmod +x /tmp/fetch-submodules.sh
+    /tmp/fetch-submodules.sh --parallel submodules/hafah submodules/btracker submodules/reptracker
     echo -e "\e[0Ksection_end:$(date +%s):submodules\r\e[0K"
 
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning functional tests..."
