@@ -8,6 +8,8 @@ stages:
 - cleanup
 
 variables:
+  # Override HAF image to use specific feature branch commit
+  UPSTREAM_OVERRIDE_TAG: "92e16281e47074d4bbd511f5aa2c0ec25ecb7999"
   # Shared HAF app test runner from common-ci-configuration
   HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.2"
   # HAF app role prefix for templates
