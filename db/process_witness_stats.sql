@@ -1,5 +1,16 @@
 SET ROLE hafbe_owner;
 
+/*
+ * process_witness_stats: Updates witness configuration and statistics.
+ *
+ * Core operations: Extracts witness properties from blockchain operations
+ * (witness_update, witness_set_properties, feed_publish, pow, pow2) and
+ * updates hafbe_app.current_witnesses table.
+ *
+ * Properties tracked: url, price_feed, bias, feed_updated_at, block_size,
+ * signing_key, version, hbd_interest_rate, account_creation_fee,
+ * missed_blocks, last_created_block_num, created.
+ */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_stats(_from INT, _to INT)
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
@@ -7,10 +18,9 @@ SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 SET enable_bitmapscan = OFF
-AS
-$$
+AS $$
 DECLARE
-  _op_account_witness_vote   INT := hafbe_backend.op_account_witness_vote();
+  -- Cache operation type IDs to avoid repeated function calls
   _op_witness_set_properties INT := hafbe_backend.op_witness_set_properties();
   _op_witness_update         INT := hafbe_backend.op_witness_update();
   _op_feed_publish           INT := hafbe_backend.op_feed_publish();
@@ -18,443 +28,251 @@ DECLARE
   _op_pow2                   INT := hafbe_backend.op_pow2();
   _op_producer_missed        INT := hafbe_backend.op_producer_missed();
 BEGIN
--- function used for calculating witnesses
--- updates table hafbe_app.current_witnesses
-  WITH ops_in_range AS MATERIALIZED -- add new witnesses per block range
-  (
-    SELECT ov.body_binary, (ov.body)->'value' AS value, ov.op_type_id
-    FROM hafbe_app.operations_view ov
-    WHERE ov.op_type_id IN (_op_account_witness_vote, _op_witness_set_properties, _op_witness_update, _op_feed_publish, _op_pow, _op_pow2)
-    AND ov.block_num BETWEEN _from AND _to
-  ),
-  select_witness_names AS MATERIALIZED (
-    SELECT DISTINCT
-      CASE WHEN op_type_id = _op_account_witness_vote THEN
-        value->>'witness'
-      ELSE
-        (SELECT hive.get_impacted_accounts(body_binary))
-      END AS name
-    FROM ops_in_range
-  )
-  INSERT INTO hafbe_app.current_witnesses (witness_id, url, price_feed, bias, feed_updated_at, block_size, signing_key, version)
-  SELECT
-    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = swn.name) AS id,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL
-  FROM select_witness_names swn
-  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO NOTHING;
 
-  -- insert witness node version
-  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version FROM
-  (
-    SELECT witness_id, version, row_n
+  /*
+   * ===================================================================================
+   * SECTION 1: Insert/Update Witness Properties
+   * ===================================================================================
+   * Parse all witness property operations in ONE scan of witness_prop_op_view.
+   * Uses parser functions to extract properties from different operation types.
+   * Window functions select the latest non-NULL value for each property.
+   *
+   * UPSERT PATTERN: INSERT witnesses with their properties, UPDATE on conflict.
+   * This avoids scanning operations twice (once for insert, once for update).
+   */
+
+  /*
+   * ===================================================================================
+   * CTE: all_property_ops
+   * ===================================================================================
+   * WHY MATERIALIZED: Single scan of witness_prop_op_view (calls get_impacted_accounts
+   * only ONCE for all operations, not 7+ times like the old code).
+   *
+   * PURPOSE: Gather all witness property operations with block_num for timestamp lookup.
+   */
+  WITH all_property_ops AS MATERIALIZED (
+    SELECT
+      wpov.witness,
+      wpov.value,
+      wpov.op_type_id,
+      wpov.operation_id,
+      wpov.block_num
+    FROM hafbe_backend.witness_prop_op_view wpov
+    WHERE wpov.op_type_id IN (
+      _op_witness_set_properties, _op_witness_update,
+      _op_feed_publish, _op_pow, _op_pow2
+    )
+    AND wpov.block_num BETWEEN _from AND _to
+  ),
+
+  /*
+   * ===================================================================================
+   * CTE: parsed_properties
+   * ===================================================================================
+   * WHY MATERIALIZED: Expensive parser function calls, used by window functions.
+   *
+   * PURPOSE: Parse all properties using operation-specific parser functions.
+   * Parsers compute price_feed and bias directly (no JSON parsing in final UPDATE).
+   *
+   * DATA FLOW:
+   *   1. For each operation, call the appropriate parser function
+   *   2. Parser returns witness_properties composite type with pre-computed values
+   *   3. Expand composite into individual columns with (.)*
+   */
+  parsed_properties AS MATERIALIZED (
+    SELECT
+      apo.witness,
+      apo.operation_id,
+      apo.block_num,
+      (CASE
+        WHEN apo.op_type_id = _op_witness_set_properties THEN
+          hafbe_backend.parse_witness_set_properties_operation(apo.value)
+        WHEN apo.op_type_id = _op_witness_update THEN
+          hafbe_backend.parse_witness_update_operation(apo.value)
+        WHEN apo.op_type_id = _op_feed_publish THEN
+          hafbe_backend.parse_feed_publish_operation(apo.value)
+        WHEN apo.op_type_id = _op_pow THEN
+          hafbe_backend.parse_pow_witness_properties(apo.value)
+        WHEN apo.op_type_id = _op_pow2 THEN
+          hafbe_backend.parse_pow2_witness_properties(apo.value)
+      END).*
+    FROM all_property_ops apo
+  ),
+
+  /*
+   * ===================================================================================
+   * CTE: latest_properties
+   * ===================================================================================
+   * PURPOSE: Select the latest non-NULL value for each property per witness.
+   *
+   * PATTERN: "FIRST NON-NULL" using FIRST_VALUE with custom ordering:
+   *   ORDER BY CASE WHEN field IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC
+   *   - Prioritizes non-NULL values (0 sorts before 1)
+   *   - Among non-NULLs, takes the latest by operation_id
+   *
+   * SPECIAL: created_block uses MIN (earliest operation = witness creation).
+   *
+   * WINDOW CLAUSE: Named windows for readability and to avoid repetition.
+   */
+  latest_properties AS (
+    SELECT DISTINCT ON (witness)
+      witness,
+      FIRST_VALUE(url) OVER w_url                         AS url,
+      FIRST_VALUE(price_feed) OVER w_price_feed           AS price_feed,
+      FIRST_VALUE(bias) OVER w_price_feed                 AS bias,
+      FIRST_VALUE(block_num) OVER w_price_feed            AS price_feed_block,
+      FIRST_VALUE(block_size) OVER w_block_size           AS block_size,
+      FIRST_VALUE(signing_key) OVER w_signing_key         AS signing_key,
+      FIRST_VALUE(hbd_interest_rate) OVER w_hbd           AS hbd_interest_rate,
+      FIRST_VALUE(account_creation_fee) OVER w_fee        AS account_creation_fee,
+      MIN(block_num) OVER (PARTITION BY witness)          AS created_block
+    FROM parsed_properties
+    WHERE witness IS NOT NULL
+    WINDOW
+      w_url         AS (PARTITION BY witness ORDER BY CASE WHEN url IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      w_price_feed  AS (PARTITION BY witness ORDER BY CASE WHEN price_feed IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      w_block_size  AS (PARTITION BY witness ORDER BY CASE WHEN block_size IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      w_signing_key AS (PARTITION BY witness ORDER BY CASE WHEN signing_key IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      w_hbd         AS (PARTITION BY witness ORDER BY CASE WHEN hbd_interest_rate IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC),
+      w_fee         AS (PARTITION BY witness ORDER BY CASE WHEN account_creation_fee IS NOT NULL THEN 0 ELSE 1 END, operation_id DESC)
+    ORDER BY witness
+  ),
+
+  /*
+   * ===================================================================================
+   * CTE: resolved_properties
+   * ===================================================================================
+   * PURPOSE: Late binding - resolve account IDs on smallest result set.
+   * Also lookup timestamps from blocks_view for feed_updated_at and created.
+   */
+  resolved_properties AS (
+    SELECT
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = lp.witness) AS witness_id,
+      lp.url,
+      lp.price_feed,
+      lp.bias,
+      (SELECT hb.created_at FROM hive.blocks_view hb WHERE hb.num = lp.price_feed_block) AS feed_updated_at,
+      lp.block_size,
+      lp.signing_key,
+      lp.hbd_interest_rate,
+      lp.account_creation_fee,
+      (SELECT hb.created_at FROM hive.blocks_view hb WHERE hb.num = lp.created_block) AS created
+    FROM latest_properties lp
+  )
+
+  /*
+   * UPSERT: Insert new witnesses with properties, update existing ones.
+   *
+   * COALESCE PATTERNS:
+   *   - Mutable fields: COALESCE(EXCLUDED.field, cw.field) - new-value-first
+   *   - Immutable fields (created): COALESCE(cw.field, EXCLUDED.field) - existing-first
+   */
+  INSERT INTO hafbe_app.current_witnesses AS cw (
+    witness_id, url, price_feed, bias, feed_updated_at,
+    block_size, signing_key, hbd_interest_rate, account_creation_fee, created
+  )
+  SELECT
+    rp.witness_id, rp.url, rp.price_feed, rp.bias, rp.feed_updated_at,
+    rp.block_size, rp.signing_key, rp.hbd_interest_rate, rp.account_creation_fee, rp.created
+  FROM resolved_properties rp
+  WHERE rp.witness_id IS NOT NULL
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO UPDATE SET
+    url                  = COALESCE(EXCLUDED.url, cw.url),
+    price_feed           = COALESCE(EXCLUDED.price_feed, cw.price_feed),
+    bias                 = COALESCE(EXCLUDED.bias, cw.bias),
+    feed_updated_at      = COALESCE(EXCLUDED.feed_updated_at, cw.feed_updated_at),
+    block_size           = COALESCE(EXCLUDED.block_size, cw.block_size),
+    signing_key          = COALESCE(EXCLUDED.signing_key, cw.signing_key),
+    hbd_interest_rate    = COALESCE(EXCLUDED.hbd_interest_rate, cw.hbd_interest_rate),
+    account_creation_fee = COALESCE(EXCLUDED.account_creation_fee, cw.account_creation_fee),
+    created              = COALESCE(cw.created, EXCLUDED.created);
+
+
+  /*
+   * ===================================================================================
+   * SECTION 2: Update Witness Version
+   * ===================================================================================
+   * Parse version from block extensions using parser function.
+   * This comes from blocks_view, not operations.
+   * The version is stored in the extensions field when a witness produces a block.
+   */
+  UPDATE hafbe_app.current_witnesses cw SET version = w_node.version
+  FROM (
+    SELECT witness_id, version
     FROM (
-      WITH get_version AS
-      (
-        SELECT
-          cw.witness_id,
-          CASE WHEN hbv.extensions->0->>'type' = 'version' THEN
-            hbv.extensions->0->>'value'
-          ELSE
-            hbv.extensions->1->>'value'
-          END AS version,
-          hbv.num
-        FROM hafbe_app.blocks_view hbv
-        JOIN hafbe_app.current_witnesses cw ON cw.witness_id = hbv.producer_account_id
-        WHERE hbv.num BETWEEN _from AND _to AND hbv.extensions IS NOT NULL
-      )
-      SELECT gv.witness_id, gv.version,
-      ROW_NUMBER() OVER (PARTITION BY gv.witness_id ORDER BY gv.num DESC) AS row_n
-      FROM get_version gv
-      WHERE gv.version IS NOT NULL
-    ) row_count
-    WHERE row_n = 1
+      /*
+       * Extract version using parser function.
+       * "LAST BLOCK WINS" PATTERN:
+       *   ROW_NUMBER() OVER (PARTITION BY witness_id ORDER BY num DESC)
+       *   Take the most recent block's version for each witness.
+       */
+      SELECT
+        hbv.producer_account_id AS witness_id,
+        hafbe_backend.parse_block_version(hbv.extensions) AS version,
+        ROW_NUMBER() OVER (PARTITION BY hbv.producer_account_id ORDER BY hbv.num DESC) AS row_n
+      FROM hafbe_app.blocks_view hbv
+      WHERE hbv.num BETWEEN _from AND _to
+        AND hbv.extensions IS NOT NULL
+    ) ranked
+    WHERE row_n = 1 AND version IS NOT NULL
   ) w_node
   WHERE cw.witness_id = w_node.witness_id;
 
-  -- parse witness url
-  WITH select_ops_with_url AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update) AND block_num BETWEEN _from AND _to
+
+  /*
+   * ===================================================================================
+   * SECTION 3: Update Missed Blocks
+   * ===================================================================================
+   * Count producer_missed_operation events per witness.
+   * Uses ADDITIVE UPSERT pattern (adds to existing count).
+   */
+  WITH select_ops_with_missed AS MATERIALIZED (
+    SELECT (SELECT hive.get_impacted_accounts(ov.body_binary)) AS witness
+    FROM hafbe_app.operations_view ov
+    WHERE ov.op_type_id = _op_producer_missed
+      AND ov.block_num BETWEEN _from AND _to
   ),
 
-  select_url_from_set_witness_properties AS (
-    SELECT ex_prop.url, operation_id, witness
-    FROM select_ops_with_url sowu
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS url
-      FROM hive.extract_set_witness_properties(sowu.value->>'props')
-      WHERE prop_name = 'url'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_url_from_witness_update_op AS (
-    SELECT value->>'url' AS url, operation_id, witness
-    FROM select_ops_with_url
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET url = ops.url FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      url
-    FROM (
-      SELECT
-        url, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT url, operation_id, witness
-        FROM select_url_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT url, operation_id, witness
-        FROM select_url_from_witness_update_op
-      ) sp
-      WHERE url IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness exchange_rate
-  WITH select_ops_with_exchange_rate_without_timestamp AS (
-    SELECT witness, value, op_type_id, operation_id, block_num
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_feed_publish) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_ops_with_exchange_rate AS (
-    SELECT select_ops.witness, select_ops.value, select_ops.op_type_id, select_ops.operation_id, hb.created_at timestamp
-    FROM select_ops_with_exchange_rate_without_timestamp select_ops
-    JOIN hive.blocks_view hb ON hb.num = select_ops.block_num
-  ),
-
-  select_exchange_rate_from_set_witness_properties AS (
-    SELECT ex_prop.exchange_rate, operation_id, timestamp, witness
-    FROM select_ops_with_exchange_rate sower
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS exchange_rate
-      FROM hive.extract_set_witness_properties(sower.value->>'props')
-      WHERE prop_name = 'hbd_exchange_rate'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_exchange_rate_from_feed_publish_op AS (
-    SELECT value->>'exchange_rate' AS exchange_rate, operation_id, timestamp, witness
-    FROM select_ops_with_exchange_rate
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET
-    price_feed = ops.price_feed,
-    bias = ops.bias,
-    feed_updated_at = ops.feed_updated_at
-  FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      (exchange_rate->'base'->>'amount')::NUMERIC / (exchange_rate->'quote'->>'amount')::NUMERIC AS price_feed,
-      ((exchange_rate->'quote'->>'amount')::NUMERIC - 1000)::NUMERIC AS bias,
-      timestamp AS feed_updated_at
-    FROM (
-      SELECT
-        exchange_rate::JSON, witness, timestamp,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT exchange_rate, operation_id, timestamp, witness
-        FROM select_exchange_rate_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT exchange_rate, operation_id, timestamp, witness
-        FROM select_exchange_rate_from_feed_publish_op
-      ) sp
-      WHERE exchange_rate IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness block_size
-  WITH select_ops_with_block_size AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_block_size_from_set_witness_properties AS (
-    SELECT ex_prop.block_size, operation_id, witness
-    FROM select_ops_with_block_size sowbs
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS block_size
-      FROM hive.extract_set_witness_properties(sowbs.value->>'props')
-      WHERE prop_name = 'maximum_block_size'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_block_size_from_witness_update_op AS (
-    SELECT value->'props'->>'maximum_block_size' AS block_size, operation_id, witness
-    FROM select_ops_with_block_size
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET block_size = ops.block_size FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      block_size
-    FROM (
-      SELECT
-        block_size::INT, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT block_size, operation_id, witness
-        FROM select_block_size_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT block_size, operation_id, witness
-        FROM select_block_size_from_witness_update_op
-      ) sp
-      WHERE block_size IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness signing_key
-  WITH select_ops_with_signing_key AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_signing_key_from_set_witness_properties AS (
-    SELECT
-      CASE WHEN ex_prop2.signing_key IS NULL THEN ex_prop1.signing_key ELSE (
-        CASE WHEN ex_prop1.signing_key IS NULL THEN ex_prop2.signing_key ELSE ex_prop1.signing_key END
-      ) END AS signing_key,
-      operation_id, witness
-    FROM select_ops_with_signing_key sowsk
-
-    LEFT JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
-      FROM hive.extract_set_witness_properties(sowsk.value->>'props')
-      WHERE prop_name = 'new_signing_key'
-    ) ex_prop1 ON TRUE
-
-    LEFT JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT) AS signing_key
-      FROM hive.extract_set_witness_properties(sowsk.value->>'props')
-      WHERE prop_name = 'key'
-    ) ex_prop2 ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_signing_key_from_witness_update_op AS (
-    SELECT value->>'block_signing_key' AS signing_key, operation_id, witness
-    FROM select_ops_with_signing_key
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      signing_key
-    FROM (
-      SELECT
-        signing_key, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_witness_update_op
-      ) sp
-      WHERE signing_key IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness signing_key (from pow)
-  WITH select_ops_with_signing_key AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_signing_key_from_pow AS (
-    SELECT value->'work'->>'worker' AS signing_key, operation_id, witness
-    FROM select_ops_with_signing_key
-    WHERE op_type_id = _op_pow
-  ),
-
-  select_signing_key_from_pow_two AS (
-    SELECT value->>'new_owner_key' AS signing_key, operation_id, witness
-    FROM select_ops_with_signing_key
-    WHERE op_type_id = _op_pow2
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET signing_key = ops.signing_key FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      signing_key
-    FROM (
-      SELECT
-        signing_key, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id ASC) AS row_n
-      FROM (
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_pow
-
-        UNION ALL
-
-        SELECT signing_key, operation_id, witness
-        FROM select_signing_key_from_pow_two
-      ) sp
-      WHERE signing_key IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id AND cw.signing_key IS NULL;
-
-      -- parse witness hbd_interest_rate
-  WITH select_ops_with_hbd_interest_rate AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_hbd_interest_rate_from_set_witness_properties AS (
-    SELECT ex_prop.hbd_interest_rate, operation_id, witness
-    FROM select_ops_with_hbd_interest_rate sowu
-
-    JOIN LATERAL (
-      SELECT trim(both '"' FROM prop_value::TEXT)::INT AS hbd_interest_rate
-      FROM hive.extract_set_witness_properties(sowu.value->>'props')
-      WHERE prop_name = 'hbd_interest_rate'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_hbd_interest_rate_from_witness_update_op AS (
-    SELECT (value->'props'->>'hbd_interest_rate')::INT AS hbd_interest_rate, operation_id, witness
-    FROM select_ops_with_hbd_interest_rate
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET hbd_interest_rate = ops.hbd_interest_rate FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      hbd_interest_rate
-    FROM (
-      SELECT
-        hbd_interest_rate, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT hbd_interest_rate, operation_id, witness
-        FROM select_hbd_interest_rate_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT hbd_interest_rate, operation_id, witness
-        FROM select_hbd_interest_rate_from_witness_update_op
-      ) sp
-      WHERE hbd_interest_rate IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness account_creation_fee
-  WITH select_ops_with_account_creation_fee AS (
-    SELECT witness, value, op_type_id, operation_id
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id IN (_op_witness_set_properties, _op_witness_update, _op_pow, _op_pow2) AND block_num BETWEEN _from AND _to
-  ),
-
-  select_account_creation_fee_from_set_witness_properties AS (
-    SELECT ex_prop.account_creation_fee, operation_id, witness
-    FROM select_ops_with_account_creation_fee sowu
-
-    JOIN LATERAL (
-      SELECT (prop_value->>'amount')::INT AS account_creation_fee
-      FROM hive.extract_set_witness_properties(sowu.value->>'props')
-      WHERE prop_name = 'account_creation_fee'
-    ) ex_prop ON TRUE
-    WHERE op_type_id = _op_witness_set_properties
-  ),
-
-  select_account_creation_fee_from_witness_update_op AS (
-    SELECT (value->'props'->'account_creation_fee'->>'amount')::INT AS account_creation_fee, operation_id, witness
-    FROM select_ops_with_account_creation_fee
-    WHERE op_type_id != _op_witness_set_properties
-  )
-
-  UPDATE hafbe_app.current_witnesses cw SET account_creation_fee = ops.account_creation_fee FROM (
-    SELECT
-      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = prop.witness) AS witness_id,
-      account_creation_fee
-    FROM (
-      SELECT
-        account_creation_fee, witness,
-        ROW_NUMBER() OVER (PARTITION BY witness ORDER BY operation_id DESC) AS row_n
-      FROM (
-        SELECT account_creation_fee, operation_id, witness
-        FROM select_account_creation_fee_from_set_witness_properties
-
-        UNION ALL
-
-        SELECT account_creation_fee, operation_id, witness
-        FROM select_account_creation_fee_from_witness_update_op
-      ) sp
-      WHERE account_creation_fee IS NOT NULL
-    ) prop
-    WHERE row_n = 1
-  ) ops
-  WHERE cw.witness_id = ops.witness_id;
-
-  -- parse witness missed_blocks
-  WITH select_ops_with_missed AS (
-    SELECT witness
-    FROM hafbe_backend.witness_prop_op_view
-    WHERE op_type_id = _op_producer_missed AND block_num BETWEEN _from AND _to
-  ),
   count_missed AS (
-    SELECT COUNT(*) AS missed_blocks, witness
+    SELECT
+      COUNT(*) AS missed_blocks,
+      witness
     FROM select_ops_with_missed
     GROUP BY witness
   )
-  INSERT INTO hafbe_app.current_witnesses AS cw
-    (witness_id, missed_blocks)
+
+  /*
+   * ADDITIVE UPSERT PATTERN:
+   *   missed_blocks = COALESCE(cw.missed_blocks, 0) + EXCLUDED.missed_blocks
+   *   Accumulates missed block count across processing batches.
+   *   Uses COALESCE to handle NULL (no default on column).
+   */
+  INSERT INTO hafbe_app.current_witnesses AS cw (witness_id, missed_blocks)
   SELECT
     (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = cm.witness),
     cm.missed_blocks
   FROM count_missed cm
-  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO
-  UPDATE SET
-    missed_blocks = cw.missed_blocks + EXCLUDED.missed_blocks;
+  ON CONFLICT ON CONSTRAINT pk_current_witnesses DO UPDATE SET
+    missed_blocks = COALESCE(cw.missed_blocks, 0) + EXCLUDED.missed_blocks;
 
-  -- parse last_created_block_num
-  UPDATE hafbe_app.current_witnesses cw SET last_created_block_num = blocks.last_created_block_num FROM (
+
+  /*
+   * ===================================================================================
+   * SECTION 4: Update Last Created Block
+   * ===================================================================================
+   * Track the most recent block produced by each witness.
+   */
+  UPDATE hafbe_app.current_witnesses cw SET last_created_block_num = blocks.last_created_block_num
+  FROM (
     SELECT
       bv.producer_account_id AS witness_id,
-      MAX(bv.num) AS last_created_block_num
+      MAX(bv.num)            AS last_created_block_num
     FROM hafbe_app.blocks_view bv
-    WHERE num BETWEEN _from AND _to
+    WHERE bv.num BETWEEN _from AND _to
     GROUP BY bv.producer_account_id
   ) blocks
   WHERE cw.witness_id = blocks.witness_id;
-END
-$$;
+
+END $$;
 
 RESET ROLE;

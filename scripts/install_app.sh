@@ -139,6 +139,12 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.swagger_url = '$SWAGGER_URL';" -f "$HAFBE_DIR/endpoints/endpoint_schema.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};"   -f "$HAFBE_DIR/backend/utilities/views.sql"
 
+  echo "Installing operation parsers (required by processing functions)..."
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/account_operations.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/witness_operations.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/witness_stats_parsers.sql"
+
+  echo "Installing block processing functions..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_account_stats.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_block_operations.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_transaction_stats.sql"
@@ -173,10 +179,6 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/witness.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocksearch.sql"
-
-  echo "Installing operation parsers..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/account_operations.sql"
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/operation_parsers/witness_operations.sql"
 
   echo "Installing REST API endpoints..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/accounts/get_account_authority.sql"
