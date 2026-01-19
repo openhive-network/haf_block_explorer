@@ -13,6 +13,7 @@ BTRACKER_SCHEMA=${BTRACKER_SCHEMA:-"hafbe_bal"}
 REPTRACKER_SCHEMA=${REPTRACKER_SCHEMA:-"reptracker_app"}
 SWAGGER_URL=${SWAGGER_URL:-"{hafbe-host}"}
 LOG_FILE=${LOG_FILE:-"install_app.log"}
+BLOCKSEARCH_INDEXES=${BLOCKSEARCH_INDEXES:-"false"}
 
 
 print_help () {
@@ -29,6 +30,7 @@ cat <<EOF
     --swagger-url=URL                 Allows to specify a server URL
     --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
     --log-file=PATH                   Log file location (defaults to install_app.log, set to 'STDOUT' for no log file)
+    --blocksearch-indexes=TRUE/FALSE  Create block search indexes (defaults to false)
     --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
     --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
 
@@ -64,6 +66,9 @@ while [ $# -gt 0 ]; do
         ;;
     --log-file=*)
         LOG_FILE="${1#*=}"
+        ;;
+    --blocksearch-indexes=*)
+        BLOCKSEARCH_INDEXES="${1#*=}"
         ;;
     --help|-h|-\?)
         print_help
@@ -207,7 +212,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT ALL ON SCHEMA hafbe_app TO hived_group;"
 
   echo "Registering HAF index dependencies..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/indexes.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.blocksearch_indexes = '$BLOCKSEARCH_INDEXES';" -f "$HAFBE_DIR/db/indexes.sql"
 
   echo "Installation complete."
 }
