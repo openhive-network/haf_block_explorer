@@ -225,7 +225,8 @@ BEGIN
     hbd_interest_rate INT,
     last_created_block_num INT,
     account_creation_fee INT,
-    missed_blocks INT DEFAULT 0,
+    missed_blocks INT,
+    created TIMESTAMP,
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   );
