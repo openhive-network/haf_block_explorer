@@ -85,7 +85,7 @@ while [ $# -gt 0 ]; do
 done
 
 cleanup() {
-  local result_dir="$TEST_ROOT_DIRECTORY/performance/result"
+  local result_dir="$TEST_ROOT_DIRECTORY/result"
   local result_report_dir="$result_dir/result_report"
 
   if [[ -z "${CI:-}" ]]; then
@@ -93,10 +93,10 @@ cleanup() {
     echo "Press ENTER to continue, ^C to cancel."
     read -r _
   fi
-  
+
   rm -rf "$result_dir"
-  mkdir "$result_dir"
-  mkdir "$result_report_dir"
+  mkdir -p "$result_dir"
+  mkdir -p "$result_report_dir"
 }
 
 generate_db() {
@@ -106,7 +106,7 @@ generate_db() {
   local password="$4"
   local database="$5"
   local database_size="$6"
-  python3 "$TEST_ROOT_DIRECTORY/performance/generate_db.py" \
+  python3 "$TEST_ROOT_DIRECTORY/generate_db.py" \
     --port "$port" \
     --host "$host" \
     --user "$user" \
@@ -120,11 +120,9 @@ run_jmeter() {
   local host="$2"
   local thread_count="$3"
   local loop_count="$4"
-  local performance_dir="$TEST_ROOT_DIRECTORY/performance"
-  local result_dir="$TEST_ROOT_DIRECTORY/performance/result"
+  local result_dir="$TEST_ROOT_DIRECTORY/result"
   local result_report_dir="$result_dir/result_report"
-  local performance_data_dir="$TEST_ROOT_DIRECTORY/performance/result"
-  local jmx_file="$performance_dir/endpoints.jmx"
+  local jmx_file="$TEST_ROOT_DIRECTORY/endpoints.jmx"
   local jtl_path="$result_dir/report.jtl"
 
   jmeter \
@@ -137,7 +135,7 @@ run_jmeter() {
         --jmeterproperty "backend.host=$host" \
         --jmeterproperty "thread.count=$thread_count" \
         --jmeterproperty "loop.count=$loop_count" \
-        --jmeterproperty "performance.data.directory=$performance_data_dir" \
+        --jmeterproperty "performance.data.directory=$result_dir" \
         --jmeterproperty "summary.report.path=$result_dir/result.xml"
 }
 

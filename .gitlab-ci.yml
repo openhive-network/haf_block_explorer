@@ -649,8 +649,8 @@ pattern-test:
 
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning Tavern API tests..."
 
-    cd "${TAVERN_DIR}"
-    pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml report.xml .
+    # Run from project root so pattern file paths resolve correctly
+    pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml "${JUNIT_REPORT}" "${TAVERN_DIR}"
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
