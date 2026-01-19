@@ -167,7 +167,7 @@ if [ "$TEST_TYPE" = "account" ] || [ "$TEST_TYPE" = "all" ]; then
     # Step 4a: Install psycopg2 if needed (not in CI)
     if [[ -z "${CI:-}" ]]; then
         echo "Step 4a: Installing Python dependencies..."
-        pip install psycopg2-binary --quiet
+        pip install psycopg2-binary --quiet --break-system-packages
         echo ""
     fi
 
@@ -242,7 +242,7 @@ if [ "$TEST_TYPE" = "witness" ] || [ "$TEST_TYPE" = "all" ]; then
     # Step 4b: Install psycopg2 if needed (not in CI)
     if [[ -z "${CI:-}" ]]; then
         echo "Step 4b: Installing Python dependencies..."
-        pip install psycopg2-binary --quiet
+        pip install psycopg2-binary --quiet --break-system-packages
         echo ""
     fi
 
