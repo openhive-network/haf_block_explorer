@@ -14,7 +14,7 @@ SELECT hive.register_index_dependency(
 -- Comment Search Indexes
 -- =============================================================================
 
---used in permlink search API, for filtering by 'all' and 'comment'
+-- used in permlink search API, for filtering by 'all' and 'comment'
 SELECT hive.register_index_dependency(
     'hafbe_app',
     $$
@@ -27,7 +27,7 @@ SELECT hive.register_index_dependency(
     $$
 );
 
---used in permlink search API, for filtering by 'post'
+-- used in permlink search API, for listing permlinks
 SELECT hive.register_index_dependency(
     'hafbe_app',
     $$
@@ -41,6 +41,7 @@ SELECT hive.register_index_dependency(
     $$
 );
 
+-- used in permlink search API, for listing operations for a related permlink
 SELECT hive.register_index_dependency(
     'hafbe_app',
     $$
@@ -71,144 +72,150 @@ Operation type IDs reference:
 */
 
 -- =============================================================================
--- Block Search Indexes (DEPRECATED - left for potential future usage)
--- These indexes are no longer utilized in current deployments but are kept
--- here for reference in case they are needed in the future.
+-- Block Search Indexes (Optional)
+-- These indexes support block search functionality. They are created only when
+-- custom.blocksearch_indexes is set to 'true' via install_app.sh --blocksearch-indexes=true
 -- =============================================================================
 
-/*
+DO $$
+BEGIN
+  IF current_setting('custom.blocksearch_indexes', true) = 'true' THEN
+    RAISE NOTICE 'Creating block search indexes...';
 
---FIXME indexes must be created concurrently
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 0
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 0
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 1
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 1
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_parent_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 1
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_parent_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 1
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) IN (17, 73)
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) IN (17, 73)
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 19
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 19
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 51
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 51
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_curation_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 52
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_curation_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 52
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 63
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 63
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 61
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 61
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 53
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 53
+      $idx$
+    );
 
-SELECT hive.register_index_dependency(
-    'hafbe_app',
-    $$
-    CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING btree
-    (
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
-        jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
-    )
-    WHERE hafd.operation_id_to_type_id(id) = 72
-    $$
-);
+    PERFORM hive.register_index_dependency(
+      'hafbe_app',
+      $idx$
+      CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING btree
+      (
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
+          jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
+      )
+      WHERE hafd.operation_id_to_type_id(id) = 72
+      $idx$
+    );
 
-*/
+    RAISE NOTICE 'Block search indexes registered.';
+  ELSE
+    RAISE NOTICE 'Skipping block search indexes (custom.blocksearch_indexes is not set to true).';
+  END IF;
+END $$;
