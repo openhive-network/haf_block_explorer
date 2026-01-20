@@ -77,7 +77,7 @@ echo "Index creation initiated."
 # during single-block processing, but CI uses cached data from MASSIVE mode
 # where indexes aren't created. Create them explicitly before tests run.
 echo "Step 3.5: Creating HAFBE application indexes..."
-psql "$POSTGRES_ACCESS" --command="SELECT hafbe_indexes.create_hafbe_indexes();"
+psql "$POSTGRES_ACCESS" --command="SELECT hafbe_app.create_hafbe_indexes();"
 echo "HAFBE application indexes created."
 
 # Step 3: Wait for all registered indexes to be created
