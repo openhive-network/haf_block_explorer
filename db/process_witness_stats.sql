@@ -186,7 +186,15 @@ BEGIN
       FIRST_VALUE(url) OVER w_url                         AS url,
       FIRST_VALUE(price_feed) OVER w_price_feed           AS price_feed,
       FIRST_VALUE(bias) OVER w_price_feed                 AS bias,
-      FIRST_VALUE(block_num) OVER w_price_feed            AS price_feed_block,
+      /*
+       * CRITICAL: Only set price_feed_block when price_feed is non-NULL.
+       * Without this check, batches with only witness_update (no feed_publish) would
+       * incorrectly set price_feed_block from the witness_update's block_num, causing
+       * feed_updated_at to be overwritten with the wrong timestamp.
+       */
+      CASE WHEN FIRST_VALUE(price_feed) OVER w_price_feed IS NOT NULL
+           THEN FIRST_VALUE(block_num) OVER w_price_feed
+      END                                                 AS price_feed_block,
       FIRST_VALUE(block_size) OVER w_block_size           AS block_size,
       /*
        * SIGNING_KEY SEPARATION:
