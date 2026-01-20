@@ -68,7 +68,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: b3f4fcfd79fe6c80dad8950c7a87fe0ed7860f78
+  ref: develop
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -102,49 +102,9 @@ lint_sql_scripts:
   extends: .haf_app_lint_sql
   stage: lint
 
-# =============================================================================
-# Upstream Image Detection Jobs
-# =============================================================================
-# Automatically find the latest built images from upstream repos (HAF) by
-# analyzing which commits changed source files. Uses .find_upstream_image template
-# from common-ci-configuration.
-# =============================================================================
 find_haf_image:
-  extends: .find_upstream_image
+  extends: .find_haf_image
   stage: detect
-  variables:
-    UPSTREAM_REPO_URL: "https://gitlab.syncad.com/hive/haf.git"
-    UPSTREAM_REGISTRY: "registry.gitlab.syncad.com/hive/haf"
-    UPSTREAM_BRANCH: "develop"
-    UPSTREAM_OUTPUT: "haf_image.env"
-  before_script:
-    # docker-builder image already has git, bash, and curl
-    # Fetch source patterns from HAF's script (single source of truth)
-  - |
-    PATTERNS_URL="https://gitlab.syncad.com/hive/haf/-/raw/develop/scripts/ci-helpers/source-patterns.sh"
-    echo "Fetching source patterns from: $PATTERNS_URL"
-    if UPSTREAM_PATTERNS=$(curl -sf "$PATTERNS_URL" | sh); then
-      echo "Loaded patterns: $UPSTREAM_PATTERNS"
-      export UPSTREAM_PATTERNS
-    else
-      echo "ERROR: Could not fetch source-patterns.sh from HAF"
-      exit 1
-    fi
-  script:
-  - !reference [.find_upstream_image, script]
-    # Rename UPSTREAM_* to HAF_UPSTREAM_* to avoid collisions
-  - |
-    if [ -f "$UPSTREAM_OUTPUT" ]; then
-      sed -i 's/^UPSTREAM_/HAF_UPSTREAM_/' "$UPSTREAM_OUTPUT"
-      echo "Renamed variables in $UPSTREAM_OUTPUT:"
-      cat "$UPSTREAM_OUTPUT"
-    fi
-  artifacts:
-    reports:
-      dotenv: haf_image.env
-    expire_in: 1 day
-  tags:
-  - public-runner-docker
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
