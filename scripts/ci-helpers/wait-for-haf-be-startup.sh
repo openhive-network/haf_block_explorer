@@ -72,6 +72,14 @@ psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.operations'
 psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.blocks');"
 echo "Index creation initiated."
 
+# Step 3.5: Create HAFBE application indexes if not already created
+# These indexes (like witness_votes_history_witness_voter) are normally created
+# during single-block processing, but CI uses cached data from MASSIVE mode
+# where indexes aren't created. Create them explicitly before tests run.
+echo "Step 3.5: Creating HAFBE application indexes..."
+psql "$POSTGRES_ACCESS" --command="SELECT hafbe_indexes.create_hafbe_indexes();"
+echo "HAFBE application indexes created."
+
 # Step 3: Wait for all registered indexes to be created
 echo "Step 3: Waiting for registered indexes to finish building..."
 wait_for_condition \
