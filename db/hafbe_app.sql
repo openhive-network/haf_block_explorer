@@ -94,50 +94,75 @@ BEGIN
 
   ------------- CONTROL TABLES ----------------
 
-  -- Application status table for processing control and timing
+  /*
+   * app_status: Processing control and timing state
+   * ------------------------------------------------
+   * Single-row table controlling the main processing loop lifecycle.
+   * Used by scripts/process_blocks.sh to start/stop block processing.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.app_status (
-    continue_processing BOOLEAN,
-    started_processing_at TIMESTAMP,
-    last_reported_at TIMESTAMP,
-    if_hf11 BOOLEAN
+    continue_processing   BOOLEAN   NULL,  -- FALSE signals main loop to exit gracefully
+    started_processing_at TIMESTAMP NULL,  -- When current processing session began
+    last_reported_at      TIMESTAMP NULL,  -- Last progress report timestamp (for timing)
+    if_hf11               BOOLEAN   NULL   -- TRUE after hardfork 11 has been processed
   );
 
   INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11)
   VALUES (TRUE, NULL, NULL, FALSE);
 
-  -- Version tracking table
-  CREATE TABLE IF NOT EXISTS hafbe_app.version(
-  git_hash TEXT
+  /*
+   * version: Schema version tracking
+   * --------------------------------
+   * Stores the git hash of the deployed schema for debugging and audit.
+   * Updated by scripts/set_version_in_sql.pgsql during deployment.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.version (
+    git_hash TEXT NULL  -- Git commit hash of deployed schema version
   );
 
   INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
 
   ------------- BLOCK OPERATIONS ----------------
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.block_operations
-  (
-    block_num INT NOT NULL,
-    op_type_id INT NOT NULL,
-    op_count INT NOT NULL
+  /*
+   * block_operations: Aggregated operation counts per block
+   * -------------------------------------------------------
+   * Pre-computed counts of each operation type per block for fast API queries.
+   * Populated by process_block_operations() during block sync.
+   * Used by get_op_count_in_block() and block statistics endpoints.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.block_operations (
+    block_num  INT NOT NULL,  -- Block number containing the operations
+    op_type_id INT NOT NULL,  -- Operation type ID (from hive.operation_types)
+    op_count   INT NOT NULL   -- Count of this operation type in the block
   );
 
   PERFORM hive.app_register_table( 'hafbe_app', 'block_operations', 'hafbe_app' );
 
   ------------- ACCOUNT PARAMETERS ----------------
-  -- Columns allow NULL to indicate "unknown/not yet processed".
-  -- API layer uses COALESCE with hafbe_backend constants to provide defaults.
-  -- See: hafbe_backend.default_can_vote(), default_mined(), default_recovery_account(),
-  --      default_timestamp(), default_pending_claimed_accounts()
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters
-  (
-    account                  INT       NOT NULL,
-    can_vote                 BOOLEAN   NULL,
-    mined                    BOOLEAN   NULL,
-    recovery_account         TEXT      NULL,
-    last_account_recovery    TIMESTAMP NULL,
-    created                  TIMESTAMP NULL,
-    pending_claimed_accounts INT       NULL,
+  /*
+   * account_parameters: Account metadata cache
+   * ------------------------------------------
+   * Stores computed account properties extracted from various operations.
+   * Populated by process_account_stats() during block sync.
+   *
+   * NULL HANDLING: Columns allow NULL to indicate "unknown/not yet processed".
+   * API layer uses COALESCE with hafbe_backend constants to provide defaults:
+   *   - hafbe_backend.default_can_vote()
+   *   - hafbe_backend.default_mined()
+   *   - hafbe_backend.default_recovery_account()
+   *   - hafbe_backend.default_timestamp()
+   *   - hafbe_backend.default_pending_claimed_accounts()
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_parameters (
+    account                  INT       NOT NULL,  -- Account ID (FK to hive.accounts_view)
+    can_vote                 BOOLEAN   NULL,      -- FALSE if decline_voting_rights was set
+    mined                    BOOLEAN   NULL,      -- TRUE if account was created via PoW mining
+    recovery_account         TEXT      NULL,      -- Designated recovery account name
+    last_account_recovery    TIMESTAMP NULL,      -- When account was last recovered
+    created                  TIMESTAMP NULL,      -- Account creation timestamp
+    pending_claimed_accounts INT       NULL,      -- Unclaimed account creation tokens
 
     CONSTRAINT pk_account_parameters PRIMARY KEY (account)
   );
@@ -146,37 +171,63 @@ BEGIN
 
   ------------- WITNESS VOTES & PROXIES ----------------
 
+  /*
+   * witness_votes_history: Complete witness vote change history
+   * -----------------------------------------------------------
+   * Append-only log of all witness vote changes (approvals and removals).
+   * Used by get_witness_votes_history() for vote timeline queries.
+   * Populated by process_witness_votes() during block sync.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_history (
-    witness_id INT NOT NULL,
-    voter_id INT NOT NULL,
-    approve BOOLEAN NOT NULL,
-    source_op BIGINT NOT NULL
-
+    witness_id INT     NOT NULL,  -- Witness account ID being voted for
+    voter_id   INT     NOT NULL,  -- Account ID casting the vote
+    approve    BOOLEAN NOT NULL,  -- TRUE=vote added, FALSE=vote removed
+    source_op  BIGINT  NOT NULL   -- Operation ID that triggered this change
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'witness_votes_history', 'hafbe_app' );
 
+  /*
+   * current_witness_votes: Current active witness votes
+   * ----------------------------------------------------
+   * Snapshot of currently active votes (only approved, not removed).
+   * Updated via UPSERT/DELETE by process_witness_votes().
+   * Used by get_witness_voters() and vote count queries.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.current_witness_votes (
-    voter_id INT NOT NULL,
-    witness_id INT NOT NULL,
-    source_op BIGINT NOT NULL,
+    voter_id   INT    NOT NULL,  -- Account ID that cast the vote
+    witness_id INT    NOT NULL,  -- Witness account ID being voted for
+    source_op  BIGINT NOT NULL,  -- Operation ID of the vote
 
     CONSTRAINT pk_current_witness_votes PRIMARY KEY (voter_id, witness_id)
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_witness_votes', 'hafbe_app' );
 
+  /*
+   * account_proxies_history: Complete proxy change history
+   * ------------------------------------------------------
+   * Append-only log of all proxy setting changes.
+   * Used by get_account_proxy_history() for proxy timeline queries.
+   * Populated by process_witness_votes() during block sync.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.account_proxies_history (
-    account_id INT NOT NULL,
-    proxy_id INT NOT NULL,
-    proxy BOOLEAN NOT NULL,
-    source_op BIGINT NOT NULL
-
+    account_id INT     NOT NULL,  -- Account ID setting the proxy
+    proxy_id   INT     NOT NULL,  -- Account ID being set as proxy
+    proxy      BOOLEAN NOT NULL,  -- TRUE=proxy set, FALSE=proxy cleared
+    source_op  BIGINT  NOT NULL   -- Operation ID that triggered this change
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'account_proxies_history', 'hafbe_app' );
 
+  /*
+   * current_account_proxies: Current proxy assignments
+   * --------------------------------------------------
+   * Snapshot of currently active proxy relationships.
+   * One account can have at most one proxy (enforced by PK).
+   * Updated via UPSERT/DELETE by process_witness_votes().
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.current_account_proxies (
-    account_id INT NOT NULL,
-    proxy_id INT NOT NULL,
-    source_op BIGINT NOT NULL,
+    account_id INT    NOT NULL,  -- Account ID that delegated voting
+    proxy_id   INT    NOT NULL,  -- Account ID receiving delegated votes
+    source_op  BIGINT NOT NULL,  -- Operation ID of the proxy assignment
 
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   );
@@ -184,27 +235,39 @@ BEGIN
 
   ------------- TRANSACTION STATISTICS ----------------
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month
-  (
-    trx_count INT NOT NULL,
-    count_blocks INT NOT NULL,
-    min_trx INT NOT NULL,
-    max_trx INT NOT NULL,
-    last_block_num INT NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
+  /*
+   * transaction_stats_by_month: Monthly aggregated transaction statistics
+   * ---------------------------------------------------------------------
+   * Pre-aggregated monthly transaction counts for dashboard queries.
+   * One row per month (keyed by first day of month in updated_at).
+   * Populated by process_transaction_stats() during block sync.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_month (
+    trx_count      INT       NOT NULL,  -- Total transactions in the month
+    count_blocks   INT       NOT NULL,  -- Number of blocks processed in month
+    min_trx        INT       NOT NULL,  -- Minimum transactions in a single block
+    max_trx        INT       NOT NULL,  -- Maximum transactions in a single block
+    last_block_num INT       NOT NULL,  -- Last block number included in stats
+    updated_at     TIMESTAMP NOT NULL,  -- First day of month (serves as PK)
 
     CONSTRAINT pk_transaction_stats_by_month PRIMARY KEY (updated_at)
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_month', 'hafbe_app' );
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day
-  (
-    trx_count INT NOT NULL,
-    count_blocks INT NOT NULL,
-    min_trx INT NOT NULL,
-    max_trx INT NOT NULL,
-    last_block_num INT NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
+  /*
+   * transaction_stats_by_day: Daily aggregated transaction statistics
+   * -----------------------------------------------------------------
+   * Pre-aggregated daily transaction counts for dashboard queries.
+   * One row per day (keyed by date in updated_at).
+   * Populated by process_transaction_stats() during block sync.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.transaction_stats_by_day (
+    trx_count      INT       NOT NULL,  -- Total transactions on this day
+    count_blocks   INT       NOT NULL,  -- Number of blocks processed on this day
+    min_trx        INT       NOT NULL,  -- Minimum transactions in a single block
+    max_trx        INT       NOT NULL,  -- Maximum transactions in a single block
+    last_block_num INT       NOT NULL,  -- Last block number included in stats
+    updated_at     TIMESTAMP NOT NULL,  -- Date of statistics (serves as PK)
 
     CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
   );
@@ -212,21 +275,27 @@ BEGIN
 
   ------------- WITNESS STATISTICS ----------------
 
-  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses
-  (
-    witness_id INT NOT NULL,
-    url TEXT,
-    price_feed FLOAT,
-    bias NUMERIC,
-    feed_updated_at TIMESTAMP,
-    block_size INT,
-    signing_key TEXT,
-    version TEXT,
-    hbd_interest_rate INT,
-    last_created_block_num INT,
-    account_creation_fee INT,
-    missed_blocks INT,
-    created TIMESTAMP,
+  /*
+   * current_witnesses: Witness metadata and configuration
+   * -----------------------------------------------------
+   * Stores current witness properties extracted from witness_update operations.
+   * Updated by process_witness_stats() during block sync.
+   * Used by get_witness() and witness listing endpoints.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_witnesses (
+    witness_id             INT       NOT NULL,  -- Witness account ID (PK)
+    url                    TEXT      NULL,      -- Witness URL/website from witness_update
+    price_feed             FLOAT     NULL,      -- Current HIVE/HBD price feed value
+    bias                   NUMERIC   NULL,      -- Price feed bias percentage
+    feed_updated_at        TIMESTAMP NULL,      -- When price feed was last published
+    block_size             INT       NULL,      -- Preferred maximum block size
+    signing_key            TEXT      NULL,      -- Public signing key for block production
+    version                TEXT      NULL,      -- Witness node software version
+    hbd_interest_rate      INT       NULL,      -- Proposed HBD interest rate (basis points)
+    last_created_block_num INT       NULL,      -- Most recent block produced by witness
+    account_creation_fee   INT       NULL,      -- Fee for creating accounts (in HIVE)
+    missed_blocks          INT       NULL,      -- Cumulative count of missed blocks
+    created                TIMESTAMP NULL,      -- When witness was first registered
 
     CONSTRAINT pk_current_witnesses PRIMARY KEY (witness_id)
   );
@@ -234,46 +303,83 @@ BEGIN
 
   ------------- SYNC LOGGING ----------------
 
+  /*
+   * sync_time_logs: Block processing performance metrics
+   * ----------------------------------------------------
+   * Stores timing data for each processed block range.
+   * Used for performance monitoring and optimization.
+   * Populated by log_and_process_blocks() during sync.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.sync_time_logs (
-    block_num INT NOT NULL,
-    time_json JSONB NOT NULL,
+    block_num INT   NOT NULL,  -- First block of the processed range (PK)
+    time_json JSONB NOT NULL,  -- JSON with timing breakdown (btracker, hafbe, state_provider)
 
     CONSTRAINT pk_massive_sync_time_logs PRIMARY KEY (block_num)
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
   ------------- CACHE TABLES (LIVE stage only) ----------------
-  -- These tables store cached witness vest statistics,
-  -- which are updated exclusively during live synchronization at each block.
+  /*
+   * Cache tables are populated exclusively during LIVE synchronization.
+   * They provide fast access to computed values that would otherwise
+   * require expensive joins across multiple tables.
+   *
+   * Updated by process_witness_votes_cache() at each block during live sync.
+   * Truncated/rebuilt at each block to ensure consistency.
+   */
 
+  /*
+   * account_vest_stats_cache: Cached vest statistics per account
+   * ------------------------------------------------------------
+   * Pre-computed voting power for accounts (voters and proxies).
+   * Used by witness vote weight calculations.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.account_vest_stats_cache (
-    account_id INT NOT NULL,
-    vests BIGINT NOT NULL,
-    account_vests BIGINT NOT NULL,
-    proxied_vests BIGINT NOT NULL,
+    account_id    INT    NOT NULL,  -- Account ID (PK)
+    vests         BIGINT NOT NULL,  -- Total effective vests (account + proxied)
+    account_vests BIGINT NOT NULL,  -- Account's own vesting shares
+    proxied_vests BIGINT NOT NULL,  -- Vests delegated via proxy
 
     CONSTRAINT pk_account_vest_stats_cache PRIMARY KEY (account_id)
   );
 
+  /*
+   * witness_votes_cache: Cached witness vote totals
+   * -----------------------------------------------
+   * Pre-computed total votes and voter counts per witness.
+   * Used by get_witnesses() for sorting by votes.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache (
-    witness_id INT NOT NULL,
-    votes BIGINT NOT NULL,
-    voters_num INT NOT NULL,
+    witness_id INT    NOT NULL,  -- Witness account ID (PK)
+    votes      BIGINT NOT NULL,  -- Total weighted votes (sum of voter vests)
+    voters_num INT    NOT NULL,  -- Count of unique voters
 
     CONSTRAINT pk_witness_votes_cache PRIMARY KEY (witness_id)
   );
 
+  /*
+   * witness_rank_cache: Cached witness rankings
+   * -------------------------------------------
+   * Pre-computed witness rank based on total votes.
+   * Rank 1 = most votes. Used for witness listing display.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_rank_cache (
-    witness_id INT NOT NULL,
-    rank INT NOT NULL,
+    witness_id INT NOT NULL,  -- Witness account ID (PK)
+    rank       INT NOT NULL,  -- Current rank (1 = highest votes)
 
     CONSTRAINT pk_witness_rank_cache PRIMARY KEY (witness_id)
   );
 
+  /*
+   * witness_votes_change_cache: Cached daily vote changes
+   * -----------------------------------------------------
+   * Pre-computed 24-hour changes in votes and voter counts.
+   * Used by get_witnesses() for showing vote trends.
+   */
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
-    witness_id INT NOT NULL,
-    votes_daily_change BIGINT NOT NULL,
-    voters_num_daily_change INT NOT NULL,
+    witness_id              INT    NOT NULL,  -- Witness account ID (PK)
+    votes_daily_change      BIGINT NOT NULL,  -- Change in votes over last 24h
+    voters_num_daily_change INT    NOT NULL,  -- Change in voter count over last 24h
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
