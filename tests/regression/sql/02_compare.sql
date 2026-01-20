@@ -219,6 +219,7 @@ BEGIN
       block_size,
       hbd_interest_rate,
       price_feed,
+      feed_updated_at,
       created
     FROM hafbe_test.expected_witness_props
   ),
@@ -265,6 +266,7 @@ BEGIN
       cw.block_size,
       cw.hbd_interest_rate,
       cw.price_feed::NUMERIC AS price_feed,
+      cw.feed_updated_at,
       cw.created
     FROM hafbe_app.current_witnesses cw
   ),
@@ -289,6 +291,7 @@ BEGIN
       ew.block_size             AS exp_block_size,
       ew.hbd_interest_rate      AS exp_hbd_interest_rate,
       ew.price_feed             AS exp_price_feed,
+      ew.feed_updated_at        AS exp_feed_updated_at,
       ew.created                AS exp_created,
       -- Computed values
       cw.url                    AS cur_url,
@@ -301,6 +304,7 @@ BEGIN
       cw.block_size             AS cur_block_size,
       cw.hbd_interest_rate      AS cur_hbd_interest_rate,
       cw.price_feed             AS cur_price_feed,
+      cw.feed_updated_at        AS cur_feed_updated_at,
       cw.created                AS cur_created
     FROM expected_witnesses ew
     LEFT JOIN computed_witnesses cw ON cw.witness_id = ew.witness_id
@@ -311,7 +315,7 @@ BEGIN
    * INSERT DIFFERENCES:
    * Skip system accounts (id <= 4).
    *
-   * TIMESTAMP TOLERANCE FOR CREATED:
+   * TIMESTAMP TOLERANCE FOR CREATED AND FEED_UPDATED_AT:
    *   hived uses operation timestamp (from transaction),
    *   hafbe uses block timestamp (from blocks_view).
    *
@@ -323,6 +327,7 @@ BEGIN
    *   because block 815424 was produced 63 seconds after 815423.
    *
    *   We use 66-second tolerance (63 + 3 buffer) to handle these cases.
+   *   This applies to both 'created' and 'feed_updated_at' timestamps.
    */
   INSERT INTO hafbe_test.differing_witnesses (witness_id)
   SELECT witness_id
@@ -341,6 +346,8 @@ BEGIN
       OR exp_hbd_interest_rate   != cur_hbd_interest_rate
       -- price_feed: Allow small floating point tolerance (1e-10)
       OR ABS(exp_price_feed - cur_price_feed) > 1e-10
+      -- feed_updated_at: Same 66-second tolerance as created (block vs operation timestamp)
+      OR ABS(EXTRACT(EPOCH FROM (exp_feed_updated_at - cur_feed_updated_at))) > 66
       OR ABS(EXTRACT(EPOCH FROM (exp_created - cur_created))) > 66
     );
 
