@@ -103,7 +103,7 @@ HAFBE integrates endpoints from submodules. These are exposed through HAFBE but 
 |-----------|-----------------|---------------|
 | btracker | `/rpc/btracker_*` | `submodules/btracker/scripts/claude/endpoints.md` |
 | reptracker | `/rpc/reptracker_*` | `submodules/reptracker/scripts/claude/endpoints.md` |
-| hafah | `/rpc/hafah_*` | `submodules/hafah/scripts/claude/endpoints.md` |
+| hafah | `/rpc/hafah_*` | `submodules/hafah/CLAUDE.md` (basic docs only) |
 
 ## Directory Structure
 

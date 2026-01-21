@@ -175,7 +175,7 @@ HAFBE integrates three sub-applications that extend its functionality:
 
 ### Account Authority History (hafah)
 - **Purpose**: Tracks account operation history
-- **Docs**: `submodules/hafah/scripts/claude/`
+- **Docs**: `submodules/hafah/CLAUDE.md` (basic documentation only - no modular docs)
 
 ### Working with Submodules
 
