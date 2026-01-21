@@ -597,8 +597,11 @@ setup-scripts-test:
     # Pre-create haf/scripts directory for hafah's setup_postgres.sh to download create_haf_app_role.sh
     # (haf submodule was removed from hafah, so this directory doesn't exist in the checked-out hafah)
     sudo mkdir -p "${CI_PROJECT_DIR}/submodules/hafah/haf/scripts"
-    # Make entire hafah submodule writable (needed for generate_version_sql.bash to write set_version_in_sql.pgsql)
+    # Make submodules writable (needed for generate_version_sql scripts to write set_version_in_sql.pgsql)
+    # Without this, reused workspace checkouts may have stale files with restrictive permissions
     sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/hafah"
+    sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker"
+    sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker"
 
     cd tests/functional
     ./test_scripts.sh --host=${HAF_HOST}
