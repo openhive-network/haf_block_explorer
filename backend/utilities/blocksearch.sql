@@ -193,6 +193,54 @@ CREATE TYPE hafbe_backend.find_blocks_with_op_return AS (
   op_count   INT
 );
 
+/*
+ * gathered_block: Intermediate block representation for gatherer functions.
+ *
+ * FIELDS:
+ *   block_num  - Block number
+ *   operations - Array of operation counts for this block
+ *
+ * USAGE: Used by gatherer functions to pass block data to the finalize step
+ *        before enrichment with metadata (hash, prev, producer_account, etc.)
+ */
+DROP TYPE IF EXISTS hafbe_backend.gathered_block CASCADE;
+CREATE TYPE hafbe_backend.gathered_block AS (
+  block_num  INT,
+  operations hafbe_backend.block_operations[]
+);
+
+/*
+ * gatherer_result: Return type for all block search gatherer functions.
+ *
+ * FIELDS:
+ *   blocks            - Array of (block_num, operations) tuples, paginated and ordered
+ *   total_count       - Total number of blocks matching the filter (may be capped)
+ *   total_pages       - Total number of pages available
+ *   min_block_num     - Minimum block number found (for cursor calculation)
+ *   pre_grouped_count - Count of operations before grouping (for cursor saturation check)
+ *   max_page_limit    - __max_page_count * _limit (for cursor saturation check)
+ *   range_from        - Normalized start of block range
+ *   range_to          - Normalized end of block range
+ *
+ * CURSOR LOGIC:
+ *   The cursor_from value is calculated by blocksearch_build_result using:
+ *   - If min_block_num IS NULL: no results, cursor = range_from
+ *   - If min_block_num = 1: at genesis, cursor = 1
+ *   - If pre_grouped_count != max_page_limit: not saturated, cursor = range_from
+ *   - Otherwise: saturated results, cursor = min_block_num - 1
+ */
+DROP TYPE IF EXISTS hafbe_backend.gatherer_result CASCADE;
+CREATE TYPE hafbe_backend.gatherer_result AS (
+  blocks            hafbe_backend.gathered_block[],
+  total_count       INT,
+  total_pages       INT,
+  min_block_num     INT,
+  pre_grouped_count INT,
+  max_page_limit    INT,
+  range_from        INT,
+  range_to          INT
+);
+
 -- ============================================================================
 -- SECTION 3: Range Calculation Functions
 -- ============================================================================
@@ -486,6 +534,11 @@ DECLARE
   __offset           INT;
   __limit            INT;
 BEGIN
+  -- Handle zero count case early
+  IF _count = 0 OR _count IS NULL THEN
+    RETURN (0, 0, 0, 0, _limit)::hafbe_backend.calculate_pages_return;
+  END IF;
+
   __rest_of_division := (_count % _limit)::INT;
 
   __total_pages := CASE
@@ -626,6 +679,102 @@ BEGIN
       (CASE WHEN _order_is = 'asc' THEN aov.block_num ELSE NULL END) ASC
     LIMIT _limit
   );
+END
+$$;
+
+-- ============================================================================
+-- SECTION 6: Result Building Functions
+-- ============================================================================
+-- Functions for building final API responses from gatherer results.
+-- ============================================================================
+
+/*
+ * blocksearch_build_result: Enriches gathered blocks and builds the final API response.
+ *
+ * This is the SINGLE point of enrichment for all block search filters.
+ * It takes the intermediate gatherer_result and:
+ *   1. Calculates the cursor (next from_block for pagination)
+ *   2. Enriches each block with metadata from blocks_view
+ *   3. Adds producer_reward, trx_count via helper functions
+ *   4. Returns the final block_history response
+ *
+ * PARAMETERS:
+ *   _gathered - The gatherer_result from any filter function
+ *   _order_is - Sort direction ('asc' or 'desc')
+ *
+ * RETURNS: block_history with enriched block data
+ *
+ * CURSOR CALCULATION:
+ *   The cursor indicates where to start the next paginated request.
+ *   - NULL min_block_num: no results found, keep original range_from
+ *   - min_block_num = 1: at genesis, cursor = 1
+ *   - Not saturated (pre_grouped_count != max_page_limit): more data available, keep range_from
+ *   - Saturated: results capped, cursor = min_block_num - 1 (start before current results)
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_build_result(
+    _gathered hafbe_backend.gatherer_result,
+    _order_is hafbe_backend.sort_direction
+)
+RETURNS hafbe_backend.block_history
+LANGUAGE 'plpgsql'
+STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET JIT = OFF
+AS
+$$
+DECLARE
+  __cursor_from INT;
+  __result      hafbe_backend.blocksearch[];
+BEGIN
+  -- Handle empty result case
+  IF _gathered.total_pages = 0 OR _gathered.blocks IS NULL OR array_length(_gathered.blocks, 1) IS NULL THEN
+    RETURN (
+      COALESCE(_gathered.total_count, 0),
+      COALESCE(_gathered.total_pages, 0),
+      (_gathered.range_from, _gathered.range_to)::hafbe_backend.block_range,
+      '{}'::hafbe_backend.blocksearch[]
+    )::hafbe_backend.block_history;
+  END IF;
+
+  -- Calculate cursor for next paginated request
+  __cursor_from := CASE
+    WHEN _gathered.min_block_num IS NULL THEN
+      _gathered.range_from
+    WHEN _gathered.min_block_num = 1 THEN
+      1
+    WHEN _gathered.pre_grouped_count != _gathered.max_page_limit THEN
+      _gathered.range_from
+    ELSE
+      _gathered.min_block_num - 1
+  END;
+
+  -- Enrich blocks with metadata and build result array
+  SELECT array_agg(row ORDER BY
+    (CASE WHEN _order_is = 'desc' THEN row.block_num ELSE NULL END) DESC,
+    (CASE WHEN _order_is = 'asc' THEN row.block_num ELSE NULL END) ASC
+  )
+  INTO __result
+  FROM (
+    SELECT
+      g.block_num,
+      bv.created_at,
+      hafah_backend.get_account_name(bv.producer_account_id) AS producer_account,
+      hafbe_backend.get_producer_reward(g.block_num)::TEXT AS producer_reward,
+      hafbe_backend.get_trx_count(g.block_num) AS trx_count,
+      encode(bv.hash, 'hex') AS hash,
+      encode(bv.prev, 'hex') AS prev,
+      g.operations
+    FROM unnest(_gathered.blocks) AS g(block_num, operations)
+    JOIN hive.blocks_view bv ON bv.num = g.block_num
+  ) row;
+
+  RETURN (
+    COALESCE(_gathered.total_count, 0),
+    COALESCE(_gathered.total_pages, 0),
+    (__cursor_from, _gathered.range_to)::hafbe_backend.block_range,
+    COALESCE(__result, '{}'::hafbe_backend.blocksearch[])
+  )::hafbe_backend.block_history;
 END
 $$;
 
