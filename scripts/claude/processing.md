@@ -83,7 +83,7 @@ HAFBE delegates some processing to integrated submodules:
 ### HAfAH (hafah)
 - **Integration**: Uses HAF state providers, no custom processing
 - **Purpose**: Account operation history
-- **Docs**: `submodules/hafah/scripts/claude/`
+- **Docs**: `submodules/hafah/CLAUDE.md` (basic documentation only - no modular docs)
 
 ## Control Functions
 

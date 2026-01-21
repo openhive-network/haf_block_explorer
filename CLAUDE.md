@@ -25,7 +25,7 @@ Blockchain API for querying Hive transactions, operations, accounts, and witness
 **Submodules**: For submodule details, read their docs:
 - btracker: `submodules/btracker/scripts/claude/`
 - reptracker: `submodules/reptracker/scripts/claude/`
-- hafah: `submodules/hafah/scripts/claude/`
+- hafah: `submodules/hafah/CLAUDE.md` (basic docs only)
 
 ## Expansion Rules
 
