@@ -8,11 +8,6 @@ stages:
 - cleanup
 
 variables:
-  # Common CI configuration version - use develop for latest fixes
-  CI_COMMON_JOB_VERSION: "develop"
-  DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
-  DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
-  IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
   # Shared HAF app test runner from common-ci-configuration
   HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.2"
   # HAF app role prefix for templates
