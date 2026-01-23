@@ -8,6 +8,15 @@ stages:
 - cleanup
 
 variables:
+  # Common CI configuration version - use develop for latest fixes
+  CI_COMMON_JOB_VERSION: "develop"
+  DOCKER_BUILDER_TAG: "$CI_COMMON_JOB_VERSION"
+  DOCKER_DIND_TAG: "$CI_COMMON_JOB_VERSION"
+  IMAGE_REMOVER_TAG: "$CI_COMMON_JOB_VERSION"
+  # Shared HAF app test runner from common-ci-configuration
+  HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.2"
+  # HAF app role prefix for templates
+  HAF_APP_ROLE_PREFIX: "hafbe"
   # Git configuration
   # Fetch strategy reuses workspace between jobs, reducing GitLab server load.
   # Full clone (depth 0) enables efficient incremental fetches - shallow clones
@@ -299,7 +308,7 @@ sync:
   - .haf_app_sync_variables
   stage: sync
   # Shared HAF app test runner from common-ci-configuration
-  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
+  image: ${HAF_APP_TEST_RUNNER_IMAGE}
   needs:
   - job: find_haf_image
     artifacts: true
@@ -318,9 +327,10 @@ sync:
     # GitLab Runner 18.6+ doesn't inherit credentials to nested submodules (tests_api in btracker)
     # Use manual init without recursion since this job doesn't need tests_api
     GIT_SUBMODULE_STRATEGY: none
-    # Docker-in-docker connection (disable TLS for simplicity - same as develop branch)
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_HOST: "tcp://docker:2375"
+    # Docker-in-docker connection - TLS enabled
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
     # Map HAF_UPSTREAM_* from find_haf_image to HAF_* for cache lookup
     HAF_COMMIT: "${HAF_UPSTREAM_COMMIT}"
     DATA_SOURCE: ${DATA_CACHE_HAF_PREFIX}_${HAF_UPSTREAM_COMMIT}
@@ -432,7 +442,7 @@ python_api_client_test:
   stage: test
   # Shared HAF app test runner from common-ci-configuration
   # Has: Python 3.14, Poetry, Docker CLI, docker-compose, JMeter, m2u
-  image: registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner:2.1
+  image: ${HAF_APP_TEST_RUNNER_IMAGE}
   needs:
   - job: find_haf_image
     artifacts: true
