@@ -33,8 +33,9 @@ variables:
   # common-ci-configuration scripts. No manual updates needed - always uses
   # the latest built image from the HAF repo.
   #
-  # Output variables (set by detect stage job):
+  # Output variables (set by find_haf_image job):
   #   HAF_UPSTREAM_IMAGE, HAF_UPSTREAM_COMMIT, HAF_UPSTREAM_TAG
+  #   HAF_IMAGE_NAME, HAF_COMMIT (convenience aliases)
   # =============================================================================
   DATA_CACHE_HAF_PREFIX: "/cache/replay_data_haf"
   # NFS cache configuration for sync data sharing across builders
@@ -126,11 +127,15 @@ quick_test_setup:
       exit 1
     fi
 
-    # Override HAF_UPSTREAM_* with the cached version
+    # Override HAF_UPSTREAM_* and aliases with the cached version
     HAF_SHORT="${QUICK_TEST_HAF_COMMIT:0:8}"
+    HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:$HAF_SHORT"
     echo "HAF_UPSTREAM_COMMIT=$QUICK_TEST_HAF_COMMIT" > quick_test.env
     echo "HAF_UPSTREAM_TAG=$HAF_SHORT" >> quick_test.env
-    echo "HAF_UPSTREAM_IMAGE=registry.gitlab.syncad.com/hive/haf:$HAF_SHORT" >> quick_test.env
+    echo "HAF_UPSTREAM_IMAGE=$HAF_IMAGE" >> quick_test.env
+    # Also set the aliases that find_haf_image now provides
+    echo "HAF_COMMIT=$QUICK_TEST_HAF_COMMIT" >> quick_test.env
+    echo "HAF_IMAGE_NAME=$HAF_IMAGE" >> quick_test.env
     echo "HAFBE_CACHE_KEY=${QUICK_TEST_HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}" >> quick_test.env
     cat quick_test.env
   artifacts:
@@ -152,16 +157,13 @@ prepare_haf_data:
   variables:
     BLOCK_LOG_SOURCE_DIR: $BLOCK_LOG_SOURCE_DIR_5M
     CONFIG_INI_SOURCE: "/tmp/haf-app-tools/config_5M.ini"
-    # Map HAF_UPSTREAM_* from find_haf_image to HAF_* expected by template
-    HAF_IMAGE_NAME: "${HAF_UPSTREAM_IMAGE}"
-    HAF_COMMIT: "${HAF_UPSTREAM_COMMIT}"
+    # HAF_IMAGE_NAME and HAF_COMMIT are now provided directly by find_haf_image
     # No submodules needed - uses pre-built HAF image from registry
     GIT_SUBMODULE_STRATEGY: none
   before_script:
   - !reference [.haf_docker_image_builder_job, before_script]
   - mkdir -p /tmp/haf-app-tools
   - curl -fsSL "${COMMON_CI_URL}/haf-app-tools/config/config_5M.ini" -o /tmp/haf-app-tools/config_5M.ini
-    # Log the mapped variables
   - echo "Using HAF image:${HAF_IMAGE_NAME} (commit:${HAF_COMMIT})"
   tags:
   - public-runner-docker
