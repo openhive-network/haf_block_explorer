@@ -361,9 +361,7 @@ AS $$
 DECLARE
   __result hafbe_backend.claim_account_result;
 BEGIN
-  __result := (
-    _body -> 'value' ->> 'creator'
-  );
+  __result := ROW(_body -> 'value' ->> 'creator');
 
   RETURN __result;
 END
