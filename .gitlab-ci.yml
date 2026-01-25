@@ -198,6 +198,16 @@ prepare_haf_data:
         docker pull "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}"
         docker tag "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
         docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+        # Also tag and push postgrest-rewriter image for publish_images job
+        REWRITER_IMAGE="$CI_REGISTRY_IMAGE/postgrest-rewriter"
+        if image-exists "${REWRITER_IMAGE}:${BASE_TAG}"; then
+          echo "Tagging pre-existing postgrest-rewriter image with Git tag..."
+          docker pull "${REWRITER_IMAGE}:${BASE_TAG}"
+          docker tag "${REWRITER_IMAGE}:${BASE_TAG}" "${REWRITER_IMAGE}:${CI_COMMIT_TAG}"
+          docker push "${REWRITER_IMAGE}:${CI_COMMIT_TAG}"
+        else
+          echo "WARNING: postgrest-rewriter:${BASE_TAG} not found - skipping tag"
+        fi
       fi
     else
       echo "Baking $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} image..."
