@@ -5,47 +5,31 @@ set -o pipefail
 
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit 1; pwd -P )"
 
-# Download process_openapi.py from haf repo if not present locally
-HAF_SCRIPTS_DIR="$SCRIPTDIR/haf_scripts"
-HAF_REF="${HAF_REF:-develop}"
-PROCESS_OPENAPI_URL="https://gitlab.syncad.com/hive/haf/-/raw/${HAF_REF}/scripts/process_openapi.py"
+# Fetch process_openapi.py from common-ci-configuration if not available locally
+COMMON_CI_REF="${COMMON_CI_REF:-develop}"
+COMMON_CI_URL="${COMMON_CI_URL:-https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}}"
+PROCESS_OPENAPI="${SCRIPTDIR}/process_openapi.py"
 
-ensure_process_openapi() {
-    if [[ ! -f "$HAF_SCRIPTS_DIR/process_openapi.py" ]]; then
-        echo "process_openapi.py not found locally, downloading from haf repo (ref: $HAF_REF)..."
-        mkdir -p "$HAF_SCRIPTS_DIR"
-        if command -v curl &> /dev/null; then
-            curl -fsSL "$PROCESS_OPENAPI_URL" -o "$HAF_SCRIPTS_DIR/process_openapi.py"
-        elif command -v wget &> /dev/null; then
-            wget -q "$PROCESS_OPENAPI_URL" -O "$HAF_SCRIPTS_DIR/process_openapi.py"
-        else
-            echo "ERROR: Neither curl nor wget is available. Please install one to download HAF scripts."
-            exit 1
-        fi
-        chmod +x "$HAF_SCRIPTS_DIR/process_openapi.py"
-        echo "process_openapi.py downloaded successfully."
-    fi
-}
+if [[ ! -f "$PROCESS_OPENAPI" ]]; then
+    echo "Fetching process_openapi.py from common-ci-configuration (ref: ${COMMON_CI_REF})..."
+    curl -fsSL "${COMMON_CI_URL}/haf-app-tools/python/process_openapi.py" -o "$PROCESS_OPENAPI"
+fi
 
 endpoints="endpoints"
-types="endpoints/types"
 rewrite_dir="${endpoints}_openapi"
-rewrite_types_dir="endpoints/types_openapi"
 input_file="rewrite_rules.conf"
 temp_output_file=$(mktemp)
 
 # Default directories with fixed order if none provided
 OUTPUT="$SCRIPTDIR/output"
-DEFAULT_TYPES="
-../$types/enums.sql
-../$types/blocks.sql
-../$types/accounts.sql
-../$types/witnesses.sql
-../$types/operations.sql
-../$types/transactions.sql"
-
 ENDPOINTS_IN_ORDER="
 ../$endpoints/endpoint_schema.sql
+../$endpoints/types/enums.sql
+../$endpoints/types/blocks.sql
+../$endpoints/types/accounts.sql
+../$endpoints/types/witnesses.sql
+../$endpoints/types/operations.sql
+../$endpoints/types/transactions.sql
 ../$endpoints/witnesses/get_witnesses.sql
 ../$endpoints/witnesses/get_witness.sql
 ../$endpoints/witnesses/get_witness_voters.sql
@@ -126,27 +110,20 @@ else
     echo "jsonpointer has been installed."
 fi
 
-echo "Using endpoints and types directories"
+echo "Using endpoints directories"
 echo "$ENDPOINTS_IN_ORDER"
-echo "$DEFAULT_TYPES"
-
-# Ensure process_openapi.py is available
-ensure_process_openapi
 
 # run openapi rewrite script
 # shellcheck disable=SC2086
-python3 "$HAF_SCRIPTS_DIR/process_openapi.py" $OUTPUT $DEFAULT_TYPES $ENDPOINTS_IN_ORDER
+python3 "$PROCESS_OPENAPI" $OUTPUT $ENDPOINTS_IN_ORDER
 
-# Create rewrite_rules.conf in endpoints directory
-reverse_lines > "$temp_output_file"
-mv "$temp_output_file" "../endpoints/$input_file"
-rm "$input_file"
-
-# Move rewriten directory to /postgrest
+# Move rewritten directory to endpoints_openapi
 rm -rf "$SCRIPTDIR/../$rewrite_dir"
-rm -rf "$SCRIPTDIR/../$rewrite_types_dir"
 mv "$OUTPUT/../$endpoints" "$SCRIPTDIR/../$rewrite_dir"
-mv "$OUTPUT/../$types" "$SCRIPTDIR/../$rewrite_types_dir"
 rm -rf "$SCRIPTDIR/output"
-echo "Rewritten endpoint scripts saved in $rewrite_dir"
-echo "Rewritten types scripts saved in $rewrite_types_dir"
+
+# Create rewrite_rules.conf inside endpoints_openapi
+reverse_lines > "$temp_output_file"
+mv "$temp_output_file" "$SCRIPTDIR/../$rewrite_dir/$input_file"
+rm "$input_file"
+echo "Rewritten scripts saved in $rewrite_dir"
