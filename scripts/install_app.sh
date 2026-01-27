@@ -122,7 +122,6 @@ setup_apps() {
 
   # Stage 2: Install all apps
   echo "Installing HAfAH..."
-  "$HAFBE_DIR/submodules/hafah/scripts/setup_postgres.sh"   --postgres-url="$POSTGRES_ACCESS"
   "$HAFBE_DIR/submodules/hafah/scripts/install_app.sh"      --postgres-url="$POSTGRES_ACCESS"
 
   echo "Installing Balance Tracker..."

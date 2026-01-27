@@ -570,7 +570,7 @@ BEGIN
     ELSE _limit
   END;
 
-  PERFORM hafah_python.validate_page(_page, __total_pages);
+  PERFORM hafah_backend.validate_page(_page, __total_pages);
 
   RETURN (__rest_of_division, __total_pages, __page, __offset, __limit)::hafbe_backend.calculate_pages_return;
 END
