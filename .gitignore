@@ -8,6 +8,7 @@ set_version_in_sql.pgsql
 accounts_dump.json
 endpoints_openapi
 backend/types_openapi
+process_openapi.py
 
 # Docker
 docker/blockchain/block_log*
