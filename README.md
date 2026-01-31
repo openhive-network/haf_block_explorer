@@ -4,7 +4,7 @@
 
 HAF Block Explorer (HAFBE) is a comprehensive blockchain API for querying information about the Hive blockchain. It provides a RESTful API for accessing transactions, operations, accounts, witnesses, and block data.
 
-Built on PostgreSQL and PostgREST, HAFBE processes blockchain data through the Hive Application Framework (HAF) and exposes it via a clean REST API. It integrates three sub-applications to provide complete blockchain data coverage: Balance Tracker (account balances), Reputation Tracker (reputation scores), and HAfAH (account operation history).
+Built on PostgreSQL and PostgREST, HAFBE processes blockchain data through the Hive Application Framework (HAF) and exposes it via a clean REST API. It integrates three sub-applications to provide complete blockchain data coverage: Balance Tracker (account balances), Reputation Tracker (reputation scores), and HAfAH (account history).
 
 HAFBE is designed for developers building Hive applications, block explorers, analytics tools, and any service that needs access to historical blockchain data.
 
@@ -38,7 +38,7 @@ HAFBE is designed for developers building Hive applications, block explorers, an
 │                      HAF Block Explorer                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
 │  │   btracker  │  │  reptracker │  │         hafah           │ │
-│  │  (balances) │  │ (reputation)│  │   (authority history)   │ │
+│  │  (balances) │  │ (reputation)│  │  (account history)      │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -103,7 +103,7 @@ haf_block_explorer/
 └── submodules/              Integrated sub-applications
     ├── btracker/            Balance Tracker
     ├── reptracker/          Reputation Tracker
-    └── hafah/               Account Authority History
+    └── hafah/               HAF Account History (HAfAH)
 ```
 
 ## Prerequisites
@@ -211,12 +211,12 @@ Tracks all account balances in real-time:
 
 Calculates reputation scores for all accounts based on votes received. Reputation is computed using the same algorithm as hived.
 
-### Account Authority History (hafah)
+### HAfAH - HAF Account History
 
-Provides complete operation history for accounts, including:
+Provides account history API, including:
 - All operations involving an account
-- Authority and key changes
-- Filtered operation queries
+- Filtered queries by operation type
+- Historical account activity
 
 ## Uninstallation
 

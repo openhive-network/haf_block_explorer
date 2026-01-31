@@ -47,7 +47,7 @@ tests/                   Test suites
 submodules/              Integrated sub-applications
 ├── btracker/            Balance tracking
 ├── reptracker/          Reputation tracking
-└── hafah/               Account authority history
+└── hafah/               HAF Account History (HAfAH)
 ```
 
 ## Schema Conventions
@@ -173,8 +173,8 @@ HAFBE integrates three sub-applications that extend its functionality:
 - **Schema**: `reptracker_app`
 - **Docs**: `submodules/reptracker/scripts/claude/`
 
-### Account Authority History (hafah)
-- **Purpose**: Tracks account operation history
+### HAfAH - HAF Account History
+- **Purpose**: Provides account history API
 - **Docs**: `submodules/hafah/CLAUDE.md` (basic documentation only - no modular docs)
 
 ### Working with Submodules
