@@ -823,8 +823,7 @@ $$;
  *   - witness_votes_history_witness_voter: Efficient voter filtering
  *
  * Account Proxies:
- *   - account_proxies_history_account_id_source_op: Time-ordered history
- *   - account_proxies_history_account_id: Filter by account
+ *   - account_proxies_history_account_id_source_op: Time-ordered history (also serves account filtering)
  *   - current_account_proxies_proxy_id: Filter by proxy
  *
  * Block Operations:
@@ -846,7 +845,6 @@ BEGIN
   CREATE INDEX IF NOT EXISTS witness_votes_history_witness_voter ON hafbe_app.witness_votes_history USING btree (witness_id, voter_id);
 
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_source_op ON hafbe_app.account_proxies_history USING btree (account_id, source_op);
-  CREATE INDEX IF NOT EXISTS account_proxies_history_account_id ON hafbe_app.account_proxies_history USING btree (account_id);
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);
