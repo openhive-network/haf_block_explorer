@@ -15,7 +15,8 @@ FROM psql as version-calculcation
 COPY --chown=haf_admin:users . /home/haf_admin/src
 WORKDIR /home/haf_admin/src
 RUN scripts/generate_version_sql.sh $(pwd)
-RUN API_VERSION="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" \
+RUN git fetch --tags --quiet 2>/dev/null || true \
+    && API_VERSION="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" \
     && find . -name 'endpoint_schema.sql' -o -name 'hafah_openapi.sql' | while read -r f; do \
          sed -i 's|"version": "[^"]*"|"version": "'"$API_VERSION"'"|' "$f"; \
          sed -i 's|^  version: .*|  version: '"$API_VERSION"'|' "$f"; \
