@@ -298,8 +298,9 @@ SELECT
   t.approve,
   t.source_op,
   hafd.operation_id_to_block_num(t.source_op) AS source_op_block,
-  hafd.operation_id_to_type_id(t.source_op) AS op_type_id
-FROM hafbe_app.witness_votes_history t;
+  ops.op_type_id
+FROM hafbe_app.witness_votes_history t
+JOIN hafd.operations ops ON ops.id = t.source_op;
 
 /*
  * current_witness_votes_view: Current witness votes with computed block numbers.
@@ -320,8 +321,9 @@ SELECT
   t.witness_id,
   t.source_op,
   hafd.operation_id_to_block_num(t.source_op) AS source_op_block,
-  hafd.operation_id_to_type_id(t.source_op) AS op_type_id
-FROM hafbe_app.current_witness_votes t;
+  ops.op_type_id
+FROM hafbe_app.current_witness_votes t
+JOIN hafd.operations ops ON ops.id = t.source_op;
 
 /*
  * account_proxies_history_view: Proxy change history with computed block numbers.
@@ -344,8 +346,9 @@ SELECT
   t.proxy,
   t.source_op,
   hafd.operation_id_to_block_num(t.source_op) AS source_op_block,
-  hafd.operation_id_to_type_id(t.source_op) AS op_type_id
-FROM hafbe_app.account_proxies_history t;
+  ops.op_type_id
+FROM hafbe_app.account_proxies_history t
+JOIN hafd.operations ops ON ops.id = t.source_op;
 
 /*
  * current_account_proxies_view: Current proxy settings with computed block numbers.
@@ -366,7 +369,8 @@ SELECT
   t.proxy_id,
   t.source_op,
   hafd.operation_id_to_block_num(t.source_op) AS source_op_block,
-  hafd.operation_id_to_type_id(t.source_op) AS op_type_id
-FROM hafbe_app.current_account_proxies t;
+  ops.op_type_id
+FROM hafbe_app.current_account_proxies t
+JOIN hafd.operations ops ON ops.id = t.source_op;
 
 RESET ROLE;

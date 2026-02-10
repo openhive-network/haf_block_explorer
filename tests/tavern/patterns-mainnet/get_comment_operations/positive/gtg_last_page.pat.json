@@ -23,7 +23,7 @@
       "op_type_id": 52,
       "timestamp": "2016-08-22T13:01:45",
       "virtual_op": true,
-      "operation_id": "18485715335644980",
+      "operation_id": "18485715335643143",
       "trx_in_block": -1
     },
     {
@@ -47,7 +47,7 @@
       "op_type_id": 52,
       "timestamp": "2016-08-22T13:01:45",
       "virtual_op": true,
-      "operation_id": "18485715335645236",
+      "operation_id": "18485715335643144",
       "trx_in_block": -1
     },
     {
@@ -71,7 +71,7 @@
       "op_type_id": 52,
       "timestamp": "2016-08-22T13:01:45",
       "virtual_op": true,
-      "operation_id": "18485715335645492",
+      "operation_id": "18485715335643145",
       "trx_in_block": -1
     },
     {
@@ -109,7 +109,7 @@
       "op_type_id": 51,
       "timestamp": "2016-08-22T13:01:45",
       "virtual_op": true,
-      "operation_id": "18485715335645747",
+      "operation_id": "18485715335643146",
       "trx_in_block": -1
     },
     {
@@ -147,7 +147,7 @@
       "op_type_id": 53,
       "timestamp": "2016-08-22T13:01:45",
       "virtual_op": true,
-      "operation_id": "18485715335646005",
+      "operation_id": "18485715335643147",
       "trx_in_block": -1
     }
   ]
