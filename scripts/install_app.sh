@@ -104,7 +104,7 @@ POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_b
 get_submodule_git_dir() {
   local submodule_name=$1
   local submodule_dir=$2
-  local modules_path="$hafbe_dir/.git/modules/submodules/$submodule_name"
+  local modules_path="$HAFBE_DIR/.git/modules/submodules/$submodule_name"
   if [[ -d "$modules_path" ]]; then
     echo "$modules_path"
   else
