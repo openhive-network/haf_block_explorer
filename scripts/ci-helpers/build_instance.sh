@@ -104,6 +104,11 @@ if [ -z "$GIT_LAST_COMMIT_DATE" ]; then
 fi
 export GIT_LAST_COMMIT_DATE
 
+# Resolve API version from git tags for OpenAPI spec injection
+git fetch --tags --quiet 2>/dev/null || true
+API_VERSION="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)"
+export API_VERSION
+
 docker buildx bake --provenance=false --progress="$PROGRESS_DISPLAY" "$TARGET"
 
 # This script can be called with BUILD_IMAGE_TAG set to either a short commit hash
