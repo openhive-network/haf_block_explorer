@@ -15,6 +15,11 @@ FROM psql as version-calculcation
 COPY --chown=haf_admin:users . /home/haf_admin/src
 WORKDIR /home/haf_admin/src
 RUN scripts/generate_version_sql.sh $(pwd)
+RUN API_VERSION="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" \
+    && find . -name 'endpoint_schema.sql' -o -name 'hafah_openapi.sql' | while read -r f; do \
+         sed -i 's|"version": "[^"]*"|"version": "'"$API_VERSION"'"|' "$f"; \
+         sed -i 's|^  version: .*|  version: '"$API_VERSION"'|' "$f"; \
+       done
 
 FROM psql as full
 
@@ -60,7 +65,7 @@ USER haf_admin
 COPY --chown=haf_admin:users docker/scripts/block-processing-healthcheck.sh /app/
 
 COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend
-COPY --chown=haf_admin:users endpoints /home/haf_admin/haf_block_explorer/endpoints
+COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/endpoints /home/haf_admin/haf_block_explorer/endpoints
 COPY --chown=haf_admin:users db /home/haf_admin/haf_block_explorer/db
 
 COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh
