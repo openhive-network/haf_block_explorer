@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from beekeepy._communication import HttpUrl
-from beekeepy._remote_handle import AbstractAsyncHandle, RemoteHandleSettings, AsyncBatchHandle
-from beekeepy._runnable_handle.settings import Settings
+from beekeepy.interfaces import HttpUrl
+from beekeepy.handle.remote import AbstractAsyncHandle, RemoteHandleSettings, AsyncBatchHandle
+from beekeepy.handle.runnable import RunnableHandleSettings
 
 from tests.api_collection import HafbeApiCollection
 
 
 class HafbeApiCaller(AbstractAsyncHandle[RemoteHandleSettings, HafbeApiCollection]):
     def __init__(self, endpoint_url: HttpUrl) -> None:
-        settings = Settings()
+        settings = RunnableHandleSettings()
         settings.http_endpoint = endpoint_url
         super().__init__(settings=settings)
 
@@ -18,7 +18,7 @@ class HafbeApiCaller(AbstractAsyncHandle[RemoteHandleSettings, HafbeApiCollectio
     def api(self) -> HafbeApiCollection:
         return super().api
 
-    async def batch(self, *, delay_error_on_data_access: bool = False) -> AsyncBatchHandle[ApiCollectionT]:
+    async def batch(self, *, delay_error_on_data_access: bool = False) -> AsyncBatchHandle[HafbeApiCollection]:
         return AsyncBatchHandle(
             url=self.http_endpoint,
             overseer=self._overseer,
