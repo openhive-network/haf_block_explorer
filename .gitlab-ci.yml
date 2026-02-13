@@ -50,12 +50,13 @@ variables:
   # Builder image from common-ci-configuration
   BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-2"
   BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
-  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
   # Common CI configuration reference for fetching scripts
   COMMON_CI_REF: "develop"
   COMMON_CI_URL: "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}"
+  # Python 3.12 image for API client jobs (pydantic-core doesn't support 3.14 yet)
+  PYTHON_COMPAT_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1"
   # Set to "true" to run poetry update before install (uses latest dependency versions)
   TEST_WITH_LATEST_DEPENDENCIES: "false"
 
@@ -270,13 +271,14 @@ generate-wax-spec:
 
 generate_python_api_client:
   extends: .project_develop_configuration_template
+  image: $PYTHON_COMPAT_IMAGE
   stage: build
   rules:
   - if: $DOCS_ONLY == "true"
     when: never
   - when: on_success
   variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   needs:
@@ -286,13 +288,14 @@ generate_python_api_client:
   - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
   artifacts:
     paths:
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hafbe_api"
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hafbe_api/hafbe_api_client"
+    - "${PYPROJECT_DIR}/hafbe_api"
+    - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
   tags:
   - public-runner-docker
 
 build_python_api_client_wheel:
   extends: .build_wheel_template
+  image: $PYTHON_COMPAT_IMAGE
   stage: build
   rules:
   - if: $DOCS_ONLY == "true"
@@ -419,6 +422,7 @@ sync:
 
 python_api_client_test:
   extends: .project_develop_configuration_template
+  image: $PYTHON_COMPAT_IMAGE
   stage: test
   rules:
   - if: $DOCS_ONLY == "true"
