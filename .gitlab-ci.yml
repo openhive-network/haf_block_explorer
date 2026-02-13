@@ -57,6 +57,8 @@ variables:
   COMMON_CI_URL: "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}"
   # Python 3.12 image for API client jobs (pydantic-core doesn't support 3.14 yet)
   PYTHON_COMPAT_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1"
+  # Set to "true" to run poetry update before install (uses latest dependency versions)
+  TEST_WITH_LATEST_DEPENDENCIES: "false"
 
   # Quick Test Mode - uses cached HAF data from previous pipeline, skips HAF rebuild/replay
   # Usage: Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT to a commit with cached data
@@ -433,6 +435,9 @@ python_api_client_test:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
+  before_script:
+  - !reference [.project_develop_configuration_template, before_script]
+  - !reference [.update_deps_for_tests, script]
   script:
   - pytest "${PYPROJECT_DIR}/tests"
   tags:
