@@ -286,8 +286,8 @@ generate_python_api_client:
   - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
   artifacts:
     paths:
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api"
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api/hafbe_api_client"
+    - "${CI_PROJECT_DIR}/scripts/python_api_package/hafbe_api"
+    - "${CI_PROJECT_DIR}/scripts/python_api_package/hafbe_api/hafbe_api_client"
   tags:
   - public-runner-docker
 

@@ -5,15 +5,19 @@ requires = [
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
-[tool.poetry]
-name = "hiveio-hafbe-api"
+[project]
+name = "hafbe_api"
 version = "0.0.0"
+description = ""
+requires-python = ">=3.12,<4"
+
+[tool.poetry]
 packages = [
-    { include = "hiveio_hafbe_api" },
+    { include = "hafbe_api" },
 ]
 include = [
-    { path =  "hiveio_hafbe_api/*", format = ["wheel", "sdist"] },
-    { path =  "hiveio_hafbe_api/hafbe_api_client/*", format = ["wheel", "sdist"] },
+    { path =  "hafbe_api/*", format = ["wheel", "sdist"] },
+    { path =  "hafbe_api/hafbe_api_client/*", format = ["wheel", "sdist"] },
 ]
 source = [
     { name = "PyPI", priority = "primary" },
@@ -21,7 +25,6 @@ source = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.12,<4"
 hiveio-beekeepy = ">=1.28.5"
 
 [tool.poetry.group.dev.dependencies]
@@ -86,5 +89,5 @@ format-jinja = """
 
 [tool.poetry-dynamic-versioning.substitution]
 files = [
-    "hiveio_hafbe_api/__init__.py",
+    "hafbe_api/__init__.py",
 ]
