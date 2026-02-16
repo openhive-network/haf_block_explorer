@@ -5,14 +5,13 @@ requires = [
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
-
-[tool.poetry]
+[project]
 name = "hafbe_api"
 version = "0.0.0"
 description = ""
-authors = []
-package-mode=true
+requires-python = ">=3.12,<4"
 
+[tool.poetry]
 packages = [
     { include = "hafbe_api" },
 ]
@@ -26,9 +25,7 @@ source = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.12"
 hiveio-beekeepy = ">=1.28.5"
-api_client_generator = ">=1.7.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3.5"
