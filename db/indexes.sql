@@ -23,7 +23,7 @@ SELECT hive.register_index_dependency(
         (body_binary::jsonb -> 'value' ->> 'author'),
         hafd.operation_id_to_block_num(id) DESC
     )
-    WHERE op_type_id = 1
+    WHERE hafd.operation_id_to_type_id(id) = 1
     $$
 );
 
@@ -37,7 +37,7 @@ SELECT hive.register_index_dependency(
         (body_binary::jsonb -> 'value' ->> 'parent_author'),
         hafd.operation_id_to_block_num(id) DESC
     )
-    WHERE op_type_id = 1
+    WHERE hafd.operation_id_to_type_id(id) = 1
     $$
 );
 
@@ -50,7 +50,7 @@ SELECT hive.register_index_dependency(
         (body_binary::jsonb -> 'value' ->> 'author'),
         (body_binary::jsonb -> 'value' ->> 'permlink')
     )
-    WHERE op_type_id IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73)
+    WHERE hafd.operation_id_to_type_id(id) IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73)
     $$
 );
 
@@ -90,7 +90,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 0
+      WHERE hafd.operation_id_to_type_id(id) = 0
       $idx$
     );
 
@@ -102,7 +102,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 1
+      WHERE hafd.operation_id_to_type_id(id) = 1
       $idx$
     );
 
@@ -114,7 +114,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'parent_permlink')
       )
-      WHERE op_type_id = 1
+      WHERE hafd.operation_id_to_type_id(id) = 1
       $idx$
     );
 
@@ -126,7 +126,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id IN (17, 73)
+      WHERE hafd.operation_id_to_type_id(id) IN (17, 73)
       $idx$
     );
 
@@ -138,7 +138,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 19
+      WHERE hafd.operation_id_to_type_id(id) = 19
       $idx$
     );
 
@@ -150,7 +150,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 51
+      WHERE hafd.operation_id_to_type_id(id) = 51
       $idx$
     );
 
@@ -162,7 +162,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 52
+      WHERE hafd.operation_id_to_type_id(id) = 52
       $idx$
     );
 
@@ -174,7 +174,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 63
+      WHERE hafd.operation_id_to_type_id(id) = 63
       $idx$
     );
 
@@ -186,7 +186,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 61
+      WHERE hafd.operation_id_to_type_id(id) = 61
       $idx$
     );
 
@@ -198,7 +198,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 53
+      WHERE hafd.operation_id_to_type_id(id) = 53
       $idx$
     );
 
@@ -210,7 +210,7 @@ BEGIN
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),
           jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')
       )
-      WHERE op_type_id = 72
+      WHERE hafd.operation_id_to_type_id(id) = 72
       $idx$
     );
 
