@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from beekeepy.handle.remote import AsyncSendable
 
-from hafbe_api.hafbe_api_client.hafbe_api_client import HafbeApi
+from hiveio_hafbe_api.hafbe_api_client.hafbe_api_client import HafbeApi
 
 
 class HafbeApiCollection:

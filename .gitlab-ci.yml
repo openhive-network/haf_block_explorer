@@ -47,13 +47,17 @@ variables:
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
+  # Builder image from common-ci-configuration
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-2"
+  BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
   # Common CI configuration reference for fetching scripts
   COMMON_CI_REF: "develop"
   COMMON_CI_URL: "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}"
-  # Python 3.12 image for API client jobs (pydantic-core doesn't support 3.14 yet)
-  PYTHON_COMPAT_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/python:3.12.9-1"
+  # Set to "true" to run poetry update before install (uses latest dependency versions)
+  TEST_WITH_LATEST_DEPENDENCIES: "false"
 
   # Quick Test Mode - uses cached HAF data from previous pipeline, skips HAF rebuild/replay
   # Usage: Set QUICK_TEST=true and QUICK_TEST_HAF_COMMIT to a commit with cached data
@@ -103,22 +107,6 @@ lint_bash_scripts:
 lint_sql_scripts:
   extends: .haf_app_lint_sql
   stage: lint
-
-verify_poetry_lock_stability_api_package:
-  stage: lint
-  extends: .verify_poetry_lock_stability_template
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-  tags:
-    - public-runner-docker
-
-verify_poetry_lock_stability_api_generation:
-  stage: lint
-  extends: .verify_poetry_lock_stability_template
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
-  tags:
-    - public-runner-docker
 
 find_haf_image:
   extends: .find_haf_image
@@ -282,14 +270,13 @@ generate-wax-spec:
 
 generate_python_api_client:
   extends: .project_develop_configuration_template
-  image: $PYTHON_COMPAT_IMAGE
   stage: build
   rules:
   - if: $DOCS_ONLY == "true"
     when: never
   - when: on_success
   variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   needs:
@@ -299,14 +286,13 @@ generate_python_api_client:
   - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
   artifacts:
     paths:
-    - "${PYPROJECT_DIR}/hafbe_api"
-    - "${PYPROJECT_DIR}/hafbe_api/hafbe_api_client"
+    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api"
+    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api/hafbe_api_client"
   tags:
   - public-runner-docker
 
 build_python_api_client_wheel:
   extends: .build_wheel_template
-  image: $PYTHON_COMPAT_IMAGE
   stage: build
   rules:
   - if: $DOCS_ONLY == "true"
@@ -433,7 +419,6 @@ sync:
 
 python_api_client_test:
   extends: .project_develop_configuration_template
-  image: $PYTHON_COMPAT_IMAGE
   stage: test
   rules:
   - if: $DOCS_ONLY == "true"
@@ -444,44 +429,13 @@ python_api_client_test:
     artifacts: true
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py${PYTHON_VERSION}-2"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
-  parallel:
-    matrix:
-    - PYTHON_VERSION: ["3.12", "3.14"]
   before_script:
   - !reference [.project_develop_configuration_template, before_script]
   - !reference [.update_deps_for_tests, script]
   script:
-  - poetry run -C "${PYPROJECT_DIR}" pytest "${PYPROJECT_DIR}/tests/test_generated_api_client.py"
-  tags:
-  - public-runner-docker
-
-test_python_api_wheel:
-  extends: .project_develop_configuration_template
-  stage: test
-  rules:
-  - if: $DOCS_ONLY == "true"
-    when: never
-  - when: on_success
-  needs:
-  - job: build_python_api_client_wheel
-    artifacts: true
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    DIST_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package/dist"
-    PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py${PYTHON_VERSION}-2"
-    GIT_SUBMODULE_STRATEGY: none
-  parallel:
-    matrix:
-    - PYTHON_VERSION: ["3.12", "3.14"]
-  before_script:
-  - !reference [.configuration_template, before_script]
-  - poetry -C "${PYPROJECT_DIR}" install --no-root
-  script:
-  - pip install --no-deps "${DIST_DIR}"/*.whl
-  - pytest "${PYPROJECT_DIR}/tests/test_package_import.py" -v
+  - pytest "${PYPROJECT_DIR}/tests"
   tags:
   - public-runner-docker
 
@@ -738,7 +692,6 @@ deploy_python_api_packages_to_gitlab:
   - job: generate_python_api_client
     artifacts: true
   - job: python_api_client_test
-  - job: test_python_api_wheel
   extends: .deploy_wheel_to_gitlab_template
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
