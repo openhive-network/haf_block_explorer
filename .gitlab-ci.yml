@@ -128,7 +128,7 @@ find_haf_image:
   extends: .find_haf_image
   stage: detect
   variables:
-    UPSTREAM_BRANCH: "mi/refactoring_reversible_cc_squashed2"
+    UPSTREAM_BRANCH: "mi/refactoring_reversible_cc_fixes"
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
