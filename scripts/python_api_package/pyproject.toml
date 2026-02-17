@@ -16,7 +16,6 @@ include = [
     { path =  "hiveio_hafbe_api/hafbe_api_client/*", format = ["wheel", "sdist"] },
 ]
 source = [
-    { name = "PyPI", priority = "primary" },
     { name = "gitlab-hive", url = "https://gitlab.syncad.com/api/v4/groups/136/-/packages/pypi/simple", priority = "supplemental" },
 ]
 
