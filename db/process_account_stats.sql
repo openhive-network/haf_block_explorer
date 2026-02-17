@@ -17,7 +17,7 @@ AS
 $$
 DECLARE
   -- Hardfork 11 block - recovery account logic changed after this (pre-HF11 defaults to 'steem')
-  _hf11_block                        INT := (SELECT hafd.block_id_to_num(block_id) FROM hafd.applied_hardforks WHERE hardfork_num = 11);
+  _hf11_block                        INT := (SELECT block_num FROM hafd.applied_hardforks WHERE hardfork_num = 11);
   -- Cache operation type IDs for performance (avoid repeated function calls)
   _op_pow                            INT := hafbe_backend.op_pow();
   _op_pow2                           INT := hafbe_backend.op_pow2();
