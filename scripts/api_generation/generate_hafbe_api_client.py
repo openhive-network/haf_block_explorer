@@ -19,7 +19,7 @@ if __name__ == "__main__":
     build_directory = Path(sys.argv[2])
 
     swagger_hafbe_api_definition = build_directory / "swagger-doc.json"
-    hafbe_api_client_output_package = base_directory / "hafbe_api" / "hafbe_api_client"
+    hafbe_api_client_output_package = base_directory / "hiveio_hafbe_api" / "hafbe_api_client"
 
     generate_api_client_from_swagger(
         swagger_hafbe_api_definition,
