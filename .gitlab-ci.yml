@@ -429,13 +429,44 @@ python_api_client_test:
     artifacts: true
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py${PYTHON_VERSION}-2"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
+  parallel:
+    matrix:
+    - PYTHON_VERSION: ["3.12", "3.14"]
   before_script:
   - !reference [.project_develop_configuration_template, before_script]
   - !reference [.update_deps_for_tests, script]
   script:
-  - pytest "${PYPROJECT_DIR}/tests"
+  - poetry run -C "${PYPROJECT_DIR}" pytest "${PYPROJECT_DIR}/tests/test_generated_api_client.py"
+  tags:
+  - public-runner-docker
+
+test_python_api_wheel:
+  extends: .project_develop_configuration_template
+  stage: test
+  rules:
+  - if: $DOCS_ONLY == "true"
+    when: never
+  - when: on_success
+  needs:
+  - job: build_python_api_client_wheel
+    artifacts: true
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    DIST_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package/dist"
+    PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py${PYTHON_VERSION}-2"
+    GIT_SUBMODULE_STRATEGY: none
+  parallel:
+    matrix:
+    - PYTHON_VERSION: ["3.12", "3.14"]
+  before_script:
+  - !reference [.configuration_template, before_script]
+  - poetry -C "${PYPROJECT_DIR}" install --no-root
+  script:
+  - pip install --no-deps "${DIST_DIR}"/*.whl
+  - pytest "${PYPROJECT_DIR}/tests/test_package_import.py" -v
   tags:
   - public-runner-docker
 
@@ -692,6 +723,7 @@ deploy_python_api_packages_to_gitlab:
   - job: generate_python_api_client
     artifacts: true
   - job: python_api_client_test
+  - job: test_python_api_wheel
   extends: .deploy_wheel_to_gitlab_template
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
