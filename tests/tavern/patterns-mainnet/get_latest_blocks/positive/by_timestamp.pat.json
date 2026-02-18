@@ -4,20 +4,20 @@
     "witness": "witness.svk",
     "operations": [
       {
-        "op_count": 2,
-        "op_type_id": 61
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 64
-      },
-      {
         "op_count": 4,
         "op_type_id": 0
       },
       {
         "op_count": 1,
         "op_type_id": 18
+      },
+      {
+        "op_count": 2,
+        "op_type_id": 61
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
       },
       {
         "op_count": 4,
@@ -30,16 +30,16 @@
     "witness": "riverhead",
     "operations": [
       {
+        "op_count": 2,
+        "op_type_id": 0
+      },
+      {
         "op_count": 1,
         "op_type_id": 64
       },
       {
         "op_count": 2,
         "op_type_id": 72
-      },
-      {
-        "op_count": 2,
-        "op_type_id": 0
       }
     ]
   },
@@ -53,19 +53,19 @@
       },
       {
         "op_count": 1,
+        "op_type_id": 1
+      },
+      {
+        "op_count": 1,
         "op_type_id": 18
       },
       {
         "op_count": 1,
-        "op_type_id": 1
+        "op_type_id": 64
       },
       {
         "op_count": 2,
         "op_type_id": 72
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 64
       }
     ]
   },
@@ -74,28 +74,8 @@
     "witness": "wackou",
     "operations": [
       {
-        "op_count": 1,
-        "op_type_id": 18
-      },
-      {
-        "op_count": 11,
-        "op_type_id": 52
-      },
-      {
         "op_count": 2,
         "op_type_id": 0
-      },
-      {
-        "op_count": 2,
-        "op_type_id": 72
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 51
       },
       {
         "op_count": 1,
@@ -103,7 +83,27 @@
       },
       {
         "op_count": 1,
+        "op_type_id": 18
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 51
+      },
+      {
+        "op_count": 11,
+        "op_type_id": 52
+      },
+      {
+        "op_count": 1,
         "op_type_id": 53
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
+      },
+      {
+        "op_count": 2,
+        "op_type_id": 72
       },
       {
         "op_count": 1,
@@ -117,11 +117,7 @@
     "operations": [
       {
         "op_count": 1,
-        "op_type_id": 72
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 61
+        "op_type_id": 0
       },
       {
         "op_count": 1,
@@ -129,19 +125,23 @@
       },
       {
         "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 80
-      },
-      {
-        "op_count": 1,
         "op_type_id": 9
       },
       {
         "op_count": 1,
-        "op_type_id": 0
+        "op_type_id": 61
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 72
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 80
       }
     ]
   },
@@ -151,10 +151,6 @@
     "operations": [
       {
         "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 1,
         "op_type_id": 0
       },
       {
@@ -163,19 +159,23 @@
       },
       {
         "op_count": 1,
-        "op_type_id": 18
-      },
-      {
-        "op_count": 1,
         "op_type_id": 6
       },
       {
         "op_count": 1,
-        "op_type_id": 85
+        "op_type_id": 18
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
       },
       {
         "op_count": 1,
         "op_type_id": 72
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 85
       }
     ]
   },
@@ -183,6 +183,10 @@
     "block_num": 4112008,
     "witness": "boatymcboatface",
     "operations": [
+      {
+        "op_count": 4,
+        "op_type_id": 0
+      },
       {
         "op_count": 2,
         "op_type_id": 1
@@ -194,10 +198,6 @@
       {
         "op_count": 4,
         "op_type_id": 72
-      },
-      {
-        "op_count": 4,
-        "op_type_id": 0
       }
     ]
   },
@@ -207,7 +207,7 @@
     "operations": [
       {
         "op_count": 13,
-        "op_type_id": 72
+        "op_type_id": 0
       },
       {
         "op_count": 1,
@@ -215,7 +215,7 @@
       },
       {
         "op_count": 13,
-        "op_type_id": 0
+        "op_type_id": 72
       }
     ]
   },
@@ -228,20 +228,20 @@
         "op_type_id": 0
       },
       {
-        "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 2,
-        "op_type_id": 72
-      },
-      {
         "op_count": 3,
         "op_type_id": 1
       },
       {
         "op_count": 1,
         "op_type_id": 18
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
+      },
+      {
+        "op_count": 2,
+        "op_type_id": 72
       }
     ]
   },
@@ -250,12 +250,12 @@
     "witness": "xeldal",
     "operations": [
       {
-        "op_count": 1,
-        "op_type_id": 64
-      },
-      {
         "op_count": 4,
         "op_type_id": 0
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
       },
       {
         "op_count": 4,

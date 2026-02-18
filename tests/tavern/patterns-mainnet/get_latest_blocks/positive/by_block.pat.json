@@ -4,24 +4,24 @@
     "witness": "silversteem",
     "operations": [
       {
+        "op_count": 4,
+        "op_type_id": 0
+      },
+      {
         "op_count": 2,
         "op_type_id": 10
-      },
-      {
-        "op_count": 4,
-        "op_type_id": 72
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 64
       },
       {
         "op_count": 1,
         "op_type_id": 11
       },
       {
+        "op_count": 1,
+        "op_type_id": 64
+      },
+      {
         "op_count": 4,
-        "op_type_id": 0
+        "op_type_id": 72
       }
     ]
   },
@@ -30,36 +30,16 @@
     "witness": "datasecuritynode",
     "operations": [
       {
-        "op_count": 1,
-        "op_type_id": 78
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 53
-      },
-      {
         "op_count": 3,
-        "op_type_id": 72
+        "op_type_id": 0
       },
       {
         "op_count": 1,
         "op_type_id": 10
       },
       {
-        "op_count": 3,
-        "op_type_id": 0
-      },
-      {
         "op_count": 1,
         "op_type_id": 14
-      },
-      {
-        "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 3,
-        "op_type_id": 52
       },
       {
         "op_count": 1,
@@ -68,6 +48,26 @@
       {
         "op_count": 1,
         "op_type_id": 51
+      },
+      {
+        "op_count": 3,
+        "op_type_id": 52
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 53
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
+      },
+      {
+        "op_count": 3,
+        "op_type_id": 72
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 78
       }
     ]
   },
@@ -76,8 +76,8 @@
     "witness": "complexring",
     "operations": [
       {
-        "op_count": 1,
-        "op_type_id": 64
+        "op_count": 2,
+        "op_type_id": 0
       },
       {
         "op_count": 1,
@@ -88,12 +88,12 @@
         "op_type_id": 2
       },
       {
-        "op_count": 2,
-        "op_type_id": 72
+        "op_count": 1,
+        "op_type_id": 64
       },
       {
         "op_count": 2,
-        "op_type_id": 0
+        "op_type_id": 72
       }
     ]
   },
@@ -102,12 +102,16 @@
     "witness": "smooth.witness",
     "operations": [
       {
+        "op_count": 4,
+        "op_type_id": 0
+      },
+      {
         "op_count": 2,
         "op_type_id": 1
       },
       {
-        "op_count": 4,
-        "op_type_id": 72
+        "op_count": 1,
+        "op_type_id": 2
       },
       {
         "op_count": 1,
@@ -119,19 +123,15 @@
       },
       {
         "op_count": 1,
-        "op_type_id": 2
+        "op_type_id": 64
       },
       {
-        "op_count": 1,
-        "op_type_id": 64
+        "op_count": 4,
+        "op_type_id": 72
       },
       {
         "op_count": 1,
         "op_type_id": 80
-      },
-      {
-        "op_count": 4,
-        "op_type_id": 0
       }
     ]
   },
@@ -140,24 +140,24 @@
     "witness": "complexring",
     "operations": [
       {
-        "op_count": 2,
-        "op_type_id": 53
-      },
-      {
-        "op_count": 11,
-        "op_type_id": 52
-      },
-      {
         "op_count": 1,
-        "op_type_id": 64
+        "op_type_id": 1
       },
       {
         "op_count": 2,
         "op_type_id": 51
       },
       {
+        "op_count": 11,
+        "op_type_id": 52
+      },
+      {
+        "op_count": 2,
+        "op_type_id": 53
+      },
+      {
         "op_count": 1,
-        "op_type_id": 1
+        "op_type_id": 64
       }
     ]
   },
@@ -170,12 +170,12 @@
         "op_type_id": 0
       },
       {
-        "op_count": 2,
-        "op_type_id": 72
-      },
-      {
         "op_count": 1,
         "op_type_id": 64
+      },
+      {
+        "op_count": 2,
+        "op_type_id": 72
       }
     ]
   },
@@ -183,10 +183,6 @@
     "block_num": 3999994,
     "witness": "roadscape",
     "operations": [
-      {
-        "op_count": 3,
-        "op_type_id": 72
-      },
       {
         "op_count": 3,
         "op_type_id": 0
@@ -198,6 +194,10 @@
       {
         "op_count": 1,
         "op_type_id": 64
+      },
+      {
+        "op_count": 3,
+        "op_type_id": 72
       }
     ]
   },
@@ -237,7 +237,7 @@
     "operations": [
       {
         "op_count": 3,
-        "op_type_id": 72
+        "op_type_id": 0
       },
       {
         "op_count": 1,
@@ -245,7 +245,7 @@
       },
       {
         "op_count": 3,
-        "op_type_id": 0
+        "op_type_id": 72
       }
     ]
   },
@@ -255,15 +255,15 @@
     "operations": [
       {
         "op_count": 1,
-        "op_type_id": 64
-      },
-      {
-        "op_count": 1,
         "op_type_id": 18
       },
       {
         "op_count": 2,
         "op_type_id": 61
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 64
       }
     ]
   }
