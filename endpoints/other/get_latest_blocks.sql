@@ -131,6 +131,7 @@ BEGIN
           jo.op_type_id,
           jo.count
         )::hafbe_backend.block_operations
+        ORDER BY jo.op_type_id
       )
     FROM join_operations jo
     GROUP BY jo.block_num, jo.witness
