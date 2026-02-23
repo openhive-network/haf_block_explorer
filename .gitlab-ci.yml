@@ -127,6 +127,8 @@ verify_poetry_lock_stability_api_generation:
 find_haf_image:
   extends: .find_haf_image
   stage: detect
+  variables:
+    UPSTREAM_BRANCH: "mi/context-views-block-conflicts-optimization"
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
