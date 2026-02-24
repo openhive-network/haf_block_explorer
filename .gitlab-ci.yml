@@ -128,7 +128,7 @@ find_haf_image:
   extends: .find_haf_image
   stage: detect
   variables:
-    UPSTREAM_BRANCH: "mi/context-views-block-conflicts-optimization"
+    UPSTREAM_BRANCH: "mi/fix-dan-review-issues"
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
