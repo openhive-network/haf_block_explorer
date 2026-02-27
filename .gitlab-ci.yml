@@ -125,33 +125,9 @@ verify_poetry_lock_stability_api_generation:
     - public-runner-docker
 
 find_haf_image:
+  extends: .find_haf_image
   stage: detect
-  image: alpine:latest
-  needs: []
-  script:
-  - |
-    HAF_IMAGE_COMMIT="0b9d0a42beecd3284841cdc4d929b98a3714a453"
-    HAF_IMAGE_SHORT="0b9d0a42"
-    HAF_CACHE_COMMIT="8ba8994a474f0621b37f410d9939b5297bd5f478"
-    HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_IMAGE_SHORT}"
-    cat > haf_image.env <<EOF2
-    HAF_UPSTREAM_BRANCH=mi/fix-dan-review-issues
-    HAF_UPSTREAM_FALLBACK=false
-    HAF_UPSTREAM_CACHE_HIT=false
-    HAF_UPSTREAM_COMMIT=${HAF_CACHE_COMMIT}
-    HAF_UPSTREAM_TAG=${HAF_IMAGE_SHORT}
-    HAF_UPSTREAM_IMAGE=${HAF_IMAGE}
-    HAF_UPSTREAM_REGISTRY=registry.gitlab.syncad.com/hive/haf
-    HAF_IMAGE_NAME=${HAF_IMAGE}
-    HAF_COMMIT=${HAF_CACHE_COMMIT}
-    EOF2
-    sed -i 's/^    //' haf_image.env
-    cat haf_image.env
-  artifacts:
-    reports:
-      dotenv: haf_image.env
-  tags:
-  - public-runner-docker
+
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
 quick_test_setup:
