@@ -130,8 +130,8 @@ find_haf_image:
   needs: []
   script:
   - |
-    HAF_COMMIT="661b8196767341a415c00743f4f5edc57f40ea63"
-    HAF_SHORT="661b8196"
+    HAF_COMMIT="81b3a26e082cc2a396f75657bf6cd20321370ded"
+    HAF_SHORT="81b3a26e"
     HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_SHORT}"
     cat > haf_image.env <<EOF2
     HAF_UPSTREAM_BRANCH=mi/fix-dan-review-issues
