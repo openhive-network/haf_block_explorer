@@ -106,23 +106,10 @@ export GIT_LAST_COMMIT_DATE
 
 # Resolve API version from git tags for OpenAPI spec injection
 git fetch --tags --quiet 2>/dev/null || true
-API_VERSION="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)"
+API_VERSION="$(git describe --tags 2>/dev/null || echo 0.0.0-dev)"
 export API_VERSION
 
 docker buildx bake --provenance=false --progress="$PROGRESS_DISPLAY" "$TARGET"
-
-# This script can be called with BUILD_IMAGE_TAG set to either a short commit hash
-# or a release tag like 1.27.5rc6.  If it's a release tag, we need to build the
-# image differently to include the release string in.
-case "$BUILD_IMAGE_TAG" in
-  1.*)
-    REWRITER_TARGET=with_tag
-    TAG_BUILD_ARGS="--build-arg GIT_COMMIT_TAG=$BUILD_IMAGE_TAG"
-    ;;
-  *)
-    REWRITER_TARGET=without_tag
-    ;;
-esac
 
 # On CI push the images to the registry, locally load them
 if [[ -n ${CI:-} ]]; then
@@ -144,16 +131,14 @@ if [[ -n "${CI_COMMIT_TAG:-}" && "${CI_COMMIT_REF_PROTECTED:-}" == "true" ]]; th
   REWRITER_TAGS+=("--tag" "$REGISTRY/postgrest-rewriter:${CI_COMMIT_TAG}")
 fi
 
-# shellcheck disable=SC2086
 docker buildx build \
+    --build-arg API_VERSION="$API_VERSION" \
     --build-arg BUILD_TIME="$BUILD_TIME" \
     --build-arg GIT_COMMIT_SHA="$GIT_COMMIT_SHA" \
     --build-arg GIT_CURRENT_BRANCH="$GIT_CURRENT_BRANCH" \
     --build-arg GIT_LAST_LOG_MESSAGE="$GIT_LAST_LOG_MESSAGE" \
     --build-arg GIT_LAST_COMMITTER="$GIT_LAST_COMMITTER" \
     --build-arg GIT_LAST_COMMIT_DATE="$GIT_LAST_COMMIT_DATE" \
-    --target=$REWRITER_TARGET \
-    $TAG_BUILD_ARGS \
     "${REWRITER_TAGS[@]}" \
     $BUILD_MODE \
     --file Dockerfile.rewriter .

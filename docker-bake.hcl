@@ -39,7 +39,7 @@ variable "GIT_LAST_COMMIT_DATE" {
   default = "[unknown]"
 }
 variable "API_VERSION" {
-  default = "dev"
+  default = "0.0.0-dev"
 }
 
 # Functions

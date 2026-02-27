@@ -11,7 +11,7 @@ RUN <<EOF
 EOF
 
 FROM psql as version-calculcation
-ARG API_VERSION="dev"
+ARG API_VERSION="0.0.0-dev"
 
 COPY --chown=haf_admin:users . /home/haf_admin/src
 WORKDIR /home/haf_admin/src
@@ -23,6 +23,7 @@ RUN find . -name 'endpoint_schema.sql' -o -name 'hafah_openapi.sql' | while read
 
 FROM psql as full
 
+ARG API_VERSION="0.0.0-dev"
 ARG BUILD_TIME
 ARG GIT_COMMIT_SHA
 ARG GIT_CURRENT_BRANCH
@@ -33,7 +34,7 @@ LABEL org.opencontainers.image.created="$BUILD_TIME"
 LABEL org.opencontainers.image.url="https://hive.io/"
 LABEL org.opencontainers.image.documentation="https://gitlab.syncad.com/hive/haf_block_explorer"
 LABEL org.opencontainers.image.source="https://gitlab.syncad.com/hive/haf_block_explorer"
-#LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.version="$API_VERSION"
 LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.ref.name="HAF Block Explorer"

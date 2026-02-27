@@ -11,7 +11,7 @@ info:
   license:
     name: MIT License
     url: https://opensource.org/license/mit
-  version: 1.27.11
+  version: 0.0.0-dev
 externalDocs:
   description: HAF Block Explorer gitlab repository
   url: https://gitlab.syncad.com/hive/haf_block_explorer
@@ -851,7 +851,7 @@ declare
       "name": "MIT License",
       "url": "https://opensource.org/license/mit"
     },
-    "version": "1.27.11"
+    "version": "0.0.0-dev"
   },
   "externalDocs": {
     "description": "HAF Block Explorer gitlab repository",
