@@ -47,9 +47,6 @@ variables:
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   PYTEST_NUMBER_OF_PROCESSES: 8
-  # Builder image from common-ci-configuration
-  BUILDER_IMAGE_TAG: ":ubuntu24.04-py3.14-2"
-  BUILDER_IMAGE_PATH: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
   # Common CI configuration reference for fetching scripts
