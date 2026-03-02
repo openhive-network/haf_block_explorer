@@ -74,7 +74,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: 4c97da098a4ceb7b343a708bb3b7b4e6474f3e26
+  ref: develop
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
@@ -743,6 +743,17 @@ deploy_python_api_packages_to_gitlab:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
+  script:
+    - echo -e "${TXT_BLUE}Deploying python wheel to the GitLab PyPI registry...${TXT_CLEAR}"
+    - ls -al
+    # Workaround: installs plugins from [tool.poetry.requires-plugins] without installing project dependencies.
+    # See: https://github.com/python-poetry/poetry/issues/9990#issuecomment-2737176168
+    - poetry -C "${PYPROJECT_DIR}" install --dry-run
+    - poetry -C "${PYPROJECT_DIR}" version
+    - ls -la "${PYPROJECT_DIR}/dist/" || echo "WARNING: dist/ directory not found"
+    - poetry -C "${PYPROJECT_DIR}" config repositories.gitlab "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi"
+    - poetry -C "${PYPROJECT_DIR}" config http-basic.gitlab gitlab-ci-token "${CI_JOB_TOKEN}"
+    - poetry -C "${PYPROJECT_DIR}" publish --build --skip-existing --repository gitlab
   when: on_success
   tags:
   - public-runner-docker
