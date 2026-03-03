@@ -130,9 +130,9 @@ find_haf_image:
   needs: []
   script:
   - |
-    HAF_IMAGE_COMMIT="e99de729"
-    HAF_IMAGE_SHORT="e99de729"
-    HAF_CACHE_COMMIT="e99de729da0aa636681ead28789cc0742cedc229"
+    HAF_IMAGE_COMMIT="cefd2690"
+    HAF_IMAGE_SHORT="cefd2690"
+    HAF_CACHE_COMMIT="cefd269042981de1e787509833133c7ae0eccdab"
     HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_IMAGE_SHORT}"
     cat > haf_image.env <<EOF2
     HAF_UPSTREAM_BRANCH=mi/test-8ba8994a_rebase
