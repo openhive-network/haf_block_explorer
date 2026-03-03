@@ -87,6 +87,11 @@ IFS=" " read -ra COMPOSE_OPTIONS <<< "$COMPOSE_OPTIONS_STRING"
 echo "Docker Compose options: ${COMPOSE_OPTIONS[*]}"
 docker compose "${COMPOSE_OPTIONS[@]}" config | tee docker-compose-config.yml.log
 
+# Remove any stale Docker volumes from previous pipeline runs on this builder.
+# Without this, named volumes (haf_datadir, haf_shmdir) persist across pipelines
+# and cause the app to skip setup because it finds existing data.
+docker compose "${COMPOSE_OPTIONS[@]}" down --volumes 2>/dev/null || true
+
 if ! timeout -s INT -k 1m 20m docker compose "${COMPOSE_OPTIONS[@]}" up --detach --quiet-pull; then
     echo "=== Docker Compose startup FAILED. Dumping container logs ==="
     for svc in $(docker compose "${COMPOSE_OPTIONS[@]}" ps -a --format '{{.Service}}' 2>/dev/null); do
