@@ -132,7 +132,7 @@ find_haf_image:
   - |
     HAF_IMAGE_COMMIT="e4ccc406"
     HAF_IMAGE_SHORT="e4ccc406"
-    HAF_CACHE_COMMIT="5214cb8d9d077940f31a2fb0c37d365f055fd360"
+    HAF_CACHE_COMMIT="e4ccc406ce8c25666511c7bb9d5cb16f48380d04"
     HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_IMAGE_SHORT}"
     cat > haf_image.env <<EOF2
     HAF_UPSTREAM_BRANCH=mi/fix-dan-review-issues
