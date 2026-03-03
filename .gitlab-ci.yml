@@ -130,8 +130,8 @@ find_haf_image:
   needs: []
   script:
   - |
-    HAF_IMAGE_COMMIT="e4ccc406"
-    HAF_IMAGE_SHORT="e4ccc406"
+    HAF_IMAGE_COMMIT="e6ff150c"
+    HAF_IMAGE_SHORT="e6ff150c"
     HAF_CACHE_COMMIT="e4ccc406ce8c25666511c7bb9d5cb16f48380d04"
     HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_IMAGE_SHORT}"
     cat > haf_image.env <<EOF2
