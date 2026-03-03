@@ -567,6 +567,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_app.finalize_massive_sync()
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
+SECURITY DEFINER
 AS
 $$
 BEGIN
