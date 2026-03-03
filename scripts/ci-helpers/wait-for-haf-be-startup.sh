@@ -72,18 +72,19 @@ psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.operations'
 psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.blocks');"
 echo "Index creation initiated."
 
-# Step 3.5: Create HAFBE application indexes if not already created
-# These indexes (like witness_votes_history_witness_voter) are normally created
-# during single-block processing, but CI uses cached data from MASSIVE mode
-# where indexes aren't created. Create them explicitly before tests run.
-echo "Step 3.5: Creating HAFBE application indexes..."
-psql "$POSTGRES_ACCESS" --command="SELECT hafbe_app.create_hafbe_indexes();"
-echo "HAFBE application indexes created."
+# Step 3: Finalize massive sync for both contexts
+# CI replay never reaches LIVE mode, so the LIVE transition (LOGGED tables,
+# PK constraints, forking mode, app indexes) must be done explicitly.
+# finalize_massive_sync() is idempotent — safe if transition already happened.
+echo "Step 3: Finalizing massive sync (LOGGED + indexes + forking)..."
+psql "$POSTGRES_ACCESS" --command="SELECT hafbe_app.finalize_massive_sync();"
+psql "$POSTGRES_ACCESS" --command="SET SEARCH_PATH TO hafbe_bal; SELECT finalize_massive_sync('hafbe_bal');"
+echo "Massive sync finalized."
 
-# Step 3: Wait for all registered indexes to be created
-echo "Step 3: Waiting for registered indexes to finish building..."
+# Step 4: Wait for all registered indexes to be created
+echo "Step 4: Waiting for registered indexes to finish building..."
 wait_for_condition \
-    "SELECT hive.check_if_registered_indexes_created('hafbe_app')::INT;" \
+    "SELECT (hive.check_if_registered_indexes_created('hafbe_app') AND hive.check_if_registered_indexes_created('hafbe_bal'))::INT;" \
     "Waiting for registered indexes to be created..." \
     60
 echo "All registered indexes are created."

@@ -548,6 +548,40 @@ END
 $$;
 
 -- ============================================================================
+-- MASSIVE SYNC FINALIZATION
+-- ============================================================================
+
+/**
+ * finalize_massive_sync()
+ * -----------------------
+ * Transition from massive sync to LIVE-ready state.
+ * Reverses the optimizations applied during setup:
+ *   1. Switch UNLOGGED tables back to LOGGED (WAL-safe)
+ *   2. Enable fork tracking (creates hive_rowid indexes + rewind triggers)
+ *   3. Restore app indexes (updates HAF tracking table)
+ *
+ * Called from process_blocks() at LIVE transition and from
+ * CI startup script after bounded replay completes.
+ * Safe to call multiple times (idempotent via isIndexesCreated check).
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.finalize_massive_sync()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+BEGIN
+  IF hafbe_app.isIndexesCreated() THEN
+    RETURN;  -- Already finalized
+  END IF;
+
+  ALTER TABLE hafbe_app.block_operations SET LOGGED;
+  PERFORM hive.app_context_set_forking('hafbe_app');
+  PERFORM hive.app_restore_indexes('hafbe_app');
+  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + forking + indexes restored)';
+END
+$$;
+
+-- ============================================================================
 -- BLOCK PROCESSING FUNCTIONS
 -- ============================================================================
 -- These functions handle block processing dispatch and execution.
@@ -562,7 +596,7 @@ $$;
  * Behavior by stage:
  * - MASSIVE_PROCESSING: Calls massive_processing() for batch sync,
  *   requests vacuum on witness/proxy tables
- * - LIVE: Creates indexes (once), calls single_processing(),
+ * - LIVE: Finalizes massive sync (once), calls single_processing(),
  *   requests vacuum on cache tables
  *
  * @param _context_name  HAF context name (typically 'hafbe_app')
@@ -587,16 +621,7 @@ BEGIN
 
     RETURN;
   END IF;
-  IF NOT hafbe_app.isIndexesCreated() THEN
-    -- Transition from massive sync to LIVE:
-    -- 1. Switch table back to LOGGED (WAL-safe for live operations)
-    ALTER TABLE hafbe_app.block_operations SET LOGGED;
-    -- 2. Enable fork tracking (creates hive_rowid indexes + rewind triggers)
-    PERFORM hive.app_context_set_forking('hafbe_app');
-    -- 3. Restore app indexes
-    PERFORM hive.app_restore_indexes('hafbe_app');
-    RAISE NOTICE 'hafbe_app: LIVE transition complete (LOGGED + forking + indexes restored)';
-  END IF;
+  PERFORM hafbe_app.finalize_massive_sync();
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
   -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'account_vest_stats_cache',   interval '10 minutes');
