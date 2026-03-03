@@ -318,6 +318,12 @@ BEGIN
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
+  ------------- SWITCH TO NON-FORKING FOR MASSIVE SYNC ----------------
+  -- Context is created as forking (required for state provider table registration),
+  -- but we switch to non-forking now to avoid creating hive_rowid indexes (7.6 GB)
+  -- during massive sync. Will switch back to forking at LIVE transition.
+  PERFORM hive.app_context_set_non_forking('hafbe_app');
+
   ------------- INDEX REGISTRATION AND MASSIVE SYNC OPTIMIZATION ----------------
   -- Register app indexes with HAF for drop/restore lifecycle.
   -- Indexes are dropped during massive sync (no reads) and restored at LIVE transition.

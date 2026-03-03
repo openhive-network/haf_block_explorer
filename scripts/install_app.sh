@@ -39,7 +39,7 @@ EOF
 
 ONLY_APPS=0
 ONLY_HAFBE=0
-IS_FORKING=${IS_FORKING:-"false"}
+IS_FORKING=${IS_FORKING:-"true"}
 
 while [ $# -gt 0 ]; do
   case "$1" in
