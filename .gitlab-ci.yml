@@ -135,7 +135,7 @@ find_haf_image:
     HAF_CACHE_COMMIT="e99de729da0aa636681ead28789cc0742cedc229"
     HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:${HAF_IMAGE_SHORT}"
     cat > haf_image.env <<EOF2
-    HAF_UPSTREAM_BRANCH=mi/fix-dan-review-issues
+    HAF_UPSTREAM_BRANCH=mi/test-8ba8994a_rebase
     HAF_UPSTREAM_FALLBACK=false
     HAF_UPSTREAM_CACHE_HIT=false
     HAF_UPSTREAM_COMMIT=${HAF_CACHE_COMMIT}
