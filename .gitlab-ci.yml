@@ -141,10 +141,13 @@ quick_test_setup:
     fi
 
     # Override HAF_UPSTREAM_* and aliases with the cached version
+    # QUICK_TEST_HAF_IMAGE_TAG allows using a different HAF image than the cache source
+    # (e.g., test SQL changes on top of existing cached data)
     HAF_SHORT="${QUICK_TEST_HAF_COMMIT:0:8}"
-    HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:$HAF_SHORT"
+    IMAGE_TAG="${QUICK_TEST_HAF_IMAGE_TAG:-$HAF_SHORT}"
+    HAF_IMAGE="registry.gitlab.syncad.com/hive/haf:$IMAGE_TAG"
     echo "HAF_UPSTREAM_COMMIT=$QUICK_TEST_HAF_COMMIT" > quick_test.env
-    echo "HAF_UPSTREAM_TAG=$HAF_SHORT" >> quick_test.env
+    echo "HAF_UPSTREAM_TAG=$IMAGE_TAG" >> quick_test.env
     echo "HAF_UPSTREAM_IMAGE=$HAF_IMAGE" >> quick_test.env
     # Also set the aliases that find_haf_image now provides
     echo "HAF_COMMIT=$QUICK_TEST_HAF_COMMIT" >> quick_test.env
