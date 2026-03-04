@@ -352,10 +352,6 @@ BEGIN
   -- Drop app indexes for massive sync (will be restored at LIVE transition)
   PERFORM hive.app_save_and_drop_indexes('hafbe_app');
 
-  -- Set large append-only table to UNLOGGED to skip WAL during massive sync.
-  -- Risk: data lost on PostgreSQL crash, but massive sync can be restarted.
-  ALTER TABLE hafbe_app.block_operations SET UNLOGGED;
-
   ------------- CACHE TABLES (LIVE stage only) ----------------
   /*
    * Cache tables are populated exclusively during LIVE synchronization.
@@ -582,10 +578,9 @@ BEGIN
     RETURN;  -- Already finalized
   END IF;
 
-  ALTER TABLE hafbe_app.block_operations SET LOGGED;
   PERFORM hive.app_context_set_forking('hafbe_app');
   PERFORM hive.app_restore_indexes('hafbe_app');
-  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + forking + indexes restored)';
+  RAISE NOTICE 'hafbe_app: massive sync finalized (forking + indexes restored)';
 END
 $$;
 
