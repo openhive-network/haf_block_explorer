@@ -331,27 +331,6 @@ BEGIN
   PERFORM hive.app_context_detach('hafbe_app');
   PERFORM hive.app_set_current_block_num('hafbe_app', 0);
 
-  ------------- INDEX REGISTRATION AND MASSIVE SYNC OPTIMIZATION ----------------
-  -- Register app indexes with HAF for drop/restore lifecycle.
-  -- Indexes are dropped during massive sync (no reads) and restored at LIVE transition.
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id ON hafbe_app.current_witness_votes USING btree (witness_id)');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS witness_votes_history_witness_id_source_op ON hafbe_app.witness_votes_history USING btree (witness_id, hafd.operation_id_to_block_num(source_op))');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS witness_votes_history_witness_voter ON hafbe_app.witness_votes_history USING btree (witness_id, voter_id)');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_source_op ON hafbe_app.account_proxies_history USING btree (account_id, source_op)');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id)');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num)');
-  PERFORM hive.app_register_index_dependency('hafbe_app',
-    'CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num)');
-
-  -- Drop app indexes for massive sync (will be restored at LIVE transition)
-  PERFORM hive.app_save_and_drop_indexes('hafbe_app');
-
   -- Set large append-only table to UNLOGGED to skip WAL during massive sync.
   -- Risk: data lost on PostgreSQL crash, but massive sync can be restarted.
   ALTER TABLE hafbe_app.block_operations SET UNLOGGED;
@@ -584,8 +563,8 @@ BEGIN
 
   ALTER TABLE hafbe_app.block_operations SET LOGGED;
   PERFORM hive.app_context_set_forking('hafbe_app');
-  PERFORM hive.app_restore_indexes('hafbe_app');
-  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + forking + indexes restored)';
+  PERFORM hafbe_app.create_hafbe_indexes();
+  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + forking + indexes created)';
 END
 $$;
 
