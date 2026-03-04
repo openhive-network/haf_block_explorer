@@ -923,3 +923,4 @@ END
 $$;
 
 RESET ROLE;
+-- HAF perf test D
