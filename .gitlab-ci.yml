@@ -425,9 +425,7 @@ sync:
   after_script: !reference [.haf_app_sync_cleanup, after_script]
   artifacts: !reference [.haf_app_sync_artifacts, artifacts]
   tags:
-  - public-runner-docker
-  - data-cache-storage
-  - fast
+  - hive-builder-12
 
 python_api_client_test:
   extends: .project_develop_configuration_template
