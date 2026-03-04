@@ -325,6 +325,7 @@ sync:
   - .docker_image_builder_job_template
   - .haf_app_sync_variables
   stage: sync
+  tags: [hive-builder-12]
   # Shared HAF app test runner from common-ci-configuration
   image: ${HAF_APP_TEST_RUNNER_IMAGE}
   needs:
