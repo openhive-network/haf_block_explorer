@@ -318,19 +318,6 @@ BEGIN
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'sync_time_logs', 'hafbe_app' );
 
-  ------------- SWITCH TO NON-FORKING FOR MASSIVE SYNC ----------------
-  -- Context is created as forking (required for state provider table registration),
-  -- but we switch to non-forking now to avoid creating hive_rowid indexes (7.6 GB)
-  -- during massive sync. Will switch back to forking at LIVE transition.
-  --
-  -- IMPORTANT: set_non_forking detaches/reattaches the context at the current
-  -- irreversible block, which would skip all block processing if HAF already has data.
-  -- We must detach and reset the position to 0 so processing starts from the beginning.
-  -- app_next_iteration() will auto-attach when processing begins.
-  PERFORM hive.app_context_set_non_forking('hafbe_app');
-  PERFORM hive.app_context_detach('hafbe_app');
-  PERFORM hive.app_set_current_block_num('hafbe_app', 0);
-
   ------------- INDEX REGISTRATION AND MASSIVE SYNC OPTIMIZATION ----------------
   -- Register app indexes with HAF for drop/restore lifecycle.
   -- Indexes are dropped during massive sync (no reads) and restored at LIVE transition.
@@ -583,9 +570,8 @@ BEGIN
   END IF;
 
   ALTER TABLE hafbe_app.block_operations SET LOGGED;
-  PERFORM hive.app_context_set_forking('hafbe_app');
   PERFORM hive.app_restore_indexes('hafbe_app');
-  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + forking + indexes restored)';
+  RAISE NOTICE 'hafbe_app: massive sync finalized (LOGGED + indexes restored)';
 END
 $$;
 
