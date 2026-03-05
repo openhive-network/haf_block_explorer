@@ -384,6 +384,19 @@ BEGIN
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
 
+  ------------- SWITCH TO NON-FORKING FOR MASSIVE SYNC ----------------
+  -- Context is created as forking (required for state provider table registration),
+  -- but we switch to non-forking now to avoid creating hive_rowid indexes
+  -- during massive sync. Will switch back to forking at LIVE transition.
+  --
+  -- IMPORTANT: set_non_forking detaches/reattaches the context at the current
+  -- irreversible block, which would skip all block processing if HAF already has data.
+  -- We must detach and reset the position to 0 so processing starts from the beginning.
+  -- app_next_iteration() will auto-attach when processing begins.
+  PERFORM hive.app_context_set_non_forking('hafbe_app');
+  PERFORM hive.app_context_detach('hafbe_app');
+  PERFORM hive.app_set_current_block_num('hafbe_app', 0);
+
 END
 $$;
 
@@ -557,6 +570,7 @@ BEGIN
     RETURN;
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
+    PERFORM hive.app_context_set_forking(_context_name);
     PERFORM hafbe_app.create_hafbe_indexes();
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
