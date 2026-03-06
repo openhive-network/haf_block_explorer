@@ -61,7 +61,7 @@ echo "Step 1: Waiting for block processing..."
 wait_for_condition \
     "SELECT hive.is_app_in_sync('hafbe_app')::INT;" \
     "Waiting for HAF Block Explorer to finish processing blocks..." \
-    20
+    60
 echo "Block processing is finished."
 
 # Step 2: Create registered indexes that weren't created during HAF's initial setup
