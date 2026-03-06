@@ -25,12 +25,26 @@ function wait_for_condition() {
     fi
 
     local end_time=$((SECONDS + timeout_minutes * 60))
+    local iteration=0
     while ! psql "$POSTGRES_ACCESS" --quiet --tuples-only --command="$command" | grep -q 1; do
         if [[ $SECONDS -ge $end_time ]]; then
             echo "Timeout waiting for: $message"
+            echo "=== DIAGNOSTICS ==="
+            psql "$POSTGRES_ACCESS" -c "SELECT name, current_block_num, irreversible_block, is_attached, last_active_at FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id WHERE name IN ('hafbe_app', 'hafbe_bal');" 2>&1 || true
+            psql "$POSTGRES_ACCESS" -c "SELECT * FROM hafd.contexts WHERE name IN ('hafbe_app', 'hafbe_bal');" 2>&1 || true
+            psql "$POSTGRES_ACCESS" -c "SELECT pid, state, query, wait_event_type, wait_event, now()-query_start as duration FROM pg_stat_activity WHERE application_name LIKE '%block_explorer%' OR usename = 'hafbe_owner';" 2>&1 || true
+            echo "=== DOCKER COMPOSE LOGS (last 200 lines) ==="
+            docker compose logs --tail=200 backend-block-processing 2>&1 || docker-compose logs --tail=200 backend-block-processing 2>&1 || true
+            echo "=== END DIAGNOSTICS ==="
             exit 1
         fi
-        echo "$message"
+        iteration=$((iteration + 1))
+        if (( iteration % 15 == 0 )); then
+            echo "$message ($(( SECONDS / 60 ))m elapsed)"
+            psql "$POSTGRES_ACCESS" --quiet --tuples-only -c "SELECT 'hafbe_app block=' || current_block_num FROM hafd.contexts WHERE name='hafbe_app';" 2>&1 || true
+        else
+            echo "$message"
+        fi
         sleep 20
     done
 }
