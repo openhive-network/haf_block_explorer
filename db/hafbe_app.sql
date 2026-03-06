@@ -724,6 +724,7 @@ BEGIN
   SELECT hafbe_backend.get_sync_time(_time, 'hafbe') INTO _time;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
+  SET LOCAL temp_buffers = '64MB';
   PERFORM hive.app_state_providers_update(_block_range.first_block, _block_range.last_block, _context_hafbe);
   SELECT hafbe_backend.get_sync_time(_time, 'state_provider') INTO _time;
 
