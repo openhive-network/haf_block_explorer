@@ -17,12 +17,15 @@ services:
       - ./scripts/haf-healthcheck.sh:/home/hived/healthcheck.sh
       - ./blockchain:/home/hived/datadir/blockchain
 
+  # CI-specific: hafah-install uses hafah Docker image (no submodule needed)
+  hafah-install:
+    image: ${HAFAH_REGISTRY:-registry.gitlab.syncad.com/hive/hafah}:${HAFAH_VERSION:-latest}
+
   # CI-specific volume mounts for app-setup
   # Docker image doesn't contain submodules (GIT_SUBMODULE_STRATEGY: none in build)
   # Mount submodules from host for install scripts
   app-setup:
     volumes:
-      - ../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
       - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
       - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
       # Mount .git for generate_version_sql.sh scripts

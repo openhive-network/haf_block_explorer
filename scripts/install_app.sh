@@ -31,7 +31,7 @@ cat <<EOF
     --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
     --log-file=PATH                   Log file location (defaults to install_app.log, set to 'STDOUT' for no log file)
     --blocksearch-indexes=TRUE/FALSE  Create block search indexes (defaults to false)
-    --only-apps                       Set up only HAfAH and Balance Tracker and Reputation Tracker, without HAF Block Explorer
+    --only-apps                       Set up only Balance Tracker and Reputation Tracker, without HAF Block Explorer
     --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
 
 EOF
@@ -115,15 +115,11 @@ get_submodule_git_dir() {
 setup_apps() {
   # Stage 1: Generate version SQL for all modules
   echo "Generating version SQL for all modules..."
-  "$HAFBE_DIR/submodules/hafah/scripts/generate_version_sql.bash"    "$HAFBE_DIR/submodules/hafah" "$(get_submodule_git_dir hafah "$HAFBE_DIR/submodules/hafah")"
   "$HAFBE_DIR/submodules/btracker/scripts/generate_version_sql.sh"   "$HAFBE_DIR/submodules/btracker" "$(get_submodule_git_dir btracker "$HAFBE_DIR/submodules/btracker")"
   "$HAFBE_DIR/submodules/reptracker/scripts/generate_version_sql.sh" "$HAFBE_DIR/submodules/reptracker" "$(get_submodule_git_dir reptracker "$HAFBE_DIR/submodules/reptracker")"
   "$HAFBE_DIR/scripts/generate_version_sql.sh" "$HAFBE_DIR"
 
-  # Stage 2: Install all apps
-  echo "Installing HAfAH..."
-  "$HAFBE_DIR/submodules/hafah/scripts/install_app.sh"      --postgres-url="$POSTGRES_ACCESS"
-
+  # Stage 2: Install apps (HAfAH is installed separately via its own Docker service)
   echo "Installing Balance Tracker..."
   "$HAFBE_DIR/submodules/btracker/scripts/install_app.sh"   --postgres-url="$POSTGRES_ACCESS" --schema="$BTRACKER_SCHEMA"
 

@@ -12,7 +12,6 @@ services:
   app-setup:
     volumes:
       # Mount submodules for live development changes
-      - ../submodules/hafah:/home/haf_admin/haf_block_explorer/submodules/hafah
       - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
       - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
       # For version generation (dev-only, not needed in CI)
