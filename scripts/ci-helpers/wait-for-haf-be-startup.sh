@@ -102,4 +102,13 @@ wait_for_condition \
     60
 echo "All registered indexes are created."
 
+# Step 4: Flush WAL to disk after heavy operations
+# finalize_massive_sync() converts UNLOGGED tables to LOGGED (full table WAL write)
+# + index restoration generates massive WAL. Without this checkpoint, the shutdown
+# template's CHECKPOINT can fail (overloaded checkpointer), causing non-clean shutdown
+# and corrupted pgdata in cache.
+echo "Step 4: Running CHECKPOINT to flush WAL from index creation..."
+psql "$POSTGRES_ACCESS" --command="CHECKPOINT;"
+echo "CHECKPOINT complete."
+
 echo "HAF Block Explorer startup complete."
