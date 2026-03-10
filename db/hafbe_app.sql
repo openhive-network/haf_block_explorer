@@ -570,7 +570,6 @@ BEGIN
     RETURN;
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
-    PERFORM hive.app_context_set_forking(_context_name);
     PERFORM hafbe_app.create_hafbe_indexes();
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
@@ -712,6 +711,13 @@ BEGIN
   IF hive.get_current_stage_name(_context_hafbe) = 'MASSIVE_PROCESSING' THEN
     RAISE NOTICE '[MASSIVE] Attempting to process a block range: <%, %>', _block_range.first_block, _block_range.last_block;
   ELSE
+    -- Transition both contexts to forking together on first LIVE block.
+    -- This MUST happen here (not in individual processors) because
+    -- set_forking reattaches contexts at irreversible_block. If only one
+    -- context transitions, they desync and app_next_iteration fails with
+    -- "Contexts {hafbe_app,hafbe_bal} are not synchronized".
+    -- Idempotent in HAF: no-op after first LIVE block.
+    PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
     RAISE NOTICE '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
   END IF;
 
