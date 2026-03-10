@@ -1,9 +1,6 @@
 [submodule "submodules/btracker"]
 	path = submodules/btracker
 	url = ../balance_tracker.git
-[submodule "submodules/hafah"]
-	path = submodules/hafah
-	url = ../HAfAH.git
 [submodule "submodules/reptracker"]
 	path = submodules/reptracker
 	url = ../reputation_tracker.git

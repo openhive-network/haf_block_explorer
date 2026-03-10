@@ -31,6 +31,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 48h #time for replay to finish
+  hafah-install:
+    image: ${HAFAH_REGISTRY:-registry.gitlab.syncad.com/hive/hafah}:${HAFAH_VERSION:-latest}
+    command:
+      - install_app
+    environment:
+      POSTGRES_URL: postgresql://haf_admin@haf:5432/haf_block_log
+    networks:
+      haf-network:
+    depends_on:
+      haf:
+        condition: service_healthy
   app-setup:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     working_dir: /home/haf_admin/haf_block_explorer
@@ -49,6 +60,8 @@ services:
     depends_on:
       haf:
         condition: service_healthy
+      hafah-install:
+        condition: service_completed_successfully
   backend-setup:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
     command: 
