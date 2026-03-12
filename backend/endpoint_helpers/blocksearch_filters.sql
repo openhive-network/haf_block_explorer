@@ -286,6 +286,10 @@ DECLARE
   _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
   _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
   _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  -- Strip leading 'value' element so paths match body_value indexes
+  _path1_inner               TEXT[] := CASE WHEN _path1[1] = 'value' THEN _path1[2:] ELSE _path1 END;
+  _path2_inner               TEXT[] := CASE WHEN _path2[1] = 'value' THEN _path2[2:] ELSE _path2 END;
+  _path3_inner               TEXT[] := CASE WHEN _path3[1] = 'value' THEN _path3[2:] ELSE _path3 END;
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -300,9 +304,9 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num <= __to AND
       ov.block_num >= __from AND
-      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path1) = _key_content[1]) AND
-      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path2) = _key_content[2]) AND
-      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path3) = _key_content[3])
+      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1_inner) = _key_content[1]) AND
+      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2_inner) = _key_content[2]) AND
+      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3_inner) = _key_content[3])
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ov.block_num ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ov.block_num ELSE NULL END) ASC
@@ -835,6 +839,10 @@ DECLARE
   _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
   _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
   _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  -- Strip leading 'value' element so paths match body_value indexes
+  _path1_inner               TEXT[] := CASE WHEN _path1[1] = 'value' THEN _path1[2:] ELSE _path1 END;
+  _path2_inner               TEXT[] := CASE WHEN _path2[1] = 'value' THEN _path2[2:] ELSE _path2 END;
+  _path3_inner               TEXT[] := CASE WHEN _path3[1] = 'value' THEN _path3[2:] ELSE _path3 END;
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -864,9 +872,9 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num >= __from AND
       ov.block_num <= __to AND
-      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path1) = _key_content[1]) AND
-      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path2) = _key_content[2]) AND
-      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path3) = _key_content[3])
+      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1_inner) = _key_content[1]) AND
+      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2_inner) = _key_content[2]) AND
+      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3_inner) = _key_content[3])
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ov.block_num ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ov.block_num ELSE NULL END) ASC
