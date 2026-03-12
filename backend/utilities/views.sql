@@ -32,7 +32,7 @@ SET ROLE hafbe_owner;
  * COLUMNS:
  *   witness      - The witness account name (from impacted accounts)
  *   value        - The operation value as JSONB
- *   body_binary  - Raw binary operation body
+ *   body_value   - Operation value as JSONB (inner value only, no type wrapper)
  *   block_num    - Block number of the operation
  *   op_type_id   - Operation type ID
  *   operation_id - Unique operation ID
@@ -40,15 +40,14 @@ SET ROLE hafbe_owner;
 CREATE OR REPLACE VIEW hafbe_backend.witness_prop_op_view AS
 SELECT
   bia.name AS witness,
-  ov.body -> 'value' AS value,
-  ov.body_binary,
+  ov.body_value AS value,
   ov.block_num,
   ov.op_type_id,
   ov.id AS operation_id
 FROM hafbe_app.operations_view ov
 JOIN LATERAL (
   SELECT get_impacted_accounts AS name
-  FROM hive.get_impacted_accounts(ov.body_binary)
+  FROM hive.get_impacted_accounts(ov.body::hafd.operation)
 ) bia ON TRUE;
 
 -- ============================================================================
