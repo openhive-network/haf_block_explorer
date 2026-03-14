@@ -104,11 +104,12 @@ BEGIN
     continue_processing   BOOLEAN   NULL,  -- FALSE signals main loop to exit gracefully
     started_processing_at TIMESTAMP NULL,  -- When current processing session began
     last_reported_at      TIMESTAMP NULL,  -- Last progress report timestamp (for timing)
-    if_hf11               BOOLEAN   NULL   -- TRUE after hardfork 11 has been processed
+    if_hf11               BOOLEAN   NULL,  -- TRUE after hardfork 11 has been processed
+    blocksearch_indexes   BOOLEAN   NOT NULL DEFAULT FALSE  -- TRUE to create optional block search indexes
   );
 
-  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11)
-  VALUES (TRUE, NULL, NULL, FALSE);
+  INSERT INTO hafbe_app.app_status (continue_processing, started_processing_at, last_reported_at, if_hf11, blocksearch_indexes)
+  VALUES (TRUE, NULL, NULL, FALSE, FALSE);
 
   /*
    * version: Schema version tracking
@@ -825,9 +826,125 @@ $$;
 -- ============================================================================
 
 /**
+ * register_haf_indexes()
+ * -----------------------
+ * Register indexes on HAF tables (hafd.operations, hafd.blocks)
+ * that are needed by hafbe's API endpoints.
+ *
+ * These indexes are deferred until after hafbe finishes its MASSIVE sync,
+ * rather than being registered at install time. This prevents hived's
+ * enable_indexes_of_irreversible() from building them during replay,
+ * which would block all apps from starting their own sync.
+ *
+ * Only registers the indexes (status='missing' in hafd.indexes_constraints).
+ * The actual creation is handled by hived's poll_and_create_indexes() background
+ * thread, which builds them with CREATE INDEX CONCURRENTLY to avoid blocking
+ * hived's writes or other apps.
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.register_haf_indexes()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+DECLARE
+  __blocksearch BOOLEAN;
+BEGIN
+  SELECT blocksearch_indexes INTO __blocksearch FROM hafbe_app.app_status LIMIT 1;
+
+  RAISE NOTICE 'Registering HAF index dependencies for hafbe_app...';
+
+  -- Always-on: block hash lookup (used by get_input_type)
+  PERFORM hive.app_register_index_dependency(
+    'hafbe_app',
+    'CREATE UNIQUE INDEX IF NOT EXISTS uq_blocks_hash ON hafd.blocks USING btree (hash)'
+  );
+
+  -- Always-on: comment search indexes
+  PERFORM hive.app_register_index_dependency(
+    'hafbe_app',
+    $$
+    CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink ON hafd.operations USING btree
+    (
+        (body_value ->>'author'),
+        hafd.operation_id_to_block_num(id) DESC
+    )
+    WHERE op_type_id = 1
+    $$
+  );
+
+  PERFORM hive.app_register_index_dependency(
+    'hafbe_app',
+    $$
+    CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_parent_author ON hafd.operations USING btree
+    (
+        (body_value ->>'author'),
+        (body_value ->>'parent_author'),
+        hafd.operation_id_to_block_num(id) DESC
+    )
+    WHERE op_type_id = 1
+    $$
+  );
+
+  PERFORM hive.app_register_index_dependency(
+    'hafbe_app',
+    $$
+    CREATE INDEX IF NOT EXISTS hive_operations_comment_search_permlink_author ON hafd.operations USING btree
+    (
+        (body_value ->>'author'),
+        (body_value ->>'permlink')
+    )
+    WHERE op_type_id IN (0, 1, 17, 19, 51, 52, 53, 61, 63, 72, 73)
+    $$
+  );
+
+  -- Optional: block search indexes
+  IF __blocksearch THEN
+    RAISE NOTICE 'Registering block search indexes...';
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 0$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 1$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_parent_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'parent_author'), jsonb_extract_path_text(body_value,'parent_permlink')) WHERE op_type_id = 1$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_delete_comment_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id IN (17, 73)$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_options_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 19$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_author_reward_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 51$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_curation_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 52$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_benefactor_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 63$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_payout_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 61$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_comment_reward_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 53$idx$);
+
+    PERFORM hive.app_register_index_dependency('hafbe_app',
+      $idx$CREATE INDEX IF NOT EXISTS hive_operations_effective_vote_author_permlink ON hafd.operations USING btree (jsonb_extract_path_text(body_value,'author'), jsonb_extract_path_text(body_value,'permlink')) WHERE op_type_id = 72$idx$);
+  ELSE
+    RAISE NOTICE 'Skipping block search indexes (blocksearch_indexes is false).';
+  END IF;
+
+  RAISE NOTICE 'HAF indexes registered. hived will create them concurrently in the background.';
+END
+$$;
+
+/**
  * create_hafbe_indexes()
  * ----------------------
- * Create performance indexes for API queries.
+ * Create performance indexes on hafbe's own tables and HAF tables for API queries.
  * Called once when transitioning from MASSIVE to LIVE processing.
  *
  * Indexes are deferred until after initial sync because:
@@ -856,6 +973,7 @@ LANGUAGE 'plpgsql' VOLATILE
 AS
 $$
 BEGIN
+  -- Indexes on hafbe_app's own tables
   CREATE INDEX IF NOT EXISTS current_witness_votes_witness_id ON hafbe_app.current_witness_votes USING btree (witness_id);
 
   --Can only vote once every 3 seconds, so sorting by block_num is sufficient
@@ -868,6 +986,10 @@ BEGIN
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);
+
+  -- Register indexes on HAF tables (deferred from install time).
+  -- hived's poll_and_create_indexes() will build them concurrently in the background.
+  PERFORM hafbe_app.register_haf_indexes();
 END
 $$;
 

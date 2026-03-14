@@ -78,36 +78,32 @@ wait_for_condition \
     60
 echo "Block processing is finished."
 
-# Step 2: Create registered indexes that weren't created during HAF's initial setup
-# Blocksearch indexes are registered by backend-setup AFTER HAF's enable_indexes_of_irreversible()
-# runs, so we need to explicitly create them here.
-echo "Step 2: Creating registered indexes..."
-psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.operations');"
-psql "$POSTGRES_ACCESS" --command="SELECT hive.restore_indexes('hafd.blocks');"
-echo "Index creation initiated."
-
-# Step 3.5: Create HAFBE application indexes if not already created
-# These indexes (like witness_votes_history_witness_voter) are normally created
-# during single-block processing, but CI uses cached data from MASSIVE mode
-# where indexes aren't created. Create them explicitly before tests run.
-echo "Step 3.5: Creating HAFBE application indexes..."
+# Step 2: Create HAFBE indexes if not already created
+# create_hafbe_indexes() handles hafbe_app table indexes AND registers HAF table
+# indexes. In CI there's no hived poll_and_create_indexes() thread, so we must
+# also explicitly restore the registered HAF indexes.
+echo "Step 2: Creating HAFBE application indexes..."
 psql "$POSTGRES_ACCESS" --command="SELECT hafbe_app.create_hafbe_indexes();"
 echo "HAFBE application indexes created."
 
-# Step 3: Wait for all registered indexes to be created
-echo "Step 3: Waiting for registered indexes to finish building..."
+echo "Step 3: Creating registered HAF table indexes..."
+psql "$POSTGRES_ACCESS" --command="SELECT hive.app_restore_indexes('hafbe_app');"
+echo "HAF table indexes created."
+
+# Step 4: Verify all registered indexes are created
+echo "Step 4: Verifying all registered indexes..."
 wait_for_condition \
     "SELECT hive.check_if_registered_indexes_created('hafbe_app')::INT;" \
     "Waiting for registered indexes to be created..." \
     60
 echo "All registered indexes are created."
 
-# Step 4: Flush WAL to disk after heavy operations
+# Step 5: Flush WAL to disk after heavy operations
 # finalize_massive_sync() converts UNLOGGED tables to LOGGED (full table WAL write)
 # + index restoration generates massive WAL. Without this checkpoint, the shutdown
 # template's CHECKPOINT can fail (overloaded checkpointer), causing non-clean shutdown
 # and corrupted pgdata in cache.
-echo "Step 4: Running CHECKPOINT to flush WAL from index creation..."
+echo "Step 5: Running CHECKPOINT to flush WAL from index creation..."
 psql "$POSTGRES_ACCESS" --command="CHECKPOINT;"
 echo "CHECKPOINT complete."
 

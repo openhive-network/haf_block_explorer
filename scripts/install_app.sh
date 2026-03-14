@@ -208,8 +208,9 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT MAINTAIN ON ALL TABLES IN SCHEMA hafbe_app TO hived_group;"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;GRANT ALL ON SCHEMA hafbe_app TO hived_group;"
 
-  echo "Registering HAF index dependencies..."
-  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.blocksearch_indexes = '$BLOCKSEARCH_INDEXES';" -f "$HAFBE_DIR/db/indexes.sql"
+  echo "Storing blocksearch indexes configuration..."
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "ALTER TABLE hafbe_app.app_status ADD COLUMN IF NOT EXISTS blocksearch_indexes BOOLEAN NOT NULL DEFAULT FALSE;"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = '${BLOCKSEARCH_INDEXES}';"
 
   echo "Installation complete."
 }
