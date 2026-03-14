@@ -527,8 +527,6 @@ test_python_api_wheel:
     HAF_IMAGE_NAME: "${HAF_UPSTREAM_IMAGE}"
     # Local bin for non-root docker/compose installation
     LOCAL_BIN: "${CI_PROJECT_DIR}/.local-bin"
-    # Run HAF container as root to access CI-extracted data
-    HIVED_UID: "0"
   before_script:
     # Git setup (from docker_image_builder_job_template, without buildx)
   - git config --global --add safe.directory '*'
@@ -553,9 +551,7 @@ test_python_api_wheel:
    # Start docker-compose
   - |
     export PATH="$LOCAL_BIN:$PATH"
-    export HIVED_UID="${HIVED_UID:-0}"
-    echo "HIVED_UID=$HIVED_UID (container will run as this UID)"
-    # Ensure container can write to extracted data (HAF runs as UID 4000 by default)
+    # Ensure container can write to extracted data
     sudo chmod -R 777 "${HAF_DATA_DIRECTORY}" || chmod -R 777 "${HAF_DATA_DIRECTORY}" || true
     echo -e "\e[0Ksection_start:$(date +%s):compose_up[collapsed=true]\r\e[0KStarting test environment..."
     docker-compose -f "${COMPOSE_FILE}" up -d

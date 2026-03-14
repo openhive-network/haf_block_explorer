@@ -14,7 +14,6 @@ OPTIONS:
     --haf-shm-directory=PATH    HAF SHM directory path (default: /srv/haf/shm)
     --haf-registry=REGISTRY     HAF registry to use (default: registry.gitlab.syncad.com/hive/haf)
     --haf-version=VERSION       HAF version to use (default: 9ec94375)
-    --hived-uid=UID             UID that hived daemon should be running as (default: $(id -u))
     --setup-uid=UID             UID that HAF setup should be run as (default: $(id -u))
     --help|-h|-?                Display this help screen and exit
 EOF
@@ -39,10 +38,6 @@ while [ $# -gt 0 ]; do
     --haf-registry=*)
         arg="${1#*=}"
         HAF_REGISTRY_PATH="$arg"
-        ;;
-    --hived-uid=*)
-        arg="${1#*=}"
-        HIVED_UID="$arg"
         ;;
     --setup-uid=*)
         arg="${1#*=}"
@@ -73,7 +68,6 @@ cat <<-EOF | tee ci.env
     HAF_SHM_DIRECTORY=${HAF_SHM_DIRECTORY:-/srv/haf/shm}
     HAF_REGISTRY=${HAF_REGISTRY_PATH:-registry.gitlab.syncad.com/hive/haf}
     HAF_VERSION=${HAF_REGISTRY_TAG:-9ec94375}
-    HIVED_UID=${HIVED_UID:-$(id -u)}
     SETUP_UID=${SETUP_UID:-$(id -u)}
     PGHERO_USERNAME=link
     PGHERO_PASSWORD=hyrule
