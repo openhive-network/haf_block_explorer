@@ -5,7 +5,6 @@ services:
     entrypoint: /home/haf_admin/docker_entrypoint.sh
     command: $${HAF_COMMAND}
     environment:
-      HIVED_UID:
       HAF_COMMAND:
       DATADIR: /home/hived/datadir
       SHM_DIR: /home/hived/shm_dir

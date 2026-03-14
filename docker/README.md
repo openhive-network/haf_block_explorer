@@ -23,8 +23,6 @@ docker compose up -d
 
 You can stop the app with `docker compose stop` or `docker compose down` (the latter removes the containers) and remove all application data with `docker compose down -v`.
 
-Note: If `docker compose up -d` exits with HAF error on Linux, try `HIVED_UID="$(id -u)" docker compose up -d` instead to fix HAF's permissions.
-
 ## Images
 
 ### Overview
@@ -91,7 +89,6 @@ The variables below are can be used to configure the Compose files.
 | PGADMIN_VERSION                   | PgAdmin version to use (*db-tools* profile only)                                                                               | latest                                                                       |
 | HAF_DATA_DIRECTORY                | HAF data directory path on host (used by [dev.yml](overrides/dev.yml) override)                                                | none                                                                         |
 | HAF_SHM_DIRECTORY                 | HAF shared memory directory path on host (used by [dev.yml](overrides/dev.yml override))                                       | none                                                                         |
-| HIVED_UID                         | UID to be used by HAF service                                                                                                  | 0                                                                            |
 | SETUP_UID                         | UID to be used to set up Balance Tracker and HAfAH                                                                             | root                                                                         |
 | PGHERO_USERNAME                   | PgHero username (*db-tools* profile only)                                                                                      | link                                                                         |
 | PGHERO_PASSWORD                   | PgHero password (*db-tools* profile only)                                                                                      | hyrule                                                                       |
@@ -107,7 +104,6 @@ You can override them by editing the [.env](.env) file or by creating your own e
   echo "HAF_REGISTRY=registry.gitlab.syncad.com/hive/haf/instance"
   echo "HAF_VERSION=instance-v1.27.5-rc0"
   echo "POSTGREST_REGISTRY=bitnami/postgrest"
-  echo "HIVED_UID=0"
   echo "HAF_COMMAND=--shared-file-size=1G --plugin database_api --replay --stop-at-block=5000000"
 } > local.env
 
@@ -174,7 +170,6 @@ cd docker
   echo "HAF_REGISTRY=registry.gitlab.syncad.com/hive/haf/instance"
   echo "HAF_VERSION=instance-v1.27.5-rc0"
   echo "POSTGREST_REGISTRY=bitnami/postgrest"
-  echo "HIVED_UID=$(id -u)" # Your user id
   echo "SETUP_UID=root"
   echo "HAF_DATA_DIRECTORY=/srv/haf/data"
   echo "HAF_SHM_DIRECTORY=/srv/haf/shm"
