@@ -12,6 +12,9 @@ EOF
 
 FROM psql as version-calculcation
 ARG API_VERSION="dev"
+USER root
+RUN addgroup -S users 2>/dev/null || true && adduser -D -u 1000 -G users hived 2>/dev/null || true
+USER hived
 
 COPY --chown=hived:users . /home/hived/src
 WORKDIR /home/hived/src
@@ -56,6 +59,8 @@ USER root
 RUN <<EOF
   set -e
   apk --no-cache add curl
+  addgroup -S users 2>/dev/null || true
+  adduser -D -u 1000 -G users hived 2>/dev/null || true
   mkdir /app
   chown hived /app
 EOF
