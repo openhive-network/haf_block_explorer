@@ -85,15 +85,15 @@ BEGIN
       SELECT (
         CASE
           WHEN ho.op_type_id = _op_pow THEN
-            hafbe_backend.parse_pow_operation(ho.body, ho.timestamp)
+            hafbe_backend.parse_pow_operation(ho.body_value, ho.timestamp)
           WHEN ho.op_type_id = _op_pow2 THEN
-            hafbe_backend.parse_pow2_operation(ho.body, ho.timestamp)
+            hafbe_backend.parse_pow2_operation(ho.body_value, ho.timestamp)
           WHEN ho.op_type_id = _op_account_created THEN
-            hafbe_backend.parse_account_created_operation(ho.body, ho.timestamp, ho.block_num > _hf11_block)
+            hafbe_backend.parse_account_created_operation(ho.body_value, ho.timestamp, ho.block_num > _hf11_block)
           WHEN ho.op_type_id IN (_op_account_create, _op_create_claimed_account, _op_account_create_with_delegation) THEN
-            hafbe_backend.parse_account_create_operation(ho.body, ho.timestamp)
+            hafbe_backend.parse_account_create_operation(ho.body_value, ho.timestamp)
           WHEN ho.op_type_id = _op_changed_recovery_account THEN
-            hafbe_backend.parse_changed_recovery_account_operation(ho.body)
+            hafbe_backend.parse_changed_recovery_account_operation(ho.body_value)
         END
       ).*
     ) AS iap
@@ -232,7 +232,7 @@ BEGIN
       parsed.recovery_timestamp,
       ov.id AS source_op
     FROM hafbe_app.operations_view_extended ov
-    CROSS JOIN hafbe_backend.parse_recover_account_operation(ov.body, ov.timestamp) parsed
+    CROSS JOIN hafbe_backend.parse_recover_account_operation(ov.body_value, ov.timestamp) parsed
     WHERE ov.op_type_id = _op_recover_account
       AND ov.block_num BETWEEN _from AND _to
   ),
@@ -297,7 +297,7 @@ BEGIN
       parsed.can_vote,
       ov.id AS source_op
     FROM hafbe_app.operations_view ov
-    CROSS JOIN hafbe_backend.parse_decline_voting_rights_operation(ov.body) parsed
+    CROSS JOIN hafbe_backend.parse_decline_voting_rights_operation(ov.body_value) parsed
     WHERE ov.op_type_id = _op_decline_voting_rights
       AND ov.block_num BETWEEN _from AND _to
   ),
@@ -371,7 +371,7 @@ BEGIN
       parsed.account_name,
       SUM(CASE WHEN ov.op_type_id = _op_claim_account THEN 1 ELSE -1 END) AS token_delta
     FROM hafbe_app.operations_view ov
-    CROSS JOIN hafbe_backend.parse_claim_account_operation(ov.body) parsed
+    CROSS JOIN hafbe_backend.parse_claim_account_operation(ov.body_value) parsed
     WHERE ov.op_type_id IN (_op_claim_account, _op_create_claimed_account)
       AND ov.block_num BETWEEN _from AND _to
     GROUP BY parsed.account_name

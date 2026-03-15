@@ -73,8 +73,8 @@ BEGIN
    */
   WITH proxy_ops AS MATERIALIZED (
     SELECT
-      ov.body     AS body,
-      ov.id       AS id,
+      ov.body_value AS body,
+      ov.id         AS id,
       ov.block_num,
       ov.op_type_id AS op_type
     FROM hafbe_app.operations_view ov

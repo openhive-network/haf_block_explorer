@@ -489,12 +489,12 @@ BEGIN
   WITH select_ops_with_missed AS MATERIALIZED (
     /*
      * Get witness names from producer_missed operations.
-     * hive.get_impacted_accounts extracts the witness name from the operation body.
-     * WHY MATERIALIZED: Prevents multiple calls to get_impacted_accounts.
+     * Extract producer directly from body_value to avoid body::hafd.operation cast
+     * (which would reconstruct the type wrapper just to parse it back).
+     * WHY MATERIALIZED: Prevents repeated JSON extraction.
      */
-    SELECT w AS witness
+    SELECT ov.body_value ->> 'producer' AS witness
     FROM hafbe_app.operations_view ov
-    CROSS JOIN LATERAL hive.get_impacted_accounts(ov.body_binary) AS w
     WHERE ov.op_type_id = _op_producer_missed
       AND ov.block_num BETWEEN _from AND _to
   ),
