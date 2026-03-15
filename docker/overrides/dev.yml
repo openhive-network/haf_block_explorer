@@ -12,11 +12,11 @@ services:
   app-setup:
     volumes:
       # Mount submodules for live development changes
-      - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
-      - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
+      - ../submodules/btracker:/home/hived/haf_block_explorer/submodules/btracker
+      - ../submodules/reptracker:/home/hived/haf_block_explorer/submodules/reptracker
       # For version generation (dev-only, not needed in CI)
-      - ../scripts/generate_version_sql.sh:/home/haf_admin/haf_block_explorer/scripts/generate_version_sql.sh
-      - ../.git:/home/haf_admin/haf_block_explorer/.git
+      - ../scripts/generate_version_sql.sh:/home/hived/haf_block_explorer/scripts/generate_version_sql.sh
+      - ../.git:/home/hived/haf_block_explorer/.git
 
 volumes:
   haf_datadir:

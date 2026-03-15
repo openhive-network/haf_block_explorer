@@ -2,7 +2,7 @@ name: 'haf-be'
 services:
   haf:
     image: ${HAF_REGISTRY:-registry.gitlab.syncad.com/hive/haf/instance}:${HAF_VERSION:-9ec94375}
-    entrypoint: /home/haf_admin/docker_entrypoint.sh
+    entrypoint: /home/hived/docker_entrypoint.sh
     command: $${HAF_COMMAND}
     environment:
       HAF_COMMAND:
@@ -43,7 +43,7 @@ services:
         condition: service_healthy
   app-setup:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
-    working_dir: /home/haf_admin/haf_block_explorer
+    working_dir: /home/hived/haf_block_explorer
     entrypoint:
       - "/bin/bash"
       - "-c"
@@ -75,8 +75,8 @@ services:
         condition: service_completed_successfully
   backend-rep-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
-    working_dir: /home/haf_admin/haf_block_explorer
-    entrypoint: 
+    working_dir: /home/hived/haf_block_explorer
+    entrypoint:
       - "/bin/bash"
       - "-c"
       - "./submodules/reptracker/scripts/process_blocks.sh --stop-at-block=5000000"
@@ -84,12 +84,12 @@ services:
       POSTGRES_HOST: haf
       POSTGRES_USER: reptracker_owner
     volumes:
-      - ../submodules/reptracker/scripts:/home/haf_admin/haf_block_explorer/submodules/reptracker/scripts
-      - ./scripts/block-processing-healthcheck.sh:/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh
+      - ../submodules/reptracker/scripts:/home/hived/haf_block_explorer/submodules/reptracker/scripts
+      - ./scripts/block-processing-healthcheck.sh:/home/hived/haf_block_explorer/block-processing-healthcheck.sh
     networks:
       haf-network:
     healthcheck:
-      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh reptracker_app"]
+      test: ["CMD-SHELL","/home/hived/haf_block_explorer/block-processing-healthcheck.sh reptracker_app"]
       interval: 60s
       timeout: 5s
       retries: 20
@@ -104,11 +104,11 @@ services:
       POSTGRES_HOST: haf
       POSTGRES_USER: hafbe_owner
     volumes:
-      - ./scripts/block-processing-healthcheck.sh:/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh
+      - ./scripts/block-processing-healthcheck.sh:/home/hived/haf_block_explorer/block-processing-healthcheck.sh
     networks:
       haf-network:
     healthcheck:
-      test: ["CMD-SHELL","/home/haf_admin/haf_block_explorer/block-processing-healthcheck.sh hafbe_app"]
+      test: ["CMD-SHELL","/home/hived/haf_block_explorer/block-processing-healthcheck.sh hafbe_app"]
       interval: 60s
       timeout: 5s
       retries: 20
