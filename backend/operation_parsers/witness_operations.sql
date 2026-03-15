@@ -36,8 +36,8 @@ SET ROLE hafbe_owner;
  * ===================================================================================
  * PURPOSE: Process a single account_witness_vote_operation.
  *
- * JSON STRUCTURE:
- *   { "value": { "account": "voter", "witness": "witness-name", "approve": true/false } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account": "voter", "witness": "witness-name", "approve": true/false }
  *
  * BEHAVIOR:
  *   1. Always insert into witness_votes_history (for historical tracking)
@@ -45,7 +45,7 @@ SET ROLE hafbe_owner;
  *   3. If approve=FALSE: Delete from current_witness_votes
  *
  * PARAMETERS:
- *   _body: Operation JSON body
+ *   _body: Operation body_value JSONB (inner value, no type wrapper)
  *   _id: Operation ID (source_op for history tracking)
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.process_vote_op(
@@ -56,9 +56,9 @@ RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS $$
 DECLARE
-  __voter_id   INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body -> 'value' ->> 'account');
-  __witness_id INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body -> 'value' ->> 'witness');
-  __approve    BOOLEAN := (_body -> 'value' ->> 'approve')::BOOLEAN;
+  __voter_id   INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');
+  __witness_id INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'witness');
+  __approve    BOOLEAN := (_body ->> 'approve')::BOOLEAN;
 BEGIN
   /*
    * Step 1: Record in history (all votes, regardless of approve status)
@@ -91,8 +91,8 @@ $$;
  * ===================================================================================
  * PURPOSE: Process account_witness_proxy_operation or proxy_cleared_operation.
  *
- * JSON STRUCTURE:
- *   { "value": { "account": "account-name", "proxy": "proxy-name" } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account": "account-name", "proxy": "proxy-name" }
  *
  * BEHAVIOR:
  *   When setting proxy (_proxy=TRUE):
@@ -107,7 +107,7 @@ $$;
  *     2. Delete from current_account_proxies
  *
  * PARAMETERS:
- *   _body: Operation JSON body
+ *   _body: Operation body_value JSONB (inner value, no type wrapper)
  *   _id: Operation ID (source_op for history tracking)
  *   _proxy: TRUE if setting proxy, FALSE if clearing proxy
  *
@@ -124,8 +124,8 @@ RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS $$
 DECLARE
-  __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body -> 'value' ->> 'account');
-  __proxy_id   INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body -> 'value' ->> 'proxy');
+  __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');
+  __proxy_id   INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'proxy');
 BEGIN
   /*
    * Skip if proxy account doesn't exist (can happen with empty proxy field)
@@ -182,8 +182,8 @@ $$;
  * ===================================================================================
  * PURPOSE: Process declined_voting_rights_operation or expired_account_notification_operation.
  *
- * JSON STRUCTURE:
- *   { "value": { "account": "account-name" } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account": "account-name" }
  *
  * BEHAVIOR:
  *   When an account expires or declines voting rights:
@@ -191,7 +191,7 @@ $$;
  *     2. Delete ALL current witness votes for this account, record in history
  *
  * PARAMETERS:
- *   _body: Operation JSON body
+ *   _body: Operation body_value JSONB (inner value, no type wrapper)
  *   _id: Operation ID (source_op for history tracking)
  *
  * NOTE: Both declined_voting_rights and expired_account_notification trigger
@@ -205,7 +205,7 @@ RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS $$
 DECLARE
-  __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body -> 'value' ->> 'account');
+  __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');
 BEGIN
   /*
    * Step 1: Delete all proxies and record in history
