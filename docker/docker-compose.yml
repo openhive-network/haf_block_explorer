@@ -2,9 +2,10 @@ name: 'haf-be'
 services:
   haf:
     image: ${HAF_REGISTRY:-registry.gitlab.syncad.com/hive/haf/instance}:${HAF_VERSION:-9ec94375}
-    entrypoint: /home/hived/docker_entrypoint.sh
+    entrypoint: /home/haf_admin/docker_entrypoint.sh
     command: $${HAF_COMMAND}
     environment:
+      HIVED_UID:
       HAF_COMMAND:
       DATADIR: /home/hived/datadir
       SHM_DIR: /home/hived/shm_dir
