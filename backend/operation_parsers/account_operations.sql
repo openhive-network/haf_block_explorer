@@ -23,8 +23,8 @@ CREATE TYPE hafbe_backend.impacted_account_parameters AS (
  * ===================================================================================
  * PURPOSE: Parse pow_operation (original proof-of-work mining from early blockchain).
  *
- * JSON STRUCTURE:
- *   { "value": { "worker_account": "account-name" } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "worker_account": "account-name" }
  *
  * RETURNS:
  *   - account_name: The miner's account
@@ -43,7 +43,7 @@ DECLARE
   __result hafbe_backend.impacted_account_parameters;
 BEGIN
   __result := (
-    _body -> 'value' ->> 'worker_account',
+    _body ->> 'worker_account',
     TRUE,
     NULL,
     _timestamp
@@ -60,8 +60,8 @@ $$;
  * ===================================================================================
  * PURPOSE: Parse pow2_operation (updated proof-of-work mining with nested structure).
  *
- * JSON STRUCTURE:
- *   { "value": { "work": { "value": { "input": { "worker_account": "account-name" } } } } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "work": { "value": { "input": { "worker_account": "account-name" } } } }
  *
  * NOTE: Deeper nesting than pow_operation due to protocol changes.
  *
@@ -82,7 +82,7 @@ DECLARE
   __result hafbe_backend.impacted_account_parameters;
 BEGIN
   __result := (
-    _body -> 'value' -> 'work' -> 'value' -> 'input' ->> 'worker_account',
+    _body -> 'work' -> 'value' -> 'input' ->> 'worker_account',
     TRUE,
     NULL,
     _timestamp
@@ -100,8 +100,8 @@ $$;
  * PURPOSE: Parse account_created_operation (virtual op emitted when account is created).
  *          This is the authoritative source for creation timestamp and recovery account.
  *
- * JSON STRUCTURE:
- *   { "value": { "new_account_name": "...", "creator": "..." } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "new_account_name": "...", "creator": "..." }
  *
  * HARDFORK LOGIC (recovery_account):
  *   - Pre-HF11: Always defaults to pre_hf11_recovery_account() ('steem')
@@ -125,8 +125,8 @@ RETURNS hafbe_backend.impacted_account_parameters
 LANGUAGE 'plpgsql' STABLE
 AS $$
 DECLARE
-  _new_account TEXT := _body -> 'value' ->> 'new_account_name';
-  _creator     TEXT := _body -> 'value' ->> 'creator';
+  _new_account TEXT := _body ->> 'new_account_name';
+  _creator     TEXT := _body ->> 'creator';
   _recovery    TEXT;
   __result     hafbe_backend.impacted_account_parameters;
 BEGIN
@@ -158,8 +158,8 @@ $$;
  * PURPOSE: Parse account creation operations where another account pays the fee.
  *          Handles: account_create, create_claimed_account, account_create_with_delegation
  *
- * JSON STRUCTURE:
- *   { "value": { "new_account_name": "..." } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "new_account_name": "..." }
  *
  * NOTE: These accounts are NOT mined (mined=FALSE). The recovery_account is set
  *       by the accompanying account_created_operation virtual op, not here.
@@ -181,7 +181,7 @@ DECLARE
   __result hafbe_backend.impacted_account_parameters;
 BEGIN
   __result := (
-    _body -> 'value' ->> 'new_account_name',
+    _body ->> 'new_account_name',
     FALSE,
     NULL,
     _timestamp
@@ -198,8 +198,8 @@ $$;
  * ===================================================================================
  * PURPOSE: Parse changed_recovery_account_operation (user changing their recovery account).
  *
- * JSON STRUCTURE:
- *   { "value": { "account": "...", "new_recovery_account": "..." } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account": "...", "new_recovery_account": "..." }
  *
  * NOTE: The change takes effect after a 30-day waiting period on the blockchain.
  *       We record the requested change immediately.
@@ -220,9 +220,9 @@ DECLARE
   __result hafbe_backend.impacted_account_parameters;
 BEGIN
   __result := (
-    _body -> 'value' ->> 'account',
+    _body ->> 'account',
     NULL,
-    _body -> 'value' ->> 'new_recovery_account',
+    _body ->> 'new_recovery_account',
     NULL
   );
 
@@ -252,8 +252,8 @@ CREATE TYPE hafbe_backend.recover_account_result AS (
  * ===================================================================================
  * PURPOSE: Parse recover_account_operation (account recovery event).
  *
- * JSON STRUCTURE:
- *   { "value": { "account_to_recover": "account-name" } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account_to_recover": "account-name" }
  *
  * RETURNS:
  *   - account_name: The account that was recovered
@@ -270,7 +270,7 @@ DECLARE
   __result hafbe_backend.recover_account_result;
 BEGIN
   __result := (
-    _body -> 'value' ->> 'account_to_recover',
+    _body ->> 'account_to_recover',
     _timestamp
   );
 
@@ -295,8 +295,8 @@ CREATE TYPE hafbe_backend.decline_voting_rights_result AS (
  * ===================================================================================
  * PURPOSE: Parse decline_voting_rights_operation (user declining/regaining voting rights).
  *
- * JSON STRUCTURE:
- *   { "value": { "account": "account-name", "decline": true/false } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "account": "account-name", "decline": true/false }
  *
  * NOTE: The 'decline' field is INVERTED to get can_vote:
  *   - decline=TRUE  → can_vote=FALSE (user wants to lose voting rights)
@@ -316,8 +316,8 @@ DECLARE
   __result hafbe_backend.decline_voting_rights_result;
 BEGIN
   __result := (
-    _body -> 'value' ->> 'account',
-    NOT (_body -> 'value' ->> 'decline')::BOOLEAN
+    _body ->> 'account',
+    NOT (_body ->> 'decline')::BOOLEAN
   );
 
   RETURN __result;
@@ -341,8 +341,8 @@ CREATE TYPE hafbe_backend.claim_account_result AS (
  * PURPOSE: Parse claim_account_operation and create_claimed_account_operation.
  *          Both operations have the same JSON structure for the creator field.
  *
- * JSON STRUCTURE:
- *   { "value": { "creator": "account-name" } }
+ * JSON STRUCTURE (body_value, no type wrapper):
+ *   { "creator": "account-name" }
  *
  * USAGE:
  *   - claim_account: Creator gains +1 account creation token
@@ -361,7 +361,7 @@ AS $$
 DECLARE
   __result hafbe_backend.claim_account_result;
 BEGIN
-  __result := ROW(_body -> 'value' ->> 'creator');
+  __result := ROW(_body ->> 'creator');
 
   RETURN __result;
 END
