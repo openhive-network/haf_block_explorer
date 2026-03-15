@@ -46,7 +46,7 @@ variables:
   HAFBE_SYNC_CACHE_TYPE: "haf_hafbe_sync"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
-  HAFAH_VERSION: "6cc42036"
+  HAFAH_VERSION: "2c5714ca"
   PYTEST_NUMBER_OF_PROCESSES: 8
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
