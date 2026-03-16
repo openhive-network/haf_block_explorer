@@ -45,7 +45,7 @@ $$
 DECLARE
   __op_producer_reward INT := hafbe_backend.op_producer_reward();
 BEGIN
-  RETURN (ov.body_value -> 'vesting_shares' ->> 'amount')::BIGINT
+  RETURN (ov.body -> 'value' -> 'vesting_shares' ->> 'amount')::BIGINT
   FROM hive.operations_view ov
   WHERE ov.block_num = _block_num
     AND ov.op_type_id = __op_producer_reward;

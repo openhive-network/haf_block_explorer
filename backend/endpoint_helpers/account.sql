@@ -310,7 +310,7 @@ BEGIN
     aov.op_type_id = __op_effective_comment_vote AND
     aov.account_id = _account AND
     -- Verify this account is actually the voter, not just related to the op
-    ov.body_value ->> 'voter' = (
+    ov.body_binary::JSONB -> 'value' ->> 'voter' = (
       SELECT av.name FROM hive.accounts_view av WHERE av.id = _account
     )
   ORDER BY aov.account_op_seq_no DESC
