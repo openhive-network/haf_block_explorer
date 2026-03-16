@@ -656,8 +656,8 @@ setup-scripts-test:
 
     # Make submodules writable (needed for generate_version_sql scripts to write set_version_in_sql.pgsql)
     # Without this, reused workspace checkouts may have stale files with restrictive permissions
-    sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker"
-    sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker"
+    chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker" 2>/dev/null || sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker"
+    chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker" 2>/dev/null || sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker"
 
     cd tests/functional
     ./test_scripts.sh --host=${HAF_HOST}
