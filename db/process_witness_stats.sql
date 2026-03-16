@@ -494,7 +494,7 @@ BEGIN
      */
     SELECT w AS witness
     FROM hafbe_app.operations_view ov
-    CROSS JOIN LATERAL hive.get_impacted_accounts(ov.body::hafd.operation) AS w
+    CROSS JOIN LATERAL hive.get_impacted_accounts(ov.body_binary) AS w
     WHERE ov.op_type_id = _op_producer_missed
       AND ov.block_num BETWEEN _from AND _to
   ),

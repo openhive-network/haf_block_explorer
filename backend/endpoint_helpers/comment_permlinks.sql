@@ -74,16 +74,16 @@ BEGIN
       ov.block_num,
       ov.id,
       ov.trx_in_block,
-      ov.body_value ->> 'permlink' AS permlink
+      ov.body_binary::JSONB -> 'value' ->> 'permlink' AS permlink
     FROM hive.operations_view ov
     WHERE
       ov.op_type_id = __op_comment AND
       ov.block_num <= _to AND
       ov.block_num >= _from AND
-      ov.body_value ->> 'author' = _author AND
+      ov.body_binary::JSONB -> 'value' ->> 'author' = _author AND
       (
-        (_comment_type = 'post'    AND ov.body_value ->> 'parent_author' = '') OR
-        (_comment_type = 'comment' AND ov.body_value ->> 'parent_author' != '') OR
+        (_comment_type = 'post'    AND ov.body_binary::JSONB -> 'value' ->> 'parent_author' = '') OR
+        (_comment_type = 'comment' AND ov.body_binary::JSONB -> 'value' ->> 'parent_author' != '') OR
         (_comment_type = 'all')
       )
     ORDER BY ov.block_num DESC, ov.id DESC
