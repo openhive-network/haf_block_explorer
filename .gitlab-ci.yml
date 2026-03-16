@@ -403,7 +403,7 @@ sync:
       ls -la "${CI_PROJECT_DIR}/docker/blockchain/" | head -5
 
       # Remove blockchain dir from datadir so Docker volume mount doesn't conflict
-      sudo rm -rf "${DATADIR}/blockchain"
+      rm -rf "${DATADIR}/blockchain" 2>/dev/null || sudo rm -rf "${DATADIR}/blockchain"
     else
       # Cache hit: HAF runs with --skip-hived, blockchain files not needed
       echo "Cache hit - skipping blockchain copy (not needed for --skip-hived mode)"
@@ -552,7 +552,7 @@ test_python_api_wheel:
   - |
     export PATH="$LOCAL_BIN:$PATH"
     # Ensure container can write to extracted data
-    sudo chmod -R 777 "${HAF_DATA_DIRECTORY}" || chmod -R 777 "${HAF_DATA_DIRECTORY}" || true
+    chmod -R 777 "${HAF_DATA_DIRECTORY}" 2>/dev/null || sudo chmod -R 777 "${HAF_DATA_DIRECTORY}" || true
     echo -e "\e[0Ksection_start:$(date +%s):compose_up[collapsed=true]\r\e[0KStarting test environment..."
     docker-compose -f "${COMPOSE_FILE}" up -d
     echo -e "\e[0Ksection_end:$(date +%s):compose_up\r\e[0K"
@@ -569,7 +569,7 @@ test_python_api_wheel:
     docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" logs > docker/container-logs.txt 2>&1 || true
     docker-compose -f "${COMPOSE_FILE:-docker/docker-compose-test.yml}" down -v || true
     # Cleanup test data
-    sudo rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" || true
+    rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" 2>/dev/null || sudo rm -rf "${HAF_DATA_DIRECTORY:-/tmp/test-data}" || true
     echo -e "\e[0Ksection_end:$(date +%s):compose_down\r\e[0K"
   artifacts:
     paths:
