@@ -13,8 +13,8 @@ EOF
 FROM psql as version-calculcation
 ARG API_VERSION="dev"
 
-COPY --chown=haf_admin:users . /home/haf_admin/src
-WORKDIR /home/haf_admin/src
+COPY --chown=hived:users . /home/hived/src
+WORKDIR /home/hived/src
 RUN scripts/generate_version_sql.sh $(pwd)
 RUN find . -name 'endpoint_schema.sql' -o -name 'hafah_openapi.sql' | while read -r f; do \
          sed -i 's|"version": "[^"]*"|"version": "'"$API_VERSION"'"|' "$f"; \
@@ -46,10 +46,10 @@ LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
 
 COPY --from=daemontools /usr/bin/tai64n /usr/bin/tai64nlocal /usr/bin/
 
-RUN mkdir -p /home/haf_admin/haf_block_explorer/scripts
-RUN mkdir -p /home/haf_admin/haf_block_explorer/queries
-RUN mkdir -p /home/haf_admin/haf_block_explorer/postgrest
-RUN mkdir -p /home/haf_admin/haf_block_explorer/haf/scripts
+RUN mkdir -p /home/hived/haf_block_explorer/scripts
+RUN mkdir -p /home/hived/haf_block_explorer/queries
+RUN mkdir -p /home/hived/haf_block_explorer/postgrest
+RUN mkdir -p /home/hived/haf_block_explorer/haf/scripts
 
 USER root
 
@@ -57,26 +57,26 @@ RUN <<EOF
   set -e
   apk --no-cache add curl
   mkdir /app
-  chown haf_admin /app
+  chown hived /app
 EOF
 
-USER haf_admin
+USER hived
 
-COPY --chown=haf_admin:users docker/scripts/block-processing-healthcheck.sh /app/
+COPY --chown=hived:users docker/scripts/block-processing-healthcheck.sh /app/
 
-COPY --chown=haf_admin:users backend /home/haf_admin/haf_block_explorer/backend
-COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/endpoints /home/haf_admin/haf_block_explorer/endpoints
-COPY --chown=haf_admin:users db /home/haf_admin/haf_block_explorer/db
+COPY --chown=hived:users backend /home/hived/haf_block_explorer/backend
+COPY --from=version-calculcation --chown=hived:users /home/hived/src/endpoints /home/hived/haf_block_explorer/endpoints
+COPY --chown=hived:users db /home/hived/haf_block_explorer/db
 
-COPY --chown=haf_admin:users scripts/install_app.sh /home/haf_admin/haf_block_explorer/scripts/install_app.sh
-COPY --chown=haf_admin:users scripts/process_blocks.sh /home/haf_admin/haf_block_explorer/scripts/process_blocks.sh
-COPY --chown=haf_admin:users scripts/uninstall_app.sh /home/haf_admin/haf_block_explorer/scripts/uninstall_app.sh
-COPY --chown=haf_admin:users scripts/generate_version_sql.sh /home/haf_admin/haf_block_explorer/scripts/generate_version_sql.sh
-COPY --chown=haf_admin:users docker/scripts/docker_entrypoint.sh /home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh
-COPY --from=version-calculcation --chown=haf_admin:users /home/haf_admin/src/scripts/set_version_in_sql.pgsql /home/haf_admin/haf_block_explorer/scripts/set_version_in_sql.pgsql
+COPY --chown=hived:users scripts/install_app.sh /home/hived/haf_block_explorer/scripts/install_app.sh
+COPY --chown=hived:users scripts/process_blocks.sh /home/hived/haf_block_explorer/scripts/process_blocks.sh
+COPY --chown=hived:users scripts/uninstall_app.sh /home/hived/haf_block_explorer/scripts/uninstall_app.sh
+COPY --chown=hived:users scripts/generate_version_sql.sh /home/hived/haf_block_explorer/scripts/generate_version_sql.sh
+COPY --chown=hived:users docker/scripts/docker_entrypoint.sh /home/hived/haf_block_explorer/scripts/docker_entrypoint.sh
+COPY --from=version-calculcation --chown=hived:users /home/hived/src/scripts/set_version_in_sql.pgsql /home/hived/haf_block_explorer/scripts/set_version_in_sql.pgsql
 
-WORKDIR /home/haf_admin/haf_block_explorer/scripts
+WORKDIR /home/hived/haf_block_explorer/scripts
 
 SHELL ["/bin/bash", "-c"]
 
-ENTRYPOINT ["/home/haf_admin/haf_block_explorer/scripts/docker_entrypoint.sh"]
+ENTRYPOINT ["/home/hived/haf_block_explorer/scripts/docker_entrypoint.sh"]

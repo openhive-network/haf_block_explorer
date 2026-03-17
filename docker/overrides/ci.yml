@@ -26,10 +26,10 @@ services:
   # Mount submodules from host for install scripts
   app-setup:
     volumes:
-      - ../submodules/btracker:/home/haf_admin/haf_block_explorer/submodules/btracker
-      - ../submodules/reptracker:/home/haf_admin/haf_block_explorer/submodules/reptracker
+      - ../submodules/btracker:/home/hived/haf_block_explorer/submodules/btracker
+      - ../submodules/reptracker:/home/hived/haf_block_explorer/submodules/reptracker
       # Mount .git for generate_version_sql.sh scripts
-      - ../.git:/home/haf_admin/haf_block_explorer/.git
+      - ../.git:/home/hived/haf_block_explorer/.git
 
 volumes:
   haf_datadir:

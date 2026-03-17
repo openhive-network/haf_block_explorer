@@ -403,7 +403,7 @@ sync:
       ls -la "${CI_PROJECT_DIR}/docker/blockchain/" | head -5
 
       # Remove blockchain dir from datadir so Docker volume mount doesn't conflict
-      sudo rm -rf "${DATADIR}/blockchain"
+      rm -rf "${DATADIR}/blockchain" 2>/dev/null || sudo rm -rf "${DATADIR}/blockchain" || true
     else
       # Cache hit: HAF runs with --skip-hived, blockchain files not needed
       echo "Cache hit - skipping blockchain copy (not needed for --skip-hived mode)"
