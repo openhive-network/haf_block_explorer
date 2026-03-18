@@ -86,6 +86,8 @@ BEGIN
       _op_expired_account_notification
     )
     AND ov.block_num BETWEEN _from AND _to
+    AND ov.id >= hafd.operation_id(_from, 0)
+    AND ov.id < hafd.operation_id(_to + 1, 0)
   ),
 
   /*

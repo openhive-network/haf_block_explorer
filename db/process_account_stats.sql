@@ -102,6 +102,8 @@ BEGIN
       _op_create_claimed_account, _op_account_create_with_delegation, _op_changed_recovery_account
     )
     AND ho.block_num BETWEEN _from AND _to
+    AND ho.id >= hafd.operation_id(_from, 0)
+    AND ho.id < hafd.operation_id(_to + 1, 0)
   ),
 
   /*
@@ -235,6 +237,8 @@ BEGIN
     CROSS JOIN hafbe_backend.parse_recover_account_operation(ov.body_value, ov.timestamp) parsed
     WHERE ov.op_type_id = _op_recover_account
       AND ov.block_num BETWEEN _from AND _to
+      AND ov.id >= hafd.operation_id(_from, 0)
+      AND ov.id < hafd.operation_id(_to + 1, 0)
   ),
 
   /*
@@ -300,6 +304,8 @@ BEGIN
     CROSS JOIN hafbe_backend.parse_decline_voting_rights_operation(ov.body_value) parsed
     WHERE ov.op_type_id = _op_decline_voting_rights
       AND ov.block_num BETWEEN _from AND _to
+      AND ov.id >= hafd.operation_id(_from, 0)
+      AND ov.id < hafd.operation_id(_to + 1, 0)
   ),
 
   /*
@@ -374,6 +380,8 @@ BEGIN
     CROSS JOIN hafbe_backend.parse_claim_account_operation(ov.body_value) parsed
     WHERE ov.op_type_id IN (_op_claim_account, _op_create_claimed_account)
       AND ov.block_num BETWEEN _from AND _to
+      AND ov.id >= hafd.operation_id(_from, 0)
+      AND ov.id < hafd.operation_id(_to + 1, 0)
     GROUP BY parsed.account_name
   )
 

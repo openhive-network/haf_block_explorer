@@ -76,6 +76,8 @@ BEGIN
       _op_feed_publish, _op_pow, _op_pow2
     )
     AND wpov.block_num BETWEEN _from AND _to
+    AND wpov.operation_id >= hafd.operation_id(_from, 0)
+    AND wpov.operation_id < hafd.operation_id(_to + 1, 0)
   ),
 
   /*
@@ -497,6 +499,8 @@ BEGIN
     FROM hafbe_app.operations_view ov
     WHERE ov.op_type_id = _op_producer_missed
       AND ov.block_num BETWEEN _from AND _to
+      AND ov.id >= hafd.operation_id(_from, 0)
+      AND ov.id < hafd.operation_id(_to + 1, 0)
   ),
 
   count_missed AS (
