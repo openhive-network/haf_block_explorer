@@ -364,6 +364,8 @@ sync:
       --ansi never
     # Use local block_log on each builder (faster than NFS)
     SHARED_BLOCK_LOG_DIR: /blockchain/block_log_5m
+    # TimescaleDB HAF containers need longer to shut down (background workers)
+    COMPOSE_DOWN_TIMEOUT: "120"
   timeout: 2 hours  # NFS cache push can take 50+ minutes on slow days
   before_script:
   - !reference [.haf_app_sync_setup, script]
