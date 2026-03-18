@@ -35,6 +35,8 @@ BEGIN
       COUNT(*) AS op_count
     FROM hafbe_app.operations_view
     WHERE block_num BETWEEN _from AND _to
+      AND id >= hafd.operation_id(_from, 0)
+      AND id < hafd.operation_id(_to + 1, 0)
     GROUP BY block_num, op_type_id
     ORDER BY block_num, op_type_id
   )
