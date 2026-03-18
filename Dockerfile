@@ -12,6 +12,10 @@ EOF
 
 FROM psql as version-calculcation
 ARG API_VERSION="dev"
+USER root
+# Replace haf_admin (UID 1000 in base image) with hived
+RUN deluser haf_admin 2>/dev/null || true && adduser -D -u 1000 -G users -h /home/hived hived
+USER hived
 
 COPY --chown=hived:users . /home/hived/src
 WORKDIR /home/hived/src
@@ -46,18 +50,19 @@ LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
 
 COPY --from=daemontools /usr/bin/tai64n /usr/bin/tai64nlocal /usr/bin/
 
-RUN mkdir -p /home/hived/haf_block_explorer/scripts
-RUN mkdir -p /home/hived/haf_block_explorer/queries
-RUN mkdir -p /home/hived/haf_block_explorer/postgrest
-RUN mkdir -p /home/hived/haf_block_explorer/haf/scripts
-
 USER root
 
 RUN <<EOF
   set -e
   apk --no-cache add curl
+  deluser haf_admin 2>/dev/null || true
+  adduser -D -u 1000 -G users -h /home/hived hived
+  mkdir -p /home/hived/haf_block_explorer/scripts
+  mkdir -p /home/hived/haf_block_explorer/queries
+  mkdir -p /home/hived/haf_block_explorer/postgrest
+  mkdir -p /home/hived/haf_block_explorer/haf/scripts
   mkdir /app
-  chown hived /app
+  chown -R hived:users /home/hived /app
 EOF
 
 USER hived
