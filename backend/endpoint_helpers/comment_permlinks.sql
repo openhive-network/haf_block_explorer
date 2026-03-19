@@ -80,6 +80,8 @@ BEGIN
       ov.op_type_id = __op_comment AND
       ov.block_num <= _to AND
       ov.block_num >= _from AND
+      ov.id >= hafd.operation_id(_from, 0) AND
+      ov.id < hafd.operation_id(_to + 1, 0) AND
       ov.body_value ->> 'author' = _author AND
       (
         (_comment_type = 'post'    AND ov.body_value ->> 'parent_author' = '') OR

@@ -48,33 +48,44 @@ BEGIN
   RETURN QUERY
     /*
      * =========================================================================
+     * CTE: candidate_ops
+     * =========================================================================
+     * PURPOSE: Find candidate operations via account_operations_view (indexed,
+     * not compressed) to avoid full table scan on compressed operations hypertable.
+     *
      * CTE: operation_range
      * =========================================================================
-     * PURPOSE: Find all operations matching the author/permlink with pagination.
-     *
-     * Filters by:
-     *   - Operation type (must be in provided array)
-     *   - Author field in operation body
-     *   - Permlink field in operation body
-     *
-     * Applies pagination BEFORE joining for efficiency.
+     * PURPOSE: Filter candidates by permlink using LATERAL join for per-row
+     * chunk exclusion on compressed hypertable, then apply pagination.
      */
-    WITH operation_range AS (
+    WITH candidate_ops AS (
       SELECT
-        ov.block_num,
-        ov.id,
+        aov.operation_id,
+        aov.block_num,
+        aov.op_type_id
+      FROM hive.account_operations_view aov
+      WHERE
+        aov.account_id = (SELECT av.id FROM hive.accounts_view av WHERE av.name = _author) AND
+        aov.op_type_id = ANY(_operation_types)
+    ),
+    operation_range AS (
+      SELECT
+        co.block_num,
+        co.operation_id AS id,
         ov.body,
         ov.op_pos,
         ov.trx_in_block,
-        ov.op_type_id
-      FROM hive.operations_view ov
-      WHERE
-        ov.op_type_id = ANY(_operation_types) AND
-        ov.body_value ->> 'author' = _author AND
-        ov.body_value ->> 'permlink' = _permlink
+        co.op_type_id
+      FROM candidate_ops co,
+      LATERAL (
+        SELECT o.body, o.op_pos, o.trx_in_block, o.body_value
+        FROM hive.operations_view o
+        WHERE o.id = co.operation_id
+      ) ov
+      WHERE ov.body_value ->> 'permlink' = _permlink
       ORDER BY
-        (CASE WHEN _order_is = 'desc' THEN ov.id ELSE NULL END) DESC,
-        (CASE WHEN _order_is = 'asc' THEN ov.id ELSE NULL END) ASC
+        (CASE WHEN _order_is = 'desc' THEN co.operation_id ELSE NULL END) DESC,
+        (CASE WHEN _order_is = 'asc' THEN co.operation_id ELSE NULL END) ASC
       OFFSET __offset
       LIMIT _page_size
     ),
@@ -169,10 +180,15 @@ $$
 BEGIN
   RETURN (
     SELECT COUNT(*)
-    FROM hive.operations_view ov
+    FROM hive.account_operations_view aov,
+    LATERAL (
+      SELECT o.body_value
+      FROM hive.operations_view o
+      WHERE o.id = aov.operation_id
+    ) ov
     WHERE
-      ov.op_type_id = ANY(_operation_types) AND
-      ov.body_value ->> 'author' = _author AND
+      aov.account_id = (SELECT av.id FROM hive.accounts_view av WHERE av.name = _author) AND
+      aov.op_type_id = ANY(_operation_types) AND
       ov.body_value ->> 'permlink' = _permlink
   );
 END

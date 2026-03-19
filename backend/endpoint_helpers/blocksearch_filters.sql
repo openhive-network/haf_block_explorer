@@ -304,6 +304,8 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num <= __to AND
       ov.block_num >= __from AND
+      ov.id >= hafd.operation_id(__from, 0) AND
+      ov.id < hafd.operation_id(__to + 1, 0) AND
       ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1_inner) = _key_content[1]) AND
       ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2_inner) = _key_content[2]) AND
       ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3_inner) = _key_content[3])
@@ -872,6 +874,8 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num >= __from AND
       ov.block_num <= __to AND
+      ov.id >= hafd.operation_id(__from, 0) AND
+      ov.id < hafd.operation_id(__to + 1, 0) AND
       ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1_inner) = _key_content[1]) AND
       ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2_inner) = _key_content[2]) AND
       ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3_inner) = _key_content[3])
