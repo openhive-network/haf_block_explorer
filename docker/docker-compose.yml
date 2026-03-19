@@ -76,8 +76,9 @@ services:
         condition: service_completed_successfully
   backend-rep-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
+    init: true
     working_dir: /home/hived/haf_block_explorer
-    entrypoint: 
+    entrypoint:
       - "/bin/bash"
       - "-c"
       - "./submodules/reptracker/scripts/process_blocks.sh --stop-at-block=5000000"
@@ -100,6 +101,7 @@ services:
         condition: service_completed_successfully
   backend-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
+    init: true
     command: "process_blocks"
     environment:
       POSTGRES_HOST: haf
