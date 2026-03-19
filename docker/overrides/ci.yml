@@ -2,6 +2,8 @@ services:
   haf:
     # Skip hived since cached data is already replayed (same as balance_tracker)
     command: ["--skip-hived"]
+    # tini as PID 1 ensures SIGTERM reaches the entrypoint and all children
+    init: true
     # TimescaleDB background workers need time to shut down cleanly
     stop_grace_period: 120s
     environment:
