@@ -18,7 +18,7 @@
         json:
           operation-types: "1"
           account-name: "blocktrades"
-          path-filter: !raw "{dmFsdWUuYXV0aG9yPWJsb2NrdHJhZGVz, dmFsdWUucGVybWxpbms9YmxvY2t0cmFkZXMtd2l0bmVzcy1yZXBvcnQtZm9yLTNyZC13ZWVrLW9mLWF1Z3VzdA==}"
+          path-filter: !raw "{YXV0aG9yPWJsb2NrdHJhZGVz, cGVybWxpbms9YmxvY2t0cmFkZXMtd2l0bmVzcy1yZXBvcnQtZm9yLTNyZC13ZWVrLW9mLWF1Z3VzdA==}"
       response:
         status_code: 200
         verify_response_with:
