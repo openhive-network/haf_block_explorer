@@ -283,9 +283,9 @@ DECLARE
   __total_pages              INT;
   __blocks                   hafbe_backend.gathered_block[];
   -- Keys must be declared separately for planner to use indexes
-  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
-  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
-  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0) OFFSET 1);
+  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1) OFFSET 1);
+  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2) OFFSET 1);
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -300,9 +300,9 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num <= __to AND
       ov.block_num >= __from AND
-      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path1) = _key_content[1]) AND
-      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path2) = _key_content[2]) AND
-      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path3) = _key_content[3])
+      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1) = _key_content[1]) AND
+      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2) = _key_content[2]) AND
+      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3) = _key_content[3])
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ov.block_num ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ov.block_num ELSE NULL END) ASC
@@ -832,9 +832,9 @@ DECLARE
   __total_pages              INT;
   __blocks                   hafbe_backend.gathered_block[];
   -- Keys must be declared separately for planner to use indexes
-  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0));
-  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1));
-  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2));
+  _path1                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->0) OFFSET 1);
+  _path2                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->1) OFFSET 1);
+  _path3                     TEXT[] := ARRAY(SELECT json_array_elements_text(_setof_keys->2) OFFSET 1);
 BEGIN
   SELECT from_block, to_block
   INTO __from, __to
@@ -864,9 +864,9 @@ BEGIN
       ov.op_type_id = _operation AND
       ov.block_num >= __from AND
       ov.block_num <= __to AND
-      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path1) = _key_content[1]) AND
-      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path2) = _key_content[2]) AND
-      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body, VARIADIC _path3) = _key_content[3])
+      ((_key_content[1] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path1) = _key_content[1]) AND
+      ((_key_content[2] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path2) = _key_content[2]) AND
+      ((_key_content[3] IS NULL) OR jsonb_extract_path_text(ov.body_value, VARIADIC _path3) = _key_content[3])
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN ov.block_num ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN ov.block_num ELSE NULL END) ASC
