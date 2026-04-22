@@ -39,6 +39,32 @@ hafbe_backend.array_of_proxy_power:
           minimum: 1
           default: 1
         description: 1-based page number (100 rows per page)
+      - in: query
+        name: sort
+        required: false
+        schema:
+          $ref: '#/components/schemas/hafbe_backend.order_by_proxy'
+          default: proxy_date
+        description: |
+          Sort order:
+
+           * `account` - delegator account name
+
+           * `proxy_date` - block in which the proxy was set
+
+           * `proxied_vests` - effective vested amount contributed via proxy
+      - in: query
+        name: direction
+        required: false
+        schema:
+          $ref: '#/components/schemas/hafbe_backend.sort_direction'
+          default: desc
+        description: |
+          Sort direction:
+
+           * `asc` - Ascending, from A to Z or smallest to largest
+
+           * `desc` - Descending, from Z to A or largest to smallest
     responses:
       '200':
         description: Array of delegators and their total vested power
@@ -60,9 +86,11 @@ hafbe_backend.array_of_proxy_power:
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_account_proxies_power;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_proxies_power(
     "account-name" TEXT,
-    "page" INT = 1
+    "page" INT = 1,
+    "sort" hafbe_backend.order_by_proxy = 'proxy_date',
+    "direction" hafbe_backend.sort_direction = 'desc'
 )
-RETURNS SETOF hafbe_backend.proxy_power 
+RETURNS SETOF hafbe_backend.proxy_power
 -- openapi-generated-code-end
 /*------------------------------------------
   hafbe_endpoints.get_account_proxies_power
@@ -92,7 +120,9 @@ BEGIN
     SELECT *
       FROM hafbe_backend.get_account_proxies_power(
              _account_id,
-             page
+             "page",
+             "sort",
+             "direction"
            );
 END;
 $$;

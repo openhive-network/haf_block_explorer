@@ -73,6 +73,14 @@ declare
           "timestamp"
         ]
       },
+      "hafbe_backend.order_by_proxy": {
+        "type": "string",
+        "enum": [
+          "account",
+          "proxy_date",
+          "proxied_vests"
+        ]
+      },
       "hafbe_backend.order_by_witness": {
         "type": "string",
         "enum": [
@@ -1497,6 +1505,26 @@ declare
               "default": 1
             },
             "description": "1-based page number (100 rows per page)"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.order_by_proxy",
+              "default": "proxy_date"
+            },
+            "description": "Sort order:\n\n * `account` - delegator account name\n\n * `proxy_date` - block in which the proxy was set\n\n * `proxied_vests` - effective vested amount contributed via proxy\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort direction:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
           }
         ],
         "responses": {

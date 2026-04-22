@@ -236,8 +236,8 @@ Get accounts that have proxied their voting power to this account.
 |-----------|------|----------|---------|-------------|
 | `account-name` | TEXT | Yes | - | Account name |
 | `page` | INT | No | 1 | Page number |
-| `page-size` | INT | No | 100 | Results per page |
-| `direction` | sort_direction | No | desc | Sort by proxied vests |
+| `sort` | order_by_proxy | No | proxy_date | Sort field: `account`, `proxy_date`, `proxied_vests` |
+| `direction` | sort_direction | No | desc | `asc` or `desc` |
 
 #### Response
 
