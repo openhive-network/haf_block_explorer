@@ -28,6 +28,10 @@
  *    - account_proxies_history: Complete proxy change history
  *    - current_account_proxies: Current proxy assignments
  *
+ * 4a. PROPOSAL VOTES
+ *    - proposal_votes_history: Complete proposal vote change history
+ *    - current_proposal_votes: Current active proposal votes
+ *
  * 5. TRANSACTION STATISTICS
  *    - transaction_stats_by_month: Monthly aggregated transaction stats
  *    - transaction_stats_by_day: Daily aggregated transaction stats
@@ -233,6 +237,41 @@ BEGIN
     CONSTRAINT pk_current_account_proxies PRIMARY KEY (account_id)
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_account_proxies', 'hafbe_app' );
+
+  ------------- PROPOSAL VOTES ----------------
+
+  /*
+   * proposal_votes_history: Complete proposal vote change history
+   * -------------------------------------------------------------
+   * Append-only log of all proposal vote changes (approvals and removals).
+   * One row per (voter, proposal) pair per update_proposal_votes_operation,
+   * since each op may target multiple proposals via its proposal_ids array.
+   * Used by get_proposal_votes_history() for vote timeline queries.
+   * Populated by process_proposal_votes() during block sync.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_history (
+    proposal_id INT     NOT NULL,
+    voter_id    INT     NOT NULL,
+    approve     BOOLEAN NOT NULL,
+    source_op   BIGINT  NOT NULL
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'proposal_votes_history', 'hafbe_app' );
+
+  /*
+   * current_proposal_votes: Current active proposal votes
+   * -----------------------------------------------------
+   * Snapshot of currently active proposal votes (only approved, not removed).
+   * Updated via UPSERT/DELETE by process_proposal_votes().
+   * One row per (voter, proposal) pair currently in the "approved" state.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_proposal_votes (
+    voter_id    INT    NOT NULL,
+    proposal_id INT    NOT NULL,
+    source_op   BIGINT NOT NULL,
+
+    CONSTRAINT pk_current_proposal_votes PRIMARY KEY (voter_id, proposal_id)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
 
   ------------- TRANSACTION STATISTICS ----------------
 
@@ -567,6 +606,7 @@ BEGIN
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witness_votes', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witnesses', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_account_proxies', interval '30 minutes');
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposal_votes', interval '30 minutes');
 
     RETURN;
   END IF;
@@ -629,6 +669,7 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
   PERFORM hafbe_app.process_witness_votes(_from, _to);
+  PERFORM hafbe_app.process_proposal_votes(_from, _to);
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -673,6 +714,7 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_block, _block);
   PERFORM hafbe_app.process_witness_stats(_block, _block);
   PERFORM hafbe_app.process_witness_votes(_block, _block);
+  PERFORM hafbe_app.process_proposal_votes(_block, _block);
   PERFORM hafbe_app.process_witness_votes_cache();
 
   IF _logs THEN
@@ -992,6 +1034,13 @@ BEGIN
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);
+
+  -- Proposal votes: time-ordered lookup per proposal (mirrors witness_votes_history pattern)
+  CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_id_source_op ON hafbe_app.proposal_votes_history USING btree (proposal_id, hafd.operation_id_to_block_num(source_op));
+  -- Proposal votes: voter-filtered lookup per proposal
+  CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_voter ON hafbe_app.proposal_votes_history USING btree (proposal_id, voter_id);
+  -- Current proposal votes: lookup voters for a given proposal
+  CREATE INDEX IF NOT EXISTS current_proposal_votes_proposal_id ON hafbe_app.current_proposal_votes USING btree (proposal_id);
 
   -- Register indexes on HAF tables (deferred from install time).
   -- hived's poll_and_create_indexes() will build them concurrently in the background.
