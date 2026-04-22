@@ -375,4 +375,21 @@ SELECT
   (SELECT ops.op_type_id FROM hafd.operations ops WHERE ops.id = t.source_op) AS op_type_id
 FROM hafbe_app.current_account_proxies t;
 
+
+/*
+ * proposal_votes_history_view: Proposal vote history with computed block numbers.
+ *
+ * Wraps hafbe_app.proposal_votes_history and extracts block_num and op_type_id
+ * from the source_op operation ID using HAF helper functions.
+ */
+CREATE OR REPLACE VIEW hafbe_backend.proposal_votes_history_view AS
+SELECT
+  t.proposal_id,
+  t.voter_id,
+  t.approve,
+  t.source_op,
+  hafd.operation_id_to_block_num(t.source_op) AS source_op_block,
+  (SELECT ops.op_type_id FROM hafd.operations ops WHERE ops.id = t.source_op) AS op_type_id
+FROM hafbe_app.proposal_votes_history t;
+
 RESET ROLE;
