@@ -64,6 +64,25 @@ CREATE TYPE hafbe_backend.order_by_votes AS ENUM (
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_backend.order_by_proxy:
+  type: string
+  enum:
+    - account
+    - proxy_date
+    - proxied_vests
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.order_by_proxy CASCADE;
+CREATE TYPE hafbe_backend.order_by_proxy AS ENUM (
+    'account',
+    'proxy_date',
+    'proxied_vests'
+);
+-- openapi-generated-code-end
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
 hafbe_backend.order_by_witness:
   type: string
   enum:
