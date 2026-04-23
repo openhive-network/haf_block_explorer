@@ -34,66 +34,86 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  __nai_vests     INT := btracker_backend.nai_vests();
   __max_page_size INT := hafbe_backend.default_max_page_size();
+  __offset        INT := (_page - 1) * __max_page_size;
 BEGIN
+  /*
+   * =============================================================================
+   * FAST PATH: sort = 'proxy_date' (the default, and by far the hottest case)
+   * =============================================================================
+   * source_op is already in current_account_proxies_view, so we can order +
+   * paginate BEFORE joining. That limits downstream joins to one page of rows
+   * instead of every delegator of this proxy — O(page_size) vs O(N).
+   */
+  IF _sort = 'proxy_date' THEN
+    RETURN QUERY
+      WITH delegates AS MATERIALIZED (
+        SELECT cap.account_id, cap.source_op, cap.source_op_block
+        FROM hafbe_backend.current_account_proxies_view cap
+        WHERE cap.proxy_id = _account_id
+        ORDER BY
+          (CASE WHEN _direction = 'desc' THEN cap.source_op ELSE NULL END) DESC,
+          (CASE WHEN _direction = 'asc'  THEN cap.source_op ELSE NULL END) ASC
+        LIMIT  __max_page_size
+        OFFSET __offset
+      )
+      SELECT
+        av.name::TEXT,
+        bv.created_at,
+        COALESCE(avs.vests, 0)::TEXT
+      FROM delegates d
+      JOIN hive.accounts_view av                       ON av.id = d.account_id
+      JOIN hive.blocks_view bv                         ON bv.num = d.source_op_block
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = d.account_id
+      ORDER BY
+        (CASE WHEN _direction = 'desc' THEN d.source_op ELSE NULL END) DESC,
+        (CASE WHEN _direction = 'asc'  THEN d.source_op ELSE NULL END) ASC;
+    RETURN;
+  END IF;
+
+  /*
+   * =============================================================================
+   * GENERAL PATH: sort by 'account' or 'proxied_vests'
+   * =============================================================================
+   * Sort key (name, vests) is only known after joins, so we must materialize
+   * the full delegator set before sorting/paginating.
+   *
+   * Vests come from hafbe_app.account_vest_stats_cache (refreshed every block
+   * by process_witness_votes_cache), which now covers proxy setters, so this
+   * path still only does one PK lookup per row.
+   */
   RETURN QUERY
-    /*
-     * =========================================================================
-     * CTE: scored
-     * =========================================================================
-     * PURPOSE: Compute effective voting power for every delegator of the
-     * target proxy. We need the full set before we can sort by proxied_vests
-     * or account name across pages.
-     *
-     * NOTE: Pagination is applied AFTER the sort (in limited_set) so results
-     * remain stable when the user pages through amount-sorted data.
-     */
     WITH scored AS (
       SELECT
         cap.source_op,
         av.name,
         bv.created_at,
-        (
-          COALESCE(cab.balance, 0) - COALESCE(aw.delayed_vests, 0) + COALESCE(avs.proxied_vests, 0)
-        ) AS vests
+        COALESCE(avs.vests, 0) AS vests
       FROM hafbe_backend.current_account_proxies_view cap
-      JOIN hive.accounts_view av                                   ON av.id = cap.account_id
-      JOIN hive.blocks_view bv                                     ON bv.num = cap.source_op_block
-      LEFT JOIN current_account_balances cab                       ON cab.account = cap.account_id AND cab.nai = __nai_vests
-      LEFT JOIN account_withdraws aw                               ON aw.account = cap.account_id
-      LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view avs    ON avs.proxy_id = cap.account_id
+      JOIN hive.accounts_view av                       ON av.id = cap.account_id
+      JOIN hive.blocks_view bv                         ON bv.num = cap.source_op_block
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cap.account_id
       WHERE cap.proxy_id = _account_id
     ),
-    /*
-     * DYNAMIC SORT:
-     *   Uses CASE expressions to enable sorting by different columns.
-     *   Each sort field has ASC and DESC variants. Only one CASE matches
-     *   per row; others return NULL and are ignored.
-     */
     limited_set AS (
       SELECT *
       FROM scored s
       ORDER BY
         -- Sort by delegator account name
-        (CASE WHEN _direction = 'desc' AND _sort = 'account'       THEN s.name           ELSE NULL END) DESC,
-        (CASE WHEN _direction = 'asc'  AND _sort = 'account'       THEN s.name           ELSE NULL END) ASC,
+        (CASE WHEN _direction = 'desc' AND _sort = 'account'       THEN s.name      ELSE NULL END) DESC,
+        (CASE WHEN _direction = 'asc'  AND _sort = 'account'       THEN s.name      ELSE NULL END) ASC,
         -- Sort by effective vested amount proxied to _account_id
-        (CASE WHEN _direction = 'desc' AND _sort = 'proxied_vests' THEN s.vests          ELSE NULL END) DESC,
-        (CASE WHEN _direction = 'asc'  AND _sort = 'proxied_vests' THEN s.vests          ELSE NULL END) ASC,
-        -- Sort by the block at which the proxy was set (stand-in for proxy_date)
-        (CASE WHEN _direction = 'desc' AND _sort = 'proxy_date'    THEN s.source_op      ELSE NULL END) DESC,
-        (CASE WHEN _direction = 'asc'  AND _sort = 'proxy_date'    THEN s.source_op      ELSE NULL END) ASC,
+        (CASE WHEN _direction = 'desc' AND _sort = 'proxied_vests' THEN s.vests     ELSE NULL END) DESC,
+        (CASE WHEN _direction = 'asc'  AND _sort = 'proxied_vests' THEN s.vests     ELSE NULL END) ASC,
         -- Tiebreaker: source_op for stable ordering
-        (CASE WHEN _direction = 'desc'                             THEN s.source_op      ELSE NULL END) DESC,
-        (CASE WHEN _direction = 'asc'                              THEN s.source_op      ELSE NULL END) ASC
+        (CASE WHEN _direction = 'desc'                             THEN s.source_op ELSE NULL END) DESC,
+        (CASE WHEN _direction = 'asc'                              THEN s.source_op ELSE NULL END) ASC
       LIMIT  __max_page_size
-      OFFSET (_page - 1) * __max_page_size
+      OFFSET __offset
     )
     SELECT
       ls.name::TEXT,
       ls.created_at,
-      -- Cast to TEXT so large VESTS values are not mangled by JSON serialization
       ls.vests::TEXT
     FROM limited_set ls;
 END

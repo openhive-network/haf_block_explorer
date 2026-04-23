@@ -186,11 +186,13 @@ LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id;
 
 /*
- * account_vest_stats_view: Complete vest statistics for witness voters.
+ * account_vest_stats_view: Complete vest statistics for accounts whose vesting
+ * power the API needs to report.
  *
- * Calculates the total voting power for each account that has voted for
- * witnesses. Includes both the account's own vests and any vests being
- * proxied to them.
+ * Covers two disjoint groups (Hive protocol makes them mutually exclusive —
+ * setting a proxy revokes direct witness votes):
+ *   - accounts that cast a direct witness vote (used by get_witness_voters)
+ *   - accounts that set a proxy            (used by get_account_proxies_power)
  *
  * COLUMNS:
  *   account_id    - The account ID
@@ -203,13 +205,18 @@ GROUP BY rapv.proxy_id;
  *   account_vests = balance - delayed_vests
  */
 CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
+WITH tracked_accounts AS (
+  SELECT account_id FROM hafbe_backend.witness_voters_list_view
+  UNION
+  SELECT account_id FROM hafbe_app.current_account_proxies
+)
 SELECT
   cw.account_id,
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
     + COALESCE(vpvv.proxied_vests, 0) AS vests,
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
   COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
-FROM hafbe_backend.witness_voters_list_view cw
+FROM tracked_accounts cw
 LEFT JOIN current_account_balances cab
   ON cab.account = cw.account_id
   AND cab.nai = btracker_backend.nai_vests()
