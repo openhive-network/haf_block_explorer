@@ -572,6 +572,12 @@ BEGIN
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
     PERFORM hafbe_app.create_hafbe_indexes();
+    -- First entry into LIVE: seed all cache tables so API endpoints that
+    -- depend on them (get_witness_voters, get_account_proxies_power) return
+    -- correct data immediately instead of waiting for the first LIVE block.
+    -- During MASSIVE, process_witness_votes_cache() is never called, so the
+    -- caches are empty at this point.
+    PERFORM hafbe_app.process_witness_votes_cache();
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
   -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
