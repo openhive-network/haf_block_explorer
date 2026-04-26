@@ -38,7 +38,7 @@ hafbe_backend.array_of_proxy_power:
           type: integer
           minimum: 1
           default: 1
-        description: 1-based page number (100 rows per page)
+        description: 1-based page number (1000 rows per page)
       - in: query
         name: sort
         required: false
