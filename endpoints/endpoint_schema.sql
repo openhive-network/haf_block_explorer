@@ -24,6 +24,8 @@ tags:
     description: Information about accounts
   - name: Witnesses
     description: Information about witnesses
+  - name: Proposals
+    description: Information about proposals
   - name: Other
     description: General API information
 servers:
@@ -76,6 +78,10 @@ declare
     {
       "name": "Witnesses",
       "description": "Information about witnesses"
+    },
+    {
+      "name": "Proposals",
+      "description": "Information about proposals"
     },
     {
       "name": "Other",
@@ -883,6 +889,44 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
+        }
+      },
+      "hafbe_backend.proposal_votes_history_record": {
+        "type": "object",
+        "properties": {
+          "voter_name": {
+            "type": "string",
+            "description": "account name of the voter"
+          },
+          "approve": {
+            "type": "boolean",
+            "description": "whether the voter approved or withdrew approval of the proposal"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "the time of the vote change"
+          }
+        }
+      },
+      "hafbe_backend.proposal_votes_history": {
+        "type": "object",
+        "properties": {
+          "total_votes": {
+            "type": "integer",
+            "description": "Total number of votes"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "votes_history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_backend.proposal_votes_history_record"
+            },
+            "description": "List of proposal vote changes"
+          }
         }
       },
       "hafbe_backend.array_of_proxy_power": {
@@ -2088,6 +2132,114 @@ declare
           },
           "404": {
             "description": "No operations in database"
+          }
+        }
+      }
+    },
+    "/proposals/{proposal-id}/votes/history": {
+      "get": {
+        "tags": [
+          "Proposals"
+        ],
+        "summary": "Get the history of votes cast for this proposal.",
+        "description": "Get information about each vote cast for this proposal, including\napprovals and later withdrawals of approval.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/1/votes/history?page-size=2''`\n",
+        "operationId": "hafbe_endpoints.get_proposal_votes_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal-id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "proposal id"
+          },
+          {
+            "in": "query",
+            "name": "voter-name",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "When provided, only votes associated with this account will be included in the results,\nallowing for targeted analysis of an individual account''s voting activity.\n"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` operations per page, defaults to `100`"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Lower limit of the block range, can be represented either by a block-number (integer) or a timestamp (in the format YYYY-MM-DD HH:MI:SS).\n\nThe provided `timestamp` will be converted to a `block-num` by finding the first block\nwhere the block''s `created_at` is more than or equal to the given `timestamp` (i.e. `block''s created_at >= timestamp`).\n\nThe function will interpret and convert the input based on its format, example input:\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          },
+          {
+            "in": "query",
+            "name": "to-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Similar to the from-block parameter, can either be a block-number (integer) or a timestamp (formatted as YYYY-MM-DD HH:MI:SS).\n\nThe provided `timestamp` will be converted to a `block-num` by finding the first block\nwhere the block''s `created_at` is less than or equal to the given `timestamp` (i.e. `block''s created_at <= timestamp`).\n\nThe function will convert the value depending on its format, example input:\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The history of votes cast for this proposal\n\n* Returns `hafbe_backend.proposal_votes_history`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.proposal_votes_history"
+                },
+                "example": {
+                  "total_votes": 12,
+                  "total_pages": 6,
+                  "votes_history": [
+                    {
+                      "voter_name": "alice",
+                      "approve": true,
+                      "timestamp": "2019-11-05T10:12:09"
+                    },
+                    {
+                      "voter_name": "bob",
+                      "approve": false,
+                      "timestamp": "2019-11-04T08:43:21"
+                    }
+                  ]
+                }
+              }
+            }
           }
         }
       }
