@@ -67,6 +67,19 @@ def gen_rand_block_range(args, limit):
 def get_acc_names(args, limit):
   return call_sql(args, "SELECT hav.name FROM hafbe_app.current_witnesses cw JOIN hafbe_app.accounts_view hav ON hav.id = cw.witness_id", limit)
 
+def fill_values(values, limit, default):
+  if not values:
+    values = [default]
+
+  while len(values) < limit:
+    values += values
+
+  return values[:limit]
+
+def get_proposal_ids(args, limit):
+  proposal_ids = call_sql(args, "SELECT DISTINCT proposal_id FROM hafbe_app.proposal_votes_history ORDER BY proposal_id", limit)
+  return fill_values(proposal_ids, limit, 99999999)
+
 def generate_input_db(args):
   db_size = args.database_size
   limit = db_size // 4
@@ -107,6 +120,10 @@ def generate_db(args):
   timestamps = generate_timestamps(args, rand_block_arr_str)
 
   if args.debug:
+    print("Fetching proposal ids...")
+  proposal_ids = get_proposal_ids(args, db_size)
+
+  if args.debug:
     print("Generating input data...")
   input_data = generate_input_db(args)
 
@@ -116,9 +133,10 @@ def generate_db(args):
   random.shuffle(partial_acc_names)
   random.shuffle(input_data)
   random.shuffle(timestamps)
+  random.shuffle(proposal_ids)
 
-  data = [f'{block},{trx_hash},{name},{part_name},{input},{timestamp}' for block, trx_hash, name, part_name, input, timestamp in zip(
-    rand_blocks, trx_hashes, acc_names, partial_acc_names, input_data, timestamps
+  data = [f'{block},{trx_hash},{name},{part_name},{input},{timestamp},{proposal_id}' for block, trx_hash, name, part_name, input, timestamp, proposal_id in zip(
+    rand_blocks, trx_hashes, acc_names, partial_acc_names, input_data, timestamps, proposal_ids
   )]
 
   db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'result')

@@ -114,8 +114,6 @@ SET ROLE hafbe_owner;
                 }
               ]
             }
-      '404':
-        description: No such proposal
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_proposal_votes_history;
@@ -128,7 +126,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_proposal_votes_history(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS hafbe_backend.proposal_votes_history
+RETURNS hafbe_backend.proposal_votes_history 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE

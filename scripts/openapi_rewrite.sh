@@ -30,6 +30,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/types/witnesses.sql
 ../$endpoints/types/operations.sql
 ../$endpoints/types/transactions.sql
+../$endpoints/types/proposals.sql
 ../$endpoints/witnesses/get_witnesses.sql
 ../$endpoints/witnesses/get_witness.sql
 ../$endpoints/witnesses/get_witness_voters.sql
@@ -41,6 +42,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
 ../$endpoints/block-search/get_block_by_op.sql
+../$endpoints/proposals/get_proposal_votes_history.sql
 ../$endpoints/transactions/get_transaction_statistics.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
