@@ -1016,6 +1016,7 @@ BEGIN
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);
+  CREATE INDEX IF NOT EXISTS account_parameters_created ON hafbe_app.account_parameters USING btree (created) WHERE created IS NOT NULL;
 
   -- Proposal votes: time-ordered lookup per proposal (mirrors witness_votes_history pattern)
   CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_id_source_op ON hafbe_app.proposal_votes_history USING btree (proposal_id, hafd.operation_id_to_block_num(source_op));

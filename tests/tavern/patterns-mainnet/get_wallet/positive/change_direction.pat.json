@@ -1,0 +1,37 @@
+[
+  {
+    "date": "2016-04-01T00:00:00",
+    "new_wallets": 527,
+    "total_wallets": 527
+  },
+  {
+    "date": "2016-05-01T00:00:00",
+    "new_wallets": 6840,
+    "total_wallets": 7367
+  },
+  {
+    "date": "2016-06-01T00:00:00",
+    "new_wallets": 3166,
+    "total_wallets": 10533
+  },
+  {
+    "date": "2016-07-01T00:00:00",
+    "new_wallets": 3505,
+    "total_wallets": 14038
+  },
+  {
+    "date": "2016-08-01T00:00:00",
+    "new_wallets": 29157,
+    "total_wallets": 43195
+  },
+  {
+    "date": "2016-09-01T00:00:00",
+    "new_wallets": 37107,
+    "total_wallets": 80302
+  },
+  {
+    "date": "2016-10-01T00:00:00",
+    "new_wallets": 12160,
+    "total_wallets": 92462
+  }
+]

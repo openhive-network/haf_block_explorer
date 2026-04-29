@@ -1,0 +1,6 @@
+{
+  "code": "P0001",
+  "details": null,
+  "hint": null,
+  "message": "Block_num '5000001' is higher than head block (5000000)."
+}
