@@ -207,7 +207,7 @@ GROUP BY rapv.proxy_id;
 CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
 WITH tracked_accounts AS (
   SELECT account_id FROM hafbe_backend.witness_voters_list_view
-  UNION
+  UNION ALL
   SELECT account_id FROM hafbe_app.current_account_proxies
 )
 SELECT

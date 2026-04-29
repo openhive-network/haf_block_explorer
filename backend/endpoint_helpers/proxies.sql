@@ -37,6 +37,8 @@ DECLARE
   __max_page_size INT := hafbe_backend.default_max_page_size();
   __offset        INT := (_page - 1) * __max_page_size;
 BEGIN
+  _sort      := COALESCE(_sort, 'proxy_date');
+  _direction := COALESCE(_direction, 'desc');
   /*
    * =============================================================================
    * FAST PATH: sort = 'proxy_date' (the default, and by far the hottest case)

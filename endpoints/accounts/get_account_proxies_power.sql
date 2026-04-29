@@ -106,7 +106,7 @@ DECLARE
   _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
 BEGIN
   -- validate that page ≥ 1
-  PERFORM hafbe_backend.validate_negative_page(page);
+  PERFORM hafbe_backend.validate_negative_page("page");
 
   -- set short public cache
   PERFORM set_config(
