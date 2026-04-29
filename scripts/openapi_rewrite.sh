@@ -41,6 +41,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/accounts/get_account_proxies_power.sql
 ../$endpoints/accounts/get_comment_permlinks.sql
 ../$endpoints/accounts/get_comment_operations.sql
+../$endpoints/accounts/get_wallet.sql
 ../$endpoints/block-search/get_block_by_op.sql
 ../$endpoints/proposals/get_proposal_votes_history.sql
 ../$endpoints/transactions/get_transaction_statistics.sql
