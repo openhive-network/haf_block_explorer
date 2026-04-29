@@ -252,6 +252,37 @@ Returns array of `hafbe_backend.proxy_power`:
 ]
 ```
 
+### GET /total_wallet_addresses
+
+**Function:** `hafbe_endpoints.get_total_wallet_addresses`
+**File:** `endpoints/accounts/get_total_wallet_addresses.sql`
+
+Chain-wide wallet (account) creation counts grouped by period plus a running cumulative total. Powers live wallet-count tickers and chain-growth charts.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `granularity` | granularity | No | yearly | Aggregation period: `daily`, `monthly`, `yearly` |
+| `direction` | sort_direction | No | desc | Sort order: `asc` or `desc` |
+| `from-block` | TEXT | No | NULL | Start block number or ISO timestamp |
+| `to-block` | TEXT | No | NULL | End block number or ISO timestamp |
+
+#### Response
+
+Returns array of `hafbe_backend.wallet_stats`:
+```json
+[
+  {
+    "date": "2016-09-01T00:00:00",
+    "new_wallets": 37107,
+    "total_wallets": 80302
+  }
+]
+```
+
+Cache-Control: `max-age=2` for live head data; `max-age=31536000` for fully irreversible ranges.
+
 ## Return Types
 
 All account types are defined in `endpoints/types/accounts.sql`:
@@ -279,6 +310,7 @@ Located in `backend/endpoint_helpers/`:
 | `get_account_ops_count()` | `account_parameters.sql` | Operation count |
 | `get_account_proxied_vsf_votes()` | `account_parameters.sql` | Recursive proxy power |
 | `parse_profile_picture()` | `account_parameters.sql` | Extract profile image URL |
+| `get_total_wallet_address_aggregation()` | `total_wallet_addresses.sql` | Date-series aggregation of account creation counts with running cumulative sum |
 
 ## Related Processing
 
