@@ -587,6 +587,30 @@ declare
           }
         }
       },
+      "hafbe_backend.wallet_stats": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "end of the time period (capped at current time for the latest partial period)"
+          },
+          "new_wallets": {
+            "type": "integer",
+            "description": "number of new wallets (accounts) created in this period"
+          },
+          "total_wallets": {
+            "type": "integer",
+            "description": "cumulative total wallets on the chain through the end of this period"
+          }
+        }
+      },
+      "hafbe_backend.array_of_wallet_stats": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.wallet_stats"
+        }
+      },
       "hafbe_backend.witness": {
         "type": "object",
         "properties": {
@@ -1860,6 +1884,80 @@ declare
           },
           "404": {
             "description": "No such account in the database"
+          }
+        }
+      }
+    },
+    "/total_wallet_addresses": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Total wallet counts over time",
+        "description": "Time-series of new wallets (accounts) created per day, month or year,\nplus the cumulative total wallet count on the chain at the end of each period.\n\nUseful for live wallet-count tickers and chain-growth charts.\n\nThe latest period (today''s partial day, current month, current year) is\nalways included; its `date` is capped at the current timestamp rather than\nthe period-end boundary.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_total_wallet_addresses();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/total_wallet_addresses''`\n",
+        "operationId": "hafbe_endpoints.get_total_wallet_addresses",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.granularity",
+              "default": "yearly"
+            },
+            "description": "granularity types:\n\n* daily\n\n* monthly\n\n* yearly\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort order:\n\n * `asc` - Ascending, from oldest to newest\n\n * `desc` - Descending, from newest to oldest\n"
+          },
+          {
+            "in": "query",
+            "name": "from-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Lower limit of the block range: block-number (integer) or timestamp (YYYY-MM-DD HH:MI:SS).\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          },
+          {
+            "in": "query",
+            "name": "to-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Upper limit of the block range: block-number (integer) or timestamp (YYYY-MM-DD HH:MI:SS).\n\n* `2016-09-15 19:47:21`\n\n* `5000000`\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet-count statistics over time\n\n* Returns array of `hafbe_backend.wallet_stats`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_wallet_stats"
+                },
+                "example": [
+                  {
+                    "date": "2017-01-01T00:00:00",
+                    "new_wallets": 12345,
+                    "total_wallets": 234567
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid block range or parameter"
           }
         }
       }

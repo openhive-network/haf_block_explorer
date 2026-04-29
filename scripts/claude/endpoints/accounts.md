@@ -264,7 +264,7 @@ All account types are defined in `endpoints/types/accounts.sql`:
 | `hafbe_backend.permlink` | Post/comment reference |
 | `hafbe_backend.permlink_history` | Paginated permlinks |
 | `hafbe_backend.proxy_power` | Proxy relationship |
-| `hafbe_backend.wallet_stats` | Per-period new + cumulative wallet counts |
+| `hafbe_backend.wallet_stats` | Per-period new + cumulative wallet counts (used by `get_total_wallet_addresses`) |
 
 ## Helper Functions
 

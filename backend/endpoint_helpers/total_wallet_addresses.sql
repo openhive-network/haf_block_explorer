@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /*
- * get_wallet_aggregation: Returns new-wallet counts + cumulative total per period.
+ * get_total_wallet_address_aggregation: Returns new-wallet counts + cumulative total per period.
  *
  * Source: hafbe_app.account_parameters.created — already populated by
  * process_account_stats(), one row per Hive account, no extra sync work needed.
@@ -16,7 +16,7 @@ SET ROLE hafbe_owner;
  *   5. Running SUM over date series gives total_wallets per row.
  *   6. Cap the latest period date at CURRENT_TIMESTAMP (partial day/month).
  */
-CREATE OR REPLACE FUNCTION hafbe_backend.get_wallet_aggregation(
+CREATE OR REPLACE FUNCTION hafbe_backend.get_total_wallet_address_aggregation(
     _granularity hafbe_backend.granularity,
     _direction   hafbe_backend.sort_direction,
     _from_block  INT,
@@ -38,6 +38,9 @@ DECLARE
   __baseline            INT;
   __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
+  _granularity := COALESCE(_granularity, 'yearly');
+  _direction   := COALESCE(_direction, 'desc');
+
   SELECT from_block, to_block
   INTO __from, __to
   FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);

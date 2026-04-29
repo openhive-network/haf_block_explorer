@@ -10,11 +10,15 @@
   stages:
     - name: test
       request:
-        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_wallet"
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_total_wallet_addresses"
         method: POST
         headers:
           content-type: application/json
           accept: application/json
+        json:
+          granularity: "daily"
+          from-block: "4900000"
+          to-block: "5000000"
       response:
         status_code: 200
         verify_response_with:
