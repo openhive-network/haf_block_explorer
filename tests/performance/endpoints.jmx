@@ -298,7 +298,7 @@
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
-  &quot;proposal-id&quot;: ${proposal_id_value},&#xd;
+  &quot;proposal-id&quot;: 99999999,&#xd;
   &quot;page-size&quot;: 100&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
@@ -552,7 +552,7 @@
       <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Data Set Config" enabled="true">
         <stringProp name="filename">${PERFORMANCE_DATA_DIR}/db.csv</stringProp>
         <stringProp name="fileEncoding"></stringProp>
-        <stringProp name="variableNames">block_num_value,trx_hash_value,account_value,partial_account_name_value,input_value,block_timestamp,proposal_id_value</stringProp>
+        <stringProp name="variableNames">block_num_value,trx_hash_value,account_value,partial_account_name_value,input_value,block_timestamp</stringProp>
         <boolProp name="ignoreFirstLine">false</boolProp>
         <stringProp name="delimiter">,</stringProp>
         <boolProp name="quotedData">false</boolProp>
