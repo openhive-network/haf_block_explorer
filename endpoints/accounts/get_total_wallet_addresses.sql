@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /** openapi:paths
-/wallet:
+/total_wallet_addresses:
   get:
     tags:
       - Accounts
@@ -17,11 +17,11 @@ SET ROLE hafbe_owner;
       the period-end boundary.
 
       SQL example
-      * `SELECT * FROM hafbe_endpoints.get_wallet();`
+      * `SELECT * FROM hafbe_endpoints.get_total_wallet_addresses();`
 
       REST call example
-      * `GET ''https://%1$s/hafbe-api/wallet''`
-    operationId: hafbe_endpoints.get_wallet
+      * `GET ''https://%1$s/hafbe-api/total_wallet_addresses''`
+    operationId: hafbe_endpoints.get_total_wallet_addresses
     parameters:
       - in: query
         name: granularity
@@ -94,14 +94,14 @@ SET ROLE hafbe_owner;
         description: Invalid block range or parameter
  */
 -- openapi-generated-code-begin
-DROP FUNCTION IF EXISTS hafbe_endpoints.get_wallet;
-CREATE OR REPLACE FUNCTION hafbe_endpoints.get_wallet(
+DROP FUNCTION IF EXISTS hafbe_endpoints.get_total_wallet_addresses;
+CREATE OR REPLACE FUNCTION hafbe_endpoints.get_total_wallet_addresses(
     "granularity" hafbe_backend.granularity = 'yearly',
-    "direction"   hafbe_backend.sort_direction = 'desc',
-    "from-block"  TEXT = NULL,
-    "to-block"    TEXT = NULL
+    "direction" hafbe_backend.sort_direction = 'desc',
+    "from-block" TEXT = NULL,
+    "to-block" TEXT = NULL
 )
-RETURNS SETOF hafbe_backend.wallet_stats
+RETURNS SETOF hafbe_backend.wallet_stats 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 SET jit = OFF
@@ -121,7 +121,7 @@ BEGIN
 
   RETURN QUERY
     SELECT fb.date, fb.new_wallets, fb.total_wallets
-    FROM hafbe_backend.get_wallet_aggregation(
+    FROM hafbe_backend.get_total_wallet_address_aggregation(
       "granularity",
       "direction",
       _block_range.first_block,

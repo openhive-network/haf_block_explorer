@@ -398,8 +398,8 @@ hafbe_backend.wallet_stats:
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.wallet_stats CASCADE;
 CREATE TYPE hafbe_backend.wallet_stats AS (
-    "date"         TIMESTAMP,
-    "new_wallets"  INT,
+    "date" TIMESTAMP,
+    "new_wallets" INT,
     "total_wallets" INT
 );
 -- openapi-generated-code-end

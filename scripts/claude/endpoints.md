@@ -70,7 +70,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | `GET /accounts/{account-name}/operations/comments/{permlink}` | `get_comment_operations` | Operations for a specific post |
 | `GET /accounts/{account-name}/comments` | `get_comment_permlinks` | List of posts/comments by account |
 | `GET /accounts/{account-name}/proxies` | `get_account_proxies_power` | Account proxy power chain |
-| `GET /wallet` | `get_wallet` | Daily/monthly/yearly new-wallet counts plus cumulative chain total |
+| `GET /total_wallet_addresses` | `get_total_wallet_addresses` | Daily/monthly/yearly new-wallet counts plus cumulative chain total |
 
 ### Witness Endpoints
 
@@ -124,7 +124,7 @@ endpoints/
 │   ├── get_comment_operations.sql
 │   ├── get_comment_permlinks.sql
 │   ├── get_account_proxies_power.sql
-│   └── get_wallet.sql
+│   └── get_total_wallet_addresses.sql
 ├── witnesses/               # Witness endpoint definitions
 │   ├── get_witness.sql
 │   ├── get_witnesses.sql
@@ -195,7 +195,7 @@ Endpoint logic is implemented in `backend/endpoint_helpers/`:
 | Helper File | Used By | Purpose |
 |-------------|---------|---------|
 | `account_parameters.sql` | Account endpoints | Query account state |
-| `wallet.sql` | `get_wallet` endpoint | Wallet-count aggregation from `account_parameters` |
+| `total_wallet_addresses.sql` | `get_total_wallet_addresses` endpoint | Wallet-count aggregation from `account_parameters` |
 | `witness.sql` | Witness endpoints | Witness data retrieval |
 | `blocksearch.sql` | Block search | Operation filtering logic |
 
