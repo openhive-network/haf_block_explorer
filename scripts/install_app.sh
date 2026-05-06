@@ -168,6 +168,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/blocksearch_filters.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/blocks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/account.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/account_hbd_interest.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/proxies.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/transactions.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/authority.sql"
