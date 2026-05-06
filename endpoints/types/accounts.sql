@@ -243,6 +243,25 @@ hafbe_backend.account:
     is_witness:
       type: boolean
       description: whether account is a witness
+    hbd_last_interest_payment:
+      type: string
+      format: date-time
+      description: timestamp of the last liquid HBD interest payment to this account
+    hbd_seconds:
+      type: string
+      description: >-
+        accumulated HBD-seconds since the last interest payment
+        (used by the chain to compute pending interest)
+    hbd_seconds_last_update:
+      type: string
+      format: date-time
+      description: timestamp of the most recent liquid HBD balance change
+    pending_hbd_interest:
+      type: integer
+      x-sql-datatype: BIGINT
+      description: >-
+        HBD interest that has accrued since the last payment but has not yet
+        been credited (paid by the chain after a 30-day gate)
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.account CASCADE;
@@ -284,7 +303,11 @@ CREATE TYPE hafbe_backend.account AS (
     "witness_votes" TEXT[],
     "witnesses_voted_for" INT,
     "ops_count" INT,
-    "is_witness" BOOLEAN
+    "is_witness" BOOLEAN,
+    "hbd_last_interest_payment" TIMESTAMP,
+    "hbd_seconds" TEXT,
+    "hbd_seconds_last_update" TIMESTAMP,
+    "pending_hbd_interest" BIGINT
 );
 -- openapi-generated-code-end
 

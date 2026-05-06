@@ -59,7 +59,11 @@ Returns `hafbe_backend.account`:
   "witness_votes": ["blocktrades", "gtg", ...],
   "witnesses_voted_for": 9,
   "ops_count": 219867,
-  "is_witness": true
+  "is_witness": true,
+  "hbd_last_interest_payment": "2016-09-02T14:59:15",
+  "hbd_seconds": "73446284422014",
+  "hbd_seconds_last_update": "2016-09-15T19:47:09",
+  "pending_hbd_interest": 232899
 }
 ```
 
@@ -79,6 +83,7 @@ This endpoint aggregates data from multiple sources:
 - `hafbe_backend.get_account_witness_votes()` - Witness votes
 - `hafbe_backend.get_account_proxy()` - Proxy assignment
 - `hafbe_backend.get_account_ops_count()` - Operation count
+- `hafbe_backend.get_account_pending_hbd_interest()` - Liquid HBD interest state (computed at query time from `account_balance_history`)
 
 ---
 

@@ -85,7 +85,11 @@ SET ROLE hafbe_owner;
               ],
               "witnesses_voted_for": 9,
               "ops_count": 219867,
-              "is_witness": true
+              "is_witness": true,
+              "hbd_last_interest_payment": "2016-09-02T14:59:15",
+              "hbd_seconds": "73446284422014",
+              "hbd_seconds_last_update": "2016-09-15T19:47:09",
+              "pending_hbd_interest": 232899
             }
       '404':
         description: No such account in the database
@@ -175,17 +179,24 @@ BEGIN
 
       --hidden, shouldn't be shown on account page
       COALESCE(_result_count, 0)::INT,
-      EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id)
+      EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id),
+
+      --pending HBD interest
+      COALESCE(_result_hbd_interest.hbd_last_interest_payment, hafbe_backend.default_timestamp()),
+      COALESCE(_result_hbd_interest.hbd_seconds, '0')::TEXT,
+      COALESCE(_result_hbd_interest.hbd_seconds_last_update, hafbe_backend.default_timestamp()),
+      COALESCE(_result_hbd_interest.pending_hbd_interest, 0)::BIGINT
   )::hafbe_backend.account
-  FROM 
-    btracker_endpoints.get_account_balances("account-name")      _result_balance,
-    reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
-    hafbe_backend.get_json_metadata(_account_id)              _result_json_metadata,
-    hafbe_backend.get_account_parameters(_account_id)         _result_parameters,
-    hafbe_backend.get_account_witness_votes(_account_id)      _result_votes,
-    hafbe_backend.get_account_proxy(_account_id)              _result_proxy,
-    hafbe_backend.get_account_ops_count(_account_id)          _result_count,
-    hafbe_backend.get_account_proxied_vsf_votes(_account_id)  _result_proxied_votes;
+  FROM
+    btracker_endpoints.get_account_balances("account-name")        _result_balance,
+    reptracker_endpoints.get_account_reputation("account-name")    _result_reputation,
+    hafbe_backend.get_json_metadata(_account_id)                   _result_json_metadata,
+    hafbe_backend.get_account_parameters(_account_id)              _result_parameters,
+    hafbe_backend.get_account_witness_votes(_account_id)           _result_votes,
+    hafbe_backend.get_account_proxy(_account_id)                   _result_proxy,
+    hafbe_backend.get_account_ops_count(_account_id)               _result_count,
+    hafbe_backend.get_account_proxied_vsf_votes(_account_id)       _result_proxied_votes,
+    hafbe_backend.get_account_pending_hbd_interest(_account_id)    _result_hbd_interest;
 END
 $$;
 
