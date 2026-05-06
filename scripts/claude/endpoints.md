@@ -183,6 +183,7 @@ Endpoint logic is implemented in `backend/endpoint_helpers/`:
 | Helper File | Used By | Purpose |
 |-------------|---------|---------|
 | `account_parameters.sql` | Account endpoints | Query account state |
+| `account_hbd_interest.sql` | `get_account` | Pending HBD interest computed from balance history |
 | `witness.sql` | Witness endpoints | Witness data retrieval |
 | `blocksearch.sql` | Block search | Operation filtering logic |
 
