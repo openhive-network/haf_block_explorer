@@ -19,8 +19,8 @@
           proposal-id: 99999999
           page-size: 50
           direction: "desc"
-          from-block: 50000000
-          to-block: 51000000
+          from-block: 4000000
+          to-block: 4500000
       response:
         status_code: 200
         verify_response_with:
