@@ -207,13 +207,26 @@ BEGIN
       AND abh.nai     = __HBD_NAI
       AND abh.balance_seq_no >= __anchor_seq_no
   ),
+  /*
+   * op_id_range gives TimescaleDB the bounds it needs for chunk exclusion on
+   * hafd.operations (compressed hypertable). Without explicit id-range bounds
+   * the planner decompresses every chunk and picks a bad join plan — see commit
+   * 25a35d8 ("Add operation ID range predicates for TimescaleDB chunk exclusion")
+   * for the same pattern in process_block_operations / process_account_stats.
+   */
+  op_id_range AS (
+    SELECT MIN(source_op) AS min_id, MAX(source_op) AS max_id FROM balance_rows
+  ),
   history AS (
     SELECT
       br.balance,
       bv.created_at AS ts,
       LEAD(bv.created_at) OVER (ORDER BY br.balance_seq_no) AS next_ts
     FROM balance_rows br
-    JOIN hafd.operations o   ON o.id  = br.source_op
+    JOIN hafd.operations o
+      ON o.id  = br.source_op
+     AND o.id >= (SELECT min_id FROM op_id_range)
+     AND o.id <= (SELECT max_id FROM op_id_range)
     JOIN hive.blocks_view bv ON bv.num = br.source_op_block - CASE WHEN o.trx_in_block = -1 THEN 0 ELSE 1 END
   )
   SELECT
