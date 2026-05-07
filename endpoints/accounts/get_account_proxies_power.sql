@@ -90,7 +90,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_proxies_power(
     "sort" hafbe_backend.order_by_proxy = 'proxy_date',
     "direction" hafbe_backend.sort_direction = 'desc'
 )
-RETURNS SETOF hafbe_backend.proxy_power
+RETURNS SETOF hafbe_backend.proxy_power 
 -- openapi-generated-code-end
 /*------------------------------------------
   hafbe_endpoints.get_account_proxies_power

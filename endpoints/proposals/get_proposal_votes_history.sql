@@ -47,7 +47,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
-        description: Return max `page-size` operations per page, defaults to `100`
+        description: Return max `page-size` votes per page, defaults to `100`
       - in: query
         name: direction
         required: false

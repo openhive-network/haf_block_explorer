@@ -49,6 +49,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | Block Search | `Block-search` | Query blocks by operations, filters, time ranges |
 | Accounts | `Accounts` | Account info, balances, authorities, operations |
 | Witnesses | `Witnesses` | Witness data, votes, rankings |
+| Proposals | `Proposals` | Proposal vote history |
 | Transactions | `Transactions` | Transaction statistics and aggregations |
 | Other | `Other` | API metadata, input type detection |
 
@@ -79,6 +80,12 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | `GET /witnesses/{account-name}/voters` | `get_witness_voters` | Accounts voting for witness |
 | `GET /witnesses/{account-name}/voters/num` | `get_witness_voters_num` | Count of witness voters |
 | `GET /witnesses/{account-name}/votes-history` | `get_witness_votes_history` | Historical vote changes |
+
+### Proposal Endpoints
+
+| Endpoint | Function | Description |
+|----------|----------|-------------|
+| `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical votes cast for a proposal |
 
 ### Transaction Endpoints
 
@@ -122,6 +129,8 @@ endpoints/
 │   ├── get_witness_voters.sql
 │   ├── get_witness_voters_num.sql
 │   └── get_witness_votes_history.sql
+├── proposals/               # Proposal endpoint definitions
+│   └── get_proposal_votes_history.sql
 ├── block-search/            # Block search endpoints
 │   └── get_block_by_op.sql
 ├── transactions/            # Transaction endpoints
@@ -137,6 +146,7 @@ endpoints/
 │   ├── blocks.sql
 │   ├── transactions.sql
 │   ├── operations.sql
+│   ├── proposals.sql
 │   └── enums.sql
 └── rewrite_rules.conf       # Nginx URL rewrites for REST paths
 ```
