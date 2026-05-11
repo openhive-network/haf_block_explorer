@@ -300,6 +300,7 @@ All account types are defined in `endpoints/types/accounts.sql`:
 | `hafbe_backend.permlink` | Post/comment reference |
 | `hafbe_backend.permlink_history` | Paginated permlinks |
 | `hafbe_backend.proxy_power` | Proxy relationship |
+| `hafbe_backend.account_pending_hbd_interest` | Liquid HBD interest state (defined in `backend/endpoint_helpers/account_hbd_interest.sql`) |
 | `hafbe_backend.wallet_stats` | Per-period new + cumulative wallet counts (used by `get_total_wallet_addresses`) |
 
 ## Helper Functions
@@ -315,6 +316,8 @@ Located in `backend/endpoint_helpers/`:
 | `get_account_ops_count()` | `account_parameters.sql` | Operation count |
 | `get_account_proxied_vsf_votes()` | `account_parameters.sql` | Recursive proxy power |
 | `parse_profile_picture()` | `account_parameters.sql` | Extract profile image URL |
+| `get_account_pending_hbd_interest()` | `account_hbd_interest.sql` | Compute liquid HBD interest from `account_balance_history` at query time |
+| `get_chain_hbd_interest_rate()` | `account_hbd_interest.sql` | Chain-effective HBD interest rate — median of top-20 witnesses via `witness_rank_cache` |
 | `get_total_wallet_address_aggregation()` | `total_wallet_addresses.sql` | Date-series aggregation of account creation counts with running cumulative sum |
 
 ## Related Processing

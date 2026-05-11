@@ -32,6 +32,12 @@ HAFBE uses two synchronization stages defined in `db/hafbe_app.sql`:
 - **Optimization**: `synchronous_commit = ON` for data safety
 - **Behavior**: Updates cache tables, indexes already exist
 
+**Transition seeding (MASSIVE → LIVE):** On the first LIVE iteration after indexes are
+created, `process_witness_votes_cache()` is called once to populate all cache tables
+(`witness_votes_cache`, `witness_rank_cache`, `account_vest_stats_cache`,
+`witness_votes_change_cache`). Without this seed, endpoints that depend on these caches
+would return empty data until the first LIVE block arrives.
+
 **Stage detection:**
 ```sql
 SELECT hive.get_current_stage_name('hafbe_app');  -- Returns 'MASSIVE_PROCESSING' or 'LIVE'
