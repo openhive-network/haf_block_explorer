@@ -401,4 +401,38 @@ CREATE TYPE hafbe_backend.permlink_history AS (
 );
 -- openapi-generated-code-end
 
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
+hafbe_backend.wallet_stats:
+  type: object
+  properties:
+    date:
+      type: string
+      format: date-time
+      description: end of the time period (capped at current time for the latest partial period)
+    new_wallets:
+      type: integer
+      description: number of new wallets (accounts) created in this period
+    total_wallets:
+      type: integer
+      description: cumulative total wallets on the chain through the end of this period
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.wallet_stats CASCADE;
+CREATE TYPE hafbe_backend.wallet_stats AS (
+    "date" TIMESTAMP,
+    "new_wallets" INT,
+    "total_wallets" INT
+);
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_backend.array_of_wallet_stats:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_backend.wallet_stats'
+ */
+
 RESET ROLE;
