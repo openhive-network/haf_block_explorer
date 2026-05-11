@@ -173,6 +173,30 @@ BEGIN
 
   PERFORM hive.app_register_table( 'hafbe_app', 'account_parameters', 'hafbe_app' );
 
+  /*
+   * account_hbd_interest_cache: Per-account HBD interest accumulator state.
+   * ----------------------------------------------------------------------
+   * Mirrors the chain's account_object.{hbd_seconds, hbd_seconds_last_update,
+   * last_HBD_balance, hbd_last_interest_payment}. Maintained incrementally by
+   * hafbe_app.process_hbd_interest() and read by
+   * hafbe_backend.get_account_pending_hbd_interest() (single PK lookup) so
+   * pending interest can be returned without walking history per request.
+   *
+   * Registered with HAF forking so reorg-driven rollbacks revert these rows
+   * atomically with btracker's account_balance_history.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.account_hbd_interest_cache (
+    account                   INT       NOT NULL,  -- Account ID (PK)
+    hbd_seconds               NUMERIC   NOT NULL DEFAULT 0,  -- Σ(balance × Δt) since last interest
+    hbd_seconds_last_update   TIMESTAMP NOT NULL,             -- Timestamp of most recent HBD-affecting op
+    last_balance              BIGINT    NOT NULL,             -- Liquid HBD balance after that op
+    hbd_last_interest_payment TIMESTAMP NOT NULL,             -- Timestamp of most recent interest_operation
+
+    CONSTRAINT pk_account_hbd_interest_cache PRIMARY KEY (account)
+  );
+
+  PERFORM hive.app_register_table( 'hafbe_app', 'account_hbd_interest_cache', 'hafbe_app' );
+
   ------------- WITNESS VOTES & PROXIES ----------------
 
   /*
@@ -652,6 +676,7 @@ BEGIN
   PERFORM hafbe_app.process_witness_stats(_from, _to);
   PERFORM hafbe_app.process_witness_votes(_from, _to);
   PERFORM hafbe_app.process_proposal_votes(_from, _to);
+  PERFORM hafbe_app.process_hbd_interest(_from, _to);
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -697,6 +722,7 @@ BEGIN
   PERFORM hafbe_app.process_witness_stats(_block, _block);
   PERFORM hafbe_app.process_witness_votes(_block, _block);
   PERFORM hafbe_app.process_proposal_votes(_block, _block);
+  PERFORM hafbe_app.process_hbd_interest(_block, _block);
   PERFORM hafbe_app.process_witness_votes_cache();
 
   IF _logs THEN
