@@ -622,15 +622,23 @@ BEGIN
   IF NOT hafbe_app.isIndexesCreated() THEN
     PERFORM hafbe_app.create_hafbe_indexes();
     -- First entry into LIVE: seed all cache tables so API endpoints that
-    -- depend on them (get_witness_voters, get_account_proxies_power) return
-    -- correct data immediately instead of waiting for the first LIVE block.
+    -- depend on them return correct data immediately instead of waiting for
+    -- the first LIVE block.
     -- During MASSIVE, process_witness_votes_cache() is never called, so the
-    -- caches are empty at this point.
+    -- witness/proxy rank caches are empty at this point.
     PERFORM hafbe_app.process_witness_votes_cache();
+
+    -- process_hbd_interest() normally runs during MASSIVE now. This guard
+    -- keeps upgraded/restored databases that missed that pass from returning
+    -- account-creation fallbacks for hbd_seconds and pending_hbd_interest.
+    IF NOT EXISTS (SELECT 1 FROM hafbe_app.account_hbd_interest_cache LIMIT 1) THEN
+      PERFORM hafbe_app.process_hbd_interest(1, hafbe_backend.get_hafbe_head_block());
+    END IF;
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
   -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'account_vest_stats_cache',   interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'account_hbd_interest_cache', interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_cache',        interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
@@ -645,10 +653,11 @@ $$;
  *
  * Processing order per range:
  * 1. Account stats (account_parameters updates)
- * 2. Block operations (operation counts aggregation)
- * 3. Transaction stats (daily/monthly aggregations)
- * 4. Witness stats (witness metadata updates)
- * 5. Witness votes (vote history and current state)
+ * 2. HBD interest cache (liquid HBD balance accumulator)
+ * 3. Block operations (operation counts aggregation)
+ * 4. Transaction stats (daily/monthly aggregations)
+ * 5. Witness stats (witness metadata updates)
+ * 6. Witness votes (vote history and current state)
  *
  * @param _from  First block number to process
  * @param _to    Last block number to process
@@ -674,6 +683,7 @@ BEGIN
   END IF;
 
   PERFORM hafbe_app.process_account_stats(_from, _to);
+  PERFORM hafbe_app.process_hbd_interest(_from, _to);
   PERFORM hafbe_app.process_block_operations(_from, _to);
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
@@ -719,6 +729,7 @@ BEGIN
   END IF;
 
   PERFORM hafbe_app.process_account_stats(_block, _block);
+  PERFORM hafbe_app.process_hbd_interest(_block, _block);
   PERFORM hafbe_app.process_block_operations(_block, _block);
   PERFORM hafbe_app.process_transaction_stats(_block, _block);
   PERFORM hafbe_app.process_witness_stats(_block, _block);
