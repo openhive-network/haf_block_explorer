@@ -1,0 +1,114 @@
+[
+    {
+        "date": "2016-10-01T00:00:00",
+        "total_transactions": 1175186,
+        "total_operations": 1075186,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 765610
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 179797
+            },
+            {
+                "op_type_id": 18,
+                "op_count": 129779
+            }
+        ],
+        "last_block_num": 4999999
+    },
+    {
+        "date": "2016-09-01T00:00:00",
+        "total_transactions": 3141793,
+        "total_operations": 2949871,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 2080947
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 555019
+            },
+            {
+                "op_type_id": 18,
+                "op_count": 313905
+            }
+        ],
+        "last_block_num": 4574687
+    },
+    {
+        "date": "2016-08-01T00:00:00",
+        "total_transactions": 2194211,
+        "total_operations": 2025920,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 1518496
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 474536
+            },
+            {
+                "op_type_id": 18,
+                "op_count": 32888
+            }
+        ],
+        "last_block_num": 3687262
+    },
+    {
+        "date": "2016-07-01T00:00:00",
+        "total_transactions": 170235,
+        "total_operations": 117414,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 87758
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 28509
+            },
+            {
+                "op_type_id": 18,
+                "op_count": 1147
+            }
+        ],
+        "last_block_num": 2802784
+    },
+    {
+        "date": "2016-06-01T00:00:00",
+        "total_transactions": 112714,
+        "total_operations": 59636,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 41112
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 18524
+            }
+        ],
+        "last_block_num": 1942546
+    },
+    {
+        "date": "2016-05-01T00:00:00",
+        "total_transactions": 156423,
+        "total_operations": 4555,
+        "operations": [
+            {
+                "op_type_id": 0,
+                "op_count": 3004
+            },
+            {
+                "op_type_id": 1,
+                "op_count": 1551
+            }
+        ],
+        "last_block_num": 1052186
+    }
+]

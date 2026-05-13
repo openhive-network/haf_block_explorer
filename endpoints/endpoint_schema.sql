@@ -915,6 +915,57 @@ declare
           "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
         }
       },
+      "hafbe_backend.period_op_type_count": {
+        "type": "object",
+        "properties": {
+          "op_type_id": {
+            "type": "integer",
+            "description": "operation type identifier"
+          },
+          "op_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "number of operations of this type in the period"
+          }
+        }
+      },
+      "hafbe_backend.operation_type_stats": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "end timestamp of the period (capped at current time for the in-progress period)"
+          },
+          "total_transactions": {
+            "type": "integer",
+            "format": "int64",
+            "description": "total number of transactions in the period (from transaction_stats_by_day/month)"
+          },
+          "total_operations": {
+            "type": "integer",
+            "format": "int64",
+            "description": "total number of operations in the period (sum of operations[].op_count)"
+          },
+          "operations": {
+            "type": "array",
+            "description": "per-op-type breakdown for the period",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_backend.period_op_type_count"
+            }
+          },
+          "last_block_num": {
+            "type": "integer",
+            "description": "last block number included in the period"
+          }
+        }
+      },
+      "hafbe_backend.array_of_operation_type_stats": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
+        }
+      },
       "hafbe_backend.proposal_votes_history_record": {
         "type": "object",
         "properties": {
@@ -2415,6 +2466,102 @@ declare
           },
           "404": {
             "description": "No such account in the database"
+          }
+        }
+      }
+    },
+    "/operation-type-statistics": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Aggregated per-op-type operation counts (with transaction totals)",
+        "description": "For each period in the requested block range, returns:\n\n* `total_transactions` \u2014 total transactions in the period (from `transaction_stats_by_day`/`_by_month`)\n* `total_operations`   \u2014 total operations in the period (sum of `operations[].op_count`)\n* `operations`         \u2014 per-op-type breakdown (`op_type_id`, `op_count`)\n* `last_block_num`     \u2014 last block included in the period\n\nPeriods with no data still appear (empty `operations`, totals = 0).\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_operation_type_statistics();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/operation-type-statistics''`\n",
+        "operationId": "hafbe_endpoints.get_operation_type_statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.granularity",
+              "default": "yearly"
+            },
+            "description": "Period rollup granularity:\n\n* `daily`\n\n* `monthly`\n\n* `yearly`\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort order:\n\n* `asc`  - oldest first\n\n* `desc` - newest first\n"
+          },
+          {
+            "in": "query",
+            "name": "from-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).\n\nWhen a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.\n"
+          },
+          {
+            "in": "query",
+            "name": "to-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Upper bound of the block range. Same format as `from-block`.\n\nWhen a `timestamp` is given, it is converted to the last block whose `created_at <= timestamp`.\n"
+          },
+          {
+            "in": "query",
+            "name": "op-types",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Comma-separated list of `op_type_id` values to include (e.g. `0,1,18`).\nWhen omitted, every operation type that occurs in the period is returned.\n\nNote: when this filter is set, `total_operations` reflects the sum of the\nfiltered op types only. `total_transactions` is always the unfiltered\nperiod total (transactions, not operations, so a filter on op types\ndoes not apply to it).\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-period operation-type histogram with transaction totals.\n\n* Returns array of `hafbe_backend.operation_type_stats`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_operation_type_stats"
+                },
+                "example": [
+                  {
+                    "date": "2017-01-02T00:00:00",
+                    "total_transactions": 412000,
+                    "total_operations": 365000,
+                    "operations": [
+                      {
+                        "op_type_id": 0,
+                        "op_count": 98000
+                      },
+                      {
+                        "op_type_id": 1,
+                        "op_count": 45000
+                      },
+                      {
+                        "op_type_id": 18,
+                        "op_count": 210000
+                      }
+                    ],
+                    "last_block_num": 5000000
+                  }
+                ]
+              }
+            }
           }
         }
       }
