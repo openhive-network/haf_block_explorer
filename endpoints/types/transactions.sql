@@ -47,4 +47,69 @@ hafbe_backend.array_of_transaction_stats:
     $ref: '#/components/schemas/hafbe_backend.transaction_stats'
 */
 
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
+hafbe_backend.period_op_type_count:
+  type: object
+  properties:
+    op_type_id:
+      type: integer
+      description: operation type identifier
+    op_count:
+      type: integer
+      format: int64
+      description: number of operations of this type in the period
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.period_op_type_count CASCADE;
+CREATE TYPE hafbe_backend.period_op_type_count AS (
+    "op_type_id" INT,
+    "op_count" BIGINT
+);
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_backend.operation_type_stats:
+  type: object
+  properties:
+    date:
+      type: string
+      format: date-time
+      description: end timestamp of the period (capped at current time for the in-progress period)
+    total_transactions:
+      type: integer
+      format: int64
+      description: total number of transactions in the period (from transaction_stats_by_day/month)
+    total_operations:
+      type: integer
+      format: int64
+      description: total number of operations in the period (sum of operations[].op_count)
+    operations:
+      type: array
+      description: per-op-type breakdown for the period
+      items:
+        $ref: '#/components/schemas/hafbe_backend.period_op_type_count'
+    last_block_num:
+      type: integer
+      description: last block number included in the period
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.operation_type_stats CASCADE;
+CREATE TYPE hafbe_backend.operation_type_stats AS (
+    "date" TIMESTAMP,
+    "total_transactions" BIGINT,
+    "total_operations" BIGINT,
+    "operations" hafbe_backend.period_op_type_count[],
+    "last_block_num" INT
+);
+-- openapi-generated-code-end
+
+/** openapi:components:schemas
+hafbe_backend.array_of_operation_type_stats:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
+*/
+
 RESET ROLE;

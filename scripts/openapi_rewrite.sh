@@ -45,6 +45,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/block-search/get_block_by_op.sql
 ../$endpoints/proposals/get_proposal_votes_history.sql
 ../$endpoints/transactions/get_transaction_statistics.sql
+../$endpoints/transactions/get_operation_type_statistics.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_input_type.sql

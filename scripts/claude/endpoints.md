@@ -93,6 +93,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | Endpoint | Function | Description |
 |----------|----------|-------------|
 | `GET /transaction-statistics` | `get_transaction_statistics` | Aggregated tx stats (daily/monthly/yearly) |
+| `GET /operation-type-statistics` | `get_operation_type_statistics` | Per-op-type counts + tx totals per period (daily/monthly/yearly) |
 
 ### Other Endpoints
 

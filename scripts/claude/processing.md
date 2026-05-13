@@ -47,7 +47,7 @@ All processing functions are in `db/process_*.sql` files.
 | `massive_processing()` | `hafbe_app.sql` | Processes block ranges during bulk sync |
 | `single_processing()` | `hafbe_app.sql` | Processes individual blocks in live mode |
 | `process_account_stats()` | `process_account_stats.sql` | Account creation, recovery, voting rights |
-| `process_block_operations()` | `process_block_operations.sql` | Operation counts per block |
+| `process_block_operations()` | `process_block_operations.sql` | Op counts per block + daily/monthly per-op-type rollups (single scan, three sinks) |
 | `process_transaction_stats()` | `process_transaction_stats.sql` | Daily/monthly transaction aggregations |
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
@@ -57,7 +57,7 @@ All processing functions are in `db/process_*.sql` files.
 
 Each block range calls processors in this order:
 1. `process_account_stats()` - Account parameters
-2. `process_block_operations()` - Operation counts
+2. `process_block_operations()` - Op counts per block + per-day/month per-op-type rollups
 3. `process_transaction_stats()` - Transaction aggregations
 4. `process_witness_stats()` - Witness metadata
 5. `process_witness_votes()` - Vote and proxy state
@@ -123,6 +123,8 @@ For implementation details of each processor:
 | `hafbe_app.block_operations` | `process_block_operations()` | Op counts per block |
 | `hafbe_app.transaction_stats_by_day` | `process_transaction_stats()` | Daily tx stats |
 | `hafbe_app.transaction_stats_by_month` | `process_transaction_stats()` | Monthly tx stats |
+| `hafbe_app.operation_type_stats_by_day` | `process_block_operations()` | Daily per-op-type counts |
+| `hafbe_app.operation_type_stats_by_month` | `process_block_operations()` | Monthly per-op-type counts |
 | `hafbe_app.current_witnesses` | `process_witness_stats()` | Witness properties |
 | `hafbe_app.witness_votes_history` | `process_witness_votes()` | Vote change log |
 | `hafbe_app.current_witness_votes` | `process_witness_votes()` | Active votes |

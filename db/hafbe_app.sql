@@ -35,6 +35,10 @@
  *    - transaction_stats_by_month: Monthly aggregated transaction stats
  *    - transaction_stats_by_day: Daily aggregated transaction stats
  *
+ * 5a. OPERATION TYPE STATISTICS
+ *    - operation_type_stats_by_month: Monthly aggregated op-type counts
+ *    - operation_type_stats_by_day: Daily aggregated op-type counts
+ *
  * 6. WITNESS STATISTICS
  *    - current_witnesses: Witness metadata (url, price feed, version, etc.)
  *
@@ -295,6 +299,41 @@ BEGIN
     CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe_app' );
+
+  ------------- OPERATION TYPE STATISTICS ----------------
+
+  /*
+   * operation_type_stats_by_month: Monthly per-op-type counts
+   * ---------------------------------------------------------
+   * Pre-aggregated monthly operation counts grouped by op_type_id.
+   * One row per (month, op_type_id). Populated by process_block_operations()
+   * in the same scan that writes per-block counts.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.operation_type_stats_by_month (
+    updated_at     TIMESTAMP NOT NULL,  -- First day of month (part of PK)
+    op_type_id     SMALLINT  NOT NULL,  -- Operation type id (part of PK)
+    op_count       BIGINT    NOT NULL,  -- Total operations of this type in month
+    last_block_num INT       NOT NULL,  -- Last block included in this period+type
+
+    CONSTRAINT pk_operation_type_stats_by_month PRIMARY KEY (updated_at, op_type_id)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'operation_type_stats_by_month', 'hafbe_app' );
+
+  /*
+   * operation_type_stats_by_day: Daily per-op-type counts
+   * -----------------------------------------------------
+   * Pre-aggregated daily operation counts grouped by op_type_id.
+   * One row per (day, op_type_id). Populated by process_block_operations().
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.operation_type_stats_by_day (
+    updated_at     TIMESTAMP NOT NULL,  -- Date of statistics (part of PK)
+    op_type_id     SMALLINT  NOT NULL,  -- Operation type id (part of PK)
+    op_count       BIGINT    NOT NULL,  -- Total operations of this type in day
+    last_block_num INT       NOT NULL,  -- Last block included in this period+type
+
+    CONSTRAINT pk_operation_type_stats_by_day PRIMARY KEY (updated_at, op_type_id)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'operation_type_stats_by_day', 'hafbe_app' );
 
   ------------- WITNESS STATISTICS ----------------
 
@@ -618,7 +657,7 @@ $$;
  *
  * Processing order per range:
  * 1. Account stats (account_parameters updates)
- * 2. Block operations (operation counts aggregation)
+ * 2. Block operations (per-block op counts + per-day/month op-type rollups in one pass)
  * 3. Transaction stats (daily/monthly aggregations)
  * 4. Witness stats (witness metadata updates)
  * 5. Witness votes (vote history and current state)
@@ -1016,6 +1055,13 @@ BEGIN
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);
+
+  -- Operation type stats: PK covers (updated_at, op_type_id). Secondary index for
+  -- filtered-by-op_type lookups (e.g. `op-types` query parameter on the endpoint).
+  CREATE INDEX IF NOT EXISTS operation_type_stats_by_day_op_type_idx
+    ON hafbe_app.operation_type_stats_by_day USING btree (op_type_id, updated_at);
+  CREATE INDEX IF NOT EXISTS operation_type_stats_by_month_op_type_idx
+    ON hafbe_app.operation_type_stats_by_month USING btree (op_type_id, updated_at);
   CREATE INDEX IF NOT EXISTS account_parameters_created ON hafbe_app.account_parameters USING btree (created) WHERE created IS NOT NULL;
 
   -- Proposal votes: time-ordered lookup per proposal (mirrors witness_votes_history pattern)
