@@ -189,10 +189,15 @@ GROUP BY rapv.proxy_id;
  * account_vest_stats_view: Complete vest statistics for accounts whose vesting
  * power the API needs to report.
  *
- * Covers two disjoint groups (Hive protocol makes them mutually exclusive —
- * setting a proxy revokes direct witness votes):
- *   - accounts that cast a direct witness vote (used by get_witness_voters)
- *   - accounts that set a proxy            (used by get_account_proxies_power)
+ * Covers three groups (no longer disjoint — a single account may be in
+ * multiple, e.g. casting both witness and proposal votes):
+ *   - direct witness voters   (used by get_witness_voters)
+ *   - proxy setters           (used by get_account_proxies_power)
+ *   - direct proposal voters  (used by proposal_vote_stats_cache refresh)
+ *
+ * UNION (not UNION ALL) is required: an account appearing in two groups
+ * must collapse to a single row, otherwise downstream SUM(vests)
+ * aggregations double-count them.
  *
  * COLUMNS:
  *   account_id    - The account ID
@@ -207,8 +212,10 @@ GROUP BY rapv.proxy_id;
 CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
 WITH tracked_accounts AS (
   SELECT account_id FROM hafbe_backend.witness_voters_list_view
-  UNION ALL
+  UNION
   SELECT account_id FROM hafbe_app.current_account_proxies
+  UNION
+  SELECT voter_id AS account_id FROM hafbe_app.current_proposal_votes
 )
 SELECT
   cw.account_id,
@@ -222,6 +229,20 @@ LEFT JOIN current_account_balances cab
   AND cab.nai = btracker_backend.nai_vests()
 LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
 LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
+
+/*
+ * proposal_paid_amounts: Aggregated DHF payments per proposal.
+ *
+ * Shared by proposal listing endpoints so paid_amount has one query shape.
+ * The proposal_payments(proposal_id) index backs selective joins from
+ * paginated endpoint result sets.
+ */
+CREATE OR REPLACE VIEW hafbe_backend.proposal_paid_amounts AS
+SELECT
+  pp.proposal_id,
+  COALESCE(SUM(pp.amount), 0)::BIGINT AS paid_amount
+FROM hafbe_app.proposal_payments pp
+GROUP BY pp.proposal_id;
 
 /*
  * expired_voter_stats_view: Vest stats for voters not in current voter list.

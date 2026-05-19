@@ -230,6 +230,13 @@ BEGIN
   INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op)
   SELECT dv.witness_id, dv.voter_id, FALSE, _id
   FROM deleted_votes dv;
+
+  -- NOTE: proposal-vote cleanup for this account is handled by
+  -- process_proposal_expired_account inside process_proposals' row-by-row
+  -- loop, NOT here. Doing it from the witness processor caused a fresh-sync
+  -- ordering bug: in MASSIVE mode the witness processor runs before the
+  -- proposal processor, so the proposal vote being deleted would not yet
+  -- exist in current_proposal_votes.
 END
 $$;
 
