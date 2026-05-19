@@ -10,6 +10,7 @@ HAFBE uses a multi-layered testing strategy to ensure API correctness, data inte
 | **Tavern** | Validate API response patterns | After endpoint changes |
 | **Performance** | Measure endpoint throughput | Before releases |
 | **Functional** | Test install/uninstall scripts | After script changes |
+| **Mock** | Drive a synthetic block range through the real processor + endpoints | When you cannot wait for a HAF sync past the feature's launch block (e.g. DHF launch at block ~22.3M) |
 
 ## Quick Reference
 
@@ -80,6 +81,36 @@ Verifies install/uninstall scripts work correctly.
 - `tests/functional/test_scripts.sh` - Script test runner
 
 [Detailed documentation](tests/functional.md)
+
+### Mock Tests
+Drives a synthetic block range (currently 91000001..91000004) through the
+real `hafbe_app.main` pipeline + endpoints, then asserts a fixed expected
+state. Used for features whose ops only appear on mainnet past a launch
+block that a partial-sync HAF has not yet processed (e.g. DHF / proposals
+launched at block ~22.3M).
+
+Three-step workflow (mirrors `submodules/btracker/tests/mocks`):
+
+```bash
+# 1. Load fixtures + rewind hafbe_app / hafbe_bal contexts
+./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
+
+# 2. Run the regular block processor against the mock range
+./scripts/process_blocks.sh --host=localhost --stop-at-block=91000004
+
+# 3. Refresh caches and run the PASS/FAIL assertion table
+./scripts/verify_mock_data.sh --host=localhost --user=haf_admin
+```
+
+Assumes a fresh HAFBE+btracker install. To re-run, fully uninstall both
+apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
+
+**Key files:**
+- `tests/mocks/install_mock_data.sh` - Loads fixtures, rewinds contexts
+- `scripts/verify_mock_data.sh` - Refreshes caches, runs verify.sql
+- `tests/mocks/sql/verify.sql` - 22 assertions (13 on processor state, 9 on endpoint composition)
+- `tests/mocks/fixtures/` - Mock block headers + operation bodies
+- `tests/mocks/README.md` - Full documentation
 
 ## CI/CD Integration
 
