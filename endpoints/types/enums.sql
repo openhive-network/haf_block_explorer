@@ -122,6 +122,67 @@ CREATE TYPE hafbe_backend.order_by_witness AS ENUM (
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_backend.order_by_proposal:
+  type: string
+  enum:
+    - by_creator
+    - by_start_date
+    - by_end_date
+    - by_total_votes
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.order_by_proposal CASCADE;
+CREATE TYPE hafbe_backend.order_by_proposal AS ENUM (
+    'by_creator',
+    'by_start_date',
+    'by_end_date',
+    'by_total_votes'
+);
+-- openapi-generated-code-end
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
+hafbe_backend.order_by_proposal_vote:
+  type: string
+  enum:
+    - by_voter_proposal
+    - by_proposal_voter
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.order_by_proposal_vote CASCADE;
+CREATE TYPE hafbe_backend.order_by_proposal_vote AS ENUM (
+    'by_voter_proposal',
+    'by_proposal_voter'
+);
+-- openapi-generated-code-end
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
+hafbe_backend.proposal_status:
+  type: string
+  enum:
+    - all
+    - active
+    - inactive
+    - expired
+    - votable
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.proposal_status CASCADE;
+CREATE TYPE hafbe_backend.proposal_status AS ENUM (
+    'all',
+    'active',
+    'inactive',
+    'expired',
+    'votable'
+);
+-- openapi-generated-code-end
+
+----------------------------------------------------------------------
+
+/** openapi:components:schemas
 hafbe_backend.granularity:
   type: string
   enum:
