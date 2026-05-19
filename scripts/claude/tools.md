@@ -78,6 +78,37 @@ These scripts help with common development and debugging tasks. **Use them autom
 
 ---
 
+### Mock Data Installer + Verifier
+
+**Location**: `tests/mocks/install_mock_data.sh` + `scripts/verify_mock_data.sh`
+
+**Use when**:
+- Testing a feature whose ops only appear past a late launch block (e.g. DHF
+  proposals launched at block ~22.3M) and a HAF sync to that point is impractical
+- Validating processor + endpoint behaviour end-to-end without waiting for
+  real blockchain data
+- Reproducing the canonical test fixtures shipped with the repo
+
+**Usage** (three steps, after a fresh `install_app.sh`):
+```bash
+./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
+./scripts/process_blocks.sh        --host=localhost --stop-at-block=91000004
+./scripts/verify_mock_data.sh      --host=localhost --user=haf_admin
+```
+
+**What they do**:
+- `install_mock_data.sh`: loads fixture blocks/ops at the 91M range, rewinds
+  `hafbe_app` and `hafbe_bal` contexts so the mock range becomes the next
+  processable batch. Does NOT process the blocks.
+- `process_blocks.sh`: drives the mock range through the canonical pipeline.
+- `verify_mock_data.sh`: refreshes LIVE caches and runs the 22-check
+  `verify.sql` PASS/FAIL table; exits non-zero on any failure.
+
+**Requirements**: Fresh HAFBE+btracker install. Mirrors
+`submodules/btracker/tests/mocks/`. Full docs in `tests/mocks/README.md`.
+
+---
+
 ## When to Use These Tools
 
 | User Request | Script to Use |
@@ -87,6 +118,8 @@ These scripts help with common development and debugging tasks. **Use them autom
 | "What's wrong with pipeline 12345?" | `check-hafbe-pipeline.sh 12345` |
 | "Check the develop pipeline" | `check-hafbe-pipeline.sh develop` |
 | "Run sync to 1M blocks" | `run_sync_test.sh 1000000` |
+| "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000004` → `verify_mock_data.sh` |
+| "Verify mock state" | `verify_mock_data.sh` |
 | "Test sync performance" | `run_sync_test.sh` |
 | "Benchmark block processing" | `run_sync_test.sh` |
 

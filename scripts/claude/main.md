@@ -25,9 +25,10 @@ db/                      Core database layer
 └── indexes.sql          Table indexes
 
 endpoints/               PostgREST API definitions
-├── endpoint_schema.sql  Main endpoint definitions
+├── endpoint_schema.sql  Main endpoint definitions (generated via openapi_rewrite.sh)
 ├── accounts/            Account-related endpoints
 ├── witnesses/           Witness-related endpoints
+├── proposals/           DHF proposal endpoints (/proposals, /proposals/votes, /proposals/{id}/votes/history)
 ├── block-search/        Block search endpoints
 ├── transactions/        Transaction endpoints
 └── types/               SQL type definitions
@@ -36,13 +37,15 @@ scripts/                 Operational scripts
 ├── install_app.sh       Install HAFBE on database
 ├── process_blocks.sh    Run block processing loop
 ├── uninstall_app.sh     Remove HAFBE from database
+├── verify_mock_data.sh  Refresh caches + run mock verify.sql (paired with tests/mocks/install_mock_data.sh)
 └── ci-helpers/          CI/CD helper scripts
 
 tests/                   Test suites
 ├── regression/          Compare against hived snapshots
 ├── tavern/              YAML-based API tests
 ├── performance/         JMeter performance tests
-└── functional/          Script functionality tests
+├── functional/          Script functionality tests
+└── mocks/               Synthetic block range to test features whose ops only appear past a late launch block
 
 submodules/              Integrated sub-applications
 ├── btracker/            Balance tracking

@@ -90,6 +90,11 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | `GET /proposals/votes` | `get_proposal_votes` | Current active proposal approvals |
 | `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical votes cast for a proposal |
 
+The proposal endpoints have an end-to-end mock harness under `tests/mocks/`
+that drives a synthetic block range through the real processor and asserts
+both processor state and endpoint composition. See `scripts/claude/tests.md`
+or `tests/mocks/README.md` for the three-step workflow.
+
 ### Transaction Endpoints
 
 | Endpoint | Function | Description |
