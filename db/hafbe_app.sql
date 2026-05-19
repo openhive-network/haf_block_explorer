@@ -28,8 +28,11 @@
  *    - account_proxies_history: Complete proxy change history
  *    - current_account_proxies: Current proxy assignments
  *
- * 4a. PROPOSAL VOTES
+ * 4a. PROPOSALS
  *    - proposal_votes_history: Complete proposal vote change history
+ *    - current_proposal_votes: Current active proposal votes
+ *    - current_proposals: Proposal metadata (create/update/remove state)
+ *    - proposal_payments: Append-only payment ledger from proposal_pay_operation
  *
  * 5. TRANSACTION STATISTICS
  *    - transaction_stats_by_month: Monthly aggregated transaction stats
@@ -46,6 +49,7 @@
  *    - witness_votes_cache: Cached witness vote counts
  *    - witness_rank_cache: Cached witness rankings
  *    - witness_votes_change_cache: Cached daily vote changes
+ *    - proposal_vote_stats_cache: Cached stake-weighted proposal vote totals
  *
  * HAF Synchronization Stages:
  * ---------------------------
@@ -64,6 +68,8 @@
  */
 
 SET ROLE hafbe_owner;
+
+CREATE SCHEMA IF NOT EXISTS hafbe_app AUTHORIZATION hafbe_owner;
 
 -- ============================================================================
 -- SCHEMA AND TABLE CREATION
@@ -237,7 +243,7 @@ BEGIN
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_account_proxies', 'hafbe_app' );
 
-  ------------- PROPOSAL VOTES ----------------
+  ------------- PROPOSALS ----------------
 
   /*
    * proposal_votes_history: Complete proposal vote change history
@@ -246,7 +252,8 @@ BEGIN
    * One row per (voter, proposal) pair per update_proposal_votes_operation,
    * since each op may target multiple proposals via its proposal_ids array.
    * Used by get_proposal_votes_history() for vote timeline queries.
-   * Populated by process_proposal_votes() during block sync.
+   * Populated by process_proposals() during block sync (the unified
+   * row-by-row processor; see db/process_proposals.sql).
    */
   CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_history (
     proposal_id INT     NOT NULL,
@@ -255,6 +262,62 @@ BEGIN
     source_op   BIGINT  NOT NULL
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'proposal_votes_history', 'hafbe_app' );
+
+  /*
+   * current_proposal_votes: active proposal approvals
+   * -------------------------------------------------
+   * Currently-active approve rows. UPSERTed by update_proposal_votes_operation
+   * handling in process_proposals; cascade-deleted when a proposal is removed
+   * or when a voter loses voting rights / has their account expired.
+   * Backs /proposals/votes and proposal_vote_stats_cache refresh.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_proposal_votes (
+    voter_id    INT    NOT NULL,
+    proposal_id INT    NOT NULL,
+    source_op   BIGINT NOT NULL,
+
+    CONSTRAINT pk_current_proposal_votes PRIMARY KEY (voter_id, proposal_id)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
+
+  /*
+   * current_proposals: proposal metadata mirror
+   * -------------------------------------------
+   * One row per proposal, INSERTed at create_proposal+proposal_fee pairing.
+   * `removed` is the only mutable lifecycle flag; rows are NEVER deleted so
+   * historical joins (vote history / payments) stay intact. daily_pay is the
+   * raw precision-3 HBD amount (milli-HBD).
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_proposals (
+    proposal_id INT       NOT NULL,
+    creator_id  INT       NOT NULL,
+    receiver_id INT       NOT NULL,
+    start_date  TIMESTAMP NOT NULL,
+    end_date    TIMESTAMP NOT NULL,
+    daily_pay   BIGINT    NOT NULL,  -- HBD amount in precision-3 units (milli-HBD)
+    subject     TEXT      NOT NULL,
+    permlink    TEXT      NOT NULL,
+    removed     BOOLEAN   NOT NULL DEFAULT FALSE,
+    source_op   BIGINT    NOT NULL,  -- op id of the latest create/update affecting this row
+
+    CONSTRAINT pk_current_proposals PRIMARY KEY (proposal_id)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_proposals', 'hafbe_app' );
+
+  /*
+   * proposal_payments: append-only DHF payment ledger
+   * -------------------------------------------------
+   * One row per proposal_pay_operation. Aggregated by hafbe_backend.proposal_paid_amounts
+   * view at read time. amount is raw precision-3 HBD (milli-HBD).
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.proposal_payments (
+    proposal_id INT    NOT NULL,
+    amount      BIGINT NOT NULL,
+    source_op   BIGINT NOT NULL,
+
+    CONSTRAINT pk_proposal_payments PRIMARY KEY (source_op)
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'proposal_payments', 'hafbe_app' );
 
   ------------- TRANSACTION STATISTICS ----------------
 
@@ -405,6 +468,28 @@ BEGIN
     voters_num_daily_change INT    NOT NULL,  -- Change in voter count over last 24h
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
+  );
+
+  /*
+   * proposal_vote_stats_cache: Cached stake-weighted proposal vote totals
+   * ---------------------------------------------------------------------
+   * Per-proposal sum of governance vests across direct (non-proxied) voters,
+   * matching hived's `database_api.list_proposals` ranking. Refreshed each
+   * LIVE block by process_proposal_vote_stats_cache(), which joins
+   * current_proposal_votes with account_vest_stats_cache and excludes
+   * voters who have set a governance proxy.
+   *
+   * LIVE-only cache: not HAF-registered (not subject to fork rollback).
+   *
+   * Powers /proposals?order-by=by_total_votes and provides voters_num for
+   * the proposal response.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.proposal_vote_stats_cache (
+    proposal_id INT    NOT NULL,
+    total_votes BIGINT NOT NULL,  -- sum of vests across direct (non-proxied) approvers
+    voters_num  INT    NOT NULL,  -- count of direct (non-proxied) approvers
+
+    CONSTRAINT pk_proposal_vote_stats_cache PRIMARY KEY (proposal_id)
   );
 
   ------------- SWITCH TO NON-FORKING FOR MASSIVE SYNC ----------------
@@ -589,17 +674,21 @@ BEGIN
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witness_votes', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witnesses', interval '30 minutes');
     PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_account_proxies', interval '30 minutes');
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposal_votes', interval '30 minutes');
+    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposals', interval '30 minutes');
 
     RETURN;
   END IF;
   IF NOT hafbe_app.isIndexesCreated() THEN
     PERFORM hafbe_app.create_hafbe_indexes();
     -- First entry into LIVE: seed all cache tables so API endpoints that
-    -- depend on them (get_witness_voters, get_account_proxies_power) return
-    -- correct data immediately instead of waiting for the first LIVE block.
-    -- During MASSIVE, process_witness_votes_cache() is never called, so the
-    -- caches are empty at this point.
+    -- depend on them (get_witness_voters, get_account_proxies_power,
+    -- /proposals?order-by=by_total_votes) return correct data immediately
+    -- instead of waiting for the first LIVE block. During MASSIVE, the
+    -- cache refresh functions are never called, so the caches are empty
+    -- at this point.
     PERFORM hafbe_app.process_witness_votes_cache();
+    PERFORM hafbe_app.process_proposal_vote_stats_cache();
   END IF;
   CALL hafbe_app.single_processing(_block_range.first_block, _logs);
   -- cache tables needs to be vacuumed, due to change from `TRUNCATE TABLE` to `DELETE FROM` in block processing
@@ -607,6 +696,7 @@ BEGIN
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_cache',        interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'proposal_vote_stats_cache',  interval '10 minutes');
 END
 $$;
 
@@ -651,7 +741,11 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
   PERFORM hafbe_app.process_witness_votes(_from, _to);
-  PERFORM hafbe_app.process_proposal_votes(_from, _to);
+  -- process_proposals is the unified row-by-row processor for ALL proposal
+  -- ops (create/update/remove/pay/vote + decline/expired cleanup). Its
+  -- internal order-of-ops design is what guarantees fresh-sync correctness;
+  -- see process_proposals.sql.
+  PERFORM hafbe_app.process_proposals(_from, _to);
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -696,8 +790,11 @@ BEGIN
   PERFORM hafbe_app.process_transaction_stats(_block, _block);
   PERFORM hafbe_app.process_witness_stats(_block, _block);
   PERFORM hafbe_app.process_witness_votes(_block, _block);
-  PERFORM hafbe_app.process_proposal_votes(_block, _block);
+  PERFORM hafbe_app.process_proposals(_block, _block);
   PERFORM hafbe_app.process_witness_votes_cache();
+  -- Must run after process_witness_votes_cache so account_vest_stats_cache
+  -- is fresh for the same block before we join against it.
+  PERFORM hafbe_app.process_proposal_vote_stats_cache();
 
   IF _logs THEN
     __end_ts := clock_timestamp();
@@ -1022,6 +1119,20 @@ BEGIN
   CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_id_source_op ON hafbe_app.proposal_votes_history USING btree (proposal_id, hafd.operation_id_to_block_num(source_op));
   -- Proposal votes: voter-filtered lookup per proposal
   CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_voter ON hafbe_app.proposal_votes_history USING btree (proposal_id, voter_id);
+  -- Current proposal votes: covers by_proposal_voter sort (proposal_id, voter_id).
+  -- The PK (voter_id, proposal_id) already covers by_voter_proposal.
+  CREATE INDEX IF NOT EXISTS current_proposal_votes_proposal_voter ON hafbe_app.current_proposal_votes USING btree (proposal_id, voter_id);
+
+  -- Proposals listing: sort by creator/start_date/end_date (PK already covers proposal_id sort)
+  CREATE INDEX IF NOT EXISTS current_proposals_creator_id   ON hafbe_app.current_proposals USING btree (creator_id, proposal_id);
+  CREATE INDEX IF NOT EXISTS current_proposals_start_date   ON hafbe_app.current_proposals USING btree (start_date, proposal_id);
+  CREATE INDEX IF NOT EXISTS current_proposals_end_date     ON hafbe_app.current_proposals USING btree (end_date, proposal_id);
+
+  -- Payment aggregation per proposal
+  CREATE INDEX IF NOT EXISTS proposal_payments_proposal_id  ON hafbe_app.proposal_payments USING btree (proposal_id);
+
+  -- Stake-weighted sort backing index for /proposals?order-by=by_total_votes
+  CREATE INDEX IF NOT EXISTS proposal_vote_stats_cache_total_votes ON hafbe_app.proposal_vote_stats_cache USING btree (total_votes DESC, proposal_id);
 
   -- Register indexes on HAF tables (deferred from install time).
   -- hived's poll_and_create_indexes() will build them concurrently in the background.
