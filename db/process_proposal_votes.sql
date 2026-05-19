@@ -1,56 +1,47 @@
 SET ROLE hafbe_owner;
 
 /*
- * process_proposal_votes: Processes update_proposal_votes operations.
+ * process_proposal_vote_stats_cache: Refresh stake-weighted proposal vote totals.
  *
- * Core operation: update_proposal_votes_operation. Each op carries a voter,
- * an `approve` flag, and a `proposal_ids` array; it applies the same action
- * to every proposal id in that array.
+ * Runs every LIVE block (NOT during MASSIVE). Mirrors process_witness_votes_cache:
+ * full DELETE + INSERT rather than incremental update. Acceptable because
+ * the number of proposals is small (low thousands over Hive's lifetime).
  *
- * Updates table:
- *   - hafbe_app.proposal_votes_history: complete (voter, proposal) change log
+ * Stake-weighting matches hived's `list_proposals(by_total_votes)`:
+ *   - sum the vesting power of each direct voter
+ *   - skip any voter who has set a governance proxy (their stake is
+ *     represented by the proxy's own vote, not added through them).
  *
- * NOTE on `proposal_ids`:
- *   `proposal_ids` is a JSON array of integers inside the op body;
- *   jsonb_array_elements_text expands it to one row per proposal id.
+ * MUST be called AFTER process_witness_votes_cache so account_vest_stats_cache
+ * is fresh for the same block.
+ *
+ * NOTE: Vote-history and current_proposal_votes maintenance lives in
+ * process_proposals (unified row-by-row processor for all proposal ops).
+ * Only the cache refresh remains in this file.
  */
-CREATE OR REPLACE FUNCTION hafbe_app.process_proposal_votes(_from INT, _to INT)
+CREATE OR REPLACE FUNCTION hafbe_app.process_proposal_vote_stats_cache()
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
 AS $$
-DECLARE
-  _op_update_proposal_votes INT := (SELECT id FROM hafd.operation_types WHERE name = 'hive::protocol::update_proposal_votes_operation');
 BEGIN
+  DELETE FROM hafbe_app.proposal_vote_stats_cache;
 
-  /*
-   * Expand each op into one row per (voter, proposal_id) and append to history.
-   *
-   * The CTE fans out `proposal_ids` via jsonb_array_elements_text and resolves
-   * the voter account name to an id. source_op lets us recover block/timestamp
-   * later via hafd.operation_id_to_block_num.
-   */
-  WITH expanded AS (
-    SELECT
-      (pid)::INT                                   AS proposal_id,
-      (SELECT av.id FROM hafbe_app.accounts_view av
-       WHERE av.name = ov.body_value ->> 'voter')  AS voter_id,
-      (ov.body_value ->> 'approve')::BOOLEAN       AS approve,
-      ov.id                                        AS source_op
-    FROM hafbe_app.operations_view ov
-    CROSS JOIN LATERAL jsonb_array_elements_text(ov.body_value -> 'proposal_ids') AS pid
-    WHERE ov.op_type_id = _op_update_proposal_votes
-      AND ov.block_num BETWEEN _from AND _to
-      AND ov.id >= hafd.operation_id(_from, 0)
-      AND ov.id < hafd.operation_id(_to + 1, 0)
+  INSERT INTO hafbe_app.proposal_vote_stats_cache (proposal_id, total_votes, voters_num)
+  SELECT
+    cpv.proposal_id,
+    COALESCE(SUM(avs.vests), 0)::BIGINT AS total_votes,
+    COUNT(*)::INT                       AS voters_num
+  FROM hafbe_app.current_proposal_votes cpv
+  LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cpv.voter_id
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM hafbe_app.current_account_proxies cap
+    WHERE cap.account_id = cpv.voter_id
   )
-  INSERT INTO hafbe_app.proposal_votes_history (proposal_id, voter_id, approve, source_op)
-  SELECT e.proposal_id, e.voter_id, e.approve, e.source_op
-  FROM expanded e
-  WHERE e.voter_id IS NOT NULL;
-
+  GROUP BY cpv.proposal_id;
 END
 $$;
 
