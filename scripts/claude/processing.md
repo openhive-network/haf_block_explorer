@@ -52,6 +52,8 @@ All processing functions are in `db/process_*.sql` files.
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
 | `process_witness_votes_cache()` | `process_witness_votes.sql` | Cache refresh (LIVE only) |
+| `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Mirrors witness row-by-row design so cascading effects within a block range resolve correctly. |
+| `process_proposal_vote_stats_cache()` | `process_proposal_votes.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
 ### Processing Order
 
@@ -61,8 +63,11 @@ Each block range calls processors in this order:
 3. `process_transaction_stats()` - Transaction aggregations
 4. `process_witness_stats()` - Witness metadata
 5. `process_witness_votes()` - Vote and proxy state
+6. `process_proposals()` - All proposal ops in one row-by-row processor: create/update/remove/pay + update_proposal_votes + decline/expired cleanup
 
-In LIVE mode, `process_witness_votes_cache()` runs after all processors.
+In LIVE mode, two cache refreshes run after the processors (in this order):
+- `process_witness_votes_cache()` - rebuilds `account_vest_stats_cache` + witness vote caches
+- `process_proposal_vote_stats_cache()` - rebuilds `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
 
 ## Submodule Processing
 
@@ -130,6 +135,10 @@ For implementation details of each processor:
 | `hafbe_app.current_witness_votes` | `process_witness_votes()` | Active votes |
 | `hafbe_app.account_proxies_history` | `process_witness_votes()` | Proxy change log |
 | `hafbe_app.current_account_proxies` | `process_witness_votes()` | Active proxies |
+| `hafbe_app.proposal_votes_history` | `process_proposals()` | Proposal vote change log (includes synthetic `approve=FALSE` rows from remove/decline cascades) |
+| `hafbe_app.current_proposal_votes` | `process_proposals()` | Currently active proposal approvals |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove) |
+| `hafbe_app.proposal_payments` | `process_proposals()` | Per-payment ledger from `proposal_pay_operation` |
 
 ### Cache Tables (LIVE only)
 | Table | Purpose |
@@ -138,6 +147,7 @@ For implementation details of each processor:
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
 | `hafbe_app.witness_votes_change_cache` | 24h vote changes |
+| `hafbe_app.proposal_vote_stats_cache` | Stake-weighted proposal totals + voters_num |
 
 ## Expansion Rules
 
