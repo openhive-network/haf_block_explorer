@@ -86,6 +86,8 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 
 | Endpoint | Function | Description |
 |----------|----------|-------------|
+| `GET /proposals` | `get_proposals` | List proposals with paid amounts and stake-weighted vote totals |
+| `GET /proposals/votes` | `get_proposal_votes` | Current active proposal approvals |
 | `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical votes cast for a proposal |
 
 ### Transaction Endpoints
@@ -132,6 +134,8 @@ endpoints/
 │   ├── get_witness_voters_num.sql
 │   └── get_witness_votes_history.sql
 ├── proposals/               # Proposal endpoint definitions
+│   ├── get_proposals.sql
+│   ├── get_proposal_votes.sql
 │   └── get_proposal_votes_history.sql
 ├── block-search/            # Block search endpoints
 │   └── get_block_by_op.sql
