@@ -146,6 +146,32 @@ declare
           "feed_updated_at"
         ]
       },
+      "hafbe_backend.order_by_proposal": {
+        "type": "string",
+        "enum": [
+          "by_creator",
+          "by_start_date",
+          "by_end_date",
+          "by_total_votes"
+        ]
+      },
+      "hafbe_backend.order_by_proposal_vote": {
+        "type": "string",
+        "enum": [
+          "by_voter_proposal",
+          "by_proposal_voter"
+        ]
+      },
+      "hafbe_backend.proposal_status": {
+        "type": "string",
+        "enum": [
+          "all",
+          "active",
+          "inactive",
+          "expired",
+          "votable"
+        ]
+      },
       "hafbe_backend.granularity": {
         "type": "string",
         "enum": [
@@ -964,6 +990,132 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
+        }
+      },
+      "hafbe_backend.proposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "proposal id assigned by hived at creation (mirrors condenser_api `id`)"
+          },
+          "proposal_id": {
+            "type": "integer",
+            "description": "proposal id assigned by hived at creation (mirrors condenser_api `proposal_id` \u2014 duplicate of `id` for client parity)"
+          },
+          "creator": {
+            "type": "string",
+            "description": "account that created the proposal"
+          },
+          "receiver": {
+            "type": "string",
+            "description": "account that receives the daily payout"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "when the proposal becomes payable"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "when the proposal stops being payable"
+          },
+          "daily_pay": {
+            "type": "string",
+            "description": "requested daily HBD payout in precision-3 units (milli-HBD)"
+          },
+          "subject": {
+            "type": "string",
+            "description": "human-readable proposal subject"
+          },
+          "permlink": {
+            "type": "string",
+            "description": "permlink pointing to the proposal discussion post"
+          },
+          "total_votes": {
+            "type": "string",
+            "description": "stake-weighted total approval in VESTS, summed across direct (non-proxied) voters"
+          },
+          "voters_num": {
+            "type": "integer",
+            "description": "number of direct (non-proxied) approving voters"
+          },
+          "paid_amount": {
+            "type": "string",
+            "description": "cumulative HBD paid to this proposal so far in precision-3 units (milli-HBD)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "expired"
+            ],
+            "description": "Current proposal status computed from start_date/end_date relative to\nthe HAFBE processed head block. Removed proposals are filtered out\nupstream by every status filter (including `all`) and never appear in\nthe response, so this enum has only the three live states.\n"
+          }
+        }
+      },
+      "hafbe_backend.proposals_return": {
+        "type": "object",
+        "properties": {
+          "total_proposals": {
+            "type": "integer",
+            "description": "Total number of proposals matching the status filter"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_backend.proposal"
+            },
+            "description": "List of proposals"
+          }
+        }
+      },
+      "hafbe_backend.proposal_vote": {
+        "type": "object",
+        "properties": {
+          "voter_name": {
+            "type": "string",
+            "description": "account name of the voter"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/hafbe_backend.proposal",
+            "description": "nested proposal object \u2014 mirrors condenser_api `ProposalVote.proposal` so the front end can display the proposal alongside the vote without a second request"
+          },
+          "voter_vests": {
+            "type": "string",
+            "description": "effective governance VESTS for this voter at last cache refresh (0 if voter currently has a proxy set)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "block timestamp at which this active vote was last (re)cast"
+          }
+        }
+      },
+      "hafbe_backend.proposal_votes_return": {
+        "type": "object",
+        "properties": {
+          "total_votes": {
+            "type": "integer",
+            "description": "Total number of active proposal votes matching the filter"
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages"
+          },
+          "votes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hafbe_backend.proposal_vote"
+            },
+            "description": "List of current active proposal votes"
+          }
         }
       },
       "hafbe_backend.proposal_votes_history_record": {
@@ -2281,6 +2433,153 @@ declare
           },
           "404": {
             "description": "No operations in database"
+          }
+        }
+      }
+    },
+    "/proposals": {
+      "get": {
+        "tags": [
+          "Proposals"
+        ],
+        "summary": "List current proposals",
+        "description": "List proposals with paid amounts and stake-weighted vote totals.\nSort by `by_total_votes` uses governance VESTS aggregated across direct\n(non-proxied) approvers, matching the hived `list_proposals` ranking.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposals();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals?status=votable&sort=by_total_votes''`\n",
+        "operationId": "hafbe_endpoints.get_proposals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` proposals per page, defaults to `100`"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.order_by_proposal",
+              "default": "by_total_votes"
+            },
+            "description": "Sort key:\n\n * `by_creator` - sort alphabetically by creator account\n\n * `by_start_date` - sort by the proposal''s start_date\n\n * `by_end_date` - sort by the proposal''s end_date\n\n * `by_total_votes` - sort by stake-weighted approval (VESTS of direct, non-proxied voters)\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort order:\n\n * `asc` - Ascending, from smallest to largest\n\n * `desc` - Descending, from largest to smallest\n"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.proposal_status",
+              "default": "all"
+            },
+            "description": "Proposal status filter (removed proposals are never returned):\n\n * `active` - currently payable (`start_date <= now <= end_date`)\n\n * `inactive` - not yet started (`now < start_date`)\n\n * `expired` - finished (`now > end_date`)\n\n * `votable` - active OR inactive (`now <= end_date`)\n\n * `all` - any non-removed status\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of proposals\n\n* Returns `hafbe_backend.proposals_return`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.proposals_return"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposals/votes": {
+      "get": {
+        "tags": [
+          "Proposals"
+        ],
+        "summary": "List current active proposal votes",
+        "description": "List currently active approvals across all proposals. The status filter\napplies to the joined proposal, not the vote. `voter_vests` is reported\nas 0 for voters who currently have a governance proxy set (their stake\ncounts through the proxy, not through their direct vote).\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/votes?sort=by_proposal_voter&status=votable''`\n",
+        "operationId": "hafbe_endpoints.get_proposal_votes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Return page on `page` number, defaults to `1`\n"
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Return max `page-size` votes per page, defaults to `100`"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.order_by_proposal_vote",
+              "default": "by_proposal_voter"
+            },
+            "description": "Sort key:\n\n * `by_voter_proposal` - sort by (voter, then proposal_id)\n\n * `by_proposal_voter` - sort by (proposal_id, then voter)\n"
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "asc"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.proposal_status",
+              "default": "all"
+            },
+            "description": "Filter votes by the joined proposal''s status (removed proposals are never returned)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of active proposal votes\n\n* Returns `hafbe_backend.proposal_votes_return`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.proposal_votes_return"
+                }
+              }
+            }
           }
         }
       }
