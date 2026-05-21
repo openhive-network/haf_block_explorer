@@ -6,6 +6,9 @@ set -euo pipefail
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 HAFBE_DIR="$SCRIPT_DIR/.."
 
+# Capture original args for the install-lock re-exec below.
+ORIGINAL_ARGS=("$@")
+
 POSTGRES_HOST=${POSTGRES_HOST:-"localhost"}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_USER=${POSTGRES_USER:-"haf_admin"}
@@ -97,6 +100,17 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_install"
+
+# Re-exec under the install-lock wrapper if not already running under it.
+# Holds an exclusive advisory lock on 'haf_block_explorer' for the lifetime of
+# this script. The btracker (--schema=hafbe_bal) and reptracker sub-installers
+# invoked from setup_apps() inherit HAF_INSTALL_LOCK_HELD=1 and skip their own
+# re-exec, so they all run under this single lock. If a block-processor is
+# holding the shared lock the wrapper logs the holder and exits 0.
+if [[ -z "${HAF_INSTALL_LOCK_HELD:-}" ]]; then
+  export HAF_INSTALL_LOCK_HELD=1
+  exec python3 /usr/local/bin/install_with_app_lock.py haf_block_explorer "$POSTGRES_ACCESS" "$0" "${ORIGINAL_ARGS[@]}"
+fi
 
 # Get git directory for a submodule - handles both:
 # 1. git submodule update --init: .git/modules/submodules/<name>
