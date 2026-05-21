@@ -181,10 +181,9 @@ END $$;
  *   - by_end_date   -> current_proposals.end_date
  *   - by_total_votes-> proposal_vote_stats_cache.total_votes (NULL=0 via LEFT JOIN)
  *
- * paid_amount comes from hafbe_backend.proposal_paid_amounts. For Hive's
- * proposal cardinality (low thousands) that aggregate view is cheap; if it
- * becomes hot, fold paid_amount into current_proposals and update it during
- * proposal_pay handling.
+ * paid_amount is a running total column on current_proposals, incremented by
+ * process_proposal_pay_op on each DHF payment. proposal_payments stays as an
+ * audit ledger but is no longer aggregated per request.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals(
     _status     hafbe_backend.proposal_status,
@@ -251,7 +250,7 @@ BEGIN
       cp.permlink,
       COALESCE(vsc.total_votes, 0)::TEXT                                               AS total_votes,
       COALESCE(vsc.voters_num, 0)                                                      AS voters_num,
-      COALESCE(p.paid_amount, 0)::TEXT                                                 AS paid_amount,
+      cp.paid_amount::TEXT                                                             AS paid_amount,
       (CASE
         WHEN _now > cp.end_date   THEN 'expired'
         WHEN _now < cp.start_date THEN 'inactive'
@@ -262,7 +261,6 @@ BEGIN
     JOIN hafbe_app.accounts_view          cav ON cav.id           = cp.creator_id
     JOIN hafbe_app.accounts_view          rav ON rav.id           = cp.receiver_id
     LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = cp.proposal_id
-    LEFT JOIN hafbe_backend.proposal_paid_amounts p ON p.proposal_id = cp.proposal_id
     ORDER BY
       (CASE WHEN _sort = 'by_creator'     AND _direction = 'asc'  THEN cav.name                    END) ASC,
       (CASE WHEN _sort = 'by_creator'     AND _direction = 'desc' THEN cav.name                    END) DESC,
@@ -365,7 +363,7 @@ BEGIN
         cp.permlink,
         COALESCE(vsc.total_votes, 0)::TEXT,
         COALESCE(vsc.voters_num, 0),
-        COALESCE(payments.paid_amount, 0)::TEXT,
+        cp.paid_amount::TEXT,
         (CASE
           WHEN _now > cp.end_date   THEN 'expired'
           WHEN _now < cp.start_date THEN 'inactive'
@@ -383,7 +381,6 @@ BEGIN
     JOIN hafbe_app.accounts_view              cav ON cav.id          = cp.creator_id
     JOIN hafbe_app.accounts_view              rav ON rav.id          = cp.receiver_id
     LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = cp.proposal_id
-    LEFT JOIN hafbe_backend.proposal_paid_amounts payments ON payments.proposal_id = cp.proposal_id
     LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = ls.voter_id
     LEFT JOIN hafbe_app.current_account_proxies  cap ON cap.account_id = ls.voter_id
     JOIN hive.blocks_view                     bv  ON bv.num          = hafd.operation_id_to_block_num(ls.source_op)

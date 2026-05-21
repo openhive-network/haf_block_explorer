@@ -69,8 +69,6 @@
 
 SET ROLE hafbe_owner;
 
-CREATE SCHEMA IF NOT EXISTS hafbe_app AUTHORIZATION hafbe_owner;
-
 -- ============================================================================
 -- SCHEMA AND TABLE CREATION
 -- ============================================================================
@@ -264,23 +262,6 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'proposal_votes_history', 'hafbe_app' );
 
   /*
-   * current_proposal_votes: active proposal approvals
-   * -------------------------------------------------
-   * Currently-active approve rows. UPSERTed by update_proposal_votes_operation
-   * handling in process_proposals; cascade-deleted when a proposal is removed
-   * or when a voter loses voting rights / has their account expired.
-   * Backs /proposals/votes and proposal_vote_stats_cache refresh.
-   */
-  CREATE TABLE IF NOT EXISTS hafbe_app.current_proposal_votes (
-    voter_id    INT    NOT NULL,
-    proposal_id INT    NOT NULL,
-    source_op   BIGINT NOT NULL,
-
-    CONSTRAINT pk_current_proposal_votes PRIMARY KEY (voter_id, proposal_id)
-  );
-  PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
-
-  /*
    * current_proposals: proposal metadata mirror
    * -------------------------------------------
    * One row per proposal, INSERTed at create_proposal+proposal_fee pairing.
@@ -298,6 +279,7 @@ BEGIN
     subject     TEXT      NOT NULL,
     permlink    TEXT      NOT NULL,
     removed     BOOLEAN   NOT NULL DEFAULT FALSE,
+    paid_amount BIGINT    NOT NULL DEFAULT 0,  -- running total of DHF payments (milli-HBD)
     source_op   BIGINT    NOT NULL,  -- op id of the latest create/update affecting this row
 
     CONSTRAINT pk_current_proposals PRIMARY KEY (proposal_id)
@@ -305,10 +287,34 @@ BEGIN
   PERFORM hive.app_register_table( 'hafbe_app', 'current_proposals', 'hafbe_app' );
 
   /*
+   * current_proposal_votes: active proposal approvals
+   * -------------------------------------------------
+   * Currently-active approve rows. UPSERTed by update_proposal_votes_operation
+   * handling in process_proposals; explicitly deleted when a proposal is
+   * removed or when a voter loses voting rights / has their account expired.
+   * Backs /proposals/votes and proposal_vote_stats_cache refresh.
+   * FK to current_proposals ensures votes for phantom proposals are rejected;
+   * ON DELETE CASCADE is a defensive guard if a proposal row is ever deleted.
+   */
+  CREATE TABLE IF NOT EXISTS hafbe_app.current_proposal_votes (
+    voter_id    INT    NOT NULL,
+    proposal_id INT    NOT NULL,
+    source_op   BIGINT NOT NULL,
+
+    CONSTRAINT pk_current_proposal_votes PRIMARY KEY (voter_id, proposal_id),
+    CONSTRAINT fk_current_proposal_votes_proposal
+      FOREIGN KEY (proposal_id) REFERENCES hafbe_app.current_proposals (proposal_id)
+      ON DELETE CASCADE
+      DEFERRABLE
+  );
+  PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
+
+  /*
    * proposal_payments: append-only DHF payment ledger
    * -------------------------------------------------
-   * One row per proposal_pay_operation. Aggregated by hafbe_backend.proposal_paid_amounts
-   * view at read time. amount is raw precision-3 HBD (milli-HBD).
+   * One row per proposal_pay_operation. Also accumulated into
+   * current_proposals.paid_amount during processing. amount is raw precision-3
+   * HBD (milli-HBD).
    */
   CREATE TABLE IF NOT EXISTS hafbe_app.proposal_payments (
     proposal_id INT    NOT NULL,
@@ -1123,16 +1129,16 @@ BEGIN
   -- The PK (voter_id, proposal_id) already covers by_voter_proposal.
   CREATE INDEX IF NOT EXISTS current_proposal_votes_proposal_voter ON hafbe_app.current_proposal_votes USING btree (proposal_id, voter_id);
 
-  -- Proposals listing: sort by creator/start_date/end_date (PK already covers proposal_id sort)
-  CREATE INDEX IF NOT EXISTS current_proposals_creator_id   ON hafbe_app.current_proposals USING btree (creator_id, proposal_id);
+  -- Proposals listing: sort by start_date/end_date (PK already covers proposal_id sort).
+  -- creator_id index is omitted: the endpoint sorts by account name (string),
+  -- not by creator_id, so a btree on creator_id cannot back that ORDER BY.
   CREATE INDEX IF NOT EXISTS current_proposals_start_date   ON hafbe_app.current_proposals USING btree (start_date, proposal_id);
   CREATE INDEX IF NOT EXISTS current_proposals_end_date     ON hafbe_app.current_proposals USING btree (end_date, proposal_id);
 
-  -- Payment aggregation per proposal
-  CREATE INDEX IF NOT EXISTS proposal_payments_proposal_id  ON hafbe_app.proposal_payments USING btree (proposal_id);
-
-  -- Stake-weighted sort backing index for /proposals?order-by=by_total_votes
-  CREATE INDEX IF NOT EXISTS proposal_vote_stats_cache_total_votes ON hafbe_app.proposal_vote_stats_cache USING btree (total_votes DESC, proposal_id);
+  -- total_votes index omitted: proposal_vote_stats_cache is sparse (proposals
+  -- with zero votes have no row) so COALESCE(vsc.total_votes, 0) in ORDER BY
+  -- prevents the planner from using a btree index. Revisit if the cache is
+  -- made dense.
 
   -- Register indexes on HAF tables (deferred from install time).
   -- hived's poll_and_create_indexes() will build them concurrently in the background.
