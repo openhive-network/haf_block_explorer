@@ -69,6 +69,22 @@ In LIVE mode, two cache refreshes run after the processors (in this order):
 - `process_witness_votes_cache()` - rebuilds `account_vest_stats_cache` + witness vote caches
 - `process_proposal_vote_stats_cache()` - rebuilds `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
 
+### Why process_proposals uses a FOR LOOP instead of CTE+CASE
+
+Most processors (e.g. `process_witness_votes`) dispatch per-op handlers via a
+`WITH ... SELECT CASE` pattern where the planner evaluates the CASE expressions
+in ORDER BY id sequence. PostgreSQL does not formally guarantee that
+side-effecting functions in a SELECT list fire in ORDER BY order — it works in
+practice but is a planner assumption, not a spec guarantee.
+
+For proposal processing the ordering invariant is safety-critical: a
+remove-then-vote sequence arriving in the same MASSIVE batch must not insert a
+vote row after the remove cascade has already deleted the proposal's votes.
+An explicit PL/pgSQL `FOR` loop iterates in the cursor's `ORDER BY id` sequence
+by definition, so the guarantee is structural rather than planner-dependent.
+`process_witness_votes` keeps the CTE+CASE pattern (accepted assumption already
+in production); `process_proposals` uses the loop where the stakes are higher.
+
 ## Submodule Processing
 
 HAFBE delegates some processing to integrated submodules:
