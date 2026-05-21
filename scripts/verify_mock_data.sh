@@ -68,6 +68,22 @@ echo "=============================================="
 
 echo "Step 1: Refreshing vote caches (witness first, then proposal)..."
 run_psql -c "SELECT hafbe_app.process_witness_votes_cache()"
+
+# Seed a deterministic vest amount for initminer so the total_votes assertion
+# in verify.sql is independent of mainnet btracker data. Runs AFTER
+# process_witness_votes_cache() (which rebuilds account_vest_stats_cache from
+# btracker) so this value survives into process_proposal_vote_stats_cache().
+run_psql -c "
+  INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
+  SELECT av.id, 5000000, 5000000, 0
+  FROM hive.accounts_view av
+  WHERE av.name = 'initminer'
+  ON CONFLICT (account_id) DO UPDATE
+    SET vests         = 5000000,
+        account_vests = 5000000,
+        proxied_vests = 0;
+"
+
 run_psql -c "SELECT hafbe_app.process_proposal_vote_stats_cache()"
 
 echo "Step 2: Running verify.sql..."

@@ -40,6 +40,16 @@ SET ROLE hafbe_owner;
  *   pulled by process_witness_votes for witness-state cleanup. Each
  *   processor maintains its own state; both pulls are independent and
  *   leave the other's state untouched.
+ *
+ * WHY FOR LOOP rather than the CTE+CASE+ORDER BY pattern in process_witness_votes:
+ *   The CTE+CASE pattern (see db/process_witness_votes.sql:74-126) relies on
+ *   the planner executing the CASE expressions in ORDER BY id sequence. PostgreSQL
+ *   does not formally guarantee that side-effecting functions in a SELECT list
+ *   fire in ORDER BY order — it works in practice today but is a planner
+ *   assumption, not a spec guarantee. For proposal processing the ordering
+ *   invariant is safety-critical (a remove-then-vote sequence in the same
+ *   batch must not insert a vote after the cascade), so we use an explicit
+ *   FOR loop whose iteration order is guaranteed by SQL semantics.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_proposals(_from INT, _to INT)
 RETURNS VOID
@@ -131,7 +141,6 @@ BEGIN
   SELECT p.proposal_id, p.creator_id, p.receiver_id, p.start_date, p.end_date,
          p.daily_pay, p.subject, p.permlink, FALSE, p.source_op
   FROM paired p
-  WHERE p.creator_id IS NOT NULL AND p.receiver_id IS NOT NULL
   ON CONFLICT ON CONSTRAINT pk_current_proposals DO NOTHING;
 
   -- ============================================================================

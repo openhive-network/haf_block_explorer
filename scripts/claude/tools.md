@@ -92,7 +92,7 @@ These scripts help with common development and debugging tasks. **Use them autom
 **Usage** (three steps, after a fresh `install_app.sh`):
 ```bash
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
-./scripts/process_blocks.sh        --host=localhost --stop-at-block=91000004
+./scripts/process_blocks.sh        --host=localhost --stop-at-block=91000006
 ./scripts/verify_mock_data.sh      --host=localhost --user=haf_admin
 ```
 
@@ -101,7 +101,7 @@ These scripts help with common development and debugging tasks. **Use them autom
   `hafbe_app` and `hafbe_bal` contexts so the mock range becomes the next
   processable batch. Does NOT process the blocks.
 - `process_blocks.sh`: drives the mock range through the canonical pipeline.
-- `verify_mock_data.sh`: refreshes LIVE caches and runs the 22-check
+- `verify_mock_data.sh`: refreshes LIVE caches and runs the 36-check
   `verify.sql` PASS/FAIL table; exits non-zero on any failure.
 
 **Requirements**: Fresh HAFBE+btracker install. Mirrors
@@ -118,7 +118,7 @@ These scripts help with common development and debugging tasks. **Use them autom
 | "What's wrong with pipeline 12345?" | `check-hafbe-pipeline.sh 12345` |
 | "Check the develop pipeline" | `check-hafbe-pipeline.sh develop` |
 | "Run sync to 1M blocks" | `run_sync_test.sh 1000000` |
-| "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000004` → `verify_mock_data.sh` |
+| "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000006` → `verify_mock_data.sh` |
 | "Verify mock state" | `verify_mock_data.sh` |
 | "Test sync performance" | `run_sync_test.sh` |
 | "Benchmark block processing" | `run_sync_test.sh` |

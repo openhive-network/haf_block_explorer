@@ -75,6 +75,44 @@
       "current_hbd_supply": "0",
       "dhf_interval_ledger": 0,
       "created_at": "2025-06-01T00:00:09"
+    },
+    {
+      "block_num": 91000005,
+      "hash": "056ca245000000000000000000000000000000a5",
+      "prev": "056ca244000000000000000000000000000000a4",
+      "producer_account": "blocktrades",
+      "transaction_merkle_root": "0000000000000000000000000000000000000000",
+      "extensions": [],
+      "witness_signature": "1f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "signing_key": "STM5fjn9kMKzwzDwEmmPUwB4WSXibQYKnWWqBjzscrXuGhk88m7fk",
+      "hbd_interest_rate": 1000,
+      "total_vesting_fund_hive": "1000000000000",
+      "total_vesting_shares": "2000000000000000000",
+      "total_reward_fund_hive": "0",
+      "virtual_supply": "0",
+      "current_supply": "0",
+      "current_hbd_supply": "0",
+      "dhf_interval_ledger": 0,
+      "created_at": "2025-06-01T00:00:12"
+    },
+    {
+      "block_num": 91000006,
+      "hash": "056ca246000000000000000000000000000000a6",
+      "prev": "056ca245000000000000000000000000000000a5",
+      "producer_account": "blocktrades",
+      "transaction_merkle_root": "0000000000000000000000000000000000000000",
+      "extensions": [],
+      "witness_signature": "1f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "signing_key": "STM5fjn9kMKzwzDwEmmPUwB4WSXibQYKnWWqBjzscrXuGhk88m7fk",
+      "hbd_interest_rate": 1000,
+      "total_vesting_fund_hive": "1000000000000",
+      "total_vesting_shares": "2000000000000000000",
+      "total_reward_fund_hive": "0",
+      "virtual_supply": "0",
+      "current_supply": "0",
+      "current_hbd_supply": "0",
+      "dhf_interval_ledger": 0,
+      "created_at": "2025-06-01T00:00:15"
     }
   ]
 }

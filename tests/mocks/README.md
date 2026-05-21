@@ -24,7 +24,7 @@ tests/mocks/
 │   ├── update_haf_state.sql      # hafbe_backend.update_irreversible_block()
 │   └── verify.sql                # PASS/FAIL assertion table
 └── fixtures/
-    ├── blocks/data.json          # 4 mock block headers (91000001..91000004)
+    ├── blocks/data.json          # 6 mock block headers (91000001..91000006)
     └── proposals/data.json       # proposal lifecycle ops covering both cascade scenarios
 ```
 
@@ -48,17 +48,24 @@ that motivated the unified row-by-row processor design:
 | `91000004`  | `update_proposal_votes`            | **initminer** approves [9001, 9002] |
 | `91000004`  | `remove_proposal`                  | removes [9001] → cascade-deletes dan→9001 AND initminer→9001 |
 | `91000004`  | `proposal_pay_operation`           | proposal 9002 receives 50000 |
+| `91000005`  | `create_proposal` + `proposal_fee` | proposal **9003** (gtg→blocktrades, 80k, active at block time) |
+| `91000006`  | `create_proposal` + `proposal_fee` | proposal **9004** (blocktrades→gtg, 30k, expired at block time) |
+
+Status at block time 2025-06-01T00:00:15 (block 91000006):
+- 9002: start=2025-07-01 > now → **inactive**
+- 9003: start=2025-01-01 ≤ now ≤ end=2099-06-30 → **active**
+- 9004: end=2020-06-01 < now → **expired**
 
 ## Expected final state
 
 After the mock range has been driven through `process_blocks.sh` and the
 two cache refreshes:
 
-- `current_proposals`: 2 rows; **9001 removed=TRUE**, **9002 removed=FALSE, daily_pay=50000**
+- `current_proposals`: 4 rows; **9001 removed=TRUE**, 9002/9003/9004 removed=FALSE
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
 - `proposal_payments`: 1 row — `(9002, 50000)`
 - `proposal_votes_history`: **9 rows** — 5 TRUE inserts + 4 FALSE rows from cascades
-- `proposal_vote_stats_cache`: 1 row for 9002, `voters_num = 1`
+- `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by verify_mock_data.sh)
 
 Two cascade-correctness invariants are checked explicitly by `verify.sql`:
 
@@ -75,9 +82,11 @@ Three steps, mirroring btracker's mock workflow:
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
 
 # 2. Run the regular block processor against the mock range.
-#    stop-at-block matches the highest mock block (91000004).
+#    --stop-at-block is REQUIRED: without it, process_blocks runs
+#    indefinitely and verify may run before block 91000006 is processed,
+#    causing false failures (9004 missing, status=expired = 0, etc.).
 ./scripts/process_blocks.sh --host=localhost --user=hafbe_owner \
-                            --stop-at-block=91000004
+                            --stop-at-block=91000006
 
 # 3. Refresh caches and assert the expected post-processing state.
 ./scripts/verify_mock_data.sh --host=localhost --user=haf_admin
@@ -127,7 +136,7 @@ the treasury for that reason.
 
 ### Resuming real sync after a mock run
 
-After a mock run the contexts sit at the mock end (`91000004`). To go
+After a mock run the contexts sit at the mock end (`91000006`). To go
 back to syncing real blocks, restore the real-data positions:
 
 ```sql

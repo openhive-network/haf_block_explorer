@@ -83,7 +83,7 @@ Verifies install/uninstall scripts work correctly.
 [Detailed documentation](tests/functional.md)
 
 ### Mock Tests
-Drives a synthetic block range (currently 91000001..91000004) through the
+Drives a synthetic block range (currently 91000001..91000006) through the
 real `hafbe_app.main` pipeline + endpoints, then asserts a fixed expected
 state. Used for features whose ops only appear on mainnet past a launch
 block that a partial-sync HAF has not yet processed (e.g. DHF / proposals
@@ -96,7 +96,7 @@ Three-step workflow (mirrors `submodules/btracker/tests/mocks`):
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
 
 # 2. Run the regular block processor against the mock range
-./scripts/process_blocks.sh --host=localhost --stop-at-block=91000004
+./scripts/process_blocks.sh --host=localhost --stop-at-block=91000006
 
 # 3. Refresh caches and run the PASS/FAIL assertion table
 ./scripts/verify_mock_data.sh --host=localhost --user=haf_admin
@@ -108,7 +108,7 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 **Key files:**
 - `tests/mocks/install_mock_data.sh` - Loads fixtures, rewinds contexts
 - `scripts/verify_mock_data.sh` - Refreshes caches, runs verify.sql
-- `tests/mocks/sql/verify.sql` - 22 assertions (13 on processor state, 9 on endpoint composition)
+- `tests/mocks/sql/verify.sql` - 36 assertions covering processor state, endpoint composition, status filters, sorting, and pagination
 - `tests/mocks/fixtures/` - Mock block headers + operation bodies
 - `tests/mocks/README.md` - Full documentation
 

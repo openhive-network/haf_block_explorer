@@ -11,7 +11,7 @@
 #
 # Workflow:
 #   1. ./tests/mocks/install_mock_data.sh           # load fixtures
-#   2. ./scripts/process_blocks.sh --stop-at-block=91000004
+#   2. ./scripts/process_blocks.sh --stop-at-block=91000006
 #                                                   # process mock range
 #   3. ./scripts/verify_mock_data.sh                # assert final state
 #

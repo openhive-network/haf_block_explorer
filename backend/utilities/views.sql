@@ -230,19 +230,9 @@ LEFT JOIN current_account_balances cab
 LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
 LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
 
-/*
- * proposal_paid_amounts: Aggregated DHF payments per proposal.
- *
- * Shared by proposal listing endpoints so paid_amount has one query shape.
- * The proposal_payments(proposal_id) index backs selective joins from
- * paginated endpoint result sets.
- */
-CREATE OR REPLACE VIEW hafbe_backend.proposal_paid_amounts AS
-SELECT
-  pp.proposal_id,
-  COALESCE(SUM(pp.amount), 0)::BIGINT AS paid_amount
-FROM hafbe_app.proposal_payments pp
-GROUP BY pp.proposal_id;
+-- proposal_paid_amounts view removed: paid_amount is now a running total column
+-- on hafbe_app.current_proposals, updated by process_proposal_pay_op. Endpoints
+-- read cp.paid_amount directly; proposal_payments stays as an audit ledger.
 
 /*
  * expired_voter_stats_view: Vest stats for voters not in current voter list.

@@ -9,13 +9,23 @@
 --   - proposal 9002 created, voted by steem (later cleared by decline) and initminer (survives)
 --   - proposal 9002 daily_pay updated 100000 -> 50000
 --   - proposal 9002 received one payment of 50000
+--   - proposal 9003 created by gtg (active at block time 2025-06-01, no votes)
+--   - proposal 9004 created by blocktrades (expired at block time 2025-06-01)
+--
+-- Status at block time 2025-06-01T00:00:15 (block 91000006):
+--   9002: start=2025-07-01 > now  -> inactive
+--   9003: start=2025-01-01 <= now -> active
+--   9004: end=2020-06-01 < now    -> expired
 --
 -- Expected final state:
---   current_proposals:           9001 removed=TRUE / 9002 removed=FALSE daily=50000
+--   current_proposals:           9001 removed=TRUE / 9002,9003,9004 removed=FALSE
 --   current_proposal_votes:      ONE row: (initminer, 9002)
 --   proposal_payments:           ONE row: (9002, 50000)
---   proposal_votes_history:      9 rows total (5 TRUE inserts + 4 FALSE cascades)
---   proposal_vote_stats_cache:   ONE row for 9002, voters_num=1
+--   proposal_votes_history:      9 rows total:
+--                                  5 TRUE inserts
+--                                  2 FALSE from steem declined voting rights (9001, 9002)
+--                                  2 FALSE from remove_proposal 9001 (dan, initminer)
+--   proposal_vote_stats_cache:   ONE row for 9002, voters_num=1, total_votes=5000000
 --
 -- EXIT BEHAVIOR
 --   Prints a PASS/FAIL table for visibility, then RAISES EXCEPTION if any
@@ -31,9 +41,9 @@ CREATE TEMP VIEW _hafbe_mock_checks AS
 WITH checks(name, expected, actual) AS (
   VALUES
     ('current_proposals row count',
-       '2',
+       '4',
        (SELECT COUNT(*)::TEXT FROM hafbe_app.current_proposals
-        WHERE proposal_id IN (9001, 9002))),
+        WHERE proposal_id IN (9001, 9002, 9003, 9004))),
 
     ('proposal 9001 marked removed',
        'true',
@@ -73,7 +83,7 @@ WITH checks(name, expected, actual) AS (
         JOIN hafbe_app.accounts_view av ON av.id = cpv.voter_id
         WHERE av.name = 'steem' AND cpv.proposal_id IN (9001, 9002))),
 
-    ('proposal_votes_history count = 9 (5 TRUE inserts + 4 FALSE cascades)',
+    ('proposal_votes_history count = 9 (5 TRUE + 2 decline FALSE + 2 remove FALSE)',
        '9',
        (SELECT COUNT(*)::TEXT FROM hafbe_app.proposal_votes_history
         WHERE proposal_id IN (9001, 9002))),
@@ -93,13 +103,20 @@ WITH checks(name, expected, actual) AS (
        (SELECT voters_num::TEXT FROM hafbe_app.proposal_vote_stats_cache
         WHERE proposal_id = 9002)),
 
+    -- Stake math: verify_mock_data.sh seeds initminer with 5000000 vests so this
+    -- catches proxy-exclusion bugs or a broken SUM that silently yields 0.
+    ('proposal_vote_stats_cache 9002 total_votes = 5000000 (seeded initminer vests)',
+       '5000000',
+       (SELECT total_votes::TEXT FROM hafbe_app.proposal_vote_stats_cache
+        WHERE proposal_id = 9002)),
+
     -- ----- Endpoint-level assertions -----
     -- Catch composition bugs that table-level checks above cannot: removed
     -- filter, paid_amount join, voters_num/total_votes wiring, nested
     -- proposal composite in /proposals/votes.
 
-    ('get_proposals.total_proposals excludes removed (= 1, not 2)',
-       '1',
+    ('get_proposals.total_proposals excludes removed (= 3, not 4)',
+       '3',
        (SELECT (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'all')).total_proposals::TEXT)),
 
     ('get_proposals.proposals contains 9002 (not removed)',
@@ -146,7 +163,88 @@ WITH checks(name, expected, actual) AS (
        '50000',
        (SELECT (v.proposal).paid_amount FROM unnest(
           (hafbe_endpoints.get_proposal_votes(1, 100, 'by_proposal_voter', 'asc', 'all')).votes
-        ) v))
+        ) v)),
+
+    -- ----- Status filter assertions -----
+
+    ('get_proposals status=active returns 1 (only 9003)',
+       '1',
+       (SELECT (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'active')).total_proposals::TEXT)),
+
+    ('get_proposals status=active proposal_id = 9003',
+       '9003',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'active')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals status=inactive returns 1 (only 9002)',
+       '1',
+       (SELECT (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'inactive')).total_proposals::TEXT)),
+
+    ('get_proposals status=expired returns 1 (only 9004)',
+       '1',
+       (SELECT (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'expired')).total_proposals::TEXT)),
+
+    ('get_proposals status=expired proposal_id = 9004',
+       '9004',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'expired')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals status=votable returns 2 (active 9003 + inactive 9002)',
+       '2',
+       (SELECT (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'votable')).total_proposals::TEXT)),
+
+    -- ----- Sort order assertions -----
+    -- by_total_votes: 9002 has 5000000 (seeded), 9003+9004 have 0.
+    -- Tie-break for direction=desc is proposal_id DESC: 9004 > 9003.
+
+    ('get_proposals by_total_votes desc: first = 9002 (highest votes)',
+       '9002',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'desc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals by_total_votes desc pagination: page 2 size 1 = 9004',
+       '9004',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(2, 1, 'by_total_votes', 'desc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals by_total_votes asc: first = 9003 (0 votes, lowest proposal_id tie-break)',
+       '9003',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_total_votes', 'asc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    -- by_creator: 9002+9004 creator=blocktrades < 9003 creator=gtg.
+    -- Tie between 9002 and 9004 (same creator): broken by proposal_id ASC (direction=asc).
+
+    ('get_proposals by_creator asc: first = 9002 (blocktrades, smallest id)',
+       '9002',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_creator', 'asc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals by_creator desc: first = 9003 (gtg > blocktrades)',
+       '9003',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_creator', 'desc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    -- by_end_date asc: 9004 (2020-06-01) < 9003 (2099-06-30) < 9002 (2099-12-31)
+
+    ('get_proposals by_end_date asc: first = 9004 (earliest end)',
+       '9004',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_end_date', 'asc', 'all')).proposals
+        ) p LIMIT 1)),
+
+    ('get_proposals by_end_date desc: first = 9002 (latest end)',
+       '9002',
+       (SELECT p.proposal_id::TEXT FROM unnest(
+          (hafbe_endpoints.get_proposals(1, 100, 'by_end_date', 'desc', 'all')).proposals
+        ) p LIMIT 1))
 )
 SELECT
   name,

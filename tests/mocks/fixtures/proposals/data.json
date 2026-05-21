@@ -86,6 +86,42 @@
         "proposal_id": 9002, "receiver": "gtg", "payer": "steem",
         "payment": {"nai": "@@000000013", "amount": "50000", "precision": 3}
       }}
+    },
+
+    {
+      "block_num": 91000005, "op_name": "hive::protocol::create_proposal_operation", "op_pos": 0, "trx_in_block": 0,
+      "body": {"type": "create_proposal_operation", "value": {
+        "creator": "gtg", "receiver": "blocktrades",
+        "start_date": "2025-01-01T00:00:00", "end_date": "2099-06-30T00:00:00",
+        "daily_pay": {"nai": "@@000000013", "amount": "80000", "precision": 3},
+        "subject": "Mock proposal C (active, no votes)", "permlink": "mock-c",
+        "extensions": []
+      }}
+    },
+    {
+      "block_num": 91000005, "op_name": "hive::protocol::proposal_fee_operation", "op_pos": 1, "trx_in_block": -1,
+      "body": {"type": "proposal_fee_operation", "value": {
+        "creator": "gtg", "treasury": "steem", "proposal_id": 9003,
+        "fee": {"nai": "@@000000013", "amount": "10000", "precision": 3}
+      }}
+    },
+
+    {
+      "block_num": 91000006, "op_name": "hive::protocol::create_proposal_operation", "op_pos": 0, "trx_in_block": 0,
+      "body": {"type": "create_proposal_operation", "value": {
+        "creator": "blocktrades", "receiver": "gtg",
+        "start_date": "2020-01-01T00:00:00", "end_date": "2020-06-01T00:00:00",
+        "daily_pay": {"nai": "@@000000013", "amount": "30000", "precision": 3},
+        "subject": "Mock proposal D (expired)", "permlink": "mock-d",
+        "extensions": []
+      }}
+    },
+    {
+      "block_num": 91000006, "op_name": "hive::protocol::proposal_fee_operation", "op_pos": 1, "trx_in_block": -1,
+      "body": {"type": "proposal_fee_operation", "value": {
+        "creator": "blocktrades", "treasury": "steem", "proposal_id": 9004,
+        "fee": {"nai": "@@000000013", "amount": "10000", "precision": 3}
+      }}
     }
   ]
 }

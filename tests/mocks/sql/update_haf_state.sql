@@ -18,7 +18,7 @@ BEGIN
   -- Use a TIGHT window (not just `>= 91000000`) because real Hive has
   -- already passed 91M; a fully-synced DB would otherwise return real
   -- block numbers here and pollute the mock setup. The current fixture
-  -- inserts blocks 91000001..91000004; the upper bound leaves headroom
+  -- inserts blocks 91000001..91000006; the upper bound leaves headroom
   -- for adding more mock blocks without re-tuning this function.
   RETURN QUERY
   SELECT MIN(b.num)::INT, MAX(b.num)::INT
