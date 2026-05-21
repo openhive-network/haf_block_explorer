@@ -87,27 +87,27 @@ RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS $$
 BEGIN
-  WITH ids AS (
-    SELECT (pid)::INT AS proposal_id
-    FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
-  ),
-  mark_removed AS (
-    UPDATE hafbe_app.current_proposals cp
-    SET removed   = TRUE,
-        source_op = _id
-    FROM ids
-    WHERE cp.proposal_id = ids.proposal_id
-    RETURNING cp.proposal_id
-  ),
-  drop_active_votes AS (
-    DELETE FROM hafbe_app.current_proposal_votes cpv
-    USING ids
-    WHERE cpv.proposal_id = ids.proposal_id
-    RETURNING cpv.voter_id, cpv.proposal_id
-  )
+  -- Write FALSE history rows while votes still exist, before deleting them.
   INSERT INTO hafbe_app.proposal_votes_history (proposal_id, voter_id, approve, source_op)
-  SELECT dav.proposal_id, dav.voter_id, FALSE, _id
-  FROM drop_active_votes dav;
+  SELECT cpv.proposal_id, cpv.voter_id, FALSE, _id
+  FROM hafbe_app.current_proposal_votes cpv
+  WHERE cpv.proposal_id = ANY(
+    SELECT (pid)::INT FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
+  );
+
+  DELETE FROM hafbe_app.current_proposal_votes cpv
+  WHERE cpv.proposal_id = ANY(
+    SELECT (pid)::INT FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
+  );
+
+  -- Mark removed after vote cleanup. The proposal row stays for historical
+  -- visibility, so ON DELETE CASCADE is only a defensive parent-delete guard.
+  UPDATE hafbe_app.current_proposals cp
+  SET removed   = TRUE,
+      source_op = _id
+  WHERE cp.proposal_id = ANY(
+    SELECT (pid)::INT FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
+  );
 END
 $$;
 
@@ -128,14 +128,21 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_pay_op(
 RETURNS VOID
 LANGUAGE 'plpgsql' VOLATILE
 AS $$
+DECLARE
+  __proposal_id INT    := (_body ->> 'proposal_id')::INT;
+  __amount      BIGINT := (_body -> 'payment' ->> 'amount')::BIGINT;
 BEGIN
-  INSERT INTO hafbe_app.proposal_payments (proposal_id, amount, source_op)
-  VALUES (
-    (_body ->> 'proposal_id')::INT,
-    (_body -> 'payment' ->> 'amount')::BIGINT,
-    _id
+  -- Append-only ledger row (for auditing / historical queries).
+  WITH inserted_payment AS (
+    INSERT INTO hafbe_app.proposal_payments (proposal_id, amount, source_op)
+    VALUES (__proposal_id, __amount, _id)
+    ON CONFLICT ON CONSTRAINT pk_proposal_payments DO NOTHING
+    RETURNING proposal_id, amount
   )
-  ON CONFLICT ON CONSTRAINT pk_proposal_payments DO NOTHING;
+  UPDATE hafbe_app.current_proposals cp
+  SET paid_amount = cp.paid_amount + ip.amount
+  FROM inserted_payment ip
+  WHERE cp.proposal_id = ip.proposal_id;
 END
 $$;
 

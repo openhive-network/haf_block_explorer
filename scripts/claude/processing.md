@@ -52,7 +52,7 @@ All processing functions are in `db/process_*.sql` files.
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
 | `process_witness_votes_cache()` | `process_witness_votes.sql` | Cache refresh (LIVE only) |
-| `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Mirrors witness row-by-row design so cascading effects within a block range resolve correctly. |
+| `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. |
 | `process_proposal_vote_stats_cache()` | `process_proposal_votes.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
 ### Processing Order
@@ -137,8 +137,8 @@ For implementation details of each processor:
 | `hafbe_app.current_account_proxies` | `process_witness_votes()` | Active proxies |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | Proposal vote change log (includes synthetic `approve=FALSE` rows from remove/decline cascades) |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Currently active proposal approvals |
-| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove) |
-| `hafbe_app.proposal_payments` | `process_proposals()` | Per-payment ledger from `proposal_pay_operation` |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` |
+| `hafbe_app.proposal_payments` | `process_proposals()` | Append-only per-payment audit ledger from `proposal_pay_operation` |
 
 ### Cache Tables (LIVE only)
 | Table | Purpose |
