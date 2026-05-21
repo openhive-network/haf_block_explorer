@@ -53,7 +53,7 @@ All processing functions are in `db/process_*.sql` files.
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
 | `process_witness_votes_cache()` | `process_witness_votes.sql` | Cache refresh (LIVE only) |
 | `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. |
-| `process_proposal_vote_stats_cache()` | `process_proposal_votes.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
+| `process_proposal_vote_stats_cache()` | `process_proposal_vote_stats_cache.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
 ### Processing Order
 

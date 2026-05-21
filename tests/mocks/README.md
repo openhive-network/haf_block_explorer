@@ -64,7 +64,7 @@ two cache refreshes:
 - `current_proposals`: 4 rows; **9001 removed=TRUE**, 9002/9003/9004 removed=FALSE
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
 - `proposal_payments`: 1 row — `(9002, 50000)`
-- `proposal_votes_history`: **9 rows** — 5 TRUE inserts + 4 FALSE rows from cascades
+- `proposal_votes_history`: **9 rows** — 5 TRUE inserts, 2 FALSE rows from steem's declined voting rights, 2 FALSE rows from removing proposal 9001
 - `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by verify_mock_data.sh)
 
 Two cascade-correctness invariants are checked explicitly by `verify.sql`:
