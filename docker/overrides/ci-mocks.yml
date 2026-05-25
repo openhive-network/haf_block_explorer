@@ -1,0 +1,24 @@
+# CI override for mock tests - the sync cache already contains replayed HAF data,
+# so the mock job only needs PostgreSQL plus the HAFBE processing container.
+services:
+  haf:
+    command: ["--skip-hived"]
+    volumes:
+      - haf_datadir:/home/hived/datadir
+      - haf_shmdir:/home/hived/shm_dir
+      - ./scripts/haf-healthcheck.sh:/home/hived/healthcheck.sh
+      - ./blockchain:/home/hived/datadir/blockchain
+
+volumes:
+  haf_datadir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_DATA_DIRECTORY}/
+  haf_shmdir:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HAF_SHM_DIRECTORY}/

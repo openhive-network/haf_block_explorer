@@ -47,6 +47,7 @@ variables:
   HAFBE_CACHE_KEY: "${HAF_UPSTREAM_COMMIT}_${CI_COMMIT_SHORT_SHA}"
   # Cache type prefixed with haf_ for automatic pgdata permission handling by cache-manager
   HAFBE_SYNC_CACHE_TYPE: "haf_hafbe_sync"
+  HAFBE_MOCK_CACHE_TYPE: "haf_hafbe_mock"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
   HAFAH_VERSION: "19c53e29"
@@ -436,6 +437,189 @@ sync:
   - data-cache-storage
   - fast
 
+sync_with_mock_data:
+  extends: .docker_image_builder_job_template
+  stage: sync
+  image: ${HAF_APP_TEST_RUNNER_IMAGE}
+  needs:
+  - job: find_haf_image
+    artifacts: true
+  - job: quick_test_setup
+    artifacts: true
+    optional: true
+  - job: sync
+    artifacts: true
+  - job: docker-setup-docker-image-build
+    artifacts: true
+  rules:
+  - if: $DOCS_ONLY == "true"
+    when: never
+  - when: on_success
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    DATADIR: "${CI_PROJECT_DIR}/${CI_JOB_ID}/datadir"
+    SHM_DIR: "${CI_PROJECT_DIR}/${CI_JOB_ID}/shm_dir"
+    HAF_DATA_DIRECTORY: "${DATADIR}"
+    HAF_SHM_DIRECTORY: "${SHM_DIR}"
+    BACKEND_VERSION: "$CI_COMMIT_SHORT_SHA"
+    HAF_REGISTRY_TAG: "${HAF_UPSTREAM_TAG}"
+    POSTGRES_ACCESS: postgresql://haf_admin@docker:5432/haf_block_log
+    COMPOSE_OPTIONS_STRING: --env-file ci.env --file docker-compose-mocks.yml --file
+      overrides/ci-mocks.yml --ansi never
+  timeout: 2 hours
+  before_script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):login[collapsed=true]\r\e[0KLogging to Docker registry..."
+    docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    echo -e "\e[0Ksection_end:$(date +%s):login\r\e[0K"
+
+    echo -e "\e[0Ksection_start:$(date +%s):git[collapsed=true]\r\e[0KConfiguring Git..."
+    git config --global --add safe.directory "$CI_PROJECT_DIR"
+    echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
+  - |
+    EFFECTIVE_HAF_COMMIT="${HAF_UPSTREAM_COMMIT}"
+    if [[ "${QUICK_TEST:-false}" == "true" ]]; then
+      echo "=== QUICK_TEST Mode (manual) ==="
+      if [[ -z "${QUICK_TEST_HAF_COMMIT}" ]]; then
+        echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
+        exit 1
+      fi
+      EFFECTIVE_HAF_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+      echo "Using cached HAF data from: ${EFFECTIVE_HAF_COMMIT}"
+    fi
+
+    EFFECTIVE_CACHE_KEY="${EFFECTIVE_HAF_COMMIT}_${CI_COMMIT_SHORT_SHA}"
+    JOB_DATA_DIR="${CI_PROJECT_DIR}/${CI_JOB_ID}"
+
+    CACHE_MANAGER="/tmp/cache-manager.sh"
+    if [[ ! -x "$CACHE_MANAGER" ]]; then
+      curl -fsSL "${COMMON_CI_URL}/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+      chmod +x "$CACHE_MANAGER"
+    fi
+
+    CACHE_HIT="false"
+    echo "Checking for mock cache: ${HAFBE_MOCK_CACHE_TYPE}/${EFFECTIVE_CACHE_KEY}"
+    if CACHE_HANDLING=haf "$CACHE_MANAGER" get "${HAFBE_MOCK_CACHE_TYPE}" "${EFFECTIVE_CACHE_KEY}" "${JOB_DATA_DIR}" 2>/dev/null; then
+      echo "Mock cache found - skipping mock fill"
+      CACHE_HIT="true"
+    else
+      echo "Mock cache not found; fetching base HAFBE sync cache"
+    fi
+
+    if [[ "$CACHE_HIT" != "true" ]]; then
+      echo "Fetching HAFBE sync cache: ${HAFBE_SYNC_CACHE_TYPE}/${EFFECTIVE_CACHE_KEY}"
+      if ! CACHE_HANDLING=haf "$CACHE_MANAGER" get "${HAFBE_SYNC_CACHE_TYPE}" "${EFFECTIVE_CACHE_KEY}" "${JOB_DATA_DIR}"; then
+        echo "ERROR: Failed to fetch HAFBE sync cache"
+        exit 1
+      fi
+    fi
+
+    if [[ -d "${JOB_DATA_DIR}/datadir/shm_dir" && ! -d "${JOB_DATA_DIR}/shm_dir" ]]; then
+      echo "Moving shm_dir from datadir/ to be a sibling..."
+      sudo mv "${JOB_DATA_DIR}/datadir/shm_dir" "${JOB_DATA_DIR}/shm_dir"
+    fi
+
+    echo "$CACHE_HIT" > /tmp/cache_hit
+    echo "$EFFECTIVE_CACHE_KEY" > /tmp/effective_cache_key
+  script:
+  - |
+    CACHE_HIT=$(cat /tmp/cache_hit 2>/dev/null || echo "false")
+    if [[ "$CACHE_HIT" == "true" ]]; then
+      echo "Cache hit - mock data already present in cache, skipping docker-compose"
+      exit 0
+    fi
+
+    echo -e "\e[0Ksection_start:$(date +%s):compose[collapsed=true]\r\e[0KStarting the mock test environment..."
+    echo "Data ready at DATADIR=${DATADIR}"
+    ls -la "${DATADIR}/" || true
+    ls -la "${SHM_DIR}/" || true
+
+    mkdir -p "${CI_PROJECT_DIR}/docker/blockchain"
+    "${CI_PROJECT_DIR}/scripts/ci-helpers/start-ci-test-environment.sh"
+    echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
+
+    echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for mock data processing..."
+    "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh" --postgres-access="${POSTGRES_ACCESS}"
+    echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
+
+    echo -e "\e[0Ksection_start:$(date +%s):verify[collapsed=true]\r\e[0KVerifying mock data..."
+    ./scripts/verify_mock_data.sh --host=docker --port=5432
+    echo -e "\e[0Ksection_end:$(date +%s):verify\r\e[0K"
+
+    echo -e "\e[0Ksection_start:$(date +%s):save_cache[collapsed=true]\r\e[0KSaving mock cache..."
+    EFFECTIVE_CACHE_KEY=$(cat /tmp/effective_cache_key)
+    JOB_DATA_DIR="${CI_PROJECT_DIR}/${CI_JOB_ID}"
+
+    pushd docker
+    IFS=" " read -ra COMPOSE_OPTIONS <<< "$COMPOSE_OPTIONS_STRING"
+
+    echo "Requesting PostgreSQL checkpoint..."
+    docker compose "${COMPOSE_OPTIONS[@]}" exec -T haf psql -U haf_admin -d haf_block_log -c "CHECKPOINT;" || true
+
+    echo "Stopping PostgreSQL with pg_ctl..."
+    PG_CTL=$(docker compose "${COMPOSE_OPTIONS[@]}" exec -T --user postgres haf \
+      bash -c 'find /usr/lib/postgresql -name pg_ctl -type f 2>/dev/null | head -1' 2>/dev/null | tr -d '\r\n')
+    if [[ -n "$PG_CTL" ]]; then
+      docker compose "${COMPOSE_OPTIONS[@]}" exec -T --user postgres haf \
+        "$PG_CTL" stop -D /home/hived/datadir/haf_db_store/pgdata -m smart -t 60 2>&1 || \
+      docker compose "${COMPOSE_OPTIONS[@]}" exec -T --user postgres haf \
+        "$PG_CTL" stop -D /home/hived/datadir/haf_db_store/pgdata -m fast -t 30 2>&1 || true
+    else
+      echo "WARNING: pg_ctl not found, relying on docker compose down"
+    fi
+
+    docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log || true
+    docker compose "${COMPOSE_OPTIONS[@]}" logs fill-db-with-mock-data > fill-db-with-mock-data.log || true
+    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log || true
+    docker compose "${COMPOSE_OPTIONS[@]}" down --timeout 60
+    popd
+
+    tar -czvf docker/container-logs.tar.gz docker/*.log
+
+    if [[ -d "${DATADIR}/blockchain" && -z "$(ls -A "${DATADIR}/blockchain" 2>/dev/null)" ]]; then
+      rmdir "${DATADIR}/blockchain" 2>/dev/null || true
+    fi
+
+    CACHE_MANAGER="/tmp/cache-manager.sh"
+    if [[ ! -x "$CACHE_MANAGER" ]]; then
+      curl -fsSL "${COMMON_CI_URL}/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+      chmod +x "$CACHE_MANAGER"
+    fi
+    echo "Pushing mock data to NFS: ${HAFBE_MOCK_CACHE_TYPE}/${EFFECTIVE_CACHE_KEY}"
+    if ! CACHE_HANDLING=haf "$CACHE_MANAGER" put "${HAFBE_MOCK_CACHE_TYPE}" "${EFFECTIVE_CACHE_KEY}" "${JOB_DATA_DIR}"; then
+      echo "ERROR: Failed to push mock cache"
+      exit 1
+    fi
+    echo -e "\e[0Ksection_end:$(date +%s):save_cache\r\e[0K"
+  after_script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):cleanup[collapsed=true]\r\e[0KCleaning up mock sync..."
+    CACHE_HIT=$(cat /tmp/cache_hit 2>/dev/null || echo "false")
+    if [[ "$CACHE_HIT" != "true" ]]; then
+      pushd docker
+      IFS=" " read -ra COMPOSE_OPTIONS <<< "${COMPOSE_OPTIONS_STRING:-}"
+      docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log 2>&1 || true
+      docker compose "${COMPOSE_OPTIONS[@]}" logs fill-db-with-mock-data > fill-db-with-mock-data.log 2>&1 || true
+      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log 2>&1 || true
+      docker compose "${COMPOSE_OPTIONS[@]}" down --timeout 30 2>&1 || true
+      popd
+      tar -czvf docker/container-logs.tar.gz docker/*.log 2>/dev/null || true
+    fi
+    sudo rm -rf "${CI_PROJECT_DIR}/${CI_JOB_ID}" 2>/dev/null || true
+    echo -e "\e[0Ksection_end:$(date +%s):cleanup\r\e[0K"
+  artifacts:
+    paths:
+    - docker/container-logs.tar.gz
+    expire_in: 1 week
+    when: always
+  tags:
+  - public-runner-docker
+  - data-cache-storage
+  - fast
+
 python_api_client_test:
   extends: .project_develop_configuration_template
   stage: test
@@ -549,7 +733,7 @@ test_python_api_wheel:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):extract_cache[collapsed=true]\r\e[0KExtracting sync cache..."
     export SKIP_WAIT=true  # Don't wait for postgres yet
-    ./scripts/ci-helpers/extract-cache-and-wait.sh "${HAFBE_SYNC_CACHE_TYPE}" "${HAFBE_CACHE_KEY}" "${HAF_DATA_DIRECTORY}"
+    ./scripts/ci-helpers/extract-cache-and-wait.sh "${APP_SYNC_CACHE_TYPE}" "${APP_CACHE_KEY}" "${HAF_DATA_DIRECTORY}"
     echo -e "\e[0Ksection_end:$(date +%s):extract_cache\r\e[0K"
    # Start docker-compose
   - |
@@ -715,6 +899,35 @@ pattern-test:
     # Run from project root so pattern file paths resolve correctly
     pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml "${JUNIT_REPORT}" "${TAVERN_DIR}"
 
+    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+
+pattern-test-with-mock-data:
+  extends: .test-with-docker-compose-tavern
+  needs:
+  - job: find_haf_image
+    artifacts: true
+  - job: quick_test_setup
+    artifacts: true
+    optional: true
+  - job: sync_with_mock_data
+    artifacts: true
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+    APP_SYNC_CACHE_TYPE: "${HAFBE_MOCK_CACHE_TYPE}"
+    TAVERN_DIR: "${CI_PROJECT_DIR}/tests/tavern/patterns-mock"
+    JUNIT_REPORT: "${CI_PROJECT_DIR}/tests/tavern/patterns-mock/report.xml"
+  artifacts:
+    paths:
+    - docker/container-logs.txt
+    - "**/*.out.json"
+    when: always
+    reports:
+      junit: "${CI_PROJECT_DIR}/tests/tavern/patterns-mock/report.xml"
+  script:
+  - |
+    . venv/bin/activate
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning mock Tavern tests..."
+    pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml "${JUNIT_REPORT}" "${TAVERN_DIR}"
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
 # Publish to registry.hive.blog on protected tags only
