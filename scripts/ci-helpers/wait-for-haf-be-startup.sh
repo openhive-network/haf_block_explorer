@@ -10,6 +10,11 @@ Script that waits for HAF Block Explorer to finish processing blocks and
 for all registered indexes to be created. To be used in CI.
 OPTIONS:
     --postgres-access=URL     PostgreSQL URL
+    --target-block=N          Wait for hafbe_app to reach block N (uses direct
+                              context check instead of hive.is_app_in_sync;
+                              useful for mock/test pipelines where the context
+                              was rewound via SQL and LIVE-mode transition is
+                              not guaranteed)
     --help|-h|-?              Display this help screen and exit
 EOF
 }
@@ -49,10 +54,15 @@ function wait_for_condition() {
     done
 }
 
+TARGET_BLOCK=""
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --postgres-access=*|--postgress-access=*)
         POSTGRES_ACCESS="${1#*=}"
+        ;;
+    --target-block=*)
+        TARGET_BLOCK="${1#*=}"
         ;;
     --help|-h|-\?)
         print_help
@@ -72,10 +82,22 @@ POSTGRES_ACCESS=${POSTGRES_ACCESS:-postgresql://haf_admin@localhost:5432/haf_blo
 
 # Step 1: Wait for block processing to complete
 echo "Step 1: Waiting for block processing..."
-wait_for_condition \
-    "SELECT hive.is_app_in_sync('hafbe_app')::INT;" \
-    "Waiting for HAF Block Explorer to finish processing blocks..." \
-    60
+if [[ -n "$TARGET_BLOCK" ]]; then
+    # Mock/test mode: wait for hafbe_app to reach a specific block number.
+    # hive.is_app_in_sync() requires a proper LIVE-mode HAF transition which
+    # does not happen when contexts are rewound via direct SQL UPDATE (as in
+    # the mock data pipeline).  Checking current_block_num directly is
+    # equivalent for our purposes.
+    wait_for_condition \
+        "SELECT (current_block_num >= ${TARGET_BLOCK})::INT FROM hafd.contexts WHERE name='hafbe_app';" \
+        "Waiting for hafbe_app to reach block ${TARGET_BLOCK}..." \
+        60
+else
+    wait_for_condition \
+        "SELECT hive.is_app_in_sync('hafbe_app')::INT;" \
+        "Waiting for HAF Block Explorer to finish processing blocks..." \
+        60
+fi
 echo "Block processing is finished."
 
 # Step 2: Create HAFBE indexes if not already created
