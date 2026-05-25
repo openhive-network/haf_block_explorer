@@ -1,0 +1,21 @@
+{
+  "total_proposals": 1,
+  "total_pages": 1,
+  "proposals": [
+    {
+      "id": 9003,
+      "proposal_id": 9003,
+      "creator": "gtg",
+      "receiver": "blocktrades",
+      "start_date": "2025-01-01T00:00:00",
+      "end_date": "2099-06-30T00:00:00",
+      "daily_pay": "80000",
+      "subject": "Mock proposal C (active, no votes)",
+      "permlink": "mock-c",
+      "total_votes": "0",
+      "voters_num": 0,
+      "paid_amount": "0",
+      "status": "active"
+    }
+  ]
+}

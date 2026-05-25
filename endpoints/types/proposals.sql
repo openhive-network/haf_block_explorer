@@ -114,6 +114,15 @@ hafbe_backend.proposal_vote:
     voter_vests:
       type: string
       description: effective governance VESTS for this voter at last cache refresh (0 if voter currently has a proxy set)
+    direct_vests:
+      type: string
+      description: this voter''s own governance VESTS (account_vests) at last cache refresh, independent of any proxy
+    proxied_vests:
+      type: string
+      description: VESTS from accounts that have proxied their governance to this voter
+    proxy:
+      type: string
+      description: name of the governance proxy this voter has set (empty string if none)
     timestamp:
       type: string
       format: date-time
@@ -125,6 +134,9 @@ CREATE TYPE hafbe_backend.proposal_vote AS (
     "voter_name" TEXT,
     "proposal" hafbe_backend.proposal,
     "voter_vests" TEXT,
+    "direct_vests" TEXT,
+    "proxied_vests" TEXT,
+    "proxy" TEXT,
     "timestamp" TIMESTAMP
 );
 -- openapi-generated-code-end

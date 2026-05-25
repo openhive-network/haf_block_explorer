@@ -152,10 +152,14 @@ AS $$
 $$;
 
 /*
- * get_proposals_count: Count proposals matching the status filter.
+ * get_proposals_count: Count proposals matching the status and optional filters.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals_count(
-    _status hafbe_backend.proposal_status
+    _status       hafbe_backend.proposal_status,
+    _creator_id   INT   DEFAULT NULL,
+    _proposal_ids INT[] DEFAULT NULL,
+    _voter_id     INT   DEFAULT NULL,
+    _search       TEXT  DEFAULT NULL
 )
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
@@ -165,7 +169,14 @@ DECLARE
 BEGIN
   RETURN COUNT(*)
   FROM hafbe_app.current_proposals cp
-  WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now);
+  WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
+    AND (_creator_id   IS NULL OR cp.creator_id = _creator_id)
+    AND (_proposal_ids IS NULL OR cp.proposal_id = ANY(_proposal_ids))
+    AND (_search       IS NULL OR cp.subject = _search)
+    AND (_voter_id     IS NULL OR EXISTS (
+          SELECT 1 FROM hafbe_app.current_proposal_votes cpv
+          WHERE cpv.proposal_id = cp.proposal_id AND cpv.voter_id = _voter_id
+        ));
 END $$;
 
 /*
@@ -186,11 +197,15 @@ END $$;
  * audit ledger but is no longer aggregated per request.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals(
-    _status     hafbe_backend.proposal_status,
-    _page       INT,
-    _page_size  INT,
-    _sort       hafbe_backend.order_by_proposal,
-    _direction  hafbe_backend.sort_direction
+    _status       hafbe_backend.proposal_status,
+    _page         INT,
+    _page_size    INT,
+    _sort         hafbe_backend.order_by_proposal,
+    _direction    hafbe_backend.sort_direction,
+    _creator_id   INT   DEFAULT NULL,
+    _proposal_ids INT[] DEFAULT NULL,
+    _voter_id     INT   DEFAULT NULL,
+    _search       TEXT  DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.proposal
 LANGUAGE 'plpgsql' STABLE
@@ -212,6 +227,13 @@ BEGIN
       SELECT cp.proposal_id, cp.creator_id, cp.start_date, cp.end_date
       FROM hafbe_app.current_proposals cp
       WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
+        AND (_creator_id   IS NULL OR cp.creator_id = _creator_id)
+        AND (_proposal_ids IS NULL OR cp.proposal_id = ANY(_proposal_ids))
+        AND (_search       IS NULL OR cp.subject = _search)
+        AND (_voter_id     IS NULL OR EXISTS (
+              SELECT 1 FROM hafbe_app.current_proposal_votes cpv
+              WHERE cpv.proposal_id = cp.proposal_id AND cpv.voter_id = _voter_id
+            ))
     ),
     creator_keyed AS (
       SELECT f.proposal_id, av.name AS creator_name, f.start_date, f.end_date
@@ -280,12 +302,14 @@ END $$;
 -- =============================================================================
 
 /*
- * get_proposal_votes_count: Count active proposal votes matching the status filter.
+ * get_proposal_votes_count: Count active proposal votes matching the status and optional filters.
  *
  * The status filter applies to the JOINED proposal, not the vote itself.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_count(
-    _status hafbe_backend.proposal_status
+    _status      hafbe_backend.proposal_status,
+    _proposal_id INT DEFAULT NULL,
+    _voter_id    INT DEFAULT NULL
 )
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
@@ -296,7 +320,9 @@ BEGIN
   RETURN COUNT(*)
   FROM hafbe_app.current_proposal_votes cpv
   JOIN hafbe_app.current_proposals      cp  ON cp.proposal_id = cpv.proposal_id
-  WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now);
+  WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
+    AND (_proposal_id IS NULL OR cpv.proposal_id = _proposal_id)
+    AND (_voter_id    IS NULL OR cpv.voter_id    = _voter_id);
 END $$;
 
 /*
@@ -313,11 +339,13 @@ END $$;
  * Status filter applies to the joined proposal, not the vote.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes(
-    _status     hafbe_backend.proposal_status,
-    _page       INT,
-    _page_size  INT,
-    _sort       hafbe_backend.order_by_proposal_vote,
-    _direction  hafbe_backend.sort_direction
+    _status      hafbe_backend.proposal_status,
+    _page        INT,
+    _page_size   INT,
+    _sort        hafbe_backend.order_by_proposal_vote,
+    _direction   hafbe_backend.sort_direction,
+    _proposal_id INT DEFAULT NULL,
+    _voter_id    INT DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.proposal_vote
 LANGUAGE 'plpgsql' STABLE
@@ -337,6 +365,8 @@ BEGIN
       FROM hafbe_app.current_proposal_votes cpv
       JOIN hafbe_app.current_proposals      cp  ON cp.proposal_id = cpv.proposal_id
       WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
+        AND (_proposal_id IS NULL OR cpv.proposal_id = _proposal_id)
+        AND (_voter_id    IS NULL OR cpv.voter_id    = _voter_id)
       ORDER BY
         (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'asc'  THEN cpv.voter_id    END) ASC,
         (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'desc' THEN cpv.voter_id    END) DESC,
@@ -373,16 +403,20 @@ BEGIN
       (CASE
         WHEN cap.account_id IS NOT NULL THEN '0'
         ELSE COALESCE(avs.vests, 0)::TEXT
-      END)                AS voter_vests,
-      bv.created_at       AS "timestamp"
+      END)                                       AS voter_vests,
+      COALESCE(avs.account_vests, 0)::TEXT        AS direct_vests,
+      COALESCE(avs.proxied_vests, 0)::TEXT        AS proxied_vests,
+      COALESCE(pav.name, '')::TEXT                AS proxy,
+      bv.created_at                               AS "timestamp"
     FROM limited_set ls
     JOIN hafbe_app.accounts_view              av  ON av.id           = ls.voter_id
     JOIN hafbe_app.current_proposals          cp  ON cp.proposal_id  = ls.proposal_id
     JOIN hafbe_app.accounts_view              cav ON cav.id          = cp.creator_id
     JOIN hafbe_app.accounts_view              rav ON rav.id          = cp.receiver_id
-    LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = cp.proposal_id
-    LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = ls.voter_id
-    LEFT JOIN hafbe_app.current_account_proxies  cap ON cap.account_id = ls.voter_id
+    LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id  = cp.proposal_id
+    LEFT JOIN hafbe_app.account_vest_stats_cache  avs ON avs.account_id   = ls.voter_id
+    LEFT JOIN hafbe_app.current_account_proxies   cap ON cap.account_id   = ls.voter_id
+    LEFT JOIN hafbe_app.accounts_view             pav ON pav.id           = cap.proxy_id
     JOIN hive.blocks_view                     bv  ON bv.num          = hafd.operation_id_to_block_num(ls.source_op)
     ORDER BY
       (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'asc'  THEN ls.voter_id    END) ASC,

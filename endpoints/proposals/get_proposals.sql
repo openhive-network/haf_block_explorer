@@ -80,6 +80,34 @@ SET ROLE hafbe_owner;
            * `votable` - active OR inactive (`now <= end_date`)
 
            * `all` - any non-removed status
+      - in: query
+        name: creator
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: Filter proposals by creator account name
+      - in: query
+        name: proposal-ids
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: Comma-separated list of proposal IDs to filter by (e.g. `1,2,3`)
+      - in: query
+        name: voter
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: Filter to proposals currently approved by this voter account
+      - in: query
+        name: search
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: Exact-match filter on proposal subject
     responses:
       '200':
         description: |
@@ -98,9 +126,13 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_proposals(
     "page-size" INT = 100,
     "sort" hafbe_backend.order_by_proposal = 'by_total_votes',
     "direction" hafbe_backend.sort_direction = 'desc',
-    "status" hafbe_backend.proposal_status = 'all'
+    "status" hafbe_backend.proposal_status = 'all',
+    "creator" TEXT = NULL,
+    "proposal-ids" TEXT = NULL,
+    "voter" TEXT = NULL,
+    "search" TEXT = NULL
 )
-RETURNS hafbe_backend.proposals_return 
+RETURNS hafbe_backend.proposals_return
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -110,9 +142,19 @@ SET jit = OFF
 AS
 $$
 DECLARE
-  _ops_count INT;
-  _total_pages INT;
-  _result hafbe_backend.proposal[];
+  _ops_count    INT;
+  _total_pages  INT;
+  _result       hafbe_backend.proposal[];
+  _creator_id   INT   := hafah_backend.get_account_id("creator", FALSE);
+  _voter_id     INT   := hafah_backend.get_account_id("voter",   FALSE);
+  _proposal_ids INT[] := CASE
+                           WHEN "proposal-ids" IS NULL OR trim("proposal-ids") = '' THEN NULL
+                           ELSE (SELECT ARRAY(
+                                   SELECT trim(x)::INT
+                                   FROM unnest(string_to_array("proposal-ids", ',')) x
+                                   WHERE trim(x) <> ''
+                                 ))
+                         END;
 BEGIN
   PERFORM hafbe_backend.validate_limit("page-size", 1000);
   PERFORM hafbe_backend.validate_negative_limit("page-size");
@@ -120,7 +162,7 @@ BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _ops_count   := hafbe_backend.get_proposals_count("status");
+  _ops_count   := hafbe_backend.get_proposals_count("status", _creator_id, _proposal_ids, _voter_id, "search");
   _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
   PERFORM hafbe_backend.validate_page("page", _total_pages);
@@ -145,7 +187,11 @@ BEGIN
       "page",
       "page-size",
       "sort",
-      "direction"
+      "direction",
+      _creator_id,
+      _proposal_ids,
+      _voter_id,
+      "search"
     ) ba
   ) row;
 

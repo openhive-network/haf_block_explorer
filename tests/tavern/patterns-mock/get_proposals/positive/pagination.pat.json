@@ -1,0 +1,21 @@
+{
+  "total_proposals": 3,
+  "total_pages": 3,
+  "proposals": [
+    {
+      "id": 9004,
+      "proposal_id": 9004,
+      "creator": "blocktrades",
+      "receiver": "gtg",
+      "start_date": "2020-01-01T00:00:00",
+      "end_date": "2020-06-01T00:00:00",
+      "daily_pay": "30000",
+      "subject": "Mock proposal D (expired)",
+      "permlink": "mock-d",
+      "total_votes": "0",
+      "voters_num": 0,
+      "paid_amount": "0",
+      "status": "expired"
+    }
+  ]
+}
