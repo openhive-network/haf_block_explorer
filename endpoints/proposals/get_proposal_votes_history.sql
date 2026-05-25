@@ -144,7 +144,7 @@ DECLARE
 
   _result hafbe_backend.proposal_votes_history_record[];
 BEGIN
-  PERFORM hafbe_backend.validate_limit("page-size", 1000);
+  PERFORM hafbe_backend.validate_limit("page-size", 10000);
   PERFORM hafbe_backend.validate_negative_limit("page-size");
   PERFORM hafbe_backend.validate_negative_page("page");
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
