@@ -542,7 +542,7 @@ sync_with_mock_data:
     echo -e "\e[0Ksection_end:$(date +%s):compose\r\e[0K"
 
     echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for mock data processing..."
-    "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh" --postgres-access="${POSTGRES_ACCESS}" --target-block=91000006
+    "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh" --postgres-access="${POSTGRES_ACCESS}"
     echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
 
     echo -e "\e[0Ksection_start:$(date +%s):verify[collapsed=true]\r\e[0KVerifying mock data..."

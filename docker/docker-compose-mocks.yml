@@ -47,7 +47,6 @@ services:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     command:
       - process_blocks
-      - --stop-at-block=91000006
       - --log-file=STDOUT
     environment:
       POSTGRES_HOST: haf
