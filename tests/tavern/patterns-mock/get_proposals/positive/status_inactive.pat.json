@@ -1,0 +1,21 @@
+{
+  "total_proposals": 1,
+  "total_pages": 1,
+  "proposals": [
+    {
+      "id": 9002,
+      "proposal_id": 9002,
+      "creator": "blocktrades",
+      "receiver": "gtg",
+      "start_date": "2025-07-01T00:00:00",
+      "end_date": "2099-12-31T00:00:00",
+      "daily_pay": "50000",
+      "subject": "Mock proposal B",
+      "permlink": "mock-b",
+      "total_votes": "5000000",
+      "voters_num": 1,
+      "paid_amount": "50000",
+      "status": "inactive"
+    }
+  ]
+}

@@ -60,6 +60,20 @@ SET ROLE hafbe_owner;
           $ref: '#/components/schemas/hafbe_backend.proposal_status'
           default: all
         description: Filter votes by the joined proposal''s status (removed proposals are never returned).
+      - in: query
+        name: proposal-id
+        required: false
+        schema:
+          type: integer
+          default: NULL
+        description: Filter votes for a specific proposal ID
+      - in: query
+        name: voter
+        required: false
+        schema:
+          type: string
+          default: NULL
+        description: Filter votes cast by a specific voter account name
     responses:
       '200':
         description: |
@@ -78,9 +92,11 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_proposal_votes(
     "page-size" INT = 100,
     "sort" hafbe_backend.order_by_proposal_vote = 'by_proposal_voter',
     "direction" hafbe_backend.sort_direction = 'asc',
-    "status" hafbe_backend.proposal_status = 'all'
+    "status" hafbe_backend.proposal_status = 'all',
+    "proposal-id" INT = NULL,
+    "voter" TEXT = NULL
 )
-RETURNS hafbe_backend.proposal_votes_return 
+RETURNS hafbe_backend.proposal_votes_return
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
@@ -90,9 +106,10 @@ SET jit = OFF
 AS
 $$
 DECLARE
-  _ops_count INT;
+  _ops_count   INT;
   _total_pages INT;
-  _result hafbe_backend.proposal_vote[];
+  _result      hafbe_backend.proposal_vote[];
+  _voter_id    INT := hafah_backend.get_account_id("voter", FALSE);
 BEGIN
   PERFORM hafbe_backend.validate_limit("page-size", 1000);
   PERFORM hafbe_backend.validate_negative_limit("page-size");
@@ -100,7 +117,7 @@ BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _ops_count   := hafbe_backend.get_proposal_votes_count("status");
+  _ops_count   := hafbe_backend.get_proposal_votes_count("status", "proposal-id", _voter_id);
   _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
 
   PERFORM hafbe_backend.validate_page("page", _total_pages);
@@ -110,13 +127,18 @@ BEGIN
       ba.voter_name,
       ba.proposal,
       ba.voter_vests,
+      ba.direct_vests,
+      ba.proxied_vests,
+      ba.proxy,
       ba.timestamp
     FROM hafbe_backend.get_proposal_votes(
       "status",
       "page",
       "page-size",
       "sort",
-      "direction"
+      "direction",
+      "proposal-id",
+      _voter_id
     ) ba
   ) row;
 
