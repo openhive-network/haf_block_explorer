@@ -1040,6 +1040,18 @@ declare
             "type": "string",
             "description": "effective governance VESTS for this voter at last cache refresh (0 if voter currently has a proxy set)"
           },
+          "direct_vests": {
+            "type": "string",
+            "description": "this voter''s own governance VESTS (account_vests) at last cache refresh, independent of any proxy"
+          },
+          "proxied_vests": {
+            "type": "string",
+            "description": "VESTS from accounts that have proxied their governance to this voter"
+          },
+          "proxy": {
+            "type": "string",
+            "description": "name of the governance proxy this voter has set (empty string if none)"
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
@@ -2444,6 +2456,46 @@ declare
               "default": "all"
             },
             "description": "Proposal status filter (removed proposals are never returned):\n\n * `active` - currently payable (`start_date <= now <= end_date`)\n\n * `inactive` - not yet started (`now < start_date`)\n\n * `expired` - finished (`now > end_date`)\n\n * `votable` - active OR inactive (`now <= end_date`)\n\n * `all` - any non-removed status\n"
+          },
+          {
+            "in": "query",
+            "name": "creator",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Filter proposals by creator account name"
+          },
+          {
+            "in": "query",
+            "name": "proposal-ids",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Comma-separated list of proposal IDs to filter by (e.g. `1,2,3`)"
+          },
+          {
+            "in": "query",
+            "name": "voter",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Filter to proposals currently approved by this voter account"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Exact-match filter on proposal subject"
           }
         ],
         "responses": {
@@ -2517,6 +2569,26 @@ declare
               "default": "all"
             },
             "description": "Filter votes by the joined proposal''s status (removed proposals are never returned)."
+          },
+          {
+            "in": "query",
+            "name": "proposal-id",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": null
+            },
+            "description": "Filter votes for a specific proposal ID"
+          },
+          {
+            "in": "query",
+            "name": "voter",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Filter votes cast by a specific voter account name"
           }
         ],
         "responses": {
