@@ -107,6 +107,8 @@ These scripts help with common development and debugging tasks. **Use them autom
 **Requirements**: Fresh HAFBE+btracker install. Mirrors
 `submodules/btracker/tests/mocks/`. Full docs in `tests/mocks/README.md`.
 
+**CI integration**: `docker/docker-compose-mocks.yml` runs the same three-step flow automatically. The `backend-block-processing` service must NOT use `--stop-at-block` — passing `_limit` to `hive.app_next_iteration` prevents the MASSIVE→LIVE mode transition, causing `hive.is_app_in_sync()` to never return TRUE. The `wait-for-haf-be-startup.sh` script supports `--target-block=N` as a debugging utility (checks `current_block_num >= N` directly), but the CI flow uses the default `is_app_in_sync` check.
+
 ---
 
 ## When to Use These Tools
@@ -120,6 +122,7 @@ These scripts help with common development and debugging tasks. **Use them autom
 | "Run sync to 1M blocks" | `run_sync_test.sh 1000000` |
 | "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000006` → `verify_mock_data.sh` |
 | "Verify mock state" | `verify_mock_data.sh` |
+| "Reproduce CI mock pipeline locally" | `docker compose -f docker/docker-compose-mocks.yml up` (no `--stop-at-block`; wait for `hive.is_app_in_sync`) |
 | "Test sync performance" | `run_sync_test.sh` |
 | "Benchmark block processing" | `run_sync_test.sh` |
 
@@ -133,6 +136,8 @@ When analyzing pipeline failures, the script extracts these patterns:
 | `regression-test` | FAILED, mismatch, differ, AssertionError |
 | `performance-test` | Error, Failed, timeout, 0 passed |
 | `pattern-test` | FAILED, ERROR, AssertionError, tavern |
+| `pattern-test-with-mock-data` | FAILED, ERROR, AssertionError, tavern |
+| `sync_with_mock_data` | Timeout, Error, FATAL, failed, is_app_in_sync |
 | `python_api_client_test` | FAILED, Error, pytest |
 | `lint_*` | violation, L/W/E codes |
 

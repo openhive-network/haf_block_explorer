@@ -45,24 +45,46 @@ pytest -n 8 --junitxml report.xml .
 pytest -v get_witness/blocktrades.tavern.yaml
 ```
 
+## Test Suites
+
+There are two pattern directories, each backed by a separate CI job:
+
+| Directory | CI Job | Data source | Use for |
+|-----------|--------|-------------|---------|
+| `tests/tavern/patterns-mainnet/` | `pattern-test` | 5M-block mainnet sync cache | Accounts, witnesses, blocks, transactions, and any endpoint whose data exists in the first 5M blocks |
+| `tests/tavern/patterns-mock/` | `pattern-test-with-mock-data` | `haf_hafbe_mock` cache (synthetic 91M block range) | Endpoints that require data only available past the mainnet sync cutoff (proposals/DHF, which launched at ~block 22.3M) |
+
+When adding proposal tests that depend on DHF data, put them in `patterns-mock/`. Mainnet patterns are still fine for validation and empty-result cases that do not need proposal fixtures.
+
 ## Test File Structure
 
 ```
 tests/tavern/
 ├── common.yaml                      # Shared configuration
 ├── pytest.ini                       # pytest markers
-└── patterns-mainnet/                # Test cases
-    ├── get_account/                 # Account endpoint tests
-    │   ├── blocktrades.tavern.yaml
-    │   └── non_existent_witness.tavern.yaml
-    ├── get_witnesses/               # Witnesses list endpoint
-    │   ├── positive/                # Success cases
-    │   │   ├── first_page.tavern.yaml
-    │   │   └── order_by_rank.tavern.yaml
-    │   └── negative/                # Error cases
-    │       ├── exceeds_page_size.tavern.yaml
-    │       └── negative_page_num.tavern.yaml
-    └── ...                          # Other endpoints
+├── patterns-mainnet/                # Mainnet test cases (pattern-test CI job)
+│   ├── get_account/                 # Account endpoint tests
+│   │   ├── blocktrades.tavern.yaml
+│   │   └── non_existent_witness.tavern.yaml
+│   ├── get_witnesses/               # Witnesses list endpoint
+│   │   ├── positive/                # Success cases
+│   │   │   ├── first_page.tavern.yaml
+│   │   │   └── order_by_rank.tavern.yaml
+│   │   └── negative/                # Error cases
+│   │       ├── exceeds_page_size.tavern.yaml
+│   │       └── negative_page_num.tavern.yaml
+│   ├── get_proposal_votes_history/  # Validation/empty-result cases
+│   └── ...                          # Other endpoints
+└── patterns-mock/                   # Mock-data test cases (pattern-test-with-mock-data CI job)
+    ├── get_proposals/
+    │   ├── positive/                # 14 tests: status×5, sort×8, pagination
+    │   └── negative/                # 5 tests
+    ├── get_proposal_votes/
+    │   ├── positive/                # 6 tests
+    │   └── negative/                # 5 tests
+    └── get_proposal_votes_history/
+        ├── positive/                # 2 tests
+        └── negative/                # 3 tests
 ```
 
 ## YAML Test Structure
@@ -195,13 +217,17 @@ When endpoint response structure changes:
 
 ### Add Tests for New Endpoint
 
-1. Create endpoint directory: `patterns-mainnet/<endpoint_name>/`
+1. Decide which pattern directory to use:
+   - `patterns-mainnet/` — data exists in the 5M-block sync cache (accounts, witnesses, blocks, transactions)
+   - `patterns-mock/` — data requires the synthetic 91M block range (proposals, DHF features)
 
-2. Create positive tests: `positive/` subdirectory
+2. Create endpoint directory in the chosen pattern directory
 
-3. Create negative tests: `negative/` subdirectory
+3. Create positive tests: `positive/` subdirectory
 
-4. Common test cases to include:
+4. Create negative tests: `negative/` subdirectory
+
+5. Common test cases to include:
    - Default parameters
    - Pagination (first page, last page)
    - Sorting options
@@ -233,9 +259,16 @@ On CI failure, download:
 
 ## CI Integration
 
-The `pattern-test` job in `.gitlab-ci.yml`:
+### `pattern-test` (mainnet patterns)
+- Runs against the 5M-block HAFBE sync cache
 - Extends `.test-with-docker-compose-tavern` template
 - Clones `tests_api` for validation functions
 - Warms up database with complex query before tests
 - Runs with 8 parallel workers
 - Artifacts: JUnit XML, container logs, `*.out.json` files
+
+### `pattern-test-with-mock-data` (mock patterns)
+- Runs against the `haf_hafbe_mock` cache prepared by the `sync_with_mock_data` job
+- Same setup as `pattern-test` but uses `TAVERN_DIR: tests/tavern/patterns-mock`
+- No database warm-up needed (mock data is small)
+- Covers proposal endpoints whose fixtures only exist in the synthetic 91M block range
