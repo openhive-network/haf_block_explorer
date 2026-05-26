@@ -49,7 +49,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | Block Search | `Block-search` | Query blocks by operations, filters, time ranges |
 | Accounts | `Accounts` | Account info, balances, authorities, operations |
 | Witnesses | `Witnesses` | Witness data, votes, rankings |
-| Proposals | `Proposals` | Proposal vote history |
+| Proposals | `Proposals` | DHF proposal listings, current approvals, and vote history |
 | Transactions | `Transactions` | Transaction statistics and aggregations |
 | Other | `Other` | API metadata, input type detection |
 
@@ -86,9 +86,11 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 
 | Endpoint | Function | Description |
 |----------|----------|-------------|
-| `GET /proposals` | `get_proposals` | List proposals with paid amounts and stake-weighted vote totals |
-| `GET /proposals/votes` | `get_proposal_votes` | Current active proposal approvals |
-| `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical votes cast for a proposal |
+| `GET /proposals` | `get_proposals` | List proposals with paid amounts and stake-weighted vote totals; filterable by `creator`, `proposal-ids`, `voter`, `search` |
+| `GET /proposals/votes` | `get_proposal_votes` | Current active proposal approvals; includes `direct_vests`, `proxied_vests`, `proxy` fields; filterable by `proposal-id` and `voter` |
+| `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical vote events (approvals + withdrawals); `page-size` max is 10000 (not 1000) |
+
+Full parameter and response details: `scripts/claude/endpoints/proposals.md`
 
 The proposal endpoints have an end-to-end mock harness under `tests/mocks/`
 that drives a synthetic block range through the real processor and asserts
@@ -219,6 +221,7 @@ For implementation details of each endpoint category:
 | Accounts | [endpoints/accounts.md](endpoints/accounts.md) |
 | Witnesses | [endpoints/witnesses.md](endpoints/witnesses.md) |
 | Transactions | [endpoints/transactions.md](endpoints/transactions.md) |
+| Proposals | [endpoints/proposals.md](endpoints/proposals.md) |
 
 ## How to Add an Endpoint
 

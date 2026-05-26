@@ -108,9 +108,17 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 **Key files:**
 - `tests/mocks/install_mock_data.sh` - Loads fixtures, rewinds contexts
 - `scripts/verify_mock_data.sh` - Refreshes caches, runs verify.sql
-- `tests/mocks/sql/verify.sql` - 36 assertions covering processor state, endpoint composition, status filters, sorting, and pagination
+- `tests/mocks/sql/verify.sql` - 36 SQL assertions covering processor state, endpoint composition, status filters, sorting, and pagination
 - `tests/mocks/fixtures/` - Mock block headers + operation bodies
 - `tests/mocks/README.md` - Full documentation
+
+**Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
+35 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+- `get_proposals/` — 14 positive (status×5, sort×8, pagination) + 5 negative
+- `get_proposal_votes/` — 6 positive + 5 negative
+- `get_proposal_votes_history/` — 2 positive + 3 negative
+
+All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add new tests here when adding proposal-related features that require mock data.
 
 ## CI/CD Integration
 
@@ -127,9 +135,12 @@ detect → lint → build → sync → test → publish
 | Job | Test Type | Artifacts |
 |-----|-----------|-----------|
 | `regression-test` | Regression | `regression_test.log` |
-| `pattern-test` | Tavern | JUnit XML report |
+| `pattern-test` | Tavern (mainnet patterns) | JUnit XML report |
+| `pattern-test-with-mock-data` | Tavern (mock patterns) | JUnit XML report |
 | `performance-test` | Performance | HTML report, JUnit XML |
 | `setup-scripts-test` | Functional | - |
+
+`pattern-test` runs against the 5M-block mainnet sync cache. `pattern-test-with-mock-data` runs against the `haf_hafbe_mock` cache prepared by `sync_with_mock_data` — it covers endpoints whose data only exists in the synthetic 91M block range (proposals, DHF votes).
 
 ### Pipeline Requirements
 
@@ -138,14 +149,21 @@ Tests require:
 2. **HAFBE schema**: Installed and synced (by `sync` job)
 3. **PostgREST**: Running for API tests
 
+`pattern-test-with-mock-data` additionally requires the mock cache (`sync_with_mock_data` job, sync stage). That job:
+- Checks NFS for a cached `haf_hafbe_mock` image; on miss, falls back to the HAFBE sync cache as base
+- Runs `docker/docker-compose-mocks.yml` (HAF + fixture installer + block processor)
+- Waits for `hive.is_app_in_sync('hafbe_app')` then runs `verify_mock_data.sh`
+- Saves the resulting pgdata as `haf_hafbe_mock` cache
+
 ### Test Dependencies
 
 ```
-find_haf_image → prepare_haf_data → sync → tests
-                                          ├── regression-test
-                                          ├── pattern-test
-                                          ├── performance-test
-                                          └── setup-scripts-test
+find_haf_image → prepare_haf_data → sync              → tests
+                                  ↘ sync_with_mock_data  ├── regression-test
+                                                          ├── pattern-test
+                                                          ├── pattern-test-with-mock-data
+                                                          ├── performance-test
+                                                          └── setup-scripts-test
 ```
 
 ## Writing New Tests
