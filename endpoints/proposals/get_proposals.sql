@@ -132,7 +132,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_proposals(
     "voter" TEXT = NULL,
     "search" TEXT = NULL
 )
-RETURNS hafbe_backend.proposals_return
+RETURNS hafbe_backend.proposals_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 STABLE
