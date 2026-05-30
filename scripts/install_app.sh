@@ -101,13 +101,19 @@ done
 
 POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_install"
 
-# Re-exec under the install-lock wrapper if not already running under it.
-# Holds an exclusive advisory lock on 'haf_block_explorer' for the lifetime of
-# this script. The btracker (--schema=hafbe_bal) and reptracker sub-installers
-# invoked from setup_apps() inherit HAF_INSTALL_LOCK_HELD=1 and skip their own
-# re-exec, so they all run under this single lock. If a block-processor is
-# holding the shared lock the wrapper logs the holder and exits 0.
-if [[ -z "${HAF_INSTALL_LOCK_HELD:-}" ]]; then
+# Re-exec under the install-lock wrapper if not already running under it AND
+# the wrapper plus python3 are actually available (e.g. inside the production
+# install image). Holds an exclusive advisory lock on 'haf_block_explorer' for
+# the lifetime of this script. The btracker (--schema=hafbe_bal) and
+# reptracker sub-installers invoked from setup_apps() inherit
+# HAF_INSTALL_LOCK_HELD=1 and skip their own re-exec, so they all run under
+# this single lock. When the wrapper isn't installed (e.g. running this
+# script directly on a CI runner host outside the production image), skip the
+# re-exec and run without the lock -- the lock is a production safety
+# mechanism, not a correctness requirement for tests.
+if [[ -z "${HAF_INSTALL_LOCK_HELD:-}" ]] \
+    && command -v python3 >/dev/null 2>&1 \
+    && [[ -f /usr/local/bin/install_with_app_lock.py ]]; then
   export HAF_INSTALL_LOCK_HELD=1
   exec python3 /usr/local/bin/install_with_app_lock.py haf_block_explorer "$POSTGRES_ACCESS" "$0" "${ORIGINAL_ARGS[@]}"
 fi
