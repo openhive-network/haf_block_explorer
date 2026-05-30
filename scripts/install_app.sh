@@ -111,11 +111,14 @@ POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_b
 # script directly on a CI runner host outside the production image), skip the
 # re-exec and run without the lock -- the lock is a production safety
 # mechanism, not a correctness requirement for tests.
-if [[ -z "${HAF_INSTALL_LOCK_HELD:-}" ]] \
-    && command -v python3 >/dev/null 2>&1 \
-    && [[ -f /usr/local/bin/install_with_app_lock.py ]]; then
-  export HAF_INSTALL_LOCK_HELD=1
-  exec python3 /usr/local/bin/install_with_app_lock.py haf_block_explorer "$POSTGRES_ACCESS" "$0" "${ORIGINAL_ARGS[@]}"
+if [[ -z "${HAF_INSTALL_LOCK_HELD:-}" ]]; then
+  if command -v python3 >/dev/null 2>&1 && [[ -f /usr/local/bin/install_with_app_lock.py ]]; then
+    export HAF_INSTALL_LOCK_HELD=1
+    exec python3 /usr/local/bin/install_with_app_lock.py haf_block_explorer "$POSTGRES_ACCESS" "$0" "${ORIGINAL_ARGS[@]}"
+  else
+    echo "WARNING: install_with_app_lock.py wrapper not found; running install without HAF advisory lock (expected in CI test setups, not in production install images)." >&2
+    export HAF_INSTALL_LOCK_HELD=1
+  fi
 fi
 
 # Get git directory for a submodule - handles both:
