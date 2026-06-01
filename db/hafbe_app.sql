@@ -297,7 +297,10 @@ BEGIN
    * handling in process_proposals; explicitly deleted when a proposal is
    * removed or when a voter loses voting rights / has their account expired.
    * Backs /proposals/votes and proposal_vote_stats_cache refresh.
-   * FK to current_proposals ensures votes for phantom proposals are rejected;
+   * process_proposal_vote_op only inserts here for proposals that exist and are
+   * not removed (mirroring hived, which skips votes for nonexistent/removed
+   * proposals -- common in pre-HF28 history). The FK to current_proposals is
+   * therefore a backstop that should never fire, not the primary enforcement;
    * ON DELETE CASCADE is a defensive guard if a proposal row is ever deleted.
    */
   CREATE TABLE IF NOT EXISTS hafbe_app.current_proposal_votes (

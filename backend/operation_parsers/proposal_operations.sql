@@ -153,9 +153,24 @@ $$;
  * JSON STRUCTURE:
  *   { "voter": "alice", "proposal_ids": [1, 2], "approve": true/false, ... }
  *
- * Fans out proposal_ids: one history row per (voter, proposal) per op.
+ * Fans out proposal_ids, but ONLY over proposals that currently exist and are
+ * not removed -- mirroring hived's update_proposal_votes_evaluator, which does
+ * `continue` (silently skips) for any proposal_id that is missing or already
+ * removed (see hive/libraries/chain/dhf_evaluator.cpp).
+ *
+ * Why this guard is required: pre-HF28 the chain ACCEPTED votes referencing a
+ * nonexistent (not-yet-created or never-created) proposal and dropped them with
+ * no effect -- no proposal_vote_object, nothing recorded. A real example in
+ * full-replay history: block 52399763 has a vote approving proposal 168, which
+ * was not created until block 52598127 (~200k blocks later). HF28
+ * (HIVE_HARDFORK_1_28_DONT_TRY_VOTE_FOR_NONEXISTENT_PROPOSAL) turned this into a
+ * hard rejection, so such ops only appear in pre-HF28 history. Without the
+ * existence guard the FK current_proposal_votes -> current_proposals aborts the
+ * INSERT and crashes block processing on that op.
+ *
  * On approve=TRUE, upserts into current_proposal_votes; on approve=FALSE,
- * deletes from current_proposal_votes.
+ * deletes from current_proposal_votes (inherently a no-op for the skipped
+ * phantom/removed case, since no such row was ever inserted).
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_vote_op(
     _body JSONB,
@@ -172,16 +187,26 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Step 1: append history rows for each (voter, proposal) in the array
+  -- Step 1: append history rows, skipping proposals that hived itself skipped
+  -- (missing or removed). Keeps history consistent with the actual on-chain
+  -- effect and with the remove/expired handlers, which only log real votes.
   INSERT INTO hafbe_app.proposal_votes_history (proposal_id, voter_id, approve, source_op)
   SELECT (pid)::INT, __voter_id, __approve, _id
-  FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid;
+  FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
+  WHERE EXISTS (
+    SELECT 1 FROM hafbe_app.current_proposals cp
+    WHERE cp.proposal_id = (pid)::INT AND NOT cp.removed
+  );
 
   -- Step 2: update current state
   IF __approve THEN
     INSERT INTO hafbe_app.current_proposal_votes (voter_id, proposal_id, source_op)
     SELECT __voter_id, (pid)::INT, _id
     FROM jsonb_array_elements_text(_body -> 'proposal_ids') AS pid
+    WHERE EXISTS (
+      SELECT 1 FROM hafbe_app.current_proposals cp
+      WHERE cp.proposal_id = (pid)::INT AND NOT cp.removed
+    )
     ON CONFLICT ON CONSTRAINT pk_current_proposal_votes DO UPDATE SET
       source_op = EXCLUDED.source_op;
   ELSE
