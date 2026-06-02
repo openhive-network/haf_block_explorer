@@ -427,6 +427,32 @@ sync:
       psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache();"
       echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
     fi
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):lock_skip_test[collapsed=true]\r\e[0KAssert advisory-lock skip path..."
+    # Regression test for advisory-lock coordination.
+    # Force-recreate the install while the BP is up; expect skip + exit 0,
+    # no wrapper-not-found warning. Catches: missing wrapper/python3 in install
+    # image (e.g. docker-bake.hcl overriding PSQL_CLIENT_VERSION with a stale
+    # tag), broken install_app.sh re-exec, missing PERFORM in main_loop.sql,
+    # helpers missing in haf.
+    COMPOSE_DIR="${CI_PROJECT_DIR}/docker/ci"
+    docker compose -f "${COMPOSE_DIR}/compose.yml" up -d --no-deps --force-recreate block-explorer-install-schema
+    cid=$(docker compose -f "${COMPOSE_DIR}/compose.yml" ps -q block-explorer-install-schema)
+    docker wait "$cid"
+    ec=$(docker inspect "$cid" --format '{{.State.ExitCode}}')
+    docker logs "$cid" > /tmp/lock_test_install.log 2>&1
+    cat /tmp/lock_test_install.log | tail -30
+    if [ "$ec" != "0" ]; then echo "FAIL: install exited $ec (expected 0)"; exit 1; fi
+    if ! grep -qE "Skipping haf_block_explorer install.*lock held by" /tmp/lock_test_install.log; then
+      echo "FAIL: wrapper-skip log line not found - the lock did not engage"
+      exit 1
+    fi
+    if grep -q "WARNING: install_with_app_lock.py wrapper not found" /tmp/lock_test_install.log; then
+      echo "FAIL: install image silently degraded to wrapper-not-found path"
+      exit 1
+    fi
+    echo "PASS: install correctly hit the advisory-lock skip path"
+    echo -e "\e[0Ksection_end:$(date +%s):lock_skip_test\r\e[0K"
   # Shutdown and save cache
   - !reference [.haf_app_sync_shutdown, script]
   - !reference [.haf_app_sync_save_cache_conditional, script]
