@@ -434,17 +434,18 @@ sync:
     # duration of the test. Catches: missing wrapper/python3 in install image
     # (e.g. docker-bake.hcl overriding PSQL_CLIENT_VERSION), broken
     # install_app.sh re-exec, missing PERFORM in main_loop.sql, helpers missing.
-    COMPOSE_DIR="${CI_PROJECT_DIR}/docker/ci"
     APP=haf_block_explorer
-    INSTALL_SVC=block-explorer-install-schema
-    docker compose -f "${COMPOSE_DIR}/compose.yml" exec -T haf psql -d haf_block_log >/tmp/fake_bp.log 2>&1 <<EOSQL &
+    INSTALL_SVC=backend-setup
+    pushd docker
+    IFS=" " read -ra COMPOSE_OPTIONS <<< "$COMPOSE_OPTIONS_STRING"
+    docker compose "${COMPOSE_OPTIONS[@]}" exec -T haf psql -d haf_block_log >/tmp/fake_bp.log 2>&1 <<EOSQL &
     SET application_name = 'ci-fake-bp-lock-holder';
     SELECT pg_advisory_lock_shared(hashtext('hive_fork_manager_app_lock'), hashtext('$APP'));
     SELECT pg_sleep(90);
     EOSQL
     FAKE_BP_PID=$!
     for i in $(seq 1 15); do
-      held=$(docker compose -f "${COMPOSE_DIR}/compose.yml" exec -T haf psql -A -t -d haf_block_log -c \
+      held=$(docker compose "${COMPOSE_OPTIONS[@]}" exec -T haf psql -A -t -d haf_block_log -c \
         "SELECT count(*) FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE l.locktype='advisory' AND a.application_name='ci-fake-bp-lock-holder';" 2>&1 | head -1 | tr -d ' ')
       [ "$held" = "1" ] && break
       sleep 1
@@ -453,15 +454,17 @@ sync:
       echo "FAIL: failed to acquire fake-BP shared lock"
       cat /tmp/fake_bp.log
       kill $FAKE_BP_PID 2>/dev/null
+      popd
       exit 1
     fi
-    docker compose -f "${COMPOSE_DIR}/compose.yml" up -d --no-deps --force-recreate $INSTALL_SVC
-    cid=$(docker compose -f "${COMPOSE_DIR}/compose.yml" ps -q $INSTALL_SVC)
+    docker compose "${COMPOSE_OPTIONS[@]}" up -d --no-deps --force-recreate $INSTALL_SVC
+    cid=$(docker compose "${COMPOSE_OPTIONS[@]}" ps -q $INSTALL_SVC)
     docker wait "$cid"
     ec=$(docker inspect "$cid" --format '{{.State.ExitCode}}')
     docker logs "$cid" > /tmp/lock_test_install.log 2>&1
     cat /tmp/lock_test_install.log | tail -30
     set +e; kill $FAKE_BP_PID 2>/dev/null; wait $FAKE_BP_PID 2>/dev/null; set -e
+    popd
     if [ "$ec" != "0" ]; then echo "FAIL: install exited $ec (expected 0)"; exit 1; fi
     if ! grep -qE "Skipping $APP install.*lock held by" /tmp/lock_test_install.log; then
       echo "FAIL: wrapper-skip log line not found - the lock did not engage"
