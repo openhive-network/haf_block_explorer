@@ -1141,6 +1141,18 @@ declare
             "type": "boolean",
             "description": "whether the voter approved or withdrew approval of the proposal"
           },
+          "own_vests": {
+            "type": "string",
+            "description": "this voter''s own governance VESTS at current HAFBE head (gross, before subtracting delayed withdrawals)"
+          },
+          "proxied_vests": {
+            "type": "string",
+            "description": "VESTS currently proxied to this voter"
+          },
+          "delayed_vests": {
+            "type": "string",
+            "description": "this voter''s pending VESTS withdrawal (power-down); subtract from own_vests to get effective governance power"
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
@@ -2662,7 +2674,7 @@ declare
           "Proposals"
         ],
         "summary": "Get the history of votes cast for this proposal.",
-        "description": "Get information about each vote cast for this proposal, including\napprovals and later withdrawals of approval.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/1/votes/history?page-size=2''`\n",
+        "description": "Get information about each vote cast for this proposal, including\napprovals and later withdrawals of approval. Each event includes the\nvoter''s current governance VESTS breakdown (`own_vests`,\n`proxied_vests`, `delayed_vests`) evaluated at the current HAFBE\nprocessed head block. Effective governance power = `own_vests - delayed_vests + proxied_vests`.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/1/votes/history?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_proposal_votes_history",
         "parameters": [
           {
@@ -2749,11 +2761,17 @@ declare
                     {
                       "voter_name": "alice",
                       "approve": true,
+                      "own_vests": "1000000",
+                      "proxied_vests": "0",
+                      "delayed_vests": "0",
                       "timestamp": "2019-11-05T10:12:09"
                     },
                     {
                       "voter_name": "bob",
                       "approve": false,
+                      "own_vests": "500000",
+                      "proxied_vests": "0",
+                      "delayed_vests": "0",
                       "timestamp": "2019-11-04T08:43:21"
                     }
                   ]

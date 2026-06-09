@@ -172,11 +172,17 @@ Returns `hafbe_backend.proposal_votes_history`:
     {
       "voter_name": "alice",
       "approve": true,
+      "own_vests": "1000000",
+      "proxied_vests": "0",
+      "delayed_vests": "0",
       "timestamp": "2019-11-05T10:12:09"
     },
     {
       "voter_name": "alice",
       "approve": false,
+      "own_vests": "1000000",
+      "proxied_vests": "0",
+      "delayed_vests": "0",
       "timestamp": "2019-11-06T08:43:21"
     }
   ]
@@ -186,6 +192,7 @@ Returns `hafbe_backend.proposal_votes_history`:
 #### Notes
 
 - The `page-size` limit is 10000 (not 1000) because vote history accumulates over the full lifecycle of a proposal; a single voter can appear multiple times (vote → unvote → revote)
+- Vote history rows include the voter's current-head governance stake: `own_vests` (gross VESTS balance), `proxied_vests` (VESTS proxied to this voter by others), `delayed_vests` (pending power-down withdrawals). Effective governance power = `own_vests - delayed_vests + proxied_vests`. All three are evaluated at the current HAFBE processed head block — not snapshotted at vote time.
 - `from-block` / `to-block` accept either integer block numbers or ISO-style timestamps; timestamps are converted to block numbers by the block time index
 
 ---

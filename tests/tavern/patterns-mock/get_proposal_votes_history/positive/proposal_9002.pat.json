@@ -5,16 +5,25 @@
     {
       "voter_name": "steem",
       "approve": true,
+      "own_vests": "0",
+      "proxied_vests": "0",
+      "delayed_vests": "0",
       "timestamp": "2025-06-01T00:00:03"
     },
     {
       "voter_name": "steem",
       "approve": false,
+      "own_vests": "0",
+      "proxied_vests": "0",
+      "delayed_vests": "0",
       "timestamp": "2025-06-01T00:00:06"
     },
     {
       "voter_name": "initminer",
       "approve": true,
+      "own_vests": "5000000",
+      "proxied_vests": "0",
+      "delayed_vests": "0",
       "timestamp": "2025-06-01T00:00:09"
     }
   ]

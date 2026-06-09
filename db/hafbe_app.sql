@@ -473,6 +473,7 @@ BEGIN
     vests         BIGINT NOT NULL,  -- Total effective vests (account + proxied)
     account_vests BIGINT NOT NULL,  -- Account's own vesting shares
     proxied_vests BIGINT NOT NULL,  -- Vests delegated via proxy
+    delayed_vests BIGINT NOT NULL,  -- Pending withdrawals excluded from voting power
 
     CONSTRAINT pk_account_vest_stats_cache PRIMARY KEY (account_id)
   );

@@ -178,6 +178,15 @@ hafbe_backend.proposal_votes_history_record:
     approve:
       type: boolean
       description: whether the voter approved or withdrew approval of the proposal
+    own_vests:
+      type: string
+      description: this voter''s own governance VESTS at current HAFBE head (gross, before subtracting delayed withdrawals)
+    proxied_vests:
+      type: string
+      description: VESTS currently proxied to this voter
+    delayed_vests:
+      type: string
+      description: this voter''s pending VESTS withdrawal (power-down); subtract from own_vests to get effective governance power
     timestamp:
       type: string
       format: date-time
@@ -188,6 +197,9 @@ DROP TYPE IF EXISTS hafbe_backend.proposal_votes_history_record CASCADE;
 CREATE TYPE hafbe_backend.proposal_votes_history_record AS (
     "voter_name" TEXT,
     "approve" BOOLEAN,
+    "own_vests" TEXT,
+    "proxied_vests" TEXT,
+    "delayed_vests" TEXT,
     "timestamp" TIMESTAMP
 );
 -- openapi-generated-code-end

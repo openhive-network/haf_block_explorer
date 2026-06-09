@@ -174,15 +174,17 @@ BEGIN
    *   - vests: Total effective vesting power (own + proxied to this account)
    *   - account_vests: Account's own vesting power
    *   - proxied_vests: Vesting power proxied to this account by others
+   *   - delayed_vests: Pending withdrawals excluded from voting power
    */
   DELETE FROM hafbe_app.account_vest_stats_cache;
 
-  INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
+  INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests, delayed_vests)
   SELECT
     account_id,
     vests,
     account_vests,
-    proxied_vests
+    proxied_vests,
+    delayed_vests
   FROM hafbe_backend.account_vest_stats_view;
 
 

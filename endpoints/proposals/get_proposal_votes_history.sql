@@ -9,7 +9,10 @@ SET ROLE hafbe_owner;
     summary: Get the history of votes cast for this proposal.
     description: |
       Get information about each vote cast for this proposal, including
-      approvals and later withdrawals of approval.
+      approvals and later withdrawals of approval. Each event includes the
+      voter's current governance VESTS breakdown (`own_vests`,
+      `proxied_vests`, `delayed_vests`) evaluated at the current HAFBE
+      processed head block. Effective governance power = `own_vests - delayed_vests + proxied_vests`.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`
@@ -105,11 +108,17 @@ SET ROLE hafbe_owner;
                 {
                   "voter_name": "alice",
                   "approve": true,
+                  "own_vests": "1000000",
+                  "proxied_vests": "0",
+                  "delayed_vests": "0",
                   "timestamp": "2019-11-05T10:12:09"
                 },
                 {
                   "voter_name": "bob",
                   "approve": false,
+                  "own_vests": "500000",
+                  "proxied_vests": "0",
+                  "delayed_vests": "0",
                   "timestamp": "2019-11-04T08:43:21"
                 }
               ]
@@ -160,6 +169,9 @@ BEGIN
     SELECT
       ba.voter_name,
       ba.approve,
+      ba.own_vests,
+      ba.proxied_vests,
+      ba.delayed_vests,
       ba.timestamp
     FROM hafbe_backend.get_proposal_votes_history(
       "proposal-id",

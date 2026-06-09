@@ -15,8 +15,9 @@ SET ROLE hafbe_owner;
  * get_proposal_votes_history: Gets historical voting records for a proposal.
  *
  * Returns vote history including both approve and unapprove actions against a
- * given proposal. Unlike witness votes, proposal vote history does not carry
- * vest/voting-power stats — it is a pure (voter, approve, timestamp) stream.
+ * given proposal, plus the voter's current governance VESTS/HP breakdown. The
+ * historical vote row does not snapshot vest balances at vote time, so these
+ * values are evaluated at the current processed head block.
  *
  * PARAMETERS:
  *   proposal_id    - Proposal id to get vote history for
@@ -27,8 +28,8 @@ SET ROLE hafbe_owner;
  *   from-block     - Optional: lower block bound (inclusive)
  *   to-block       - Optional: upper block bound (inclusive)
  *
- * RETURNS: Set of proposal_votes_history_record with voter name, approve flag
- *          and block timestamp.
+ * RETURNS: Set of proposal_votes_history_record with voter name, approve flag,
+ *          vest breakdown, proxy, and block timestamp.
  */
 DROP FUNCTION IF EXISTS hafbe_backend.get_proposal_votes_history;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_history(
@@ -54,9 +55,16 @@ BEGIN
         av.name,
         pvh.voter_id,
         pvh.approve,
+        avs.vests,
+        avs.account_vests,
+        avs.proxied_vests,
+        avs.delayed_vests,
         pvh.source_op_block,
         bv.created_at
       FROM hafbe_backend.proposal_votes_history_view pvh
+      -- LEFT JOIN: voter may no longer be active, stats may be NULL and are
+      -- then filled from expired_voter_stats_view in empty_results below.
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = pvh.voter_id
       JOIN hive.blocks_view bv   ON bv.num = pvh.source_op_block
       JOIN hive.accounts_view av ON av.id = pvh.voter_id
       WHERE
@@ -71,12 +79,58 @@ BEGIN
         (CASE WHEN _direction = 'asc'  THEN pvh.voter_id        ELSE NULL END) ASC
       OFFSET __offset
       LIMIT _page_size
+    ),
+    -- Cache miss: voter not in account_vest_stats_cache (e.g. removed their
+    -- vote). The heavy proxy-chain aggregate in expired_voter_stats_view is
+    -- evaluated only for this subset, not the whole page.
+    empty_results AS (
+      SELECT
+        ls.name,
+        ls.voter_id,
+        ls.approve,
+        evs.vests,
+        evs.account_vests,
+        evs.proxied_vests,
+        evs.delayed_vests,
+        ls.source_op_block,
+        ls.created_at
+      FROM limited_set ls
+      JOIN hafbe_backend.expired_voter_stats_view evs ON evs.account_id = ls.voter_id
+      WHERE ls.vests IS NULL
+    ),
+    -- Cache hit: all four vest figures come from the same cached snapshot.
+    not_empty_results AS (
+      SELECT
+        ls.name,
+        ls.voter_id,
+        ls.approve,
+        ls.vests,
+        ls.account_vests,
+        ls.proxied_vests,
+        ls.delayed_vests,
+        ls.source_op_block,
+        ls.created_at
+      FROM limited_set ls
+      WHERE ls.vests IS NOT NULL
+    ),
+    union_results AS (
+      SELECT * FROM empty_results
+      UNION ALL
+      SELECT * FROM not_empty_results
     )
     SELECT
-      ls.name::TEXT,
-      ls.approve,
-      ls.created_at
-    FROM limited_set ls
+      ur.name::TEXT,
+      ur.approve,
+      (COALESCE(ur.account_vests, 0) + COALESCE(ur.delayed_vests, 0))::TEXT,
+      COALESCE(ur.proxied_vests, 0)::TEXT,
+      COALESCE(ur.delayed_vests, 0)::TEXT,
+      ur.created_at
+    FROM union_results ur
+    ORDER BY
+      (CASE WHEN _direction = 'desc' THEN ur.source_op_block ELSE NULL END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN ur.source_op_block ELSE NULL END) ASC,
+      (CASE WHEN _direction = 'desc' THEN ur.voter_id        ELSE NULL END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN ur.voter_id        ELSE NULL END) ASC
   );
 END
 $$;

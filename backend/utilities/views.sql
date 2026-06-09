@@ -200,10 +200,11 @@ GROUP BY rapv.proxy_id;
  * aggregations double-count them.
  *
  * COLUMNS:
- *   account_id    - The account ID
- *   vests         - Total voting power (own + proxied)
- *   account_vests - Account's own vesting shares (minus pending withdrawals)
- *   proxied_vests - Vests being proxied to this account
+ *   account_id     - The account ID
+ *   vests          - Total voting power (own + proxied)
+ *   account_vests  - Account's own vesting shares (minus pending withdrawals)
+ *   proxied_vests  - Vests being proxied to this account
+ *   delayed_vests  - Pending vesting withdrawals excluded from voting power
  *
  * CALCULATION:
  *   vests = account_vests + proxied_vests
@@ -222,7 +223,8 @@ SELECT
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
     + COALESCE(vpvv.proxied_vests, 0) AS vests,
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
-  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
+  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests,
+  COALESCE(dv.delayed_vests::BIGINT, 0) AS delayed_vests
 FROM tracked_accounts cw
 LEFT JOIN current_account_balances cab
   ON cab.account = cw.account_id
@@ -242,10 +244,11 @@ LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
  * but have historical vote data.
  *
  * COLUMNS:
- *   account_id    - The account ID
- *   vests         - Total voting power (own + proxied)
- *   account_vests - Account's own vesting shares
- *   proxied_vests - Vests being proxied to this account
+ *   account_id     - The account ID
+ *   vests          - Total voting power (own + proxied)
+ *   account_vests  - Account's own vesting shares minus pending withdrawals
+ *   proxied_vests  - Vests being proxied to this account
+ *   delayed_vests  - Pending vesting withdrawals excluded from voting power
  *
  * NOTE: Uses hive.accounts_view to include all accounts, not just active voters.
  */
@@ -255,7 +258,8 @@ SELECT
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
     + COALESCE(vpvv.proxied_vests, 0) AS vests,
   COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
-  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
+  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests,
+  COALESCE(dv.delayed_vests::BIGINT, 0) AS delayed_vests
 FROM hive.accounts_view av
 LEFT JOIN current_account_balances cab
   ON cab.account = av.id
