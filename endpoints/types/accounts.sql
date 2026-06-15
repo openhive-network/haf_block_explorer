@@ -243,6 +243,24 @@ hafbe_backend.account:
     is_witness:
       type: boolean
       description: whether account is a witness
+    hbd_seconds:
+      type: string
+      description: >-
+        accumulated HBD-seconds (liquid HBD balance integrated over time) since
+        the last interest payment; the chain''s raw value used to derive interest.
+        Frozen from HF25 onward. Mirrors condenser_api.get_account.hbd_seconds
+    hbd_seconds_last_update:
+      type: string
+      format: date-time
+      description: >-
+        timestamp of the most recent liquid HBD balance change
+        (the anchor hbd_seconds is accrued from). Epoch if never set
+    hbd_last_interest_payment:
+      type: string
+      format: date-time
+      description: >-
+        timestamp of the last liquid HBD interest payment to this account.
+        Epoch for accounts that never received liquid HBD interest
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.account CASCADE;
@@ -284,7 +302,10 @@ CREATE TYPE hafbe_backend.account AS (
     "witness_votes" TEXT[],
     "witnesses_voted_for" INT,
     "ops_count" INT,
-    "is_witness" BOOLEAN
+    "is_witness" BOOLEAN,
+    "hbd_seconds" TEXT,
+    "hbd_seconds_last_update" TIMESTAMP,
+    "hbd_last_interest_payment" TIMESTAMP
 );
 -- openapi-generated-code-end
 
