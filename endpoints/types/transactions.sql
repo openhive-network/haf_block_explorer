@@ -65,7 +65,7 @@ hafbe_backend.period_op_type_count:
 DROP TYPE IF EXISTS hafbe_backend.period_op_type_count CASCADE;
 CREATE TYPE hafbe_backend.period_op_type_count AS (
     "op_type_id" INT,
-    "op_count" BIGINT
+    "op_count" INT
 );
 -- openapi-generated-code-end
 
@@ -98,8 +98,8 @@ hafbe_backend.operation_type_stats:
 DROP TYPE IF EXISTS hafbe_backend.operation_type_stats CASCADE;
 CREATE TYPE hafbe_backend.operation_type_stats AS (
     "date" TIMESTAMP,
-    "total_transactions" BIGINT,
-    "total_operations" BIGINT,
+    "total_transactions" INT,
+    "total_operations" INT,
     "operations" hafbe_backend.period_op_type_count[],
     "last_block_num" INT
 );
