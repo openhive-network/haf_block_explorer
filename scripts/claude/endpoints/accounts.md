@@ -59,9 +59,19 @@ Returns `hafbe_backend.account`:
   "witness_votes": ["blocktrades", "gtg", ...],
   "witnesses_voted_for": 9,
   "ops_count": 219867,
-  "is_witness": true
+  "is_witness": true,
+  "hbd_seconds": "73446284422014",
+  "hbd_seconds_last_update": "2016-09-15T19:47:09",
+  "hbd_last_interest_payment": "2016-09-02T14:59:15"
 }
 ```
+
+The last three fields are the account's raw liquid-HBD interest state, mirroring
+`condenser_api.get_account` / `database_api.list_accounts`. They come straight
+from Balance Tracker's accumulator (`btracker_backend.account_hbd_interest_view`,
+maintained in `process_balances` and frozen from HF25 onward). Accounts that
+never held liquid HBD report epoch timestamps and `hbd_seconds = "0"`. No
+"pending interest" is computed server-side.
 
 #### Example
 
@@ -79,6 +89,7 @@ This endpoint aggregates data from multiple sources:
 - `hafbe_backend.get_account_witness_votes()` - Witness votes
 - `hafbe_backend.get_account_proxy()` - Proxy assignment
 - `hafbe_backend.get_account_ops_count()` - Operation count
+- `hafbe_backend.get_account_hbd_interest()` - Raw liquid-HBD interest state, read from `btracker_backend.account_hbd_interest_view`
 
 ---
 
@@ -309,6 +320,7 @@ Located in `backend/endpoint_helpers/`:
 | `get_account_proxy()` | `account_parameters.sql` | Proxy assignment |
 | `get_account_ops_count()` | `account_parameters.sql` | Operation count |
 | `get_account_proxied_vsf_votes()` | `account_parameters.sql` | Recursive proxy power |
+| `get_account_hbd_interest()` | `account.sql` | Raw liquid-HBD interest fields from `btracker_backend.account_hbd_interest_view` (single-row, epoch defaults when unmatched) |
 | `parse_profile_picture()` | `account_parameters.sql` | Extract profile image URL |
 | `get_total_wallet_address_aggregation()` | `total_wallet_addresses.sql` | Date-series aggregation of account creation counts with running cumulative sum |
 

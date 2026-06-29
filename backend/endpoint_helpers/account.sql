@@ -354,4 +354,47 @@ BEGIN
 END
 $$;
 
+-- =============================================================================
+-- get_account_hbd_interest: Raw liquid-HBD interest state for an account.
+-- =============================================================================
+-- Reads the per-account accumulator maintained by Balance Tracker
+-- (btracker_backend.account_hbd_interest_view, populated in process_balances and
+-- frozen from HF25 onward) and returns the three chain-snapshot fields that
+-- condenser_api.get_account / database_api.list_accounts expose:
+--   hbd_seconds               - Σ(liquid HBD balance × seconds) since last payment
+--                               (NUMERIC -> integer string, matching the wire type)
+--   hbd_seconds_last_update   - timestamp of the last liquid HBD balance change
+--   hbd_last_interest_payment - timestamp of the last liquid HBD interest payment
+--
+-- The (SELECT 1) anchor LEFT JOIN guarantees exactly one row even when the
+-- account has no accumulator entry (never held liquid HBD): the view columns
+-- come back NULL and the caller (get_account) COALESCEs them to epoch / '0',
+-- which is what the chain reports for a never-paid account. Returning one row is
+-- required because get_account composes its result from a cross join of single-
+-- row helpers; a bare view join would drop the whole account when unmatched.
+--
+-- PARAMETERS:
+--   _account - Account ID
+--
+-- RETURNS: one row of (hbd_seconds, hbd_seconds_last_update, hbd_last_interest_payment)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_account_hbd_interest(_account INT)
+RETURNS TABLE(
+    "hbd_seconds" TEXT,
+    "hbd_seconds_last_update" TIMESTAMP,
+    "hbd_last_interest_payment" TIMESTAMP
+)
+LANGUAGE 'plpgsql' STABLE
+AS
+$$
+BEGIN
+  RETURN QUERY
+    SELECT
+      TRUNC(v.hbd_seconds)::TEXT,
+      v.hbd_seconds_last_update,
+      v.hbd_last_interest_payment
+    FROM (SELECT 1) anchor
+    LEFT JOIN btracker_backend.account_hbd_interest_view v ON v.account = _account;
+END
+$$;
+
 RESET ROLE;

@@ -544,6 +544,20 @@ declare
           "is_witness": {
             "type": "boolean",
             "description": "whether account is a witness"
+          },
+          "hbd_seconds": {
+            "type": "string",
+            "description": "accumulated HBD-seconds (liquid HBD balance integrated over time) since the last interest payment; the chain''s raw value used to derive interest. Frozen from HF25 onward. Mirrors condenser_api.get_account.hbd_seconds"
+          },
+          "hbd_seconds_last_update": {
+            "type": "string",
+            "format": "date-time",
+            "description": "timestamp of the most recent liquid HBD balance change (the anchor hbd_seconds is accrued from). Epoch if never set"
+          },
+          "hbd_last_interest_payment": {
+            "type": "string",
+            "format": "date-time",
+            "description": "timestamp of the last liquid HBD interest payment to this account. Epoch for accounts that never received liquid HBD interest"
           }
         }
       },
@@ -1680,7 +1694,10 @@ declare
                   ],
                   "witnesses_voted_for": 9,
                   "ops_count": 219867,
-                  "is_witness": true
+                  "is_witness": true,
+                  "hbd_seconds": "73446284422014",
+                  "hbd_seconds_last_update": "2016-09-15T19:47:09",
+                  "hbd_last_interest_payment": "2016-09-02T14:59:15"
                 }
               }
             }
