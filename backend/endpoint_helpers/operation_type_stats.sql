@@ -152,19 +152,12 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from                INT;
-  __to                  INT;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
   __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
-  -- Normalize block range (block_num or timestamp -> block_num)
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
-
   __granularity := (
     CASE
       WHEN _granularity = 'daily'   THEN 'day'
@@ -174,14 +167,12 @@ BEGIN
     END
   );
 
-  __from_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP
-  );
-  __to_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP
-  );
+  -- Robustly normalize the timestamp range in one step. See aggregation_block_range
+  -- for the #139 hardening: pruned-HAF-safe lower bound and NULL-safe upper-bound
+  -- timestamp so the period series can never collapse.
+  SELECT from_timestamp, to_timestamp
+  INTO __from_timestamp, __to_timestamp
+  FROM hafbe_backend.aggregation_block_range(_from_block, _to_block, __hafbe_current_block, __granularity);
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
@@ -251,8 +242,12 @@ BEGIN
     ),
 
     /*
-     * Fill in last_block_num for periods where both rollups were empty,
-     * using a lateral lookup for the last block before period end.
+     * Fill in last_block_num for periods where both rollups were empty, using a
+     * lateral lookup for the last block at/before period end. This is exact per
+     * period (a carry-forward from an earlier period would mis-report the block for
+     * an empty interior period); it only fires for empty periods and is served by
+     * hive_blocks_created_at_idx, so a full-history request with dense data does
+     * essentially no extra work.
      */
     with_block AS (
       SELECT

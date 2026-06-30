@@ -345,6 +345,88 @@ END
 $$;
 
 /*
+ * aggregation_block_range_return: Resolved range for the time-series aggregation
+ * endpoints (operation-type / transaction statistics).
+ *
+ * FIELDS:
+ *   from_block     - First block actually present at/above the requested lower bound
+ *   to_block       - Last block actually present at/below the processed head (never a phantom num)
+ *   from_timestamp - from_block's created_at truncated to the requested granularity
+ *   to_timestamp   - to_block's created_at truncated to the requested granularity
+ */
+DROP TYPE IF EXISTS hafbe_backend.aggregation_block_range_return CASCADE;
+CREATE TYPE hafbe_backend.aggregation_block_range_return AS (
+  from_block     INT,
+  to_block       INT,
+  from_timestamp TIMESTAMP,
+  to_timestamp   TIMESTAMP
+);
+
+/*
+ * aggregation_block_range: Robustly resolves the (block, timestamp) range for the
+ * time-series statistics endpoints. Mirrors btracker_backend.aggregated_history_block_range.
+ *
+ * Hardening over blocksearch_range (fixes #139 non-determinism):
+ *   - Lower bound (NULL) uses the first block actually present in blocks_view, so a
+ *     pruned HAF (where block 1 is absent) does not produce a NULL timestamp.
+ *   - Upper bound is clamped to the app's processed head and the timestamps are
+ *     resolved with <= / >= look-ups instead of an exact `num =` match. A missing
+ *     exact block (reversible-block visibility / context-pointer lag) can therefore
+ *     never yield a NULL timestamp that collapses the generated period series to a
+ *     single (or zero) row. The returned period count becomes a pure function of the
+ *     data rather than of the app's instantaneous processing position.
+ *
+ * PARAMETERS:
+ *   _from          - Lower bound block number (NULL = first available block)
+ *   _to            - Upper bound block number (NULL = processed head)
+ *   _current_block - App's current (processed) head block number
+ *   _granularity   - PostgreSQL date_trunc unit ('day' | 'month' | 'year')
+ *
+ * RETURNS: aggregation_block_range_return with normalized blocks and truncated timestamps
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_block_range(
+    _from          INT,
+    _to            INT,
+    _current_block INT,
+    _granularity   TEXT
+)
+RETURNS hafbe_backend.aggregation_block_range_return
+LANGUAGE 'plpgsql'
+STABLE
+SET JIT = OFF
+AS
+$$
+DECLARE
+  __from_block     INT;
+  __to_block       INT;
+  __from_timestamp TIMESTAMP;
+  __to_timestamp   TIMESTAMP;
+BEGIN
+  -- Upper bound: the last block actually present at or below the processed head. One
+  -- index look-up yields both the real boundary block and its timestamp, so neither
+  -- can be NULL when the context pointer is briefly ahead of blocks_view visibility
+  -- (the #139 non-determinism: a missing exact block collapsed the period series).
+  SELECT b.num, DATE_TRUNC(_granularity, b.created_at::TIMESTAMP)
+  INTO __to_block, __to_timestamp
+  FROM hive.blocks_view b
+  WHERE b.num <= LEAST(COALESCE(_to, _current_block), _current_block)
+  ORDER BY b.num DESC
+  LIMIT 1;
+
+  -- Lower bound: the first block actually present at or above the requested start
+  -- (pruned HAF: the first block may not be 1; NULL -> first available block).
+  SELECT b.num, DATE_TRUNC(_granularity, b.created_at::TIMESTAMP)
+  INTO __from_block, __from_timestamp
+  FROM hive.blocks_view b
+  WHERE b.num >= COALESCE(_from, 0)
+  ORDER BY b.num ASC
+  LIMIT 1;
+
+  RETURN (__from_block, __to_block, __from_timestamp, __to_timestamp)::hafbe_backend.aggregation_block_range_return;
+END
+$$;
+
+/*
  * blocksearch_account_range: Calculates block and sequence range for account-based search.
  *
  * In addition to block range, calculates the account operation sequence numbers

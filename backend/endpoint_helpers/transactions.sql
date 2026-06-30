@@ -211,19 +211,12 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from                INT;
-  __to                  INT;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
   __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
-  -- Normalize block range
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
-
   -- Convert granularity enum to PostgreSQL interval keyword
   __granularity := (
     CASE
@@ -234,15 +227,12 @@ BEGIN
     END
   );
 
-  -- Convert blocks to timestamps (truncated to period boundary)
-  __from_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP
-  );
-  __to_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP
-  );
+  -- Robustly normalize the timestamp range in one step. See aggregation_block_range
+  -- for the #139 hardening: pruned-HAF-safe lower bound and NULL-safe upper-bound
+  -- timestamp so the period series can never collapse.
+  SELECT from_timestamp, to_timestamp
+  INTO __from_timestamp, __to_timestamp
+  FROM hafbe_backend.aggregation_block_range(_from_block, _to_block, __hafbe_current_block, __granularity);
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
@@ -306,8 +296,10 @@ BEGIN
      * =========================================================================
      * PURPOSE: Fill in missing last_block_num for periods without transactions.
      *
-     * Uses LATERAL join to find the most recent block before the end of
-     * the period. This ensures every row has a valid block reference.
+     * Uses a LATERAL lookup for the last block at/before period end. This is exact
+     * per period (a carry-forward from an earlier period would mis-report the block
+     * for an empty interior period); it only fires for empty periods and is served by
+     * hive_blocks_created_at_idx, so dense data does essentially no extra work.
      */
     join_missing_block AS (
       SELECT
