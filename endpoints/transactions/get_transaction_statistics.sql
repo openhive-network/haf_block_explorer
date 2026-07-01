@@ -128,7 +128,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS hafbe_backend.transaction_stats_return
+RETURNS hafbe_backend.transaction_stats_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 SET jit = OFF

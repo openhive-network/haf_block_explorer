@@ -136,7 +136,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_type_statistics(
     "to-block" TEXT = NULL,
     "op-types" TEXT = NULL
 )
-RETURNS hafbe_backend.operation_type_stats_return
+RETURNS hafbe_backend.operation_type_stats_return 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET jit = OFF

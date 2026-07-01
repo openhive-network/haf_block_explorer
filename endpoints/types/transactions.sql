@@ -84,6 +84,7 @@ hafbe_backend.period_op_type_count:
     op_count:
       type: integer
       format: int64
+      x-sql-datatype: BIGINT
       description: number of operations of this type in the period
  */
 -- openapi-generated-code-begin
@@ -105,10 +106,12 @@ hafbe_backend.operation_type_stats:
     total_transactions:
       type: integer
       format: int64
+      x-sql-datatype: BIGINT
       description: total number of transactions in the period (from transaction_stats_by_day/month)
     total_operations:
       type: integer
       format: int64
+      x-sql-datatype: BIGINT
       description: total number of operations in the period (sum of operations[].op_count)
     operations:
       type: array
