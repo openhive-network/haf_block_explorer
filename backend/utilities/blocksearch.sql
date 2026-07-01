@@ -427,6 +427,51 @@ END
 $$;
 
 /*
+ * aggregation_period_count: Number of periods the time-series aggregation would emit
+ * for the given (granularity, block-range), i.e. the total record count across all pages.
+ *
+ * Resolves the range with the same NULL-safe boundaries as aggregation_block_range, so
+ * the count matches exactly what get_transaction_aggregation / get_operation_type_aggregation
+ * page over. Cheap: two boundary look-ups plus a generate_series count (no table scan).
+ * Independent of any op-type filter (every period is one series row).
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_period_count(
+    _granularity hafbe_backend.granularity,
+    _from_block  INT,
+    _to_block    INT
+)
+RETURNS INT
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __granularity         TEXT;
+  __from_timestamp      TIMESTAMP;
+  __to_timestamp        TIMESTAMP;
+  __one_period          INTERVAL;
+  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+BEGIN
+  __granularity := (
+    CASE
+      WHEN _granularity = 'daily'   THEN 'day'
+      WHEN _granularity = 'monthly' THEN 'month'
+      WHEN _granularity = 'yearly'  THEN 'year'
+      ELSE NULL
+    END
+  );
+
+  SELECT from_timestamp, to_timestamp
+  INTO __from_timestamp, __to_timestamp
+  FROM hafbe_backend.aggregation_block_range(_from_block, _to_block, __hafbe_current_block, __granularity);
+
+  __one_period := ('1 ' || __granularity)::INTERVAL;
+
+  RETURN (SELECT count(*)::INT FROM generate_series(__from_timestamp, __to_timestamp, __one_period));
+END
+$$;
+
+/*
  * blocksearch_account_range: Calculates block and sequence range for account-based search.
  *
  * In addition to block range, calculates the account operation sequence numbers

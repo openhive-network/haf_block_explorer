@@ -145,6 +145,8 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
     _direction   hafbe_backend.sort_direction,
     _from_block  INT,
     _to_block    INT,
+    _page        INT DEFAULT 1,
+    _page_size   INT DEFAULT 100,
     _op_types    INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.operation_type_stats
@@ -152,6 +154,8 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
+  __full_from_timestamp TIMESTAMP;
+  __full_to_timestamp   TIMESTAMP;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
@@ -171,10 +175,25 @@ BEGIN
   -- for the #139 hardening: pruned-HAF-safe lower bound and NULL-safe upper-bound
   -- timestamp so the period series can never collapse.
   SELECT from_timestamp, to_timestamp
-  INTO __from_timestamp, __to_timestamp
+  INTO __full_from_timestamp, __full_to_timestamp
   FROM hafbe_backend.aggregation_block_range(_from_block, _to_block, __hafbe_current_block, __granularity);
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
+
+  -- Narrow the full range to the requested page's contiguous period window, so only
+  -- page_size periods are generated and aggregated (bounds work AND payload). A slice
+  -- of a regular series is contiguous, so [MIN,MAX] reproduces exactly the page.
+  SELECT MIN(s.p), MAX(s.p)
+  INTO __from_timestamp, __to_timestamp
+  FROM (
+    SELECT p
+    FROM generate_series(__full_from_timestamp, __full_to_timestamp, __one_period) AS p
+    ORDER BY
+      (CASE WHEN _direction = 'desc' THEN p END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN p END) ASC
+    OFFSET (GREATEST(_page, 1) - 1) * _page_size
+    LIMIT _page_size
+  ) s;
 
   RETURN QUERY (
     /*

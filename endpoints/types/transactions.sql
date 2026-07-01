@@ -47,6 +47,31 @@ hafbe_backend.array_of_transaction_stats:
     $ref: '#/components/schemas/hafbe_backend.transaction_stats'
 */
 
+/** openapi:components:schemas
+hafbe_backend.transaction_stats_return:
+  type: object
+  properties:
+    total_periods:
+      type: integer
+      description: total number of periods in the requested range (across all pages)
+    total_pages:
+      type: integer
+      description: total number of pages for the requested page-size
+    stats:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_backend.transaction_stats'
+      description: the requested page of per-period transaction statistics
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.transaction_stats_return CASCADE;
+CREATE TYPE hafbe_backend.transaction_stats_return AS (
+    "total_periods" INT,
+    "total_pages" INT,
+    "stats" hafbe_backend.transaction_stats[]
+);
+-- openapi-generated-code-end
+
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
@@ -111,5 +136,30 @@ hafbe_backend.array_of_operation_type_stats:
   items:
     $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
 */
+
+/** openapi:components:schemas
+hafbe_backend.operation_type_stats_return:
+  type: object
+  properties:
+    total_periods:
+      type: integer
+      description: total number of periods in the requested range (across all pages)
+    total_pages:
+      type: integer
+      description: total number of pages for the requested page-size
+    stats:
+      type: array
+      items:
+        $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
+      description: the requested page of per-period operation-type statistics
+ */
+-- openapi-generated-code-begin
+DROP TYPE IF EXISTS hafbe_backend.operation_type_stats_return CASCADE;
+CREATE TYPE hafbe_backend.operation_type_stats_return AS (
+    "total_periods" INT,
+    "total_pages" INT,
+    "stats" hafbe_backend.operation_type_stats[]
+);
+-- openapi-generated-code-end
 
 RESET ROLE;
