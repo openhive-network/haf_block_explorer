@@ -154,6 +154,8 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
+  __from                INT;
+  __to                  INT;
   __full_from_timestamp TIMESTAMP;
   __full_to_timestamp   TIMESTAMP;
   __from_timestamp      TIMESTAMP;
@@ -171,12 +173,15 @@ BEGIN
     END
   );
 
-  -- Robustly normalize the timestamp range in one step. See aggregation_block_range
-  -- for the #139 hardening: pruned-HAF-safe lower bound and NULL-safe upper-bound
-  -- timestamp so the period series can never collapse.
-  SELECT from_timestamp, to_timestamp
-  INTO __full_from_timestamp, __full_to_timestamp
-  FROM hafbe_backend.aggregation_block_range(_from_block, _to_block, __hafbe_current_block, __granularity);
+  -- Normalize block range (block_num or timestamp -> block_num), then convert the
+  -- boundaries to period-truncated timestamps. This is the full requested range;
+  -- the page window is carved out of it below.
+  SELECT from_block, to_block
+  INTO __from, __to
+  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
+
+  __full_from_timestamp := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP);
+  __full_to_timestamp   := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP);
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
 

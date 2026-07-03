@@ -196,15 +196,12 @@ Many endpoints accept block ranges via timestamp or block number:
 Conversion handled by `hive.convert_to_blocks_range()`.
 
 The time-series statistics endpoints (`get_transaction_statistics`,
-`get_operation_type_statistics`) additionally normalize the range with
-`hafbe_backend.aggregation_block_range()` (in `backend/utilities/blocksearch.sql`):
-a NULL upper bound resolves to the last block actually present at/below the
-processed head, and a NULL lower bound to the first block present (pruned-HAF
-safe). Both bounds are resolved with NULL-safe boundary look-ups so a context
-pointer briefly ahead of `blocks_view` cannot collapse the generated period
-series — the #139 non-determinism (one call returned 1 row, the next 3,750).
-Empty periods report the exact last block at/before period end (a LATERAL on
-`hive_blocks_created_at_idx`), not a carried-forward value.
+`get_operation_type_statistics`) normalize the range with
+`hafbe_backend.blocksearch_range()` and convert the boundary blocks to
+period-truncated timestamps. A no-range call therefore spans genesis → the app's
+processed head; the row count reflects how far the app has processed (a
+still-syncing node legitimately returns fewer periods). Because that full-history
+`daily` series is large, these endpoints are **paginated** — see below.
 
 ### Response Caching
 

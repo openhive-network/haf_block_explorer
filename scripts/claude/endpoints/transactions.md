@@ -186,8 +186,8 @@ Located in `backend/endpoint_helpers/`:
 |----------|------|---------|
 | `get_transaction_aggregation()` | transactions.sql | Page over transaction stats for the range |
 | `get_operation_type_aggregation()` | operation_type_stats.sql | Page over per-op-type stats for the range |
-| `aggregation_period_count()` | ../utilities/blocksearch.sql | `total_periods` for the wrapper (drives `total_pages`) |
-| `aggregation_block_range()` | ../utilities/blocksearch.sql | NULL-safe (block, timestamp) range resolution (#139) |
+| `aggregation_period_count()` | ../utilities/blocksearch.sql | `total_periods` for the wrapper (drives `total_pages`); resolves the range via `blocksearch_range` + counts periods |
+| `blocksearch_range()` | ../utilities/blocksearch.sql | Normalizes the (from, to) block range (shared with block-search) |
 
 ## Related Processing
 
