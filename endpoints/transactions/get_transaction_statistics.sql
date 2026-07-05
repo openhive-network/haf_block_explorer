@@ -153,7 +153,7 @@ BEGIN
   END IF;
 
   _total_periods := hafbe_backend.aggregation_period_count("granularity", _block_range.first_block, _block_range.last_block);
-  _total_pages   := CEIL(_total_periods::NUMERIC / "page-size")::INT;
+  _total_pages   := hafah_backend.total_pages(_total_periods, "page-size");
 
   PERFORM hafbe_backend.validate_page("page", _total_pages);
 
