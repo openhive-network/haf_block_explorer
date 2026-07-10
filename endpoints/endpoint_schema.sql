@@ -2859,7 +2859,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Page number (1-indexed) of periods to return, in the sorted order."
           },
@@ -2869,7 +2870,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Number of periods returned per page (max 1000)."
           },
@@ -2960,7 +2963,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Page number (1-indexed) of periods to return, in the sorted order."
           },
@@ -2970,7 +2974,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Number of periods returned per page (max 1000)."
           },

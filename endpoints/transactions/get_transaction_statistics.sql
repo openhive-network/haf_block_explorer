@@ -48,6 +48,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
+          minimum: 1
         description: Page number (1-indexed) of periods to return, in the sorted order.
       - in: query
         name: page-size
@@ -55,6 +56,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 1000
         description: Number of periods returned per page (max 1000).
       - in: query
         name: from-block
@@ -128,7 +131,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL
 )
-RETURNS hafbe_backend.transaction_stats_return 
+RETURNS hafbe_backend.transaction_stats_return
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql'
 SET jit = OFF
@@ -137,14 +140,24 @@ $$
 DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
+  -- Normalize optional params: an explicit NULL (e.g. {"page-size": null} or
+  -- {"granularity": null}) must fall back to the signature default. PostgREST applies the
+  -- default only when a param is OMITTED, not when it is explicitly null, so a raw NULL
+  -- otherwise slips past the validators (NULL > 1000 / NULL <= 0 are NULL, not TRUE) into
+  -- LIMIT NULL (= "no limit"), and a NULL granularity/direction collapses the period series
+  -- / drops the sort. COALESCE every param that has a non-NULL default.
+  _granularity    hafbe_backend.granularity    := COALESCE("granularity", 'yearly');
+  _direction      hafbe_backend.sort_direction := COALESCE("direction", 'desc');
+  _page           INT               := COALESCE("page", 1);
+  _page_size      INT               := COALESCE("page-size", 100);
   _total_periods  INT;
   _total_pages    INT;
   _result         hafbe_backend.transaction_stats[];
 BEGIN
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
-  PERFORM hafbe_backend.validate_limit("page-size", 1000);
-  PERFORM hafbe_backend.validate_negative_limit("page-size");
-  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_limit(_page_size, 1000);
+  PERFORM hafbe_backend.validate_negative_limit(_page_size);
+  PERFORM hafbe_backend.validate_negative_page(_page);
 
   IF _block_range.last_block <= hive.app_get_irreversible_block() AND _block_range.last_block IS NOT NULL THEN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
@@ -152,24 +165,24 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  _total_periods := hafbe_backend.aggregation_period_count("granularity", _block_range.first_block, _block_range.last_block);
-  _total_pages   := hafah_backend.total_pages(_total_periods, "page-size");
+  _total_periods := hafbe_backend.aggregation_period_count(_granularity, _block_range.first_block, _block_range.last_block);
+  _total_pages   := hafah_backend.total_pages(_total_periods, _page_size);
 
-  PERFORM hafbe_backend.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page(_page, _total_pages);
 
   _result := ARRAY(
     SELECT fb::hafbe_backend.transaction_stats
     FROM hafbe_backend.get_transaction_aggregation(
-      "granularity",
-      "direction",
+      _granularity,
+      _direction,
       _block_range.first_block,
       _block_range.last_block,
-      "page",
-      "page-size"
+      _page,
+      _page_size
     ) fb
     ORDER BY
-      (CASE WHEN "direction" = 'desc' THEN fb.date END) DESC,
-      (CASE WHEN "direction" = 'asc'  THEN fb.date END) ASC
+      (CASE WHEN _direction = 'desc' THEN fb.date END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN fb.date END) ASC
   );
 
   RETURN (

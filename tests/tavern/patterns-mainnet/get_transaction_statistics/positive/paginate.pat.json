@@ -1,0 +1,30 @@
+{
+    "total_periods": 7,
+    "total_pages": 3,
+    "stats": [
+        {
+            "date": "2016-07-01T00:00:00",
+            "trx_count": 170235,
+            "avg_trx": 0,
+            "min_trx": 0,
+            "max_trx": 8,
+            "last_block_num": 2802785
+        },
+        {
+            "date": "2016-06-01T00:00:00",
+            "trx_count": 112714,
+            "avg_trx": 0,
+            "min_trx": 0,
+            "max_trx": 6,
+            "last_block_num": 1942555
+        },
+        {
+            "date": "2016-05-01T00:00:00",
+            "trx_count": 156423,
+            "avg_trx": 0,
+            "min_trx": 0,
+            "max_trx": 34,
+            "last_block_num": 1052190
+        }
+    ]
+}
