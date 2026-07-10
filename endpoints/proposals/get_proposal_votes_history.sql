@@ -139,22 +139,25 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
   _filter_account_id INT         := hafah_backend.get_account_id("voter-name", FALSE);
+  _page INT                      := COALESCE("page", 1);
+  _page_size INT                 := COALESCE("page-size", 100);
+  _direction hafbe_backend.sort_direction := COALESCE("direction", 'desc');
   _ops_count INT;
   _total_pages INT;
 
   _result hafbe_backend.proposal_votes_history_record[];
 BEGIN
-  PERFORM hafbe_backend.validate_limit("page-size", 10000);
-  PERFORM hafbe_backend.validate_negative_limit("page-size");
-  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_limit(_page_size, 10000);
+  PERFORM hafbe_backend.validate_negative_limit(_page_size);
+  PERFORM hafbe_backend.validate_negative_page(_page);
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count   := hafbe_backend.get_proposal_votes_history_count("proposal-id", _filter_account_id, _block_range);
-  _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
+  _total_pages := hafah_backend.total_pages(_ops_count, _page_size);
 
-  PERFORM hafbe_backend.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page(_page, _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT
@@ -164,9 +167,9 @@ BEGIN
     FROM hafbe_backend.get_proposal_votes_history(
       "proposal-id",
       _filter_account_id,
-      "page",
-      "page-size",
-      "direction",
+      _page,
+      _page_size,
+      _direction,
       _block_range.first_block,
       _block_range.last_block
     ) ba

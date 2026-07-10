@@ -43,6 +43,13 @@ IMMUTABLE
 AS
 $$
 BEGIN
+  -- An explicit NULL (e.g. {"page-size": null} over PostgREST) must be rejected here,
+  -- not silently pass: `NULL > _expected_limit` is NULL (not TRUE), so without this guard
+  -- the value flows on to `LIMIT NULL` (= "no limit") and returns the whole table,
+  -- bypassing the cap. Endpoints that want a default should COALESCE before validating.
+  IF _given_limit IS NULL THEN
+    RAISE EXCEPTION '% must not be null', _given_limit_name;
+  END IF;
   IF _given_limit > _expected_limit THEN
     RAISE EXCEPTION '% <= %: % of % is greater than maxmimum allowed',
       _given_limit_name, _expected_limit, _given_limit_name, _given_limit;
@@ -71,6 +78,11 @@ IMMUTABLE
 AS
 $$
 BEGIN
+  -- NULL is not positive: reject it (NULL <= 0 is NULL, not TRUE) so it cannot slip
+  -- through to LIMIT NULL. See validate_limit for the full rationale.
+  IF _given_limit IS NULL THEN
+    RAISE EXCEPTION '% must not be null', _given_limit_name;
+  END IF;
   IF _given_limit <= 0 THEN
     RAISE EXCEPTION '% <= 0: % of % is lesser or equal 0',
       _given_limit_name, _given_limit_name, _given_limit;
