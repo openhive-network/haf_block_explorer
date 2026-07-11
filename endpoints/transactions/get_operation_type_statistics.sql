@@ -161,6 +161,9 @@ DECLARE
   _page_size      INT               := COALESCE("page-size", 100);
   _total_periods  INT;
   _total_pages    INT;
+  _current_block  INT;
+  _from_ts        TIMESTAMP;
+  _to_ts          TIMESTAMP;
   _result         hafbe_backend.operation_type_stats[];
 BEGIN
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
@@ -184,7 +187,14 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  _total_periods := hafbe_backend.aggregation_period_count(_granularity, _block_range.first_block, _block_range.last_block);
+  -- Resolve current_block + the full period-truncated range ONCE, then share the window
+  -- with both the period count (total_pages) and the paged aggregation, so they can never
+  -- disagree (e.g. a block committed mid-request) and the range is resolved a single time.
+  _current_block := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  SELECT from_ts, to_ts INTO _from_ts, _to_ts
+  FROM hafbe_backend.aggregation_time_range(_granularity, _block_range.first_block, _block_range.last_block, _current_block);
+
+  _total_periods := hafbe_backend.aggregation_period_count(_granularity, _from_ts, _to_ts);
   _total_pages   := hafah_backend.total_pages(_total_periods, _page_size);
 
   PERFORM hafbe_backend.validate_page(_page, _total_pages);
@@ -194,8 +204,8 @@ BEGIN
     FROM hafbe_backend.get_operation_type_aggregation(
       _granularity,
       _direction,
-      _block_range.first_block,
-      _block_range.last_block,
+      _from_ts,
+      _to_ts,
       _page,
       _page_size,
       _op_types

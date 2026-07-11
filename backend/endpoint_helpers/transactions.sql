@@ -172,42 +172,38 @@ $$;
  * Fills gaps in the time series with zero values for periods without data.
  *
  * PARAMETERS:
- *   _granularity - Time granularity: 'daily', 'monthly', or 'yearly'
- *   _direction   - Sort direction: 'asc' or 'desc'
- *   _from_block  - Starting block number (NULL = genesis)
- *   _to_block    - Ending block number (NULL = current head)
+ *   _granularity          - Time granularity: 'daily', 'monthly', or 'yearly'
+ *   _direction            - Sort direction: 'asc' or 'desc'
+ *   _full_from_timestamp  - lower bound of the full range, period-truncated (from aggregation_time_range)
+ *   _full_to_timestamp    - upper bound of the full range, period-truncated (from aggregation_time_range)
  *
  * RETURNS: Set of transaction_stats records covering the time range
  *
  * PROCESSING STEPS:
- *   1. Convert block range to timestamp range
+ *   1. Narrow the pre-resolved full range to the requested page's period window
  *   2. Generate complete time series for the period
  *   3. Left join with actual stats (gaps become NULL)
  *   4. Fill missing last_block_num by finding nearest block
  *   5. Calculate avg_trx from trx_count and count_blocks
  */
+DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
-    _granularity hafbe_backend.granularity,
-    _direction   hafbe_backend.sort_direction,
-    _from_block  INT,
-    _to_block    INT,
-    _page        INT DEFAULT 1,
-    _page_size   INT DEFAULT 100
+    _granularity          hafbe_backend.granularity,
+    _direction            hafbe_backend.sort_direction,
+    _full_from_timestamp  TIMESTAMP,
+    _full_to_timestamp    TIMESTAMP,
+    _page                 INT DEFAULT 1,
+    _page_size            INT DEFAULT 100
 )
 RETURNS SETOF hafbe_backend.transaction_stats
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from                INT;
-  __to                  INT;
-  __full_from_timestamp TIMESTAMP;
-  __full_to_timestamp   TIMESTAMP;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
   -- Convert granularity enum to PostgreSQL interval keyword
   __granularity := (
@@ -219,26 +215,18 @@ BEGIN
     END
   );
 
-  -- Normalize block range (block_num or timestamp -> block_num), then convert the
-  -- boundaries to period-truncated timestamps. This is the full requested range;
-  -- the page window is carved out of it below.
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
-
-  __full_from_timestamp := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP);
-  __full_to_timestamp   := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP);
-
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
-  -- Narrow the full range to the requested page's contiguous period window, so only
-  -- page_size periods are generated and aggregated (bounds work AND payload). A slice
-  -- of a regular series is contiguous, so [MIN,MAX] reproduces exactly the page.
+  -- The full period-truncated range [_full_from_timestamp, _full_to_timestamp] is resolved
+  -- once by the caller (aggregation_time_range) and passed in. Narrow it to the requested
+  -- page's contiguous period window, so only page_size periods are generated and aggregated
+  -- (bounds work AND payload). A slice of a regular series is contiguous, so [MIN,MAX]
+  -- reproduces exactly the page.
   SELECT MIN(s.p), MAX(s.p)
   INTO __from_timestamp, __to_timestamp
   FROM (
     SELECT p
-    FROM generate_series(__full_from_timestamp, __full_to_timestamp, __one_period) AS p
+    FROM generate_series(_full_from_timestamp, _full_to_timestamp, __one_period) AS p
     ORDER BY
       (CASE WHEN _direction = 'desc' THEN p END) DESC,
       (CASE WHEN _direction = 'asc'  THEN p END) ASC

@@ -122,8 +122,8 @@ $$;
 /*
  * get_operation_type_aggregation: Main function for the operation-type-statistics endpoint.
  *
- * Returns one row per period in the [_from_block, _to_block] range at the requested
- * granularity. Each row contains:
+ * Returns one row per period in the [_full_from_timestamp, _full_to_timestamp] range at
+ * the requested granularity. Each row contains:
  *   - total_transactions (from transaction_stats_by_day/month rollup)
  *   - total_operations   (sum across op-type breakdown for that period)
  *   - operations         (nested array of {op_type_id, op_count})
@@ -134,35 +134,31 @@ $$;
  * in-progress period) to match the convention of get_transaction_aggregation.
  *
  * PARAMETERS:
- *   _granularity - 'daily' | 'monthly' | 'yearly'
- *   _direction   - 'asc' | 'desc'
- *   _from_block  - lower bound (NULL = genesis); pre-normalized to actual block num
- *   _to_block    - upper bound (NULL = head);    pre-normalized to actual block num
- *   _op_types    - optional filter; NULL = include all op_type_ids
+ *   _granularity          - 'daily' | 'monthly' | 'yearly'
+ *   _direction            - 'asc' | 'desc'
+ *   _full_from_timestamp  - lower bound of the full range, period-truncated (from aggregation_time_range)
+ *   _full_to_timestamp    - upper bound of the full range, period-truncated (from aggregation_time_range)
+ *   _op_types             - optional filter; NULL = include all op_type_ids
  */
+DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT, INT[]);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
-    _granularity hafbe_backend.granularity,
-    _direction   hafbe_backend.sort_direction,
-    _from_block  INT,
-    _to_block    INT,
-    _page        INT DEFAULT 1,
-    _page_size   INT DEFAULT 100,
-    _op_types    INT[] DEFAULT NULL
+    _granularity          hafbe_backend.granularity,
+    _direction            hafbe_backend.sort_direction,
+    _full_from_timestamp  TIMESTAMP,
+    _full_to_timestamp    TIMESTAMP,
+    _page                 INT DEFAULT 1,
+    _page_size            INT DEFAULT 100,
+    _op_types             INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.operation_type_stats
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from                INT;
-  __to                  INT;
-  __full_from_timestamp TIMESTAMP;
-  __full_to_timestamp   TIMESTAMP;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
   __granularity := (
     CASE
@@ -173,26 +169,18 @@ BEGIN
     END
   );
 
-  -- Normalize block range (block_num or timestamp -> block_num), then convert the
-  -- boundaries to period-truncated timestamps. This is the full requested range;
-  -- the page window is carved out of it below.
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
-
-  __full_from_timestamp := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP);
-  __full_to_timestamp   := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP);
-
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
-  -- Narrow the full range to the requested page's contiguous period window, so only
-  -- page_size periods are generated and aggregated (bounds work AND payload). A slice
-  -- of a regular series is contiguous, so [MIN,MAX] reproduces exactly the page.
+  -- The full period-truncated range [_full_from_timestamp, _full_to_timestamp] is resolved
+  -- once by the caller (aggregation_time_range) and passed in. Narrow it to the requested
+  -- page's contiguous period window, so only page_size periods are generated and aggregated
+  -- (bounds work AND payload). A slice of a regular series is contiguous, so [MIN,MAX]
+  -- reproduces exactly the page.
   SELECT MIN(s.p), MAX(s.p)
   INTO __from_timestamp, __to_timestamp
   FROM (
     SELECT p
-    FROM generate_series(__full_from_timestamp, __full_to_timestamp, __one_period) AS p
+    FROM generate_series(_full_from_timestamp, _full_to_timestamp, __one_period) AS p
     ORDER BY
       (CASE WHEN _direction = 'desc' THEN p END) DESC,
       (CASE WHEN _direction = 'asc'  THEN p END) ASC
