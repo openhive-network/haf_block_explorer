@@ -41,13 +41,6 @@ CREATE TYPE hafbe_backend.transaction_stats AS (
 -- openapi-generated-code-end
 
 /** openapi:components:schemas
-hafbe_backend.array_of_transaction_stats:
-  type: array
-  items:
-    $ref: '#/components/schemas/hafbe_backend.transaction_stats'
-*/
-
-/** openapi:components:schemas
 hafbe_backend.transaction_stats_return:
   type: object
   properties:
@@ -132,13 +125,6 @@ CREATE TYPE hafbe_backend.operation_type_stats AS (
     "last_block_num" INT
 );
 -- openapi-generated-code-end
-
-/** openapi:components:schemas
-hafbe_backend.array_of_operation_type_stats:
-  type: array
-  items:
-    $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
-*/
 
 /** openapi:components:schemas
 hafbe_backend.operation_type_stats_return:

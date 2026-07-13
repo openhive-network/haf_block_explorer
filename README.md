@@ -376,7 +376,8 @@ No authentication is required. The API is read-only and publicly accessible.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/transaction-statistics` | GET | Get aggregated transaction stats |
+| `/transaction-statistics` | GET | Get aggregated transaction stats per period (paginated) |
+| `/operation-type-statistics` | GET | Get per-op-type operation counts and transaction totals per period (paginated) |
 
 #### Utility Endpoints
 
@@ -456,21 +457,33 @@ Response:
 #### Get Transaction Statistics
 
 ```bash
-curl "http://localhost:3000/hafbe-api/transaction-statistics?granularity=monthly"
+curl "http://localhost:3000/hafbe-api/transaction-statistics?granularity=monthly&page=1&page-size=100"
 ```
+
+The endpoint returns a **paginated wrapper**, not a top-level array. Transaction records are
+available under `stats`; use `total_periods` and `total_pages` to drive pagination. Page size
+defaults to 100 and is capped at 1000.
 
 Response:
 ```json
-[
-  {
-    "date": "2024-01-01T00:00:00",
-    "trx_count": 15234567,
-    "avg_trx": 12,
-    "min_trx": 0,
-    "max_trx": 156
-  }
-]
+{
+  "total_periods": 120,
+  "total_pages": 2,
+  "stats": [
+    {
+      "date": "2024-01-01T00:00:00",
+      "trx_count": 15234567,
+      "avg_trx": 12,
+      "min_trx": 0,
+      "max_trx": 156,
+      "last_block_num": 81748629
+    }
+  ]
+}
 ```
+
+`/operation-type-statistics` uses the same wrapper shape, with each `stats[]` entry carrying a
+per-op-type breakdown under `operations[]`.
 
 ### Common Parameters
 

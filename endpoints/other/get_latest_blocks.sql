@@ -96,9 +96,16 @@ $$
 DECLARE
   __block         INT := hive.convert_to_block_num("block-num");
   _head_block_num INT := hafbe_backend.get_hafbe_head_block();
+  -- Normalize the optional param: an explicit NULL ({"result-limit": null}) must fall back to
+  -- the signature default. PostgREST applies the default only when a param is OMITTED, not when
+  -- it is explicitly null, so a raw NULL would otherwise reach LIMIT NULL (= "no limit") and
+  -- return every block. The shared validators now reject NULL as a backstop, but that would
+  -- 400 an input whose optional-parameter semantics are simply "use the default" -- so COALESCE
+  -- here, exactly as the paginated endpoints do with page / page-size.
+  _result_limit   INT := COALESCE("result-limit", 20);
 BEGIN
-  PERFORM hafbe_backend.validate_limit("result-limit", 1000, 'result-limit');
-  PERFORM hafbe_backend.validate_negative_limit("result-limit",'result-limit');
+  PERFORM hafbe_backend.validate_limit(_result_limit, 1000, 'result-limit');
+  PERFORM hafbe_backend.validate_negative_limit(_result_limit, 'result-limit');
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
@@ -110,7 +117,7 @@ BEGIN
       FROM hive.blocks_view bv
       WHERE bv.num <= _head_block_num
         AND bv.num <= COALESCE(__block, _head_block_num)
-      ORDER BY bv.num DESC LIMIT "result-limit"
+      ORDER BY bv.num DESC LIMIT _result_limit
     )
     SELECT
       sbr.block_num,

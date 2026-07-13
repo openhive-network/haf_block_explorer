@@ -133,13 +133,18 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
 )
 RETURNS hafbe_backend.transaction_stats_return
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE 'plpgsql' STABLE
 SET jit = OFF
 AS
 $$
 DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
-  _head_block_num INT            := hafbe_backend.get_hafbe_head_block();
+  -- The chain head is read ONCE and used for BOTH the block-num validation and the range
+  -- resolution. Two separate reads are two statement snapshots, so during a fork rollback
+  -- they can observe different heads (an explicit from-block could pass validation at head
+  -- N, then resolve against head N-k and collapse to from > to). STABLE additionally pins
+  -- the whole call to one snapshot, matching get_operation_type_statistics.
+  _current_block INT             := hafbe_backend.get_hafbe_head_block();
   -- Normalize optional params: an explicit NULL (e.g. {"page-size": null} or
   -- {"granularity": null}) must fall back to the signature default. PostgREST applies the
   -- default only when a param is OMITTED, not when it is explicitly null, so a raw NULL
@@ -152,12 +157,11 @@ DECLARE
   _page_size      INT               := COALESCE("page-size", 100);
   _total_periods  INT;
   _total_pages    INT;
-  _current_block  INT;
   _from_ts        TIMESTAMP;
   _to_ts          TIMESTAMP;
   _result         hafbe_backend.transaction_stats[];
 BEGIN
-  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
+  PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _current_block);
   PERFORM hafbe_backend.validate_limit(_page_size, 1000);
   PERFORM hafbe_backend.validate_negative_limit(_page_size);
   PERFORM hafbe_backend.validate_negative_page(_page);
@@ -168,10 +172,9 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  -- Resolve current_block + the full period-truncated range ONCE, then share the window
-  -- with both the period count (total_pages) and the paged aggregation, so they can never
-  -- disagree (e.g. a block committed mid-request) and the range is resolved a single time.
-  _current_block := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
+  -- Resolve the full period-truncated range ONCE (off the single _current_block read above),
+  -- then share the window with both the period count (total_pages) and the paged aggregation,
+  -- so they can never disagree and the range is resolved a single time.
   SELECT from_ts, to_ts INTO _from_ts, _to_ts
   FROM hafbe_backend.aggregation_time_range(_granularity, _block_range.first_block, _block_range.last_block, _current_block);
 

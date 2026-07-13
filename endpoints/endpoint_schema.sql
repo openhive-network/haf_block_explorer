@@ -949,12 +949,6 @@ declare
           }
         }
       },
-      "hafbe_backend.array_of_transaction_stats": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
-        }
-      },
       "hafbe_backend.transaction_stats_return": {
         "type": "object",
         "properties": {
@@ -1021,12 +1015,6 @@ declare
             "type": "integer",
             "description": "last block number included in the period"
           }
-        }
-      },
-      "hafbe_backend.array_of_operation_type_stats": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
         }
       },
       "hafbe_backend.operation_type_stats_return": {
