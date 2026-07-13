@@ -1237,7 +1237,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -1247,7 +1248,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -1419,7 +1422,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -1429,7 +1433,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 10000
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -1562,7 +1568,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -1572,7 +1579,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 10000
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -1917,7 +1926,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`"
           },
@@ -1927,7 +1937,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 100
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -2036,7 +2048,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`"
           },
@@ -2046,7 +2059,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 10000
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -2270,7 +2285,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Return max `page-size` operations per page, defaults to `100`"
           },
@@ -2512,7 +2529,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -2522,7 +2540,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Return max `page-size` proposals per page, defaults to `100`"
           },
@@ -2626,7 +2646,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -2636,7 +2657,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Return max `page-size` votes per page, defaults to `100`"
           },
@@ -2738,7 +2761,8 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 1
+              "default": 1,
+              "minimum": 1
             },
             "description": "Return page on `page` number, defaults to `1`\n"
           },
@@ -2748,7 +2772,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 100
+              "default": 100,
+              "minimum": 1,
+              "maximum": 10000
             },
             "description": "Return max `page-size` votes per page, defaults to `100`"
           },
@@ -3158,7 +3184,9 @@ declare
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 20
+              "default": 20,
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Specifies number of blocks to return starting with head block, defaults to `20`\n"
           }

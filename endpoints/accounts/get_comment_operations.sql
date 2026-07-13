@@ -45,6 +45,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
+          minimum: 1
         description: Return page on `page` number, defaults to `1`
       - in: query
         name: page-size
@@ -52,6 +53,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 10000
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: direction

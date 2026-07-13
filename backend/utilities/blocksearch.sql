@@ -624,6 +624,15 @@ BEGIN
     ELSE (_count / _limit) + 1
   END::INT;
 
+  -- Reject an out-of-range page BEFORE any page arithmetic. This guard used to run at the
+  -- very end, after __page/__offset had already been computed -- too late: a page far past
+  -- the end overflows the INT offset ((_page - 1) * _limit) and raises "integer out of
+  -- range" (HTTP 500) instead of the intended 400, and in 'desc' order __page goes negative
+  -- (__total_pages - _page + 1), producing a negative OFFSET. Validating first makes both
+  -- impossible: past this point _page <= __total_pages, so the arithmetic below is bounded
+  -- by _count and __page stays >= 1.
+  PERFORM hafah_backend.validate_page(_page, __total_pages);
+
   -- Adjust page number for descending order (page 1 = most recent)
   __page := CASE
     WHEN _page IS NULL THEN 1
@@ -647,8 +656,6 @@ BEGIN
       __rest_of_division
     ELSE _limit
   END;
-
-  PERFORM hafah_backend.validate_page(_page, __total_pages);
 
   RETURN (__rest_of_division, __total_pages, __page, __offset, __limit)::hafbe_backend.calculate_pages_return;
 END

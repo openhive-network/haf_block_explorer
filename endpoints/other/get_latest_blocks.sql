@@ -41,6 +41,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 20
+          minimum: 1
+          maximum: 1000
         description: |
           Specifies number of blocks to return starting with head block, defaults to `20`
     responses:

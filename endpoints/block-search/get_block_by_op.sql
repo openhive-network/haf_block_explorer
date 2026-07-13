@@ -46,6 +46,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 1000
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: direction

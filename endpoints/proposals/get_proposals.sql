@@ -25,6 +25,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
+          minimum: 1
         description: |
           Return page on `page` number, defaults to `1`
       - in: query
@@ -33,6 +34,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 1000
         description: Return max `page-size` proposals per page, defaults to `100`
       - in: query
         name: sort

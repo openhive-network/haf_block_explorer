@@ -35,7 +35,12 @@ AS
 $$
 DECLARE
   __max_page_size INT := hafbe_backend.default_max_page_size();
-  __offset        INT := (_page - 1) * __max_page_size;
+  -- BIGINT, not INT: this endpoint has no total-page count to validate _page against (unlike
+  -- the block-search family, which rejects an out-of-range page up front), so a large _page
+  -- reaches this arithmetic directly. As INT, (_page - 1) * __max_page_size overflows and
+  -- raises "integer out of range" (HTTP 500). Widening keeps the endpoint's existing
+  -- out-of-range contract -- an offset past the end simply yields an empty page.
+  __offset        BIGINT := (_page::BIGINT - 1) * __max_page_size;
 BEGIN
   _sort      := COALESCE(_sort, 'proxy_date');
   _direction := COALESCE(_direction, 'desc');
