@@ -9,6 +9,7 @@ accounts_dump.json
 endpoints_openapi
 backend/types_openapi
 process_openapi.py
+notes/
 
 # Docker
 docker/blockchain/block_log*

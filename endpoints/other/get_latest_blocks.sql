@@ -94,48 +94,38 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  __block INT := hive.convert_to_block_num("block-num");
-  _is_block_filter BOOLEAN;
+  __block         INT := hive.convert_to_block_num("block-num");
+  _head_block_num INT := hafbe_backend.get_hafbe_head_block();
 BEGIN
   PERFORM hafbe_backend.validate_limit("result-limit", 1000, 'result-limit');
   PERFORM hafbe_backend.validate_negative_limit("result-limit",'result-limit');
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _is_block_filter := (__block IS NULL);
-
   RETURN QUERY
     WITH select_block_range AS MATERIALIZED (
-      SELECT 
-        bv.num as block_num,
-        (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT as witness
+      SELECT
+        bv.num AS block_num,
+        (SELECT av.name FROM hive.accounts_view av WHERE av.id = bv.producer_account_id)::TEXT AS witness
       FROM hive.blocks_view bv
-      WHERE _is_block_filter OR bv.num <= __block
+      WHERE bv.num <= _head_block_num
+        AND bv.num <= COALESCE(__block, _head_block_num)
       ORDER BY bv.num DESC LIMIT "result-limit"
-    ),
-    join_operations AS MATERIALIZED (
-      SELECT 
-        sbr.block_num, 
-        sbr.witness, 
-        COUNT(ov.op_type_id) as count, 
-        ov.op_type_id 
-      FROM hive.operations_view ov
-      JOIN select_block_range sbr ON sbr.block_num = ov.block_num
-      GROUP BY ov.op_type_id,sbr.block_num,sbr.witness
     )
-    SELECT 
-      jo.block_num,
-      jo.witness,
+    SELECT
+      sbr.block_num,
+      sbr.witness,
       array_agg(
         (
-          jo.op_type_id,
-          jo.count
+          bo.op_type_id,
+          bo.op_count
         )::hafbe_backend.block_operations
-        ORDER BY jo.op_type_id
+        ORDER BY bo.op_type_id
       )
-    FROM join_operations jo
-    GROUP BY jo.block_num, jo.witness
-    ORDER BY jo.block_num DESC
+    FROM select_block_range sbr
+    JOIN hafbe_app.block_operations bo ON bo.block_num = sbr.block_num
+    GROUP BY sbr.block_num, sbr.witness
+    ORDER BY sbr.block_num DESC
   ;
 
 END
