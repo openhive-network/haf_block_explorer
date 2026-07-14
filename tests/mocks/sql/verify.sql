@@ -244,7 +244,77 @@ WITH checks(name, expected, actual) AS (
        '9002',
        (SELECT p.proposal_id::TEXT FROM unnest(
           (hafbe_endpoints.get_proposals(1, 100, 'by_end_date', 'desc', 'all')).proposals
-        ) p LIMIT 1))
+        ) p LIMIT 1)),
+
+    -- ----- get_proposal_votes_history stake sourcing (#140) -----
+    -- The tavern patterns alone CANNOT prove the expired-view fallback fired: if steem
+    -- happened to hold 0 vests, a working fallback and a fallback broken back to
+    -- COALESCE(..., 0) would emit byte-identical JSON. These checks are value-independent
+    -- (they compare against the view, not a literal) and so stay honest either way.
+
+    -- steem lost every vote to the declined_voting_rights cascade, so it is in none of the
+    -- three tracked_accounts legs -> it MUST be a genuine cache miss. If this ever starts
+    -- failing, the two checks below stop testing the fallback branch at all.
+    ('vote-history: steem is absent from account_vest_stats_cache (cache-miss branch)',
+       '0',
+       (SELECT COUNT(*)::TEXT FROM hafbe_app.account_vest_stats_cache
+        WHERE account_id = (SELECT id FROM hive.accounts_view WHERE name = 'steem'))),
+
+    -- ...and its reported stake must equal expired_voter_stats_view exactly, AND be
+    -- non-zero (a zero here would make the assertion vacuous).
+    ('vote-history: steem stake == expired_voter_stats_view, and non-zero',
+       'true',
+       (SELECT bool_and(
+                 v.voter_vests   = e.vests::TEXT         AND
+                 v.direct_vests  = e.account_vests::TEXT AND
+                 v.proxied_vests = e.proxied_vests::TEXT AND
+                 e.vests > 0
+               )::TEXT
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9002, 'steem')).votes_history) v
+        CROSS JOIN hafbe_backend.expired_voter_stats_view e
+        WHERE e.account_id = (SELECT id FROM hive.accounts_view WHERE name = 'steem'))),
+
+    -- Both of steem's rows (approve + withdrawal) must carry the SAME stake: the source is
+    -- chosen per voter, never per row. The row count is asserted too, otherwise a regression
+    -- that returned only ONE steem row would still show a single distinct stake and pass.
+    ('vote-history: steem has 2 rows, both carrying identical stake',
+       '2|1',
+       (SELECT COUNT(*)::TEXT || '|' ||
+               COUNT(DISTINCT (v.voter_vests, v.direct_vests, v.proxied_vests))::TEXT
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9002, 'steem')).votes_history) v)),
+
+    -- Cache-hit branch: initminer is still a current voter, and verify_mock_data.sh seeds
+    -- its cache row to a deterministic 5000000.
+    ('vote-history: initminer voter_vests = 5000000 (cache-hit branch), no proxy',
+       '5000000|',
+       (SELECT v.voter_vests || '|' || v.proxy
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9002, 'initminer')).votes_history) v
+        LIMIT 1)),
+
+    -- Tie-break regression guard. On 9001, initminer approves at block 91000004 and the
+    -- remove_proposal cascade writes its synthetic approve=FALSE row in the SAME block, so
+    -- (source_op_block, voter_id) ties. Without source_op as the final sort key the
+    -- withdrawal can be returned BEFORE the approval; asc order must be TRUE then FALSE.
+    ('vote-history: 9001 initminer same-block approve precedes its withdrawal',
+       'true|false',
+       (SELECT string_agg(t.approve::TEXT, '|' ORDER BY t.ord)
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9001, 'initminer', 1, 100, 'asc')).votes_history)
+             WITH ORDINALITY AS t(voter_name, approve, voter_vests, direct_vests, proxied_vests, proxy, ts, ord))),
+
+    -- ...and desc must be the exact reverse.
+    ('vote-history: 9001 initminer desc is the exact reverse',
+       'false|true',
+       (SELECT string_agg(t.approve::TEXT, '|' ORDER BY t.ord)
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9001, 'initminer', 1, 100, 'desc')).votes_history)
+             WITH ORDINALITY AS t(voter_name, approve, voter_vests, direct_vests, proxied_vests, proxy, ts, ord))),
+
+    -- The documented contract is a ONE-WAY implication: a proxied voter must report 0.
+    -- Do NOT assert the converse (voter_vests = 0 => proxied): a voter holding no VESTS
+    -- legitimately reports '0' with an empty proxy, which would fail a biconditional check.
+    ('vote-history: proxied voter => voter_vests = 0',
+       'true',
+       (SELECT bool_and(v.proxy = '' OR v.voter_vests = '0')::TEXT
+        FROM unnest((hafbe_endpoints.get_proposal_votes_history(9002)).votes_history) v))
 )
 SELECT
   name,

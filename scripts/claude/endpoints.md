@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 |----------|----------|-------------|
 | `GET /proposals` | `get_proposals` | List proposals with paid amounts and stake-weighted vote totals; filterable by `creator`, `proposal-ids`, `voter`, `search` |
 | `GET /proposals/votes` | `get_proposal_votes` | Current active proposal approvals; includes `direct_vests`, `proxied_vests`, `proxy` fields; filterable by `proposal-id` and `voter` |
-| `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical vote events (approvals + withdrawals); `page-size` max is 10000 (not 1000) |
+| `GET /proposals/{proposal-id}/votes/history` | `get_proposal_votes_history` | Historical vote events (approvals + withdrawals) with voter stake (`voter_vests`/`direct_vests`/`proxied_vests`/`proxy`, same quadruple as `/proposals/votes`); `page-size` max is 10000 (not 1000) |
 
 Full parameter and response details: `scripts/claude/endpoints/proposals.md`
 

@@ -113,10 +113,10 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 - `tests/mocks/README.md` - Full documentation
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
-35 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
-- `get_proposals/` — 14 positive (status×5, sort×8, pagination) + 5 negative
-- `get_proposal_votes/` — 6 positive + 5 negative
-- `get_proposal_votes_history/` — 2 positive + 3 negative
+50 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+- `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
+- `get_proposal_votes/` — 11 positive + 5 negative
+- `get_proposal_votes_history/` — 7 positive + 3 negative (the two `filter_voter_*` cases pin the voter-stake cache-hit and expired-view fallback branches)
 
 All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add new tests here when adding proposal-related features that require mock data.
 

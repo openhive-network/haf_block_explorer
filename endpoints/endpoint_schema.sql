@@ -1186,6 +1186,22 @@ declare
             "type": "boolean",
             "description": "whether the voter approved or withdrew approval of the proposal"
           },
+          "voter_vests": {
+            "type": "string",
+            "description": "effective governance VESTS carried by this voter''s direct proposal vote (0 if the voter currently has a proxy set \u2014 their stake counts through the proxy, and hived''s proposal totals exclude them). NOTE: this is the voter''s CURRENT stake, not the stake they held at the block of this historical vote event \u2014 no point-in-time vesting snapshot is kept."
+          },
+          "direct_vests": {
+            "type": "string",
+            "description": "this voter''s own governance VESTS (account_vests), independent of any proxy. Never zeroed, so the voter''s real stake stays visible when voter_vests is 0."
+          },
+          "proxied_vests": {
+            "type": "string",
+            "description": "VESTS from accounts that have proxied their governance to this voter"
+          },
+          "proxy": {
+            "type": "string",
+            "description": "name of the governance proxy this voter has set (empty string if none). Whenever this field is non-empty, voter_vests is 0. The converse does NOT hold: a voter who simply holds no VESTS also reports 0, with an empty proxy."
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
@@ -2733,7 +2749,7 @@ declare
           "Proposals"
         ],
         "summary": "Get the history of votes cast for this proposal.",
-        "description": "Get information about each vote cast for this proposal, including\napprovals and later withdrawals of approval.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/1/votes/history?page-size=2''`\n",
+        "description": "Get information about each vote cast for this proposal, including\napprovals and later withdrawals of approval.\n\nEach record also carries the voter''s governance stake. These vest figures are the\nvoter''s CURRENT stake, NOT the stake they held at the block of the historical vote \u2014\nno point-in-time vesting snapshot is stored. `voter_vests` is 0 when the voter\ncurrently has a governance proxy set (their stake counts through the proxy, matching\n`GET /proposals/votes` and hived''s proposal totals); their own stake is still\nreported in `direct_vests`.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/proposals/1/votes/history?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_proposal_votes_history",
         "parameters": [
           {
@@ -2823,11 +2839,19 @@ declare
                     {
                       "voter_name": "alice",
                       "approve": true,
+                      "voter_vests": "8322015717445",
+                      "direct_vests": "8322015717445",
+                      "proxied_vests": "0",
+                      "proxy": "",
                       "timestamp": "2019-11-05T10:12:09"
                     },
                     {
                       "voter_name": "bob",
                       "approve": false,
+                      "voter_vests": "0",
+                      "direct_vests": "1245007811003",
+                      "proxied_vests": "0",
+                      "proxy": "alice",
                       "timestamp": "2019-11-04T08:43:21"
                     }
                   ]

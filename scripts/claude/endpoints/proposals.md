@@ -172,11 +172,19 @@ Returns `hafbe_backend.proposal_votes_history`:
     {
       "voter_name": "alice",
       "approve": true,
+      "voter_vests": "8322015717445",
+      "direct_vests": "8322015717445",
+      "proxied_vests": "0",
+      "proxy": "",
       "timestamp": "2019-11-05T10:12:09"
     },
     {
-      "voter_name": "alice",
+      "voter_name": "bob",
       "approve": false,
+      "voter_vests": "0",
+      "direct_vests": "1245007811003",
+      "proxied_vests": "0",
+      "proxy": "alice",
       "timestamp": "2019-11-06T08:43:21"
     }
   ]
@@ -187,6 +195,43 @@ Returns `hafbe_backend.proposal_votes_history`:
 
 - The `page-size` limit is 10000 (not 1000) because vote history accumulates over the full lifecycle of a proposal; a single voter can appear multiple times (vote → unvote → revote)
 - `from-block` / `to-block` accept either integer block numbers or ISO-style timestamps; timestamps are converted to block numbers by the block time index
+
+#### Voter stake fields (#140)
+
+The stake quadruple is identical to the one `GET /proposals/votes` returns, so a client can render
+both with one component.
+
+| Field | Meaning |
+|-------|---------|
+| `voter_vests` | VESTS this voter's **direct** proposal vote carries. `'0'` when the voter currently has a governance proxy set — their stake counts through the proxy, and hived's proposal totals exclude them (same rule as `process_proposal_vote_stats_cache`) |
+| `direct_vests` | The voter's own VESTS (`balance - delayed_vests`). **Never** zeroed, so their real stake stays visible even when `voter_vests` is `0` |
+| `proxied_vests` | VESTS proxied **to** this voter |
+| `proxy` | Name of the proxy this voter has set; `''` when none |
+
+One-way implication: **`proxy <> ''` ⟹ `voter_vests = '0'`.** The converse does **not** hold — a
+voter who simply holds no VESTS also reports `'0'` with an empty `proxy`. So a client cannot infer
+"this voter is proxied" from `voter_vests == 0` alone; it must read `proxy`. (This is exactly why the
+field is not optional.)
+
+**The row is historical; the numbers are not.** The vest figures are the voter's *current* stake, not
+the stake they held at the block of the vote event — HAFBE stores no point-in-time vesting snapshot.
+`get_witness_votes_history` has the same limitation. A consequence worth knowing: an account that has
+since declined its voting rights still reports non-zero `direct_vests`. Do not label these "voting
+power at time of vote".
+
+**Stake sourcing** — two sources, chosen per *voter*, never per row (so a voter's approve and
+withdrawal rows always agree):
+1. `hafbe_app.account_vest_stats_cache` — the fast path, but it only tracks *current* witness voters,
+   proxy setters and proposal voters. A voter who withdrew approval and does nothing else in
+   governance has **no cache row**.
+2. `hafbe_backend.expired_voter_stats_view` — same arithmetic over every account; always resolves.
+   Joined **only** for the page's cache-miss voters, so an all-cache-hit page pays nothing for it.
+
+**Naming diverges from the witness endpoint, deliberately.** `get_witness_votes_history` returns
+`vests` / `account_vests` / `proxied_vests`, does not zero under a proxy, and has no `proxy` field.
+The proposals family uses `voter_vests` / `direct_vests` and *does* zero. That is not an oversight:
+setting a proxy deletes witness votes, so the proxied case is unreachable there, while proposal votes
+survive a proxy and must be excluded from the proposal's total.
 
 ---
 

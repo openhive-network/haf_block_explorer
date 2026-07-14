@@ -77,13 +77,13 @@ tests/tavern/
 │   └── ...                          # Other endpoints
 └── patterns-mock/                   # Mock-data test cases (pattern-test-with-mock-data CI job)
     ├── get_proposals/
-    │   ├── positive/                # 14 tests: status×5, sort×8, pagination
+    │   ├── positive/                # 19 tests: status×5, sort×8, pagination
     │   └── negative/                # 5 tests
     ├── get_proposal_votes/
-    │   ├── positive/                # 6 tests
+    │   ├── positive/                # 11 tests
     │   └── negative/                # 5 tests
     └── get_proposal_votes_history/
-        ├── positive/                # 2 tests
+        ├── positive/                # 7 tests (incl. filter_voter_* = stake branches)
         └── negative/                # 3 tests
 ```
 
