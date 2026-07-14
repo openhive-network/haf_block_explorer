@@ -233,6 +233,22 @@ Returns `hafbe_backend.witness_votes_history_return`:
 }
 ```
 
+#### Ordering
+
+Sorted by `(source_op_block, voter_id, source_op)`. The `source_op` key is **required for
+correctness, not a cosmetic tie-break**: a Hive block is 3 seconds and nothing stops an account
+from voting and un-voting the same witness inside one block, which produces two history rows
+identical on `(source_op_block, voter_id)`. Tied rows have no defined order, so without
+`source_op` the un-vote could be returned *before* the vote it undid, and the two sorts in
+`hafbe_backend.get_witness_votes_history` (one inside `limited_set` to pick the page, one after
+the `UNION ALL` to display it) could break the same tie in opposite directions — making the row
+order depend on the page size. `source_op` is the operation id: monotonic within a block and
+unique, so the sort is total.
+
+Real example: `cmtzco` voted for `arhag` and un-voted in block 3067986. Covered by
+`tests/tavern/patterns-mainnet/get_witness_votes_history/positive/tied_same_block_vote_unvote.*`.
+The same rule is applied in `get_proposal_votes_history`; see `proposals.md`.
+
 ## Return Types
 
 All witness types are defined in `endpoints/types/witnesses.sql`:
