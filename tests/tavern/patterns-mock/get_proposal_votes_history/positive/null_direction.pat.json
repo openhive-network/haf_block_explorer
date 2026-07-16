@@ -1,0 +1,21 @@
+{
+  "total_votes": 3,
+  "total_pages": 1,
+  "votes_history": [
+    {
+      "voter_name": "initminer",
+      "approve": true,
+      "timestamp": "2025-06-01T00:00:09"
+    },
+    {
+      "voter_name": "steem",
+      "approve": false,
+      "timestamp": "2025-06-01T00:00:06"
+    },
+    {
+      "voter_name": "steem",
+      "approve": true,
+      "timestamp": "2025-06-01T00:00:03"
+    }
+  ]
+}

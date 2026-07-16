@@ -104,9 +104,17 @@ AS
 $$
 DECLARE
   _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
+  -- Normalize optional params: an explicit NULL must fall back to the signature default.
+  -- PostgREST applies the default only when a param is OMITTED, not when it is explicitly
+  -- null, so a raw NULL would otherwise reach the backend -- a NULL sort/direction collapses
+  -- the ORDER BY CASE and silently DROPS the sort (arbitrary row order), and a NULL page
+  -- slips past validate_negative_page (NULL <= 0 is NULL, not TRUE) into OFFSET NULL.
+  _page      INT                          := COALESCE("page", 1);
+  _sort      hafbe_backend.order_by_proxy := COALESCE("sort", 'proxy_date');
+  _direction hafbe_backend.sort_direction := COALESCE("direction", 'desc');
 BEGIN
   -- validate that page ≥ 1
-  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_negative_page(_page);
 
   -- set short public cache
   PERFORM set_config(
@@ -120,9 +128,9 @@ BEGIN
     SELECT *
       FROM hafbe_backend.get_account_proxies_power(
              _account_id,
-             "page",
-             "sort",
-             "direction"
+             _page,
+             _sort,
+             _direction
            );
 END;
 $$;

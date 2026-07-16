@@ -46,6 +46,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 1000
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: direction
@@ -306,9 +308,12 @@ DECLARE
 
   _key_content TEXT[]               := NULL;
   _set_of_keys JSON                 := NULL;
+
+  _page_size INT                    := COALESCE("page-size", 100);
+  _direction hafbe_backend.sort_direction := COALESCE("direction", 'desc');
 BEGIN
-  PERFORM hafbe_backend.validate_limit("page-size", 1000);
-  PERFORM hafbe_backend.validate_negative_limit("page-size");
+  PERFORM hafbe_backend.validate_limit(_page_size, 1000);
+  PERFORM hafbe_backend.validate_negative_limit(_page_size);
   PERFORM hafbe_backend.validate_negative_page("page");
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
@@ -334,11 +339,11 @@ BEGIN
   RETURN hafbe_backend.get_blocks_by_ops(
     _operation_types,
     _account_id,
-    "direction",
+    _direction,
     _block_range.first_block,
     _block_range.last_block,
     "page",
-    "page-size",
+    _page_size,
     _key_content,
     _set_of_keys
   );

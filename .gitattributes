@@ -2,3 +2,4 @@
 *.py text eol=lf
 Dockerfile* text eol=lf
 docker/ci/Dockerfile text eol=lf
+*.sql text eol=lf

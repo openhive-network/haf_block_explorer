@@ -345,6 +345,84 @@ END
 $$;
 
 /*
+ * aggregation_time_range: Resolve a (granularity, block-range) request into the
+ * period-truncated [from_ts, to_ts] window the time-series aggregation operates over
+ * (blocksearch_range + each boundary block's created_at, truncated to the period).
+ *
+ * current_block is passed IN (not read here) so the endpoint reads it ONCE and hands
+ * the SAME value to both consumers -- aggregation_period_count (total_pages) and
+ * get_*_aggregation (the paged data) -- guaranteeing they resolve the identical window
+ * even if a block is committed mid-request. Cheap: normalize + two block look-ups.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_time_range(
+    _granularity   hafbe_backend.granularity,
+    _from_block    INT,
+    _to_block      INT,
+    _current_block INT,
+    OUT from_ts    TIMESTAMP,
+    OUT to_ts      TIMESTAMP
+)
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __from        INT;
+  __to          INT;
+  __granularity TEXT := (
+    CASE
+      WHEN _granularity = 'daily'   THEN 'day'
+      WHEN _granularity = 'monthly' THEN 'month'
+      WHEN _granularity = 'yearly'  THEN 'year'
+      ELSE NULL
+    END
+  );
+BEGIN
+  SELECT from_block, to_block
+  INTO __from, __to
+  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, _current_block);
+
+  from_ts := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP);
+  to_ts   := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP);
+END
+$$;
+
+/*
+ * aggregation_period_count: Number of periods the time-series aggregation emits for the
+ * already-resolved [from_ts, to_ts] window, i.e. the total record count across all pages.
+ * Drives total_pages for the paginated operation-type / transaction statistics endpoints.
+ *
+ * Takes the resolved timestamps (from aggregation_time_range) rather than re-resolving the
+ * block range, so the endpoint resolves the window once and shares it with get_*_aggregation
+ * -- no duplicated block-range resolution, no chance of the count and the data disagreeing.
+ * Independent of any op-type filter (every period is one series row).
+ */
+DROP FUNCTION IF EXISTS hafbe_backend.aggregation_period_count(hafbe_backend.granularity, INT, INT);
+CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_period_count(
+    _granularity    hafbe_backend.granularity,
+    _from_timestamp TIMESTAMP,
+    _to_timestamp   TIMESTAMP
+)
+RETURNS INT
+LANGUAGE 'plpgsql'
+STABLE
+AS
+$$
+DECLARE
+  __one_period INTERVAL := ('1 ' || (
+    CASE
+      WHEN _granularity = 'daily'   THEN 'day'
+      WHEN _granularity = 'monthly' THEN 'month'
+      WHEN _granularity = 'yearly'  THEN 'year'
+      ELSE NULL
+    END
+  ))::INTERVAL;
+BEGIN
+  RETURN (SELECT count(*)::INT FROM generate_series(_from_timestamp, _to_timestamp, __one_period));
+END
+$$;
+
+/*
  * blocksearch_account_range: Calculates block and sequence range for account-based search.
  *
  * In addition to block range, calculates the account operation sequence numbers
@@ -546,6 +624,15 @@ BEGIN
     ELSE (_count / _limit) + 1
   END::INT;
 
+  -- Reject an out-of-range page BEFORE any page arithmetic. This guard used to run at the
+  -- very end, after __page/__offset had already been computed -- too late: a page far past
+  -- the end overflows the INT offset ((_page - 1) * _limit) and raises "integer out of
+  -- range" (HTTP 500) instead of the intended 400, and in 'desc' order __page goes negative
+  -- (__total_pages - _page + 1), producing a negative OFFSET. Validating first makes both
+  -- impossible: past this point _page <= __total_pages, so the arithmetic below is bounded
+  -- by _count and __page stays >= 1.
+  PERFORM hafah_backend.validate_page(_page, __total_pages);
+
   -- Adjust page number for descending order (page 1 = most recent)
   __page := CASE
     WHEN _page IS NULL THEN 1
@@ -569,8 +656,6 @@ BEGIN
       __rest_of_division
     ELSE _limit
   END;
-
-  PERFORM hafah_backend.validate_page(_page, __total_pages);
 
   RETURN (__rest_of_division, __total_pages, __page, __offset, __limit)::hafbe_backend.calculate_pages_return;
 END

@@ -101,8 +101,18 @@ or `tests/mocks/README.md` for the three-step workflow.
 
 | Endpoint | Function | Description |
 |----------|----------|-------------|
-| `GET /transaction-statistics` | `get_transaction_statistics` | Aggregated tx stats (daily/monthly/yearly) |
-| `GET /operation-type-statistics` | `get_operation_type_statistics` | Per-op-type counts + tx totals per period (daily/monthly/yearly) |
+| `GET /transaction-statistics` | `get_transaction_statistics` | Aggregated tx stats (daily/monthly/yearly), paginated |
+| `GET /operation-type-statistics` | `get_operation_type_statistics` | Per-op-type counts + tx totals per period (daily/monthly/yearly), paginated |
+
+Both time-series endpoints are **paginated** (`page`/`page-size`, default page-size 100,
+max 1000) and return a wrapper object `{ total_periods, total_pages, stats: [...] }`
+rather than a bare array — mirroring the `total_*`/`total_pages`/array convention of
+`block_history`, `witnesses_return`, etc. Pagination is what keeps the full-history
+`daily` response bounded (a full chain is ~3,750 daily periods / ~6.9 MB as one array
+otherwise); `total_periods` is a pure function of the (granularity, range), independent
+of any `op-types` filter. See `hafbe_backend.aggregation_period_count()` for the count
+and the page-window slicing in `get_operation_type_aggregation` /
+`get_transaction_aggregation`.
 
 ### Other Endpoints
 
@@ -184,6 +194,14 @@ Many endpoints accept block ranges via timestamp or block number:
 "to-block" TEXT = NULL
 ```
 Conversion handled by `hive.convert_to_blocks_range()`.
+
+The time-series statistics endpoints (`get_transaction_statistics`,
+`get_operation_type_statistics`) normalize the range with
+`hafbe_backend.blocksearch_range()` and convert the boundary blocks to
+period-truncated timestamps. A no-range call therefore spans genesis → the app's
+processed head; the row count reflects how far the app has processed (a
+still-syncing node legitimately returns fewer periods). Because that full-history
+`daily` series is large, these endpoints are **paginated** — see below.
 
 ### Response Caching
 
