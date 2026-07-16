@@ -42,6 +42,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
+          minimum: 1
         description: Return page on `page` number, defaults to `1`
       - in: query
         name: page-size
@@ -49,6 +50,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 100
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: from-block
@@ -147,11 +150,15 @@ DECLARE
   _block_range hive.blocks_range := hive.convert_to_blocks_range("from-block","to-block");
   _head_block_num INT            := hafbe_backend.get_haf_head_block();
 
+  _comment_type hafbe_backend.comment_type := COALESCE("comment-type", 'all');
+  _page INT                      := COALESCE("page", 1);
+  _page_size INT                 := COALESCE("page-size", 100);
+
   __block_range hafbe_backend.blocksearch_filter_return;
 BEGIN
-  PERFORM hafbe_backend.validate_limit("page-size", 100);
-  PERFORM hafbe_backend.validate_negative_limit("page-size");
-  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_limit(_page_size, 100);
+  PERFORM hafbe_backend.validate_negative_limit(_page_size);
+  PERFORM hafbe_backend.validate_negative_page(_page);
   PERFORM hafbe_backend.validate_comment_search_indexes();
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _head_block_num);
 
@@ -165,9 +172,9 @@ BEGIN
 
   RETURN hafbe_backend.get_comment_permlinks(
     "account-name",
-    "comment-type",
-    "page",
-    "page-size",
+    _comment_type,
+    _page,
+    _page_size,
     __block_range.from_block,
     __block_range.to_block
   );

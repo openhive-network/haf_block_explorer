@@ -1,0 +1,426 @@
+[
+  {
+    "block_num": 5000000,
+    "witness": "ihashfury",
+    "operations": [
+      {
+        "op_type_id": 5,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 9,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 80,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999999,
+    "witness": "smooth.witness",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 6,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 30,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 78,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 85,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999998,
+    "witness": "steemed",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999997,
+    "witness": "clayop",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 2,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 5,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 61,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999996,
+    "witness": "riverhead",
+    "operations": [
+      {
+        "op_type_id": 6,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 85,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999995,
+    "witness": "ihashfury",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999994,
+    "witness": "boatymcboatface",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999993,
+    "witness": "arhag",
+    "operations": [
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999992,
+    "witness": "blocktrades",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999991,
+    "witness": "pharesim",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 18,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999990,
+    "witness": "jesta",
+    "operations": [
+      {
+        "op_type_id": 1,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 2,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 61,
+        "op_count": 5
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999989,
+    "witness": "steemychicken1",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 18,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999988,
+    "witness": "wackou",
+    "operations": [
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999987,
+    "witness": "steemed",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 86,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999986,
+    "witness": "roadscape",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999985,
+    "witness": "rabbit-28",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 2
+      },
+      {
+        "op_type_id": 19,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 2
+      }
+    ]
+  },
+  {
+    "block_num": 4999984,
+    "witness": "smooth.witness",
+    "operations": [
+      {
+        "op_type_id": 5,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999983,
+    "witness": "xeldal",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999982,
+    "witness": "complexring",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  },
+  {
+    "block_num": 4999981,
+    "witness": "riverhead",
+    "operations": [
+      {
+        "op_type_id": 0,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 1,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 56,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 64,
+        "op_count": 1
+      },
+      {
+        "op_type_id": 72,
+        "op_count": 1
+      }
+    ]
+  }
+]

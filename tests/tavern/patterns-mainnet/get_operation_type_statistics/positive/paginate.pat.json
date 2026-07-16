@@ -1,0 +1,478 @@
+{
+    "total_periods": 7,
+    "total_pages": 3,
+    "stats": [
+        {
+            "date": "2016-07-01T00:00:00",
+            "total_transactions": 170235,
+            "total_operations": 1170858,
+            "operations": [
+                {
+                    "op_type_id": 0,
+                    "op_count": 87758
+                },
+                {
+                    "op_type_id": 1,
+                    "op_count": 28509
+                },
+                {
+                    "op_type_id": 2,
+                    "op_count": 1441
+                },
+                {
+                    "op_type_id": 3,
+                    "op_count": 922
+                },
+                {
+                    "op_type_id": 4,
+                    "op_count": 467
+                },
+                {
+                    "op_type_id": 5,
+                    "op_count": 25
+                },
+                {
+                    "op_type_id": 6,
+                    "op_count": 3
+                },
+                {
+                    "op_type_id": 7,
+                    "op_count": 4857
+                },
+                {
+                    "op_type_id": 9,
+                    "op_count": 2514
+                },
+                {
+                    "op_type_id": 10,
+                    "op_count": 76
+                },
+                {
+                    "op_type_id": 11,
+                    "op_count": 75
+                },
+                {
+                    "op_type_id": 12,
+                    "op_count": 2493
+                },
+                {
+                    "op_type_id": 13,
+                    "op_count": 225
+                },
+                {
+                    "op_type_id": 14,
+                    "op_count": 40967
+                },
+                {
+                    "op_type_id": 15,
+                    "op_count": 2
+                },
+                {
+                    "op_type_id": 17,
+                    "op_count": 236
+                },
+                {
+                    "op_type_id": 18,
+                    "op_count": 1147
+                },
+                {
+                    "op_type_id": 56,
+                    "op_count": 1951
+                },
+                {
+                    "op_type_id": 60,
+                    "op_count": 1
+                },
+                {
+                    "op_type_id": 64,
+                    "op_count": 860230
+                },
+                {
+                    "op_type_id": 72,
+                    "op_count": 87758
+                },
+                {
+                    "op_type_id": 73,
+                    "op_count": 2
+                },
+                {
+                    "op_type_id": 77,
+                    "op_count": 922
+                },
+                {
+                    "op_type_id": 78,
+                    "op_count": 40967
+                },
+                {
+                    "op_type_id": 80,
+                    "op_count": 3505
+                },
+                {
+                    "op_type_id": 85,
+                    "op_count": 18
+                },
+                {
+                    "op_type_id": 86,
+                    "op_count": 3770
+                },
+                {
+                    "op_type_id": 91,
+                    "op_count": 17
+                }
+            ],
+            "last_block_num": 2802785
+        },
+        {
+            "date": "2016-08-01T00:00:00",
+            "total_transactions": 2194211,
+            "total_operations": 5805655,
+            "operations": [
+                {
+                    "op_type_id": 0,
+                    "op_count": 1518496
+                },
+                {
+                    "op_type_id": 1,
+                    "op_count": 474536
+                },
+                {
+                    "op_type_id": 2,
+                    "op_count": 27283
+                },
+                {
+                    "op_type_id": 3,
+                    "op_count": 7550
+                },
+                {
+                    "op_type_id": 4,
+                    "op_count": 3704
+                },
+                {
+                    "op_type_id": 5,
+                    "op_count": 87670
+                },
+                {
+                    "op_type_id": 6,
+                    "op_count": 16429
+                },
+                {
+                    "op_type_id": 7,
+                    "op_count": 8005
+                },
+                {
+                    "op_type_id": 8,
+                    "op_count": 3351
+                },
+                {
+                    "op_type_id": 9,
+                    "op_count": 27692
+                },
+                {
+                    "op_type_id": 10,
+                    "op_count": 4766
+                },
+                {
+                    "op_type_id": 11,
+                    "op_count": 551
+                },
+                {
+                    "op_type_id": 12,
+                    "op_count": 4667
+                },
+                {
+                    "op_type_id": 13,
+                    "op_count": 530
+                },
+                {
+                    "op_type_id": 14,
+                    "op_count": 42125
+                },
+                {
+                    "op_type_id": 15,
+                    "op_count": 13
+                },
+                {
+                    "op_type_id": 17,
+                    "op_count": 4028
+                },
+                {
+                    "op_type_id": 18,
+                    "op_count": 32888
+                },
+                {
+                    "op_type_id": 20,
+                    "op_count": 889
+                },
+                {
+                    "op_type_id": 24,
+                    "op_count": 513
+                },
+                {
+                    "op_type_id": 25,
+                    "op_count": 394
+                },
+                {
+                    "op_type_id": 26,
+                    "op_count": 2
+                },
+                {
+                    "op_type_id": 50,
+                    "op_count": 2212
+                },
+                {
+                    "op_type_id": 51,
+                    "op_count": 78432
+                },
+                {
+                    "op_type_id": 52,
+                    "op_count": 278625
+                },
+                {
+                    "op_type_id": 53,
+                    "op_count": 78432
+                },
+                {
+                    "op_type_id": 54,
+                    "op_count": 537
+                },
+                {
+                    "op_type_id": 55,
+                    "op_count": 1208
+                },
+                {
+                    "op_type_id": 56,
+                    "op_count": 3931
+                },
+                {
+                    "op_type_id": 57,
+                    "op_count": 41578
+                },
+                {
+                    "op_type_id": 60,
+                    "op_count": 6
+                },
+                {
+                    "op_type_id": 61,
+                    "op_count": 524676
+                },
+                {
+                    "op_type_id": 64,
+                    "op_count": 884477
+                },
+                {
+                    "op_type_id": 72,
+                    "op_count": 1518496
+                },
+                {
+                    "op_type_id": 77,
+                    "op_count": 7550
+                },
+                {
+                    "op_type_id": 78,
+                    "op_count": 42125
+                },
+                {
+                    "op_type_id": 80,
+                    "op_count": 29157
+                },
+                {
+                    "op_type_id": 82,
+                    "op_count": 10
+                },
+                {
+                    "op_type_id": 85,
+                    "op_count": 39758
+                },
+                {
+                    "op_type_id": 86,
+                    "op_count": 8320
+                },
+                {
+                    "op_type_id": 91,
+                    "op_count": 43
+                }
+            ],
+            "last_block_num": 3687262
+        },
+        {
+            "date": "2016-09-01T00:00:00",
+            "total_transactions": 3141793,
+            "total_operations": 7331995,
+            "operations": [
+                {
+                    "op_type_id": 0,
+                    "op_count": 2080947
+                },
+                {
+                    "op_type_id": 1,
+                    "op_count": 555019
+                },
+                {
+                    "op_type_id": 2,
+                    "op_count": 35539
+                },
+                {
+                    "op_type_id": 3,
+                    "op_count": 8661
+                },
+                {
+                    "op_type_id": 4,
+                    "op_count": 3248
+                },
+                {
+                    "op_type_id": 5,
+                    "op_count": 54035
+                },
+                {
+                    "op_type_id": 6,
+                    "op_count": 36157
+                },
+                {
+                    "op_type_id": 7,
+                    "op_count": 5491
+                },
+                {
+                    "op_type_id": 8,
+                    "op_count": 3035
+                },
+                {
+                    "op_type_id": 9,
+                    "op_count": 36284
+                },
+                {
+                    "op_type_id": 10,
+                    "op_count": 20874
+                },
+                {
+                    "op_type_id": 11,
+                    "op_count": 6145
+                },
+                {
+                    "op_type_id": 12,
+                    "op_count": 4009
+                },
+                {
+                    "op_type_id": 13,
+                    "op_count": 337
+                },
+                {
+                    "op_type_id": 14,
+                    "op_count": 19915
+                },
+                {
+                    "op_type_id": 15,
+                    "op_count": 18
+                },
+                {
+                    "op_type_id": 17,
+                    "op_count": 3820
+                },
+                {
+                    "op_type_id": 18,
+                    "op_count": 313905
+                },
+                {
+                    "op_type_id": 19,
+                    "op_count": 2
+                },
+                {
+                    "op_type_id": 20,
+                    "op_count": 468
+                },
+                {
+                    "op_type_id": 24,
+                    "op_count": 55
+                },
+                {
+                    "op_type_id": 25,
+                    "op_count": 50
+                },
+                {
+                    "op_type_id": 26,
+                    "op_count": 147
+                },
+                {
+                    "op_type_id": 30,
+                    "op_count": 22332
+                },
+                {
+                    "op_type_id": 50,
+                    "op_count": 3636
+                },
+                {
+                    "op_type_id": 51,
+                    "op_count": 76406
+                },
+                {
+                    "op_type_id": 52,
+                    "op_count": 476640
+                },
+                {
+                    "op_type_id": 53,
+                    "op_count": 76406
+                },
+                {
+                    "op_type_id": 55,
+                    "op_count": 2780
+                },
+                {
+                    "op_type_id": 56,
+                    "op_count": 8051
+                },
+                {
+                    "op_type_id": 57,
+                    "op_count": 13884
+                },
+                {
+                    "op_type_id": 60,
+                    "op_count": 1
+                },
+                {
+                    "op_type_id": 61,
+                    "op_count": 399638
+                },
+                {
+                    "op_type_id": 64,
+                    "op_count": 887425
+                },
+                {
+                    "op_type_id": 72,
+                    "op_count": 2043480
+                },
+                {
+                    "op_type_id": 76,
+                    "op_count": 2
+                },
+                {
+                    "op_type_id": 77,
+                    "op_count": 8661
+                },
+                {
+                    "op_type_id": 78,
+                    "op_count": 42247
+                },
+                {
+                    "op_type_id": 80,
+                    "op_count": 37107
+                },
+                {
+                    "op_type_id": 82,
+                    "op_count": 33
+                },
+                {
+                    "op_type_id": 85,
+                    "op_count": 39621
+                },
+                {
+                    "op_type_id": 86,
+                    "op_count": 5375
+                },
+                {
+                    "op_type_id": 91,
+                    "op_count": 109
+                }
+            ],
+            "last_block_num": 4574687
+        }
+    ]
+}

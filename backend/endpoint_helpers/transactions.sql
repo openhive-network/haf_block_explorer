@@ -11,26 +11,12 @@ SET ROLE hafbe_owner;
 -- SECTION 1: Type Definitions
 -- =============================================================================
 
-/*
- * transaction_stats: Transaction statistics for a time period (API output format).
- *
- * FIELDS:
- *   date           - Period timestamp (start of day/month/year)
- *   trx_count      - Total transactions in period
- *   avg_trx        - Average transactions per block
- *   min_trx        - Minimum transactions in a single block
- *   max_trx        - Maximum transactions in a single block
- *   last_block_num - Last block number in the period
- */
-DROP TYPE IF EXISTS hafbe_backend.transaction_stats CASCADE;
-CREATE TYPE hafbe_backend.transaction_stats AS (
-    date           TIMESTAMP,
-    trx_count      INT,
-    avg_trx        INT,
-    min_trx        INT,
-    max_trx        INT,
-    last_block_num INT
-);
+-- NOTE: the public hafbe_backend.transaction_stats type -- and the paginated
+-- hafbe_backend.transaction_stats_return wrapper that depends on it -- are
+-- defined in endpoints/types/transactions.sql, which installs before this file.
+-- transaction_stats is intentionally NOT redefined here: a DROP TYPE ... CASCADE
+-- would strip the `stats` column off transaction_stats_return. Only the internal
+-- trx_stats type (no OpenAPI schema, not depended on elsewhere) lives here.
 
 /*
  * trx_stats: Transaction statistics for a time period (internal format).
@@ -186,44 +172,39 @@ $$;
  * Fills gaps in the time series with zero values for periods without data.
  *
  * PARAMETERS:
- *   _granularity - Time granularity: 'daily', 'monthly', or 'yearly'
- *   _direction   - Sort direction: 'asc' or 'desc'
- *   _from_block  - Starting block number (NULL = genesis)
- *   _to_block    - Ending block number (NULL = current head)
+ *   _granularity          - Time granularity: 'daily', 'monthly', or 'yearly'
+ *   _direction            - Sort direction: 'asc' or 'desc'
+ *   _full_from_timestamp  - lower bound of the full range, period-truncated (from aggregation_time_range)
+ *   _full_to_timestamp    - upper bound of the full range, period-truncated (from aggregation_time_range)
  *
  * RETURNS: Set of transaction_stats records covering the time range
  *
  * PROCESSING STEPS:
- *   1. Convert block range to timestamp range
+ *   1. Narrow the pre-resolved full range to the requested page's period window
  *   2. Generate complete time series for the period
  *   3. Left join with actual stats (gaps become NULL)
  *   4. Fill missing last_block_num by finding nearest block
  *   5. Calculate avg_trx from trx_count and count_blocks
  */
+DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
-    _granularity hafbe_backend.granularity,
-    _direction   hafbe_backend.sort_direction,
-    _from_block  INT,
-    _to_block    INT
+    _granularity          hafbe_backend.granularity,
+    _direction            hafbe_backend.sort_direction,
+    _full_from_timestamp  TIMESTAMP,
+    _full_to_timestamp    TIMESTAMP,
+    _page                 INT DEFAULT 1,
+    _page_size            INT DEFAULT 100
 )
 RETURNS SETOF hafbe_backend.transaction_stats
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from                INT;
-  __to                  INT;
   __from_timestamp      TIMESTAMP;
   __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
-  __hafbe_current_block INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
 BEGIN
-  -- Normalize block range
-  SELECT from_block, to_block
-  INTO __from, __to
-  FROM hafbe_backend.blocksearch_range(_from_block, _to_block, __hafbe_current_block);
-
   -- Convert granularity enum to PostgreSQL interval keyword
   __granularity := (
     CASE
@@ -234,17 +215,24 @@ BEGIN
     END
   );
 
-  -- Convert blocks to timestamps (truncated to period boundary)
-  __from_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP
-  );
-  __to_timestamp := DATE_TRUNC(
-    __granularity,
-    (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP
-  );
-
   __one_period := ('1 ' || __granularity)::INTERVAL;
+
+  -- The full period-truncated range [_full_from_timestamp, _full_to_timestamp] is resolved
+  -- once by the caller (aggregation_time_range) and passed in. Narrow it to the requested
+  -- page's contiguous period window, so only page_size periods are generated and aggregated
+  -- (bounds work AND payload). A slice of a regular series is contiguous, so [MIN,MAX]
+  -- reproduces exactly the page.
+  SELECT MIN(s.p), MAX(s.p)
+  INTO __from_timestamp, __to_timestamp
+  FROM (
+    SELECT p
+    FROM generate_series(_full_from_timestamp, _full_to_timestamp, __one_period) AS p
+    ORDER BY
+      (CASE WHEN _direction = 'desc' THEN p END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN p END) ASC
+    OFFSET (GREATEST(_page, 1) - 1) * _page_size
+    LIMIT _page_size
+  ) s;
 
   RETURN QUERY (
     /*
@@ -306,8 +294,10 @@ BEGIN
      * =========================================================================
      * PURPOSE: Fill in missing last_block_num for periods without transactions.
      *
-     * Uses LATERAL join to find the most recent block before the end of
-     * the period. This ensures every row has a valid block reference.
+     * Uses a LATERAL lookup for the last block at/before period end. This is exact
+     * per period (a carry-forward from an earlier period would mis-report the block
+     * for an empty interior period); it only fires for empty periods and is served by
+     * hive_blocks_created_at_idx, so dense data does essentially no extra work.
      */
     join_missing_block AS (
       SELECT

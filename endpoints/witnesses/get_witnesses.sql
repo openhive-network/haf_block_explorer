@@ -23,6 +23,7 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 1
+          minimum: 1
         description: |
           Return page on `page` number, defaults to `1`
       - in: query
@@ -31,6 +32,8 @@ SET ROLE hafbe_owner;
         schema:
           type: integer
           default: 100
+          minimum: 1
+          maximum: 1000
         description: Return max `page-size` operations per page, defaults to `100`
       - in: query
         name: sort
@@ -157,17 +160,21 @@ DECLARE
   _ops_count INT;
   _total_pages INT;
   _result hafbe_backend.witness[];
+  _page INT := COALESCE("page", 1);
+  _page_size INT := COALESCE("page-size", 100);
+  _sort hafbe_backend.order_by_witness := COALESCE("sort", 'votes');
+  _direction hafbe_backend.sort_direction := COALESCE("direction", 'desc');
 BEGIN
-  PERFORM hafbe_backend.validate_limit("page-size", 1000);
-  PERFORM hafbe_backend.validate_negative_limit("page-size");
-  PERFORM hafbe_backend.validate_negative_page("page");
+  PERFORM hafbe_backend.validate_limit(_page_size, 1000);
+  PERFORM hafbe_backend.validate_negative_limit(_page_size);
+  PERFORM hafbe_backend.validate_negative_page(_page);
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
   _ops_count   := hafbe_backend.get_witnesses_count();
-  _total_pages := hafah_backend.total_pages(_ops_count, "page-size");
+  _total_pages := hafah_backend.total_pages(_ops_count, _page_size);
 
-  PERFORM hafbe_backend.validate_page("page", _total_pages);
+  PERFORM hafbe_backend.validate_page(_page, _total_pages);
 
   _result := array_agg(row) FROM (
     SELECT 
@@ -189,10 +196,10 @@ BEGIN
       ba.last_confirmed_block_num,
       ba.account_creation_fee
     FROM hafbe_backend.get_witnesses(
-      "page",
-      "page-size",
-      "sort",
-      "direction"
+      _page,
+      _page_size,
+      _sort,
+      _direction
     ) ba
   ) row;
 

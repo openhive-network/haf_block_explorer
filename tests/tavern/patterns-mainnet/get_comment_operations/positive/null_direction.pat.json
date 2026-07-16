@@ -1,0 +1,455 @@
+{
+  "total_operations": 808,
+  "total_pages": 41,
+  "operations_result": [
+    {
+      "op": {
+        "type": "comment_operation",
+        "value": {
+          "body": "<html>\n<p>On the coding side of things, we made several <a href=\"https://github.com/steemit/steem/pulls\">pull requests</a> for features/fixes we recently made to the Steem client. Some I've mentioned previously, but one new one is the ability to send two transactions for the same amount of funds between the same pair of users in the same block. Previously the 2nd transaction would be rejected.</p>\n<p>This week we spent more time on business and design discussions versus coding work. Some proposals for changing features related to voting were discussed and ultimately rejected after soliciting community input (most notoriously, the vote nullification feature). Last I heard Dan was planning to go back to the drawing board on this issue, although I have hopes that some other features such as the ones below will take precedence for the near term.&nbsp;</p>\n<p><br>\nI've been pushing hard both publicly and behind the scenes for an introductory location where new users can get a nice introduction to the Steemit site and Steemit culture, and a recent post by Ned makes me think we're going to make some headway on this issue soon. I think this is critically important, not only so new users don't feel lost, but also to reduce friction between new and existing users and move us closer to a common ground about site usage.&nbsp;</p>\n<p><br>\nI also participated in some discussions about how to protect people from losing too much Steem in the event of a hacker manages to gain control of their account, as well as a feature for allowing a user to regain control of their Steem account if they lose their password. I think both of these features will be big selling points when making the case for Steem as a safe alternative to traditional money.&nbsp;</p>\n<p><br>\nI'm still arguing the case that a primary focus for the front-end developers for Steemit should be a feature that allows for new users who sign up via facebook to “Share” that they've signed up to Steemit as a means of viral advertising. If you agree or if you think there's other more important features that the GUI guys should focus on first, please leave a comment.&nbsp;</p>\n</html>",
+          "title": "BlockTrades Witness Report for 3rd Week of August",
+          "author": "blocktrades",
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "json_metadata": "{\"tags\":[\"witness-category\",\"blocktrades\"],\"links\":[\"https://github.com/steemit/steem/pulls\"]}",
+          "parent_author": "",
+          "parent_permlink": "witness-category"
+        }
+      },
+      "block": 4228228,
+      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+      "op_pos": 0,
+      "op_type_id": 1,
+      "timestamp": "2016-08-19T21:21:03",
+      "virtual_op": false,
+      "operation_id": "18160100980031490",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "blocktrades",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228228,
+      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+      "op_pos": 1,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:03",
+      "virtual_op": false,
+      "operation_id": "18160100980031491",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "blocktrades",
+          "author": "blocktrades",
+          "weight": 0,
+          "rshares": 39641608482099,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210008",
+            "precision": 3
+          },
+          "total_vote_weight": "16755995752068192035"
+        }
+      },
+      "block": 4228228,
+      "trx_id": "2bbeb7513e49cb169d4fe446ff980f2102f7210a",
+      "op_pos": 2,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:03",
+      "virtual_op": true,
+      "operation_id": "18160100980031492",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "murh",
+          "author": "blocktrades",
+          "weight": 3301,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228239,
+      "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:36",
+      "virtual_op": false,
+      "operation_id": "18160148224671746",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "murh",
+          "author": "blocktrades",
+          "weight": 1278085846439,
+          "rshares": 1799526647,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210067",
+            "precision": 3
+          },
+          "total_vote_weight": "16756065465841634165"
+        }
+      },
+      "block": 4228239,
+      "trx_id": "e06bc7ad9c51a974ee2bd673e8fa4b4f7018bc18",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:36",
+      "virtual_op": true,
+      "operation_id": "18160148224671747",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "weenis",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228240,
+      "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:39",
+      "virtual_op": false,
+      "operation_id": "18160152519639050",
+      "trx_in_block": 5
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "weenis",
+          "author": "blocktrades",
+          "weight": 126949035192,
+          "rshares": 163854600,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210072",
+            "precision": 3
+          },
+          "total_vote_weight": "16756071813293393800"
+        }
+      },
+      "block": 4228240,
+      "trx_id": "c5a07b2a069db3ac9faffe0c5a6c6296ef3e78c5",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:39",
+      "virtual_op": true,
+      "operation_id": "18160152519639051",
+      "trx_in_block": 5
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "soupernerd",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228241,
+      "trx_id": "449544adf3ea809e1b8648f9d7633dd14cf922b0",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:42",
+      "virtual_op": false,
+      "operation_id": "18160156814606336",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "soupernerd",
+          "author": "blocktrades",
+          "weight": 140082477983,
+          "rshares": 166899192,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210078",
+            "precision": 3
+          },
+          "total_vote_weight": "16756078278638531520"
+        }
+      },
+      "block": 4228241,
+      "trx_id": "449544adf3ea809e1b8648f9d7633dd14cf922b0",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:42",
+      "virtual_op": true,
+      "operation_id": "18160156814606337",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "riscadox",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228242,
+      "trx_id": "6ec58dc08d1ab7513b9495237d189204a070d527",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:45",
+      "virtual_op": false,
+      "operation_id": "18160161109573638",
+      "trx_in_block": 3
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "riscadox",
+          "author": "blocktrades",
+          "weight": 4435522878191,
+          "rshares": 4907734423,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210131",
+            "precision": 3
+          },
+          "total_vote_weight": "16756268372476168304"
+        }
+      },
+      "block": 4228242,
+      "trx_id": "6ec58dc08d1ab7513b9495237d189204a070d527",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:45",
+      "virtual_op": true,
+      "operation_id": "18160161109573639",
+      "trx_in_block": 3
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "tomeraddady",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228242,
+      "trx_id": "bbea1bd90a0f380371b35d38639d50ded932c12e",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:45",
+      "virtual_op": false,
+      "operation_id": "18160161109573640",
+      "trx_in_block": 4
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "tomeraddady",
+          "author": "blocktrades",
+          "weight": 53921055654,
+          "rshares": 59668352,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210131",
+            "precision": 3
+          },
+          "total_vote_weight": "16756270683378553512"
+        }
+      },
+      "block": 4228242,
+      "trx_id": "bbea1bd90a0f380371b35d38639d50ded932c12e",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:45",
+      "virtual_op": true,
+      "operation_id": "18160161109573641",
+      "trx_in_block": 4
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "runridefly",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228244,
+      "trx_id": "6b17805f0109aab1621b484237505f33970d4397",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:51",
+      "virtual_op": false,
+      "operation_id": "18160169699508226",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "runridefly",
+          "author": "blocktrades",
+          "weight": 60453184887,
+          "rshares": 58534791,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210140",
+            "precision": 3
+          },
+          "total_vote_weight": "16756272950372986778"
+        }
+      },
+      "block": 4228244,
+      "trx_id": "6b17805f0109aab1621b484237505f33970d4397",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:51",
+      "virtual_op": true,
+      "operation_id": "18160169699508227",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "brains",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228245,
+      "trx_id": "2820d4838ba429acab35346476232fb69b083fda",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:21:54",
+      "virtual_op": false,
+      "operation_id": "18160173994475520",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "brains",
+          "author": "blocktrades",
+          "weight": 58758139107,
+          "rshares": 53546994,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210144",
+            "precision": 3
+          },
+          "total_vote_weight": "16756275024189661173"
+        }
+      },
+      "block": 4228245,
+      "trx_id": "2820d4838ba429acab35346476232fb69b083fda",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:21:54",
+      "virtual_op": true,
+      "operation_id": "18160173994475521",
+      "trx_in_block": 0
+    },
+    {
+      "op": {
+        "type": "comment_operation",
+        "value": {
+          "body": "@@ -860,21 +860,16 @@\n %3C/p%3E%0A%3Cp%3E\n-%3Cbr%3E%0A\n I've bee\n@@ -1320,32 +1320,24 @@\n sage.&nbsp;%3C\n-/p%3E%0A%3Cp%3E%3C\n br%3E%0AI also p\n@@ -1747,21 +1747,16 @@\n %3C/p%3E%0A%3Cp%3E\n-%3Cbr%3E%0A\n I'm stil\n",
+          "title": "BlockTrades Witness Report for 3rd Week of August",
+          "author": "blocktrades",
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "json_metadata": "{\"tags\":[\"witness-category\",\"blocktrades\"],\"links\":[\"https://github.com/steemit/steem/pulls\"]}",
+          "parent_author": "",
+          "parent_permlink": "witness-category"
+        }
+      },
+      "block": 4228246,
+      "trx_id": "7e14eba4f15f3ca60b4664ea28ae5859d9a719b9",
+      "op_pos": 0,
+      "op_type_id": 1,
+      "timestamp": "2016-08-19T21:21:57",
+      "virtual_op": false,
+      "operation_id": "18160178289442818",
+      "trx_in_block": 1
+    },
+    {
+      "op": {
+        "type": "vote_operation",
+        "value": {
+          "voter": "noaommerrr",
+          "author": "blocktrades",
+          "weight": 10000,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august"
+        }
+      },
+      "block": 4228247,
+      "trx_id": "56cd5865186b4c295990184a75c2cff0d615b8b6",
+      "op_pos": 0,
+      "op_type_id": 0,
+      "timestamp": "2016-08-19T21:22:00",
+      "virtual_op": false,
+      "operation_id": "18160182584410118",
+      "trx_in_block": 3
+    },
+    {
+      "op": {
+        "type": "effective_comment_vote_operation",
+        "value": {
+          "voter": "noaommerrr",
+          "author": "blocktrades",
+          "weight": 58839027676613,
+          "rshares": 48029273695,
+          "permlink": "blocktrades-witness-report-for-3rd-week-of-august",
+          "pending_payout": {
+            "nai": "@@000000013",
+            "amount": "210637",
+            "precision": 3
+          },
+          "total_vote_weight": "16758133098747870032"
+        }
+      },
+      "block": 4228247,
+      "trx_id": "56cd5865186b4c295990184a75c2cff0d615b8b6",
+      "op_pos": 1,
+      "op_type_id": 72,
+      "timestamp": "2016-08-19T21:22:00",
+      "virtual_op": true,
+      "operation_id": "18160182584410119",
+      "trx_in_block": 3
+    }
+  ]
+}
