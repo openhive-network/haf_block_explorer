@@ -249,8 +249,11 @@ See `scripts/claude/processing.md` for the processor detail.
 
 ## Testing
 
-Proposal endpoints are covered by:
-- **SQL assertions**: `tests/mocks/sql/verify.sql` (36 checks run by `verify_mock_data.sh`)
-- **Tavern HTTP tests**: `tests/tavern/patterns-mock/` (35 test cases with matching `.pat.json` files, run by `pattern-test-with-mock-data` CI job)
+Proposal endpoints are covered by the **Tavern HTTP suite**:
+`tests/tavern/patterns-mock/` (55 test cases with matching `.pat.json` files,
+run by the `pattern-test-with-mock-data` CI job). The mock DB is built by
+`install_mock_data.sh` → `process_blocks.sh` → `prepare_mock_cache.sh`
+(fixtures + processing + a deterministic cache seed), then asserted purely
+through the REST API. There is no separate SQL verifier.
 
 Both use a synthetic 91M block range because DHF proposals only appear on mainnet past block ~22.3M (HF21). See `scripts/claude/tests.md` for the mock harness workflow.

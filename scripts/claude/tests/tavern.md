@@ -83,7 +83,7 @@ tests/tavern/
     │   ├── positive/                # 11 tests
     │   └── negative/                # 5 tests
     └── get_proposal_votes_history/
-        ├── positive/                # 7 tests (incl. filter_voter_* = stake branches)
+        ├── positive/                # 12 tests (filter_voter_* = stake branches; tie_break_* = same-block ordering at page boundary; proxied_voter = proxy zeroing)
         └── negative/                # 3 tests
 ```
 

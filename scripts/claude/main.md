@@ -37,7 +37,7 @@ scripts/                 Operational scripts
 ├── install_app.sh       Install HAFBE on database
 ├── process_blocks.sh    Run block processing loop
 ├── uninstall_app.sh     Remove HAFBE from database
-├── verify_mock_data.sh  Refresh caches + run mock verify.sql (paired with tests/mocks/install_mock_data.sh)
+├── prepare_mock_cache.sh  Refresh caches + seed deterministic mock vests (paired with tests/mocks/install_mock_data.sh; behavior asserted by tests/tavern/patterns-mock)
 └── ci-helpers/          CI/CD helper scripts
 
 tests/                   Test suites

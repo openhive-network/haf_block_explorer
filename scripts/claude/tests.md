@@ -98,8 +98,11 @@ Three-step workflow (mirrors `submodules/btracker/tests/mocks`):
 # 2. Run the regular block processor against the mock range
 ./scripts/process_blocks.sh --host=localhost --stop-at-block=91000006
 
-# 3. Refresh caches and run the PASS/FAIL assertion table
-./scripts/verify_mock_data.sh --host=localhost --user=haf_admin
+# 3. Refresh caches + deterministic seed (setup only, no assertions)
+./scripts/prepare_mock_cache.sh --host=localhost --user=haf_admin
+
+# 4. Assert behavior through the REST API
+cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 ```
 
 Assumes a fresh HAFBE+btracker install. To re-run, fully uninstall both
@@ -107,16 +110,20 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 
 **Key files:**
 - `tests/mocks/install_mock_data.sh` - Loads fixtures, rewinds contexts
-- `scripts/verify_mock_data.sh` - Refreshes caches, runs verify.sql
-- `tests/mocks/sql/verify.sql` - 36 SQL assertions covering processor state, endpoint composition, status filters, sorting, and pagination
+- `scripts/prepare_mock_cache.sh` - Refreshes LIVE caches + seeds deterministic initminer vests (setup for the Tavern suite; not a test)
 - `tests/mocks/fixtures/` - Mock block headers + operation bodies
 - `tests/mocks/README.md` - Full documentation
 
+Mock behavior is asserted through the public REST interface by the Tavern
+mock suite below — there is no separate SQL verifier. DB-internal invariants
+(physical table layout, cache membership, ledger row counts) belong in a
+dedicated DB integration-test suite if ever needed, not alongside the API tests.
+
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
-50 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+55 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
 - `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
 - `get_proposal_votes/` — 11 positive + 5 negative
-- `get_proposal_votes_history/` — 7 positive + 3 negative (the two `filter_voter_*` cases pin the voter-stake cache-hit and expired-view fallback branches)
+- `get_proposal_votes_history/` — 12 positive + 3 negative (`filter_voter_*` pin the cache-hit and expired-view fallback stake branches; `tie_break_*` pin the same-block vote/un-vote ordering at the `page-size=1` pagination boundary; `proxied_voter` pins proxy zeroing)
 
 All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add new tests here when adding proposal-related features that require mock data.
 
@@ -152,7 +159,7 @@ Tests require:
 `pattern-test-with-mock-data` additionally requires the mock cache (`sync_with_mock_data` job, sync stage). That job:
 - Checks NFS for a cached `haf_hafbe_mock` image; on miss, falls back to the HAFBE sync cache as base
 - Runs `docker/docker-compose-mocks.yml` (HAF + fixture installer + block processor)
-- Waits for `hive.is_app_in_sync('hafbe_app')` then runs `verify_mock_data.sh`
+- Waits for `hive.is_app_in_sync('hafbe_app')` then runs `prepare_mock_cache.sh`
 - Saves the resulting pgdata as `haf_hafbe_mock` cache
 
 ### Test Dependencies

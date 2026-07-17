@@ -78,9 +78,9 @@ These scripts help with common development and debugging tasks. **Use them autom
 
 ---
 
-### Mock Data Installer + Verifier
+### Mock Data Installer + Cache Preparer
 
-**Location**: `tests/mocks/install_mock_data.sh` + `scripts/verify_mock_data.sh`
+**Location**: `tests/mocks/install_mock_data.sh` + `scripts/prepare_mock_cache.sh`
 
 **Use when**:
 - Testing a feature whose ops only appear past a late launch block (e.g. DHF
@@ -89,11 +89,12 @@ These scripts help with common development and debugging tasks. **Use them autom
   real blockchain data
 - Reproducing the canonical test fixtures shipped with the repo
 
-**Usage** (three steps, after a fresh `install_app.sh`):
+**Usage** (after a fresh `install_app.sh`):
 ```bash
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
 ./scripts/process_blocks.sh        --host=localhost --stop-at-block=91000006
-./scripts/verify_mock_data.sh      --host=localhost --user=haf_admin
+./scripts/prepare_mock_cache.sh    --host=localhost --user=haf_admin
+cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 ```
 
 **What they do**:
@@ -101,8 +102,9 @@ These scripts help with common development and debugging tasks. **Use them autom
   `hafbe_app` and `hafbe_bal` contexts so the mock range becomes the next
   processable batch. Does NOT process the blocks.
 - `process_blocks.sh`: drives the mock range through the canonical pipeline.
-- `verify_mock_data.sh`: refreshes LIVE caches and runs the 36-check
-  `verify.sql` PASS/FAIL table; exits non-zero on any failure.
+- `prepare_mock_cache.sh`: refreshes LIVE caches and seeds a deterministic
+  `initminer` vests value (setup, not a test). Behavior is asserted through
+  the REST API by the Tavern mock suite (`tests/tavern/patterns-mock`).
 
 **Requirements**: Fresh HAFBE+btracker install. Mirrors
 `submodules/btracker/tests/mocks/`. Full docs in `tests/mocks/README.md`.
@@ -120,8 +122,8 @@ These scripts help with common development and debugging tasks. **Use them autom
 | "What's wrong with pipeline 12345?" | `check-hafbe-pipeline.sh 12345` |
 | "Check the develop pipeline" | `check-hafbe-pipeline.sh develop` |
 | "Run sync to 1M blocks" | `run_sync_test.sh 1000000` |
-| "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000006` → `verify_mock_data.sh` |
-| "Verify mock state" | `verify_mock_data.sh` |
+| "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000006` → `prepare_mock_cache.sh` → `pytest tests/tavern/patterns-mock/get_proposal_votes_history/` |
+| "Prepare mock cache" | `prepare_mock_cache.sh` |
 | "Reproduce CI mock pipeline locally" | `docker compose -f docker/docker-compose-mocks.yml up` (no `--stop-at-block`; wait for `hive.is_app_in_sync`) |
 | "Test sync performance" | `run_sync_test.sh` |
 | "Benchmark block processing" | `run_sync_test.sh` |
