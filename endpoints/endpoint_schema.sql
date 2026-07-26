@@ -949,24 +949,10 @@ declare
           }
         }
       },
-      "hafbe_backend.transaction_stats_return": {
-        "type": "object",
-        "properties": {
-          "total_periods": {
-            "type": "integer",
-            "description": "total number of periods in the requested range (across all pages)"
-          },
-          "total_pages": {
-            "type": "integer",
-            "description": "total number of pages for the requested page-size"
-          },
-          "stats": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
-            },
-            "description": "the requested page of per-period transaction statistics"
-          }
+      "hafbe_backend.array_of_transaction_stats": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.transaction_stats"
         }
       },
       "hafbe_backend.period_op_type_count": {
@@ -1017,24 +1003,10 @@ declare
           }
         }
       },
-      "hafbe_backend.operation_type_stats_return": {
-        "type": "object",
-        "properties": {
-          "total_periods": {
-            "type": "integer",
-            "description": "total number of periods in the requested range (across all pages)"
-          },
-          "total_pages": {
-            "type": "integer",
-            "description": "total number of pages for the requested page-size"
-          },
-          "stats": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
-            },
-            "description": "the requested page of per-period operation-type statistics"
-          }
+      "hafbe_backend.array_of_operation_type_stats": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
         }
       },
       "hafbe_backend.proposal": {
@@ -2893,29 +2865,6 @@ declare
           },
           {
             "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 1,
-              "minimum": 1
-            },
-            "description": "Page number (1-indexed) of periods to return, in the sorted order."
-          },
-          {
-            "in": "query",
-            "name": "page-size",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100,
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "description": "Number of periods returned per page (max 1000)."
-          },
-          {
-            "in": "query",
             "name": "from-block",
             "required": false,
             "schema": {
@@ -2937,26 +2886,22 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Paginated per-period transaction statistics.\n\n* Returns `hafbe_backend.transaction_stats_return`\n",
+            "description": "Every period in the requested range, as a flat array.\n\n* Returns array of `hafbe_backend.transaction_stats`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_backend.transaction_stats_return"
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_transaction_stats"
                 },
-                "example": {
-                  "total_periods": 11,
-                  "total_pages": 1,
-                  "stats": [
-                    {
-                      "date": "2017-01-01T00:00:00",
-                      "trx_count": 6961192,
-                      "avg_trx": 1,
-                      "min_trx": 0,
-                      "max_trx": 89,
-                      "last_block_num": 5000000
-                    }
-                  ]
-                }
+                "example": [
+                  {
+                    "date": "2017-01-01T00:00:00",
+                    "trx_count": 6961192,
+                    "avg_trx": 1,
+                    "min_trx": 0,
+                    "max_trx": 89,
+                    "last_block_num": 5000000
+                  }
+                ]
               }
             }
           },
@@ -2997,36 +2942,13 @@ declare
           },
           {
             "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 1,
-              "minimum": 1
-            },
-            "description": "Page number (1-indexed) of periods to return, in the sorted order."
-          },
-          {
-            "in": "query",
-            "name": "page-size",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100,
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "description": "Number of periods returned per page (max 1000)."
-          },
-          {
-            "in": "query",
             "name": "from-block",
             "required": false,
             "schema": {
               "type": "string",
               "default": null
             },
-            "description": "Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).\n\nWhen a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.\n"
+            "description": "Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).\n\nWhen a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.\n\nWhen omitted at `daily` granularity, the range defaults to the most recent **1 year**\ninstead of the whole chain -- an unbounded daily histogram is ~3,750 periods / ~6.6 MB\nand trips client timeouts. An explicitly supplied `from-block` is always honoured in\nfull, at every granularity, so a chart always receives every period of the range it\nasked for. `monthly` and `yearly` are never defaulted.\n"
           },
           {
             "in": "query",
@@ -3051,38 +2973,34 @@ declare
         ],
         "responses": {
           "200": {
-            "description": "Paginated per-period operation-type histogram with transaction totals.\n\n* Returns `hafbe_backend.operation_type_stats_return`\n",
+            "description": "Every period in the requested range, as a flat array, each with its\noperation-type histogram and transaction totals.\n\n* Returns array of `hafbe_backend.operation_type_stats`\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/hafbe_backend.operation_type_stats_return"
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_operation_type_stats"
                 },
-                "example": {
-                  "total_periods": 3752,
-                  "total_pages": 38,
-                  "stats": [
-                    {
-                      "date": "2017-01-02T00:00:00",
-                      "total_transactions": 412000,
-                      "total_operations": 365000,
-                      "operations": [
-                        {
-                          "op_type_id": 0,
-                          "op_count": 98000
-                        },
-                        {
-                          "op_type_id": 1,
-                          "op_count": 45000
-                        },
-                        {
-                          "op_type_id": 18,
-                          "op_count": 210000
-                        }
-                      ],
-                      "last_block_num": 5000000
-                    }
-                  ]
-                }
+                "example": [
+                  {
+                    "date": "2017-01-02T00:00:00",
+                    "total_transactions": 412000,
+                    "total_operations": 365000,
+                    "operations": [
+                      {
+                        "op_type_id": 0,
+                        "op_count": 98000
+                      },
+                      {
+                        "op_type_id": 1,
+                        "op_count": 45000
+                      },
+                      {
+                        "op_type_id": 18,
+                        "op_count": 210000
+                      }
+                    ],
+                    "last_block_num": 5000000
+                  }
+                ]
               }
             }
           }

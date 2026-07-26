@@ -189,6 +189,9 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/operation_types.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/witness.sql"
+  # Types before the functions that return them: these DROP ... CASCADE, which would
+  # otherwise take the blocksearch_filters.sql gatherers down with them.
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/types/blocksearch.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/utilities/blocksearch.sql"
 
   echo "Installing backend helpers..."

@@ -1,4 +1,9 @@
 ---
+# A daily request with NO block range. On a full-history node the endpoint falls back to
+# hafbe_backend.default_stats_window() (1 year) instead of scanning the whole chain, which is
+# what issue #139 was about. The 5M-block test dataset spans <1 year, so here the fallback must
+# NOT fire and the complete history is expected back -- this pins the "no over-clamping" half of
+# the behaviour. The clamp itself is covered at SQL level, since no Tavern dataset spans a year.
   test_name: Hafbe PostgREST
 
   marks:
@@ -17,8 +22,6 @@
           accept: application/json
         json:
           granularity: "daily"
-          page: null
-          page-size: 3
       response:
         status_code: 200
         verify_response_with:

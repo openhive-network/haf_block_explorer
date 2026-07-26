@@ -9,7 +9,7 @@ SET ROLE hafbe_owner;
 --
 -- MAIN COMPONENTS:
 --   1. Block Data Functions - Retrieve block-specific data
---   2. Filter Return Types - Composite types for search results
+--   2. Filter Return Types - moved to backend/types/blocksearch.sql
 --   3. Range Calculation Functions - Calculate valid block ranges
 --   4. Pagination Functions - Handle page calculations
 --   5. Block Search Functions - Find blocks matching criteria
@@ -122,124 +122,17 @@ END
 $$;
 
 -- ============================================================================
--- SECTION 2: Filter Return Types
+-- SECTION 2: Filter Return Types  -- MOVED
 -- ============================================================================
--- Composite types used to return bundled search results.
+-- The composite types this file's functions return now live in
+-- backend/types/blocksearch.sql, which install_app.sh applies first.
+--
+-- They were moved because re-creating a type needs DROP TYPE ... CASCADE, and that
+-- CASCADE also dropped the eight gatherers in
+-- backend/endpoint_helpers/blocksearch_filters.sql -- a file NOT re-applied by a partial
+-- hot-patch of this one, leaving /block-search returning HTTP 500. Keeping the DROPs out
+-- of this file makes re-applying it safe on its own.
 -- ============================================================================
-
-/*
- * blocksearch_filter_return: Return type for block search filter functions.
- *
- * FIELDS:
- *   count_blocks - Total number of blocks matching the filter (NULL if not counted)
- *   from_block   - Starting block number of the range
- *   to_block     - Ending block number of the range
- */
-DROP TYPE IF EXISTS hafbe_backend.blocksearch_filter_return CASCADE;
-CREATE TYPE hafbe_backend.blocksearch_filter_return AS (
-  count_blocks INT,
-  from_block   INT,
-  to_block     INT
-);
-
-/*
- * blocksearch_account_filter_return: Return type for account-based block searches.
- *
- * FIELDS:
- *   from_block - Starting block number of the range
- *   to_block   - Ending block number of the range
- *   from_seq   - Starting account operation sequence number
- *   to_seq     - Ending account operation sequence number
- */
-DROP TYPE IF EXISTS hafbe_backend.blocksearch_account_filter_return CASCADE;
-CREATE TYPE hafbe_backend.blocksearch_account_filter_return AS (
-  from_block INT,
-  to_block   INT,
-  from_seq   INT,
-  to_seq     INT
-);
-
-/*
- * calculate_pages_return: Return type for pagination calculations.
- *
- * FIELDS:
- *   rest_of_division - Remainder when dividing total by page size
- *   total_pages      - Total number of pages available
- *   page_num         - Adjusted page number for the query
- *   offset_filter    - SQL OFFSET value for the query
- *   limit_filter     - SQL LIMIT value for the query
- */
-DROP TYPE IF EXISTS hafbe_backend.calculate_pages_return CASCADE;
-CREATE TYPE hafbe_backend.calculate_pages_return AS (
-  rest_of_division INT,
-  total_pages      INT,
-  page_num         INT,
-  offset_filter    INT,
-  limit_filter     INT
-);
-
-/*
- * find_blocks_with_op_return: Return type for operation-based block searches.
- *
- * FIELDS:
- *   block_num  - Block number where the operation was found
- *   op_type_id - Operation type ID
- *   op_count   - Number of operations of this type in the block (NULL for account searches)
- */
-DROP TYPE IF EXISTS hafbe_backend.find_blocks_with_op_return CASCADE;
-CREATE TYPE hafbe_backend.find_blocks_with_op_return AS (
-  block_num  INT,
-  op_type_id INT,
-  op_count   INT
-);
-
-/*
- * gathered_block: Intermediate block representation for gatherer functions.
- *
- * FIELDS:
- *   block_num  - Block number
- *   operations - Array of operation counts for this block
- *
- * USAGE: Used by gatherer functions to pass block data to the finalize step
- *        before enrichment with metadata (hash, prev, producer_account, etc.)
- */
-DROP TYPE IF EXISTS hafbe_backend.gathered_block CASCADE;
-CREATE TYPE hafbe_backend.gathered_block AS (
-  block_num  INT,
-  operations hafbe_backend.block_operations[]
-);
-
-/*
- * gatherer_result: Return type for all block search gatherer functions.
- *
- * FIELDS:
- *   blocks            - Array of (block_num, operations) tuples, paginated and ordered
- *   total_count       - Total number of blocks matching the filter (may be capped)
- *   total_pages       - Total number of pages available
- *   min_block_num     - Minimum block number found (for cursor calculation)
- *   pre_grouped_count - Count of operations before grouping (for cursor saturation check)
- *   max_page_limit    - __max_page_count * _limit (for cursor saturation check)
- *   range_from        - Normalized start of block range
- *   range_to          - Normalized end of block range
- *
- * CURSOR LOGIC:
- *   The cursor_from value is calculated by blocksearch_build_result using:
- *   - If min_block_num IS NULL: no results, cursor = range_from
- *   - If min_block_num = 1: at genesis, cursor = 1
- *   - If pre_grouped_count != max_page_limit: not saturated, cursor = range_from
- *   - Otherwise: saturated results, cursor = min_block_num - 1
- */
-DROP TYPE IF EXISTS hafbe_backend.gatherer_result CASCADE;
-CREATE TYPE hafbe_backend.gatherer_result AS (
-  blocks            hafbe_backend.gathered_block[],
-  total_count       INT,
-  total_pages       INT,
-  min_block_num     INT,
-  pre_grouped_count INT,
-  max_page_limit    INT,
-  range_from        INT,
-  range_to          INT
-);
 
 -- ============================================================================
 -- SECTION 3: Range Calculation Functions
@@ -349,10 +242,9 @@ $$;
  * period-truncated [from_ts, to_ts] window the time-series aggregation operates over
  * (blocksearch_range + each boundary block's created_at, truncated to the period).
  *
- * current_block is passed IN (not read here) so the endpoint reads it ONCE and hands
- * the SAME value to both consumers -- aggregation_period_count (total_pages) and
- * get_*_aggregation (the paged data) -- guaranteeing they resolve the identical window
- * even if a block is committed mid-request. Cheap: normalize + two block look-ups.
+ * current_block is passed IN (not read here) so the endpoint reads it ONCE, guaranteeing
+ * the window cannot shift if a block is committed mid-request. Cheap: normalize + two
+ * block look-ups.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_time_range(
     _granularity   hafbe_backend.granularity,
@@ -387,38 +279,47 @@ BEGIN
 END
 $$;
 
-/*
- * aggregation_period_count: Number of periods the time-series aggregation emits for the
- * already-resolved [from_ts, to_ts] window, i.e. the total record count across all pages.
- * Drives total_pages for the paginated operation-type / transaction statistics endpoints.
- *
- * Takes the resolved timestamps (from aggregation_time_range) rather than re-resolving the
- * block range, so the endpoint resolves the window once and shares it with get_*_aggregation
- * -- no duplicated block-range resolution, no chance of the count and the data disagreeing.
- * Independent of any op-type filter (every period is one series row).
- */
+-- aggregation_period_count() drove total_pages for the paginated stats endpoints (!494).
+-- Pagination is gone (issue #139) and nothing else calls it, so drop it on redeploy.
+DROP FUNCTION IF EXISTS hafbe_backend.aggregation_period_count(hafbe_backend.granularity, TIMESTAMP, TIMESTAMP);
 DROP FUNCTION IF EXISTS hafbe_backend.aggregation_period_count(hafbe_backend.granularity, INT, INT);
-CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_period_count(
-    _granularity    hafbe_backend.granularity,
-    _from_timestamp TIMESTAMP,
-    _to_timestamp   TIMESTAMP
+
+/*
+ * aggregation_default_from: Lower bound a time-series endpoint should actually use.
+ *
+ * When the caller supplied no from-block, an unbounded daily series spans the whole chain
+ * (~3.7k periods). That is fine for one row per period, but the operation-type histogram
+ * carries a nested per-op-type array per period and reaches ~6.6 MB, which trips client
+ * timeouts -- the original report in issue #139. So an OMITTED lower bound falls back to
+ * default_stats_window() before "now", exactly like the network statistics endpoints do.
+ *
+ * Deliberately narrow:
+ *   - only when _from_omitted; an explicit from-block is always honoured in full, because
+ *     charts need every period of the range they asked for (block_explorer_ui#759).
+ *   - only at 'daily'; monthly (~125 periods) and yearly (~11) are small, and defaulting
+ *     them would silently collapse the Explorer's all-time chart to a single bar.
+ *
+ * Pure function of its arguments so it can be unit-tested with synthetic timestamps -- the
+ * 5M-block CI dataset spans <1 year, so the fallback never fires there.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_default_from(
+    _granularity   hafbe_backend.granularity,
+    _from_ts       TIMESTAMP,
+    _to_ts         TIMESTAMP,
+    _from_omitted  BOOLEAN
 )
-RETURNS INT
+RETURNS TIMESTAMP
 LANGUAGE 'plpgsql'
-STABLE
+IMMUTABLE
 AS
 $$
-DECLARE
-  __one_period INTERVAL := ('1 ' || (
-    CASE
-      WHEN _granularity = 'daily'   THEN 'day'
-      WHEN _granularity = 'monthly' THEN 'month'
-      WHEN _granularity = 'yearly'  THEN 'year'
-      ELSE NULL
-    END
-  ))::INTERVAL;
 BEGIN
-  RETURN (SELECT count(*)::INT FROM generate_series(_from_timestamp, _to_timestamp, __one_period));
+  IF NOT COALESCE(_from_omitted, FALSE) OR _granularity IS DISTINCT FROM 'daily' THEN
+    RETURN _from_ts;
+  END IF;
+
+  -- GREATEST keeps genesis when the chain is younger than the window.
+  RETURN GREATEST(_from_ts, DATE_TRUNC('day', _to_ts - hafbe_backend.default_stats_window()));
 END
 $$;
 

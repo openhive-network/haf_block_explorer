@@ -11,12 +11,12 @@ SET ROLE hafbe_owner;
 -- SECTION 1: Type Definitions
 -- =============================================================================
 
--- NOTE: the public hafbe_backend.transaction_stats type -- and the paginated
--- hafbe_backend.transaction_stats_return wrapper that depends on it -- are
--- defined in endpoints/types/transactions.sql, which installs before this file.
--- transaction_stats is intentionally NOT redefined here: a DROP TYPE ... CASCADE
--- would strip the `stats` column off transaction_stats_return. Only the internal
--- trx_stats type (no OpenAPI schema, not depended on elsewhere) lives here.
+-- NOTE: the public hafbe_backend.transaction_stats type is defined in
+-- endpoints/types/transactions.sql, which installs before this file. It is
+-- intentionally NOT redefined here: a DROP TYPE ... CASCADE would drop
+-- get_transaction_statistics and get_transaction_aggregation along with it, and
+-- neither file is guaranteed to be re-applied by a partial hot-patch. Only the
+-- internal trx_stats type (no OpenAPI schema, nothing else depends on it) lives here.
 
 /*
  * trx_stats: Transaction statistics for a time period (internal format).
@@ -172,36 +172,41 @@ $$;
  * Fills gaps in the time series with zero values for periods without data.
  *
  * PARAMETERS:
- *   _granularity          - Time granularity: 'daily', 'monthly', or 'yearly'
- *   _direction            - Sort direction: 'asc' or 'desc'
- *   _full_from_timestamp  - lower bound of the full range, period-truncated (from aggregation_time_range)
- *   _full_to_timestamp    - upper bound of the full range, period-truncated (from aggregation_time_range)
+ *   _granularity     - Time granularity: 'daily', 'monthly', or 'yearly'
+ *   _direction       - Sort direction: 'asc' or 'desc'
+ *   _from_timestamp  - lower bound of the range, period-truncated (from aggregation_time_range)
+ *   _to_timestamp    - upper bound of the range, period-truncated (from aggregation_time_range)
  *
  * RETURNS: Set of transaction_stats records covering the time range
  *
  * PROCESSING STEPS:
- *   1. Narrow the pre-resolved full range to the requested page's period window
- *   2. Generate complete time series for the period
- *   3. Left join with actual stats (gaps become NULL)
- *   4. Fill missing last_block_num by finding nearest block
- *   5. Calculate avg_trx from trx_count and count_blocks
+ *   1. Generate complete time series for the period
+ *   2. Left join with actual stats (gaps become NULL)
+ *   3. Fill missing last_block_num by finding nearest block
+ *   4. Calculate avg_trx from trx_count and count_blocks
+ *
+ * NOTE: this reads one pre-aggregated row per period, so a full-history daily request is
+ * ~3.7k rows / ~400 kB — small enough that it is returned whole. Pagination (!494) was
+ * removed because these rows feed time-series charts that need every period at once.
  */
+-- NB: the arg list MUST match the signature currently installed, or the DROP silently
+-- no-ops and CREATE OR REPLACE leaves a stale paginated overload behind, making the
+-- 4-arg call below ambiguous ("function ... is not unique").
+DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT, INT);
 DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
-    _granularity          hafbe_backend.granularity,
-    _direction            hafbe_backend.sort_direction,
-    _full_from_timestamp  TIMESTAMP,
-    _full_to_timestamp    TIMESTAMP,
-    _page                 INT DEFAULT 1,
-    _page_size            INT DEFAULT 100
+    _granularity     hafbe_backend.granularity,
+    _direction       hafbe_backend.sort_direction,
+    _from_timestamp  TIMESTAMP,
+    _to_timestamp    TIMESTAMP
 )
 RETURNS SETOF hafbe_backend.transaction_stats
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from_timestamp      TIMESTAMP;
-  __to_timestamp        TIMESTAMP;
+  __from_timestamp      TIMESTAMP := _from_timestamp;
+  __to_timestamp        TIMESTAMP := _to_timestamp;
   __granularity         TEXT;
   __one_period          INTERVAL;
 BEGIN
@@ -216,23 +221,6 @@ BEGIN
   );
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
-
-  -- The full period-truncated range [_full_from_timestamp, _full_to_timestamp] is resolved
-  -- once by the caller (aggregation_time_range) and passed in. Narrow it to the requested
-  -- page's contiguous period window, so only page_size periods are generated and aggregated
-  -- (bounds work AND payload). A slice of a regular series is contiguous, so [MIN,MAX]
-  -- reproduces exactly the page.
-  SELECT MIN(s.p), MAX(s.p)
-  INTO __from_timestamp, __to_timestamp
-  FROM (
-    SELECT p
-    FROM generate_series(_full_from_timestamp, _full_to_timestamp, __one_period) AS p
-    ORDER BY
-      (CASE WHEN _direction = 'desc' THEN p END) DESC,
-      (CASE WHEN _direction = 'asc'  THEN p END) ASC
-    OFFSET (GREATEST(_page, 1) - 1) * _page_size
-    LIMIT _page_size
-  ) s;
 
   RETURN QUERY (
     /*

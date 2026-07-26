@@ -41,29 +41,18 @@ CREATE TYPE hafbe_backend.transaction_stats AS (
 -- openapi-generated-code-end
 
 /** openapi:components:schemas
-hafbe_backend.transaction_stats_return:
-  type: object
-  properties:
-    total_periods:
-      type: integer
-      description: total number of periods in the requested range (across all pages)
-    total_pages:
-      type: integer
-      description: total number of pages for the requested page-size
-    stats:
-      type: array
-      items:
-        $ref: '#/components/schemas/hafbe_backend.transaction_stats'
-      description: the requested page of per-period transaction statistics
- */
--- openapi-generated-code-begin
+hafbe_backend.array_of_transaction_stats:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_backend.transaction_stats'
+*/
+
+-- The paginated wrapper type introduced by !494 is intentionally gone: these endpoints feed
+-- time-series charts, which draw a whole range at once, so they return a bare array again
+-- (see issue #139 / block_explorer_ui#759). This DROP clears the type off databases that
+-- already have it; the CASCADE takes the old paginated get_transaction_statistics with it,
+-- which is fine because install_app.sh re-creates the endpoint functions after this file.
 DROP TYPE IF EXISTS hafbe_backend.transaction_stats_return CASCADE;
-CREATE TYPE hafbe_backend.transaction_stats_return AS (
-    "total_periods" INT,
-    "total_pages" INT,
-    "stats" hafbe_backend.transaction_stats[]
-);
--- openapi-generated-code-end
 
 ----------------------------------------------------------------------
 
@@ -127,28 +116,13 @@ CREATE TYPE hafbe_backend.operation_type_stats AS (
 -- openapi-generated-code-end
 
 /** openapi:components:schemas
-hafbe_backend.operation_type_stats_return:
-  type: object
-  properties:
-    total_periods:
-      type: integer
-      description: total number of periods in the requested range (across all pages)
-    total_pages:
-      type: integer
-      description: total number of pages for the requested page-size
-    stats:
-      type: array
-      items:
-        $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
-      description: the requested page of per-period operation-type statistics
- */
--- openapi-generated-code-begin
+hafbe_backend.array_of_operation_type_stats:
+  type: array
+  items:
+    $ref: '#/components/schemas/hafbe_backend.operation_type_stats'
+*/
+
+-- Same as transaction_stats_return above: clears the !494 wrapper off existing databases.
 DROP TYPE IF EXISTS hafbe_backend.operation_type_stats_return CASCADE;
-CREATE TYPE hafbe_backend.operation_type_stats_return AS (
-    "total_periods" INT,
-    "total_pages" INT,
-    "stats" hafbe_backend.operation_type_stats[]
-);
--- openapi-generated-code-end
 
 RESET ROLE;

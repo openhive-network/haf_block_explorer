@@ -44,6 +44,21 @@ END;
 $$;
 
 -- ============================================================================
+-- Statistics defaults
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION hafbe_backend.default_stats_window()
+RETURNS INTERVAL LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  -- Range a statistics endpoint falls back to when the caller supplies no lower bound.
+  -- Only applied where an unbounded series would be unreasonably large (currently the
+  -- daily operation-type histogram: ~3.7k periods / ~6.6 MB over full history). Mirrors
+  -- the 1-year default of the network statistics endpoints. An explicit from-block always wins.
+  RETURN INTERVAL '1 year';
+END;
+$$;
+
+-- ============================================================================
 -- Account Parameters Defaults
 -- These provide single source of truth for account_parameters table defaults
 -- ============================================================================
