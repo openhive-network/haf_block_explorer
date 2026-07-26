@@ -97,8 +97,6 @@ SET ROLE hafbe_owner;
               }
             ]
 
-      '404':
-        description: No such account in the database
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_transaction_statistics;

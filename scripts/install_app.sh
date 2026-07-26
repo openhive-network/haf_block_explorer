@@ -150,7 +150,77 @@ setup_apps() {
   "$HAFBE_DIR/submodules/reptracker/scripts/install_app.sh" --postgres-url="$POSTGRES_ACCESS" --schema="$REPTRACKER_SCHEMA"
 }
 
+# Sorted list of qualified function NAMES (not signatures) in the API schemas.
+#
+# Compared by NAME, not signature, on purpose: a legitimate refactor that changes a
+# signature keeps the name, whereas a DROP TYPE ... CASCADE removes the name outright.
+# The tradeoff is deliberate and worth knowing: this cannot see one overload of an
+# overloaded name being dropped while a sibling overload survives. It is tuned to catch
+# wholesale loss with (near) zero false positives, not to be exhaustive.
+#
+# Errors are NOT swallowed. An earlier version sent stderr to /dev/null, so a failed psql
+# produced an empty list, the comparison found nothing missing, and the check reported
+# success -- a guard that fails OPEN, which is precisely the class of bug it exists to
+# catch. It now fails closed.
+api_function_names() {
+  local out
+  # NB: the assignment must sit inside the `if` condition. This script runs under
+  # `set -euo pipefail`, where a bare `out=$(failing-cmd)` aborts the script before any
+  # `$?` check could run -- so the error branch below would be dead code.
+  if ! out=$(psql "$POSTGRES_ACCESS" -tAX -v ON_ERROR_STOP=on -c "
+    SELECT DISTINCT n.nspname || '.' || p.proname
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname IN ('hafbe_backend', 'hafbe_endpoints')
+    ORDER BY 1;"); then
+    echo "ERROR: could not read the function inventory from the database." >&2
+    return 1
+  fi
+
+  # An empty result is legitimate ONLY on a fresh install, where the schemas do not exist
+  # yet. That is indistinguishable from "everything was dropped", but harmless here: the
+  # before-snapshot is the empty one, so nothing can be reported as lost either way.
+  printf '%s\n' "$out" | sed '/^$/d' | sort
+}
+
+# Guards against the failure mode reported on issue #139: a composite type is re-created with
+# DROP TYPE ... CASCADE, which also drops every function that returns it -- possibly declared
+# in a file this run never re-applies. A full install re-creates them further down the list and
+# self-heals, so CI never sees it; a partial hot-patch silently leaves endpoints returning 500.
+verify_api_surface() {
+  local before="$1" after lost
+  after=$(mktemp)
+  # shellcheck disable=SC2064
+  trap "rm -f '$after'" RETURN
+
+  if ! api_function_names > "$after"; then
+    echo "ERROR: API surface verification could not run." >&2
+    return 1
+  fi
+
+  # comm requires both inputs sorted; api_function_names sorts, and the caller's snapshot
+  # came from the same function.
+  lost=$(comm -23 "$before" "$after")
+
+  if [[ -n "$lost" ]]; then
+    echo "ERROR: functions present before this run are missing afterwards:" >&2
+    echo "$lost" | sed 's/^/  - /' >&2
+    echo "" >&2
+    echo "Most likely a DROP TYPE ... CASCADE removed them and the file that defines them" >&2
+    echo "was not re-applied. Re-run the full API setup rather than patching single files." >&2
+    return 1
+  fi
+  echo "API surface verified: no functions lost."
+}
+
 setup_api() {
+  # Snapshot before touching anything. Empty on a fresh install, so nothing can be "lost".
+  # shellcheck disable=SC2064
+  local __api_before
+  __api_before=$(mktemp)
+  trap "rm -f '$__api_before'" RETURN
+  api_function_names > "$__api_before" || return 1
+
   echo "Setting up database roles..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/builtin_roles.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA}; SET custom.is_forking = '$IS_FORKING';" -f "$HAFBE_DIR/db/hafbe_app.sql"
@@ -253,6 +323,10 @@ setup_api() {
   echo "Storing blocksearch indexes configuration..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "ALTER TABLE hafbe_app.app_status ADD COLUMN IF NOT EXISTS blocksearch_indexes BOOLEAN NOT NULL DEFAULT FALSE;"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = '${BLOCKSEARCH_INDEXES}';"
+
+  echo "Verifying API surface..."
+  verify_api_surface "$__api_before" || { rm -f "$__api_before"; return 1; }
+  rm -f "$__api_before"
 
   echo "Installation complete."
 }

@@ -490,12 +490,14 @@ response around 400 kB.
 
 ### Common Parameters
 
-Many endpoints support these standard parameters:
+Many endpoints support these standard parameters. Note that `page` / `page-size` do **not**
+apply to the two statistics endpoints above -- those return every period in the range as a
+flat array (see the note there).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `page` | integer | Page number (1-indexed) |
-| `page-size` | integer | Results per page (default: 100, max: 1000) |
+| `page` | integer | Page number (1-indexed) -- not supported by the statistics endpoints |
+| `page-size` | integer | Results per page (default: 100, max: 1000) -- not supported by the statistics endpoints |
 | `direction` | string | Sort order: `asc` or `desc` |
 | `from-block` | string | Block number or timestamp (YYYY-MM-DD HH:MI:SS) |
 | `to-block` | string | Block number or timestamp (YYYY-MM-DD HH:MI:SS) |

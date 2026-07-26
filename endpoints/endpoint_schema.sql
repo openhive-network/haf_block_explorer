@@ -2904,9 +2904,6 @@ declare
                 ]
               }
             }
-          },
-          "404": {
-            "description": "No such account in the database"
           }
         }
       }

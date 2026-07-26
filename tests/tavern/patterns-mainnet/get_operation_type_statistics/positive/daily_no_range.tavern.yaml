@@ -3,7 +3,12 @@
 # hafbe_backend.default_stats_window() (1 year) instead of scanning the whole chain, which is
 # what issue #139 was about. The 5M-block test dataset spans <1 year, so here the fallback must
 # NOT fire and the complete history is expected back -- this pins the "no over-clamping" half of
-# the behaviour. The clamp itself is covered at SQL level, since no Tavern dataset spans a year.
+# the behaviour, and nothing more.
+#
+# It CANNOT pin the clamp itself. Inverting the _from_omitted argument produces byte-identical
+# output on this dataset (176 periods here, 36 for change_range), so the arming condition is
+# invisible to every Tavern fixture. That half is asserted directly against the pure function in
+# tests/mocks/sql/verify_stats_window.sql -- change this behaviour and update BOTH.
   test_name: Hafbe PostgREST
 
   marks:
