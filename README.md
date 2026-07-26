@@ -490,14 +490,15 @@ response around 400 kB.
 
 ### Common Parameters
 
-Many endpoints support these standard parameters. Note that `page` / `page-size` do **not**
-apply to the two statistics endpoints above -- those return every period in the range as a
-flat array (see the note there).
+Many endpoints support these standard parameters. Note that `page` / `page-size` are **rejected**
+by the two statistics endpoints above -- they are not part of those function signatures, so
+PostgREST answers `404 PGRST202` ("Could not find the function ... in the schema cache") rather
+than ignoring them. Those endpoints return every period in the range as a flat array.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `page` | integer | Page number (1-indexed) -- not supported by the statistics endpoints |
-| `page-size` | integer | Results per page (default: 100, max: 1000) -- not supported by the statistics endpoints |
+| `page` | integer | Page number (1-indexed) -- rejected by the statistics endpoints |
+| `page-size` | integer | Results per page (default: 100, max: 1000) -- rejected by the statistics endpoints |
 | `direction` | string | Sort order: `asc` or `desc` |
 | `from-block` | string | Block number or timestamp (YYYY-MM-DD HH:MI:SS) |
 | `to-block` | string | Block number or timestamp (YYYY-MM-DD HH:MI:SS) |

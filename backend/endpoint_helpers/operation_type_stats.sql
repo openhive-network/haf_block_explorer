@@ -135,7 +135,6 @@ $$;
  *
  * PARAMETERS:
  *   _granularity     - 'daily' | 'monthly' | 'yearly'
- *   _direction       - 'asc' | 'desc'
  *   _from_timestamp  - lower bound of the range, period-truncated (from aggregation_time_range)
  *   _to_timestamp    - upper bound of the range, period-truncated (from aggregation_time_range)
  *   _op_types        - optional filter; NULL = include all op_type_ids
@@ -144,13 +143,17 @@ $$;
  * period, so an unbounded daily range is ~6.6 MB. The caller bounds an omitted range to
  * hafbe_backend.default_stats_window() rather than paginating here (issue #139).
  */
--- NB: the arg list MUST match the signature currently installed, or the DROP silently
--- no-ops and CREATE OR REPLACE leaves a stale paginated overload behind.
+-- Every signature this function has ever shipped with, so hot-patching THIS FILE ALONE
+-- cannot leave a stale overload behind. (Redundant on a full install: the DROP TYPE ...
+-- CASCADE in endpoints/types/transactions.sql, applied earlier, already removed them all.)
+--   ..., TIMESTAMP, TIMESTAMP, INT, INT, INT[]  -- !494, paginated
+--   ..., INT, INT, INT[]                        -- pre-!494, block-number range
+--   ..., TIMESTAMP, TIMESTAMP, INT[]            -- this MR, before _direction was dropped
 DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT, INT, INT[]);
-DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT, INT[]);
+DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT[]);
+DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT[]);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
     _granularity     hafbe_backend.granularity,
-    _direction       hafbe_backend.sort_direction,
     _from_timestamp  TIMESTAMP,
     _to_timestamp    TIMESTAMP,
     _op_types        INT[] DEFAULT NULL
@@ -160,8 +163,6 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from_timestamp      TIMESTAMP := _from_timestamp;
-  __to_timestamp        TIMESTAMP := _to_timestamp;
   __granularity         TEXT;
   __one_period          INTERVAL;
 BEGIN
@@ -182,7 +183,7 @@ BEGIN
      * data still appear as a row in the response.
      */
     WITH date_series AS (
-      SELECT generate_series(__from_timestamp, __to_timestamp, __one_period) AS period
+      SELECT generate_series(_from_timestamp, _to_timestamp, __one_period) AS period
     ),
 
     /*
@@ -190,7 +191,7 @@ BEGIN
      */
     op_stats AS MATERIALIZED (
       SELECT s.date AS period, s.op_type_id, s.op_count, s.last_block_num
-      FROM hafbe_backend.get_operation_type_stats(_granularity, __from_timestamp, __to_timestamp, _op_types) s
+      FROM hafbe_backend.get_operation_type_stats(_granularity, _from_timestamp, _to_timestamp, _op_types) s
     ),
 
     /*
@@ -222,7 +223,7 @@ BEGIN
         ts.date::TIMESTAMP AS period,
         ts.trx_count::BIGINT AS trx_count,
         ts.last_block_num
-      FROM hafbe_backend.get_transaction_stats(_granularity, __from_timestamp, __to_timestamp) ts
+      FROM hafbe_backend.get_transaction_stats(_granularity, _from_timestamp, _to_timestamp) ts
     ),
 
     /*
@@ -273,9 +274,8 @@ BEGIN
       wb.operations,
       wb.last_block_num
     FROM with_block wb
-    ORDER BY
-      (CASE WHEN _direction = 'desc' THEN wb.period ELSE NULL END) DESC,
-      (CASE WHEN _direction = 'asc'  THEN wb.period ELSE NULL END) ASC
+    -- Deliberately unordered: the caller applies the single authoritative ORDER BY. Sorting
+    -- here as well meant a second full sort of ~3.7k rows each carrying a nested array.
   );
 END
 $$;

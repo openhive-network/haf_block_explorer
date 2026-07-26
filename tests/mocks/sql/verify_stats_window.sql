@@ -36,10 +36,13 @@ span AS (
 ),
 checks(name, expected, actual) AS (
   VALUES
-    -- The window constant itself.
+    -- The window constant itself. Compared as an INTERVAL VALUE, not as text: the textual
+    -- rendering depends on IntervalStyle ('1 year' under the default postgres style, 'P1Y'
+    -- under iso_8601, '+1-0' under sql_standard), so a text comparison would fail the
+    -- pipeline on a correctly-configured deployment that simply formats intervals differently.
     ('default_stats_window is 1 year',
-       '1 year',
-       (SELECT hafbe_backend.default_stats_window()::TEXT)),
+       'true',
+       (SELECT (hafbe_backend.default_stats_window() = INTERVAL '1 year')::TEXT)),
 
     -- ARMING CONDITION. These two differ only in _from_omitted and are THE pair no
     -- Tavern fixture can distinguish; inverting the flag flips both.

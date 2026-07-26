@@ -177,7 +177,6 @@ BEGIN
     SELECT a.*
     FROM hafbe_backend.get_operation_type_aggregation(
       _granularity,
-      _direction,
       _from_ts,
       _to_ts,
       _op_types

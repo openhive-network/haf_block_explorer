@@ -53,7 +53,10 @@ BEGIN
   -- Range a statistics endpoint falls back to when the caller supplies no lower bound.
   -- Only applied where an unbounded series would be unreasonably large (currently the
   -- daily operation-type histogram: ~3.7k periods / ~6.6 MB over full history). Mirrors
-  -- the 1-year default of the network statistics endpoints. An explicit from-block always wins.
+  -- the 1-year default used by the separate haf_stats service's network/* endpoints
+  -- (haf_stats_endpoints.get_network_author_retention / _account_funnel, which fall back to
+  -- NOW() - 1 year when no dates are given). No other HAFBE endpoint has such a fallback, so
+  -- there is nothing in THIS repo to keep in sync. An explicit from-block always wins.
   RETURN INTERVAL '1 year';
 END;
 $$;

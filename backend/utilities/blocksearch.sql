@@ -313,13 +313,26 @@ LANGUAGE 'plpgsql'
 IMMUTABLE
 AS
 $$
+DECLARE
+  -- Derived from _granularity rather than hardcoded, so that widening the gate below cannot
+  -- silently produce a mis-aligned lower bound. The rollup tables are keyed on period-start
+  -- timestamps, so a monthly series starting on the 26th would join nothing and every period
+  -- would come back total_operations = 0 -- a wrong answer, not an error.
+  __trunc TEXT := (
+    CASE
+      WHEN _granularity = 'daily'   THEN 'day'
+      WHEN _granularity = 'monthly' THEN 'month'
+      WHEN _granularity = 'yearly'  THEN 'year'
+      ELSE NULL
+    END
+  );
 BEGIN
   IF NOT COALESCE(_from_omitted, FALSE) OR _granularity IS DISTINCT FROM 'daily' THEN
     RETURN _from_ts;
   END IF;
 
   -- GREATEST keeps genesis when the chain is younger than the window.
-  RETURN GREATEST(_from_ts, DATE_TRUNC('day', _to_ts - hafbe_backend.default_stats_window()));
+  RETURN GREATEST(_from_ts, DATE_TRUNC(__trunc, _to_ts - hafbe_backend.default_stats_window()));
 END
 $$;
 

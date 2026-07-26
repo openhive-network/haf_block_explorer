@@ -162,8 +162,21 @@ setup_apps() {
 # produced an empty list, the comparison found nothing missing, and the check reported
 # success -- a guard that fails OPEN, which is precisely the class of bug it exists to
 # catch. It now fails closed.
+# Functions this release removes ON PURPOSE. Without this list, verify_api_surface would
+# abort every upgrade from a release that still shipped them: the before-snapshot contains
+# the name, nothing re-creates it, and the guard cannot tell a deliberate deletion from a
+# CASCADE accident. Prune an entry once no supported upgrade path still has the function.
+#   - aggregation_period_count: drove total_pages for the paginated statistics endpoints,
+#     removed with the pagination itself (issue #139). Present on develop.
+INTENTIONALLY_REMOVED_FUNCTIONS=(
+  "hafbe_backend.aggregation_period_count"
+)
+
 api_function_names() {
   local out
+  # No ORDER BY: `comm` needs the SHELL sort order (the DB collation may differ), so sorting
+  # in SQL as well would be thrown away and would hide which sort actually matters.
+  #
   # NB: the assignment must sit inside the `if` condition. This script runs under
   # `set -euo pipefail`, where a bare `out=$(failing-cmd)` aborts the script before any
   # `$?` check could run -- so the error branch below would be dead code.
@@ -171,8 +184,7 @@ api_function_names() {
     SELECT DISTINCT n.nspname || '.' || p.proname
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname IN ('hafbe_backend', 'hafbe_endpoints')
-    ORDER BY 1;"); then
+    WHERE n.nspname IN ('hafbe_backend', 'hafbe_endpoints');"); then
     echo "ERROR: could not read the function inventory from the database." >&2
     return 1
   fi
@@ -188,19 +200,26 @@ api_function_names() {
 # in a file this run never re-applies. A full install re-creates them further down the list and
 # self-heals, so CI never sees it; a partial hot-patch silently leaves endpoints returning 500.
 verify_api_surface() {
-  local before="$1" after lost
+  local before="$1" after expected lost
   after=$(mktemp)
-  # shellcheck disable=SC2064
-  trap "rm -f '$after'" RETURN
+  expected=$(mktemp)
+  # Deliberately NO `trap ... RETURN` here. Bash keeps a single global RETURN-trap slot and
+  # does not restore the caller's when a nested function installs its own, so a trap set
+  # here would silently clobber setup_api's and leak its temp file instead. Clean up on
+  # every path by hand.
 
   if ! api_function_names > "$after"; then
+    rm -f "$after" "$expected"
     echo "ERROR: API surface verification could not run." >&2
     return 1
   fi
 
+  printf '%s\n' "${INTENTIONALLY_REMOVED_FUNCTIONS[@]}" | sed '/^$/d' | sort > "$expected"
+
   # comm requires both inputs sorted; api_function_names sorts, and the caller's snapshot
-  # came from the same function.
-  lost=$(comm -23 "$before" "$after")
+  # came from the same function. Subtract the deliberate removals from what went missing.
+  lost=$(comm -23 "$before" "$after" | comm -23 - "$expected")
+  rm -f "$after" "$expected"
 
   if [[ -n "$lost" ]]; then
     echo "ERROR: functions present before this run are missing afterwards:" >&2

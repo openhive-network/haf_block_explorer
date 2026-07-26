@@ -16,6 +16,8 @@ HAF Block Explorer (HAFBE) is a blockchain API that processes and serves Hive bl
 backend/                 SQL backend logic
 ├── endpoint_helpers/    Functions that power API endpoints
 ├── operation_parsers/   Extract data from blockchain operations
+├── types/               Composite types kept out of function files so that
+│                        re-applying a function file cannot DROP ... CASCADE them
 └── utilities/           Shared SQL utilities (validation, constants)
 
 db/                      Core database layer
@@ -79,6 +81,7 @@ HAFBE uses these PostgreSQL schema prefixes:
    - Processing logic → `db/process_*.sql`
    - Endpoint helpers → `backend/endpoint_helpers/`
    - Utilities → `backend/utilities/`
+   - Composite types depended on across files → `backend/types/`
    - API endpoints → `endpoints/`
 
 2. **Apply changes**:

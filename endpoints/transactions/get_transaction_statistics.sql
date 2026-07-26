@@ -148,7 +148,6 @@ BEGIN
     SELECT fb.*
     FROM hafbe_backend.get_transaction_aggregation(
       _granularity,
-      _direction,
       _from_ts,
       _to_ts
     ) fb

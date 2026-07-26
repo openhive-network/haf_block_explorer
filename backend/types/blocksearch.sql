@@ -19,6 +19,16 @@ SET ROLE hafbe_owner;
 --   so the dependents survive. Same reasoning as the note in
 --   backend/endpoint_helpers/transactions.sql.
 --
+--   THIS DOES NOT MAKE THE CHAIN CASCADE-PROOF, only the function files. Re-applying THIS
+--   file still drops the eight gatherers, and so does re-applying endpoints/types/blocks.sql,
+--   because hafbe_backend.block_operations sits ABOVE gathered_block in the chain:
+--     block_operations (endpoints/types/blocks.sql, applied EARLIER)
+--       -> gathered_block.operations[]  -> gatherer_result.blocks[]
+--       -> the eight blocksearch_* gatherers -> blocksearch_build_result
+--   install_app.sh orders all of these correctly, so a full run always self-heals; it is
+--   only hand-applying a single file that breaks /block-search. setup_api's
+--   verify_api_surface check is the backstop for that.
+--
 --   If you change a type in this file you MUST also re-apply
 --   backend/endpoint_helpers/blocksearch_filters.sql and backend/endpoint_helpers/blocks.sql.
 --
