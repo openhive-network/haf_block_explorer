@@ -1,0 +1,33 @@
+---
+# Sibling of get_operation_type_statistics/positive/daily_no_range.
+#
+# Pins the invariant that /transaction-statistics is NEVER range-defaulted: unlike the op-type
+# histogram it carries one pre-aggregated row per period (~400 kB over full history), so a daily
+# request with no block range must return the COMPLETE series, not the most recent year.
+#
+# The op-type endpoint had this case covered and this one did not -- an invariant tested for one
+# endpoint but not its sibling. On the 5M dataset (~176 days) both endpoints happen to return the
+# full history, so this asserts the shared "no over-clamping" behaviour; the asymmetry itself is
+# enforced by aggregation_default_from() being called only from the op-type endpoint.
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_transaction_statistics"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          granularity: "daily"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern
