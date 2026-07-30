@@ -900,6 +900,24 @@ setup-scripts-test:
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
+sql-integration-test:
+  extends: .hafbe_test_base
+  variables:
+    # No submodules needed: this job only runs psql against the already-installed
+    # schema, it does not reinstall the app.
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning SQL integration checks..."
+
+    # Purpose-built DB integration suite, deliberately separate from the API tests
+    # (see tests/mocks/README.md). Covers contracts the Tavern suites structurally
+    # cannot reach -- currently the 1-year default window on /operation-type-statistics,
+    # which never fires on the ~175-day mainnet pattern dataset.
+    ./tests/integration/run_sql_checks.sh --host=${HAF_HOST}
+
+    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+
 performance-test:
   extends: .hafbe_test_base
   script:

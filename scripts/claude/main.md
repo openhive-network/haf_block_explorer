@@ -43,6 +43,7 @@ scripts/                 Operational scripts
 └── ci-helpers/          CI/CD helper scripts
 
 tests/                   Test suites
+├── integration/         SQL-level contract checks (no REST, no fixtures)
 ├── regression/          Compare against hived snapshots
 ├── tavern/              YAML-based API tests
 ├── performance/         JMeter performance tests

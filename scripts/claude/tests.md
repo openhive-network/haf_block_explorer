@@ -11,6 +11,7 @@ HAFBE uses a multi-layered testing strategy to ensure API correctness, data inte
 | **Performance** | Measure endpoint throughput | Before releases |
 | **Functional** | Test install/uninstall scripts | After script changes |
 | **Mock** | Drive a synthetic block range through the real processor + endpoints | When you cannot wait for a HAF sync past the feature's launch block (e.g. DHF launch at block ~22.3M) |
+| **SQL integration** | Assert SQL-level contracts directly, outside the REST API | When a behaviour is structurally unreachable from the Tavern suites, or asserting it through the API would need an unreasonably large fixture |
 
 ## Quick Reference
 
@@ -29,6 +30,9 @@ cd tests/tavern/patterns-mainnet && pytest -n 8 .
 
 # Functional tests
 ./tests/functional/test_scripts.sh --host=localhost
+
+# SQL integration checks (needs only an installed schema — no fixtures, no processed blocks)
+./tests/integration/run_sql_checks.sh --host=localhost
 ```
 
 ### Environment Variables
@@ -207,6 +211,37 @@ find_haf_image → prepare_haf_data → sync              → tests
 2. Download artifacts (container logs, test reports)
 3. Look for `docker/container-logs.txt` for service logs
 4. For Tavern: check `*.out.json` files for actual responses
+
+## SQL Integration Suite
+
+`tests/integration/` — a purpose-built DB integration suite, deliberately separate from the API
+tests. `tests/mocks/README.md` sets the rule this follows:
+
+> Assertions then run through the REST API via the Tavern pattern suite
+> (`tests/tavern/patterns-mock`). If you need to guard physical table layout, cache membership,
+> or ledger row counts, add a purpose-built DB integration-test suite rather than mixing SQL
+> assertions in with the API tests.
+
+```
+tests/integration/
+├── run_sql_checks.sh          # runner: applies every sql/*.sql with ON_ERROR_STOP
+└── sql/
+    └── verify_stats_window.sql  # hafbe_backend.aggregation_default_from() (issue #139)
+```
+
+Each check file prints a PASS/FAIL table and `RAISE EXCEPTION`s on failure, so `psql -v
+ON_ERROR_STOP=on` propagates a non-zero exit and CI job `sql-integration-test` fails.
+
+Requires only that HAFBE is installed — no fixtures, no processed blocks, no cache state.
+
+**When to add a check here instead of a Tavern test.** Only when the API route genuinely will
+not work. The current example: the 1-year default window on `/operation-type-statistics` never
+fires on the mainnet pattern dataset (~175 days, shorter than the window), so inverting its
+arming condition produces byte-identical fixtures there. The mock dataset does span it, but the
+resulting fixture would be ~40 kB / 366 rows — 32x the largest file in `patterns-mock` — and
+every row carries a `last_block_num` resolved by a LATERAL block lookup. Prefer Tavern whenever
+the response can be kept small (the `patterns-mock` tie-break tests shrink theirs with
+`page-size: 1`); reach for SQL only when it cannot.
 
 ## Expansion Rules
 

@@ -9,12 +9,15 @@
 # output on this dataset (176 periods here, 36 for change_range), so the arming condition is
 # invisible to every fixture in THIS suite.
 #
-# The clamp's active branch is reachable from the patterns-mock suite instead: that dataset
-# runs to block 91000006 dated 2025-06-01 against a 2016-03-24 genesis, a ~9-year span, where
-# an unbounded daily request is 3,357 periods and a clamped one is 366. See
-# tests/mocks/sql/verify_stats_window.sql for the pure-function assertions -- NOTE that file
-# is not currently wired into any CI job (its former runner, verify_mock_data.sh, was replaced
-# by prepare_mock_cache.sh on develop, which no longer runs SQL assertions).
+# That half is asserted directly against the pure function, in the purpose-built DB
+# integration suite: tests/integration/sql/verify_stats_window.sql (run by
+# tests/integration/run_sql_checks.sh, CI job `sql-integration-test`).
+#
+# It is NOT asserted through the REST API, deliberately: the mock dataset does span the window
+# (block 91000006 is dated 2025-06-01 against a 2016-03-24 genesis, so unbounded = 3,357
+# periods vs clamped = 366), but that fixture would be ~40 kB / 366 rows -- 32x the largest
+# file in patterns-mock -- and every row carries a last_block_num resolved by a LATERAL block
+# lookup. Change this behaviour and update the SQL checks too.
   test_name: Hafbe PostgREST
 
   marks:
