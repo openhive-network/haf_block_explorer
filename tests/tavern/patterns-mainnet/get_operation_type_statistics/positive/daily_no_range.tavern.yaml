@@ -7,8 +7,14 @@
 #
 # It CANNOT pin the clamp itself. Inverting the _from_omitted argument produces byte-identical
 # output on this dataset (176 periods here, 36 for change_range), so the arming condition is
-# invisible to every Tavern fixture. That half is asserted directly against the pure function in
-# tests/mocks/sql/verify_stats_window.sql -- change this behaviour and update BOTH.
+# invisible to every fixture in THIS suite.
+#
+# The clamp's active branch is reachable from the patterns-mock suite instead: that dataset
+# runs to block 91000006 dated 2025-06-01 against a 2016-03-24 genesis, a ~9-year span, where
+# an unbounded daily request is 3,357 periods and a clamped one is 366. See
+# tests/mocks/sql/verify_stats_window.sql for the pure-function assertions -- NOTE that file
+# is not currently wired into any CI job (its former runner, verify_mock_data.sh, was replaced
+# by prepare_mock_cache.sh on develop, which no longer runs SQL assertions).
   test_name: Hafbe PostgREST
 
   marks:
