@@ -172,6 +172,7 @@ BEGIN
         avs.vests,
         avs.account_vests,
         avs.proxied_vests,
+        cwv.source_op,
         cwv.source_op_block,
         bv.created_at
       FROM hafbe_backend.witness_votes_history_view cwv
@@ -184,11 +185,22 @@ BEGIN
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account") AND
         ("from-block" IS NULL     OR cwv.source_op_block >= "from-block") AND
         ("to-block" IS NULL       OR cwv.source_op_block <= "to-block")
+      -- source_op is the final tie-break and is NOT optional. A Hive block is 3
+      -- seconds and nothing stops an account from voting and un-voting the same
+      -- witness inside one block, which yields two rows identical on BOTH
+      -- (source_op_block, voter_id) -- e.g. cmtzco/arhag in block 3067986. Tied rows
+      -- have no defined order, so the un-vote could be returned before the vote it
+      -- undid. source_op (the operation id) is monotonic within a block and unique,
+      -- which makes the sort total. It must also match the post-UNION sort below,
+      -- otherwise the two sorts can break the same tie in opposite directions and a
+      -- page is displayed in an order the pagination did not choose.
       ORDER BY
         (CASE WHEN "direction" = 'desc' THEN cwv.source_op_block ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  THEN cwv.source_op_block ELSE NULL END) ASC,
         (CASE WHEN "direction" = 'desc' THEN cwv.voter_id        ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  THEN cwv.voter_id        ELSE NULL END) ASC
+        (CASE WHEN "direction" = 'asc'  THEN cwv.voter_id        ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' THEN cwv.source_op       ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  THEN cwv.source_op       ELSE NULL END) ASC
       OFFSET __offset
       LIMIT "page-size"
     ),
@@ -210,6 +222,7 @@ BEGIN
         evs.vests,
         evs.account_vests,
         evs.proxied_vests,
+        ls.source_op,
         ls.source_op_block,
         ls.created_at
       FROM limited_set ls
@@ -231,6 +244,7 @@ BEGIN
         ls.vests,
         ls.account_vests,
         ls.proxied_vests,
+        ls.source_op,
         ls.source_op_block,
         ls.created_at
       FROM limited_set ls
@@ -257,12 +271,15 @@ BEGIN
       ur.proxied_vests::TEXT,
       ur.created_at
     FROM union_results ur
-    -- Re-apply sort after UNION
+    -- Re-apply sort after UNION (UNION ALL destroys limited_set's ordering).
+    -- Keys MUST match limited_set's exactly, source_op included -- see the note there.
     ORDER BY
       (CASE WHEN "direction" = 'desc' THEN ur.source_op_block ELSE NULL END) DESC,
       (CASE WHEN "direction" = 'asc'  THEN ur.source_op_block ELSE NULL END) ASC,
       (CASE WHEN "direction" = 'desc' THEN ur.voter_id        ELSE NULL END) DESC,
-      (CASE WHEN "direction" = 'asc'  THEN ur.voter_id        ELSE NULL END) ASC
+      (CASE WHEN "direction" = 'asc'  THEN ur.voter_id        ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' THEN ur.source_op       ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  THEN ur.source_op       ELSE NULL END) ASC
   );
 END
 $$;
