@@ -1,0 +1,26 @@
+---
+  # proxied voter (dan proxies to blocktrades): voter_vests is 0 and proxy is set, but direct_vests stays the account's own non-zero stake
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_proposal_votes_history"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          proposal-id: 9001
+          voter-name: "dan"
+          direction: "asc"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern

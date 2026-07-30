@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 # =============================================================================
-# HAFBE Proposal Mock Data Verification
+# HAFBE Proposal Mock Cache Preparation
 # =============================================================================
 #
 # Run AFTER:
 #   1. ./tests/mocks/install_mock_data.sh   (loads fixtures + rewinds contexts)
 #   2. ./scripts/process_blocks.sh ...      (processes the mock range)
 #
-# Refreshes the two LIVE-mode caches (witness_votes_cache and
-# proposal_vote_stats_cache) — they normally refresh per-block while LIVE,
-# but if processing stopped mid-batch we force a refresh here — then runs
-# tests/mocks/sql/verify.sql which prints a PASS/FAIL table and RAISEs on
-# any failure (psql -v ON_ERROR_STOP=on propagates non-zero exit so CI
-# fails the job).
+# This is a SETUP step, not a test. It puts the mock DB into a deterministic
+# state so the Tavern pattern suite (tests/tavern/patterns-mock) can assert
+# stable values:
+#
+#   1. Refreshes the two LIVE-mode caches (witness_votes_cache and
+#      proposal_vote_stats_cache). They normally refresh per-block while LIVE,
+#      but if processing stopped mid-batch we force a refresh here.
+#   2. Seeds a deterministic VESTS amount for `initminer` so that assertions
+#      depending on its stake (e.g. proposal total_votes, and the
+#      get_proposal_votes_history cache-hit pattern) do not depend on the
+#      account's real, cache-version-dependent mainnet balance.
+#
+# Assertions about the resulting behaviour live in the Tavern pattern tests
+# (tests/tavern/patterns-mock), driven through the public REST interface — not
+# in a SQL verifier alongside them.
 #
 # Usage:
-#   ./verify_mock_data.sh [OPTIONS]
+#   ./prepare_mock_cache.sh [OPTIONS]
 #
 # Options:
 #   --host=HOSTNAME    PostgreSQL hostname  (default: localhost)
@@ -26,10 +35,6 @@
 # =============================================================================
 
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HAFBE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-MOCKS_DIR="$HAFBE_DIR/tests/mocks"
 
 POSTGRES_USER="${POSTGRES_USER:-haf_admin}"
 POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
@@ -52,7 +57,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-POSTGRES_ACCESS="${POSTGRES_URL:-postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=hafbe_mock_verify}"
+POSTGRES_ACCESS="${POSTGRES_URL:-postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=hafbe_mock_prepare}"
 BTRACKER_SCHEMA="${BTRACKER_SCHEMA:-hafbe_bal}"
 
 # btracker_backend.nai_vests() references `asset_table` unqualified — that
@@ -62,15 +67,16 @@ export PGOPTIONS="-c search_path=${BTRACKER_SCHEMA},public"
 run_psql() { psql "$POSTGRES_ACCESS" -v ON_ERROR_STOP=on "$@"; }
 
 echo "=============================================="
-echo "HAFBE proposal mock verification"
+echo "HAFBE proposal mock cache preparation"
 echo "  Host: $POSTGRES_HOST:$POSTGRES_PORT  User: $POSTGRES_USER"
 echo "=============================================="
 
 echo "Step 1: Refreshing vote caches (witness first, then proposal)..."
 run_psql -c "SELECT hafbe_app.process_witness_votes_cache()"
 
-# Seed a deterministic vest amount for initminer so the total_votes assertion
-# in verify.sql is independent of mainnet btracker data. Runs AFTER
+# Seed a deterministic vest amount for initminer so that stake-dependent
+# pattern assertions are independent of the real mainnet btracker balance
+# (which varies with the underlying HAF sync cache). Runs AFTER
 # process_witness_votes_cache() (which rebuilds account_vest_stats_cache from
 # btracker) so this value survives into process_proposal_vote_stats_cache().
 run_psql -c "
@@ -86,5 +92,5 @@ run_psql -c "
 
 run_psql -c "SELECT hafbe_app.process_proposal_vote_stats_cache()"
 
-echo "Step 2: Running verify.sql..."
-run_psql -f "$MOCKS_DIR/sql/verify.sql"
+echo "Mock cache prepared. Endpoint behaviour is asserted by the Tavern suite"
+echo "(tests/tavern/patterns-mock)."

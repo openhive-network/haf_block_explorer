@@ -1,0 +1,15 @@
+{
+  "total_votes": 2,
+  "total_pages": 2,
+  "votes_history": [
+    {
+      "voter_name": "initminer",
+      "approve": false,
+      "voter_vests": "5000000",
+      "direct_vests": "5000000",
+      "proxied_vests": "0",
+      "proxy": "",
+      "timestamp": "2025-06-01T00:00:09"
+    }
+  ]
+}

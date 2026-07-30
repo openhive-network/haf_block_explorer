@@ -5,16 +5,28 @@
     {
       "voter_name": "steem",
       "approve": true,
+      "voter_vests": "15636871956265",
+      "direct_vests": "15636871956265",
+      "proxied_vests": "0",
+      "proxy": "",
       "timestamp": "2025-06-01T00:00:03"
     },
     {
       "voter_name": "steem",
       "approve": false,
+      "voter_vests": "15636871956265",
+      "direct_vests": "15636871956265",
+      "proxied_vests": "0",
+      "proxy": "",
       "timestamp": "2025-06-01T00:00:06"
     },
     {
       "voter_name": "initminer",
       "approve": true,
+      "voter_vests": "5000000",
+      "direct_vests": "5000000",
+      "proxied_vests": "0",
+      "proxy": "",
       "timestamp": "2025-06-01T00:00:09"
     }
   ]

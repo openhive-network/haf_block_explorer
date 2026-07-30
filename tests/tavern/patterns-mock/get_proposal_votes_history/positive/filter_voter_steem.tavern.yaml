@@ -1,0 +1,29 @@
+---
+  # steem approved 9002, then declined_voting_rights cascade-removed its votes, so it is
+  # absent from hafbe_app.account_vest_stats_cache. Its stake must therefore be resolved
+  # via hafbe_backend.expired_voter_stats_view — this test pins the cache-MISS branch,
+  # and that both of its rows (approve + withdrawal) report identical vests.
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_proposal_votes_history"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          proposal-id: 9002
+          voter-name: "steem"
+          direction: "asc"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern

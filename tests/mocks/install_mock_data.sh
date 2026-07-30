@@ -13,7 +13,8 @@
 #   1. ./tests/mocks/install_mock_data.sh           # load fixtures
 #   2. ./scripts/process_blocks.sh --stop-at-block=91000006
 #                                                   # process mock range
-#   3. ./scripts/verify_mock_data.sh                # assert final state
+#   3. ./scripts/prepare_mock_cache.sh              # refresh caches + seed
+#      then run the Tavern suite (tests/tavern/patterns-mock) to assert behavior
 #
 # Usage:
 #   ./install_mock_data.sh [OPTIONS]
@@ -99,6 +100,7 @@ echo
 echo "Next steps:"
 echo "  1. Process the mock range:"
 echo "       ./scripts/process_blocks.sh --stop-at-block=$END_BLOCK"
-echo "  2. Verify expected state:"
-echo "       ./scripts/verify_mock_data.sh"
+echo "  2. Prepare the mock cache (refresh caches + deterministic seed):"
+echo "       ./scripts/prepare_mock_cache.sh"
+echo "  3. Assert behavior via the Tavern suite: tests/tavern/patterns-mock"
 echo

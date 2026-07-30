@@ -1,0 +1,22 @@
+{
+  "total_votes": 2,
+  "total_pages": 1,
+  "votes_history": [
+    {
+      "voter_name": "cmtzco",
+      "approve": true,
+      "vests": "1904352835812",
+      "account_vests": "1904352835812",
+      "proxied_vests": "0",
+      "timestamp": "2016-07-10T06:14:57"
+    },
+    {
+      "voter_name": "cmtzco",
+      "approve": false,
+      "vests": "1904352835812",
+      "account_vests": "1904352835812",
+      "proxied_vests": "0",
+      "timestamp": "2016-07-10T06:14:57"
+    }
+  ]
+}

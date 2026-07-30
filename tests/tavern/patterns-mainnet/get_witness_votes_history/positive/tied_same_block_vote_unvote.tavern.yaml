@@ -1,0 +1,33 @@
+---
+  # Regression guard for the (source_op_block, voter_id) tie-break.
+  #
+  # cmtzco voted for arhag and un-voted in the SAME block (3067986), producing two
+  # history rows identical on both former sort keys. Without source_op as the final
+  # tie-break their order is undefined, and asc could return the un-vote (approve:false)
+  # BEFORE the vote it undid. Expected asc order: approve true, then approve false.
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_witness_votes_history"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          account-name: "arhag"
+          voter-name: "cmtzco"
+          direction: "asc"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern
+          extra_kwargs:
+            ignore_tags: "<hafbe cache_update>"

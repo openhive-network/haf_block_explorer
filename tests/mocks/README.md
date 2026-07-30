@@ -8,12 +8,13 @@ underlying pattern.
 ## Layout
 
 Mirrors btracker's split: the installer only loads fixtures, processing is
-done by the standard `process_blocks.sh`, and verification is a separate
-step.
+done by the standard `process_blocks.sh`, and cache preparation is a separate
+step. Behavior is asserted through the public REST interface by the Tavern
+suite (`tests/tavern/patterns-mock`), not by a SQL verifier.
 
 ```
 scripts/
-└── verify_mock_data.sh           # refreshes caches + runs verify.sql
+└── prepare_mock_cache.sh         # refreshes LIVE caches + seeds deterministic initminer vests
 
 tests/mocks/
 ├── install_mock_data.sh          # loads fixtures + rewinds contexts (no processing)
@@ -21,8 +22,7 @@ tests/mocks/
 │   ├── types.sql                 # composite types for json_populate_recordset
 │   ├── insert_blocks.sql         # hafbe_backend.insert_mock_blocks(json)
 │   ├── insert_operations.sql     # hafbe_backend.insert_mock_operations(json)
-│   ├── update_haf_state.sql      # hafbe_backend.update_irreversible_block()
-│   └── verify.sql                # PASS/FAIL assertion table
+│   └── update_haf_state.sql      # hafbe_backend.update_irreversible_block()
 └── fixtures/
     ├── blocks/data.json          # 6 mock block headers (91000001..91000006)
     └── proposals/data.json       # proposal lifecycle ops covering both cascade scenarios
@@ -49,6 +49,7 @@ that motivated the unified row-by-row processor design:
 | `91000004`  | `remove_proposal`                  | removes [9001] → cascade-deletes dan→9001 AND initminer→9001 |
 | `91000004`  | `proposal_pay_operation`           | proposal 9002 receives 50000 |
 | `91000005`  | `create_proposal` + `proposal_fee` | proposal **9003** (gtg→blocktrades, 80k, active at block time) |
+| `91000005`  | `account_witness_proxy`            | **dan** sets a governance proxy to **blocktrades** (so dan's proposal-vote history rows report `voter_vests=0` / `proxy=blocktrades`, with `direct_vests` preserved) |
 | `91000006`  | `create_proposal` + `proposal_fee` | proposal **9004** (blocktrades→gtg, 30k, expired at block time) |
 
 Status at block time 2025-06-01T00:00:15 (block 91000006):
@@ -65,12 +66,18 @@ two cache refreshes:
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
 - `proposal_payments`: 1 row — `(9002, 50000)`
 - `proposal_votes_history`: **9 rows** — 5 TRUE inserts, 2 FALSE rows from steem's declined voting rights, 2 FALSE rows from removing proposal 9001
-- `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by verify_mock_data.sh)
+- `current_account_proxies`: the mock range **adds** `(dan → blocktrades)`. Unlike the proposal tables above — which are mock-only totals, since no DHF data exists before block ~22.3M — this table also carries the witness proxies inherited from the 5M base sync, so the total is base + 1, not 1.
+- `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by `prepare_mock_cache.sh`)
 
-Two cascade-correctness invariants are checked explicitly by `verify.sql`:
+Observable behavior is asserted through the REST API by the Tavern suite
+(`tests/tavern/patterns-mock/get_proposal_votes_history/`), including:
 
-- No active votes on a removed proposal (`proposal_id = 9001` count = 0)
-- No active votes from an account that lost voting rights (`steem` count = 0)
+- the two cascade-cleanup paths (a removed proposal and a declined-rights
+  account both drop out of the active-votes endpoint)
+- the same-block vote/un-vote tie-break, checked at the pagination boundary
+  (`page-size=1`, pages 1 and 2, both directions — the `tie_break_*` cases)
+- the proxy case (`proxied_voter`): `voter_vests=0`, `proxy=blocktrades`,
+  `direct_vests` preserved
 
 ## Usage
 
@@ -83,13 +90,17 @@ Three steps, mirroring btracker's mock workflow:
 
 # 2. Run the regular block processor against the mock range.
 #    --stop-at-block is REQUIRED: without it, process_blocks runs
-#    indefinitely and verify may run before block 91000006 is processed,
-#    causing false failures (9004 missing, status=expired = 0, etc.).
+#    indefinitely and the Tavern suite may run before block 91000006 is
+#    processed, causing false failures (9004 missing, status=expired = 0, etc.).
 ./scripts/process_blocks.sh --host=localhost --user=hafbe_owner \
                             --stop-at-block=91000006
 
-# 3. Refresh caches and assert the expected post-processing state.
-./scripts/verify_mock_data.sh --host=localhost --user=haf_admin
+# 3. Prepare the mock cache (refresh caches + deterministic initminer seed).
+./scripts/prepare_mock_cache.sh --host=localhost --user=haf_admin
+
+# 4. Assert behavior through the REST API.
+#    (In CI this is the pattern-test-with-mock-data job.)
+cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 ```
 
 ### What each step does
@@ -113,13 +124,18 @@ Three steps, mirroring btracker's mock workflow:
 main-loop (`hafbe_app.main` → `log_and_process_blocks`), same as a real
 sync — including btracker processing and state-provider updates.
 
-**verify_mock_data.sh**:
+**prepare_mock_cache.sh** (setup, not assertion):
 1. Refreshes `witness_votes_cache` then `proposal_vote_stats_cache` (LIVE
    mode normally refreshes them per-block, but we force a refresh in case
    processing stopped mid-batch)
-2. Runs `sql/verify.sql` — prints a PASS/FAIL table and `RAISE EXCEPTION`
-   on any failure (`psql -v ON_ERROR_STOP=on` propagates non-zero exit so
-   CI fails the job)
+2. Seeds a deterministic `initminer` VESTS value so stake-dependent pattern
+   assertions do not depend on the real, cache-version-dependent mainnet
+   balance
+
+Assertions then run through the REST API via the Tavern pattern suite
+(`tests/tavern/patterns-mock`). If you need to guard physical table layout,
+cache membership, or ledger row counts, add a purpose-built DB
+integration-test suite rather than mixing SQL assertions in with the API tests.
 
 ### Account-naming rule for fixtures
 
@@ -199,9 +215,10 @@ DELETE FROM hafd.blocks WHERE num BETWEEN 91000000 AND 91000010;
 1. Append ops to `fixtures/proposals/data.json`. Use the next free `op_pos`
    per block, or add another block in `fixtures/blocks/data.json`. Keep
    `block_num >= 91000000`.
-2. Add expected-state rows to the `checks(name, expected, actual)` VALUES
-   table in `sql/verify.sql`.
-3. Re-run the three-step workflow above (install → process_blocks → verify).
+2. Add a Tavern case under `tests/tavern/patterns-mock/<endpoint>/` asserting
+   the new behavior through the REST API, with its sibling `.pat.json`.
+3. Re-run the workflow above (install → process_blocks → prepare_mock_cache →
+   pytest).
 
 The fixture uses `op_name` (e.g. `hive::protocol::create_proposal_operation`)
 rather than hardcoded numeric `op_type_id`; the insert function looks up the

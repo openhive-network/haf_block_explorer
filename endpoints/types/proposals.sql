@@ -178,6 +178,28 @@ hafbe_backend.proposal_votes_history_record:
     approve:
       type: boolean
       description: whether the voter approved or withdrew approval of the proposal
+    voter_vests:
+      type: string
+      description: >-
+        effective governance VESTS carried by this voter''s direct proposal vote
+        (0 if the voter currently has a proxy set — their stake counts through the
+        proxy, and hived''s proposal totals exclude them).
+        NOTE: this is the voter''s CURRENT stake, not the stake they held at the block
+        of this historical vote event — no point-in-time vesting snapshot is kept.
+    direct_vests:
+      type: string
+      description: >-
+        this voter''s own governance VESTS (account_vests), independent of any proxy.
+        Never zeroed, so the voter''s real stake stays visible when voter_vests is 0.
+    proxied_vests:
+      type: string
+      description: VESTS from accounts that have proxied their governance to this voter
+    proxy:
+      type: string
+      description: >-
+        name of the governance proxy this voter has set (empty string if none).
+        Whenever this field is non-empty, voter_vests is 0. The converse does NOT hold:
+        a voter who simply holds no VESTS also reports 0, with an empty proxy.
     timestamp:
       type: string
       format: date-time
@@ -188,6 +210,10 @@ DROP TYPE IF EXISTS hafbe_backend.proposal_votes_history_record CASCADE;
 CREATE TYPE hafbe_backend.proposal_votes_history_record AS (
     "voter_name" TEXT,
     "approve" BOOLEAN,
+    "voter_vests" TEXT,
+    "direct_vests" TEXT,
+    "proxied_vests" TEXT,
+    "proxy" TEXT,
     "timestamp" TIMESTAMP
 );
 -- openapi-generated-code-end

@@ -11,6 +11,13 @@ SET ROLE hafbe_owner;
       Get information about each vote cast for this proposal, including
       approvals and later withdrawals of approval.
 
+      Each record also carries the voter''s governance stake. These vest figures are the
+      voter''s CURRENT stake, NOT the stake they held at the block of the historical vote —
+      no point-in-time vesting snapshot is stored. `voter_vests` is 0 when the voter
+      currently has a governance proxy set (their stake counts through the proxy, matching
+      `GET /proposals/votes` and hived''s proposal totals); their own stake is still
+      reported in `direct_vests`.
+
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_proposal_votes_history(1);`
 
@@ -108,11 +115,19 @@ SET ROLE hafbe_owner;
                 {
                   "voter_name": "alice",
                   "approve": true,
+                  "voter_vests": "8322015717445",
+                  "direct_vests": "8322015717445",
+                  "proxied_vests": "0",
+                  "proxy": "",
                   "timestamp": "2019-11-05T10:12:09"
                 },
                 {
                   "voter_name": "bob",
                   "approve": false,
+                  "voter_vests": "0",
+                  "direct_vests": "1245007811003",
+                  "proxied_vests": "0",
+                  "proxy": "alice",
                   "timestamp": "2019-11-04T08:43:21"
                 }
               ]
@@ -166,6 +181,10 @@ BEGIN
     SELECT
       ba.voter_name,
       ba.approve,
+      ba.voter_vests,
+      ba.direct_vests,
+      ba.proxied_vests,
+      ba.proxy,
       ba.timestamp
     FROM hafbe_backend.get_proposal_votes_history(
       "proposal-id",

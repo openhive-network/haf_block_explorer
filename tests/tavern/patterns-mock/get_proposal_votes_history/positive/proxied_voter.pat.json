@@ -1,0 +1,24 @@
+{
+  "total_votes": 2,
+  "total_pages": 1,
+  "votes_history": [
+    {
+      "voter_name": "dan",
+      "approve": true,
+      "voter_vests": "0",
+      "direct_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "proxy": "blocktrades",
+      "timestamp": "2025-06-01T00:00:03"
+    },
+    {
+      "voter_name": "dan",
+      "approve": false,
+      "voter_vests": "0",
+      "direct_vests": "9928811304950768",
+      "proxied_vests": "0",
+      "proxy": "blocktrades",
+      "timestamp": "2025-06-01T00:00:09"
+    }
+  ]
+}

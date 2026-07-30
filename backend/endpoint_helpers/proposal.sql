@@ -14,21 +14,55 @@ SET ROLE hafbe_owner;
 /*
  * get_proposal_votes_history: Gets historical voting records for a proposal.
  *
- * Returns vote history including both approve and unapprove actions against a
- * given proposal. Unlike witness votes, proposal vote history does not carry
- * vest/voting-power stats — it is a pure (voter, approve, timestamp) stream.
+ * Returns vote history (approve and unapprove events) for a proposal, enriched
+ * with the voter's governance stake — the same voter_vests / direct_vests /
+ * proxied_vests / proxy quadruple get_proposal_votes reports for active votes.
+ *
+ * STAKE SEMANTICS — the ROW is historical, the NUMBERS are NOT:
+ *   The vest columns describe the voter's CURRENT stake, not the stake held at
+ *   the block of the vote event. HAFBE keeps no point-in-time vesting snapshot;
+ *   get_witness_votes_history behaves the same way.
+ *
+ *   voter_vests   - VESTS this voter's DIRECT proposal vote carries today; '0'
+ *                   when the voter currently has a governance proxy set (hived's
+ *                   proposal totals exclude proxied voters — see
+ *                   process_proposal_vote_stats_cache). Same rule as
+ *                   get_proposal_votes, so voter_vests means one thing across
+ *                   the whole proposals API.
+ *   direct_vests  - voter's own VESTS (balance - delayed_vests). Never zeroed.
+ *   proxied_vests - VESTS proxied TO this voter. Never zeroed.
+ *   proxy         - current proxy name, '' when none.
+ *   Implication (one-way): proxy <> ''  =>  voter_vests = '0'. The converse does
+ *   NOT hold — a voter holding no VESTS also reports '0' with an empty proxy, so
+ *   clients must read `proxy` to tell "stake counted via proxy" from "no stake".
+ *
+ * STAKE SOURCING (two sources, chosen per VOTER, never per row):
+ *   - hafbe_app.account_vest_stats_cache is the fast path, but it only tracks
+ *     current witness voters, current proxy setters and current proposal voters
+ *     (see hafbe_backend.account_vest_stats_view.tracked_accounts). A voter who
+ *     withdrew approval and does nothing else in governance has no cache row.
+ *   - hafbe_backend.expired_voter_stats_view runs the same arithmetic over
+ *     hive.accounts_view (every account) and always resolves. It is joined ONLY
+ *     for the page's cache-miss voters (missing_voters CTE), so a page of pure
+ *     cache hits does no fallback work at all.
+ *   - The proxy rule is applied AFTER the merge: current_account_proxies is a
+ *     per-block HAF table keyed by account_id, independent of the stats source
+ *     (expired_voter_stats_view has no proxy column), and during MASSIVE sync the
+ *     cache is empty so the fallback is the only branch.
+ *
+ * PERF: paginate first (limited_set), enrich after — the stake joins only ever
+ * see at most _page_size rows.
  *
  * PARAMETERS:
- *   proposal_id    - Proposal id to get vote history for
- *   filter_account - Optional: filter to a specific voter account id
- *   page           - Page number (1-based)
- *   page-size      - Number of records per page
- *   direction      - Sort direction: 'asc' or 'desc' (by block)
- *   from-block     - Optional: lower block bound (inclusive)
- *   to-block       - Optional: upper block bound (inclusive)
+ *   _proposal_id    - Proposal id to get vote history for
+ *   _filter_account - Optional: filter to a specific voter account id
+ *   _page           - Page number (1-based)
+ *   _page_size      - Number of records per page
+ *   _direction      - Sort direction: 'asc' or 'desc' (by block)
+ *   _from_block     - Optional: lower block bound (inclusive)
+ *   _to_block       - Optional: upper block bound (inclusive)
  *
- * RETURNS: Set of proposal_votes_history_record with voter name, approve flag
- *          and block timestamp.
+ * RETURNS: Set of proposal_votes_history_record.
  */
 DROP FUNCTION IF EXISTS hafbe_backend.get_proposal_votes_history;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_history(
@@ -42,6 +76,9 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_history(
 )
 RETURNS SETOF hafbe_backend.proposal_votes_history_record
 LANGUAGE 'plpgsql' STABLE
+SET from_collapse_limit = 16
+SET join_collapse_limit = 16
+SET jit = OFF
 SET plan_cache_mode = force_custom_plan
 AS
 $$
@@ -49,11 +86,17 @@ DECLARE
   __offset INT := ((_page - 1) * _page_size);
 BEGIN
   RETURN QUERY (
+    /*
+     * CTE: limited_set
+     * WHY MATERIALIZED: filters + joins; pagination happens HERE and nowhere
+     * else. No stats joins, so the OFFSET/LIMIT plan is untouched by #140.
+     */
     WITH limited_set AS MATERIALIZED (
       SELECT
         av.name,
         pvh.voter_id,
         pvh.approve,
+        pvh.source_op,
         pvh.source_op_block,
         bv.created_at
       FROM hafbe_backend.proposal_votes_history_view pvh
@@ -64,19 +107,113 @@ BEGIN
         (_filter_account IS NULL OR pvh.voter_id = _filter_account) AND
         (_from_block IS NULL     OR pvh.source_op_block >= _from_block) AND
         (_to_block IS NULL       OR pvh.source_op_block <= _to_block)
+      -- source_op is the final tie-break and is NOT optional: a voter can have two
+      -- events for one proposal in a SINGLE block (e.g. they approve, and in the same
+      -- block remove_proposal / declined_voting_rights cascades a synthetic approve=FALSE
+      -- row — the mock does exactly this to initminer on 9001). (block, voter_id) alone
+      -- ties there, and the withdrawal can sort BEFORE the approval. source_op is
+      -- monotonic within a block, so it restores chronological order.
       ORDER BY
         (CASE WHEN _direction = 'desc' THEN pvh.source_op_block ELSE NULL END) DESC,
         (CASE WHEN _direction = 'asc'  THEN pvh.source_op_block ELSE NULL END) ASC,
         (CASE WHEN _direction = 'desc' THEN pvh.voter_id        ELSE NULL END) DESC,
-        (CASE WHEN _direction = 'asc'  THEN pvh.voter_id        ELSE NULL END) ASC
+        (CASE WHEN _direction = 'asc'  THEN pvh.voter_id        ELSE NULL END) ASC,
+        (CASE WHEN _direction = 'desc' THEN pvh.source_op       ELSE NULL END) DESC,
+        (CASE WHEN _direction = 'asc'  THEN pvh.source_op       ELSE NULL END) ASC
       OFFSET __offset
       LIMIT _page_size
+    ),
+
+    /*
+     * CTE: paged_stats
+     * PURPOSE: probe the vest cache for the <= _page_size rows of THIS page.
+     * LEFT JOIN: a voter who withdrew their approval (and is not otherwise
+     * tracked) has no cache row -> NULL, filled from the expired view below.
+     * account_vest_stats_cache.vests is BIGINT NOT NULL, so "vests IS NULL" is
+     * an exact cache-miss test.
+     * WHY MATERIALIZED: it is read twice (missing_voters + the outer SELECT), and
+     * the cache join must be evaluated exactly once. PG would auto-materialize a
+     * twice-referenced CTE anyway, but stating it keeps that guarantee if a later
+     * edit drops one of the two references.
+     */
+    paged_stats AS MATERIALIZED (
+      SELECT
+        ls.name,
+        ls.voter_id,
+        ls.approve,
+        ls.source_op,
+        ls.source_op_block,
+        ls.created_at,
+        avs.vests,
+        avs.account_vests,
+        avs.proxied_vests
+      FROM limited_set ls
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = ls.voter_id
+    ),
+
+    /*
+     * CTE: missing_voters
+     * PURPOSE: the page's cache-miss voters (<= _page_size distinct ids).
+     * Keeping the miss predicate on the OUTER side of the fallback join is what
+     * makes the fallback cost ZERO when the page is all cache hits. Expressing
+     * it as an ON-qual instead would not gate anything: it becomes a joinrel
+     * qualifier, so expired_voter_stats_view would be evaluated on every call.
+     */
+    missing_voters AS (
+      SELECT DISTINCT ps.voter_id
+      FROM paged_stats ps
+      WHERE ps.vests IS NULL
+    ),
+
+    /*
+     * CTE: fallback_stats
+     * PURPOSE: resolve the missing voters from expired_voter_stats_view (same
+     * arithmetic, computed over every account). MATERIALIZED so the planner
+     * cannot pull the view up into the outer join and evaluate it for
+     * cache-hit rows too.
+     */
+    fallback_stats AS MATERIALIZED (
+      SELECT
+        evs.account_id,
+        evs.vests,
+        evs.account_vests,
+        evs.proxied_vests
+      FROM hafbe_backend.expired_voter_stats_view evs
+      JOIN missing_voters mv ON mv.voter_id = evs.account_id
     )
+
+    -- VESTS are cast to TEXT to avoid JSON precision loss on large numbers.
+    -- Column ORDER must match hafbe_backend.proposal_votes_history_record: the
+    -- endpoint casts these positionally, and all four vest/proxy columns are
+    -- TEXT, so a transposition would return 200 with swapped values.
     SELECT
-      ls.name::TEXT,
-      ls.approve,
-      ls.created_at
-    FROM limited_set ls
+      ps.name::TEXT                                          AS voter_name,
+      ps.approve                                             AS approve,
+      (CASE
+        WHEN cap.account_id IS NOT NULL THEN '0'
+        ELSE COALESCE(ps.vests, fs.vests, 0)::TEXT
+      END)                                                   AS voter_vests,
+      COALESCE(ps.account_vests, fs.account_vests, 0)::TEXT  AS direct_vests,
+      COALESCE(ps.proxied_vests, fs.proxied_vests, 0)::TEXT  AS proxied_vests,
+      COALESCE(pav.name, '')::TEXT                           AS proxy,
+      ps.created_at                                          AS "timestamp"
+    FROM paged_stats ps
+    LEFT JOIN fallback_stats                    fs  ON fs.account_id  = ps.voter_id
+    LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = ps.voter_id
+    LEFT JOIN hafbe_app.accounts_view           pav ON pav.id         = cap.proxy_id
+    -- MANDATORY: the joins above void limited_set's ordering (the witness twin
+    -- re-sorts after its UNION for exactly this reason). The endpoint aggregates
+    -- with array_agg() and no ORDER BY, so dropping this silently shuffles pages
+    -- rather than erroring. Keys must match limited_set's exactly, source_op
+    -- included -- otherwise the two sorts can break a tie differently and the page
+    -- is displayed in an order the pagination did not choose.
+    ORDER BY
+      (CASE WHEN _direction = 'desc' THEN ps.source_op_block ELSE NULL END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN ps.source_op_block ELSE NULL END) ASC,
+      (CASE WHEN _direction = 'desc' THEN ps.voter_id        ELSE NULL END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN ps.voter_id        ELSE NULL END) ASC,
+      (CASE WHEN _direction = 'desc' THEN ps.source_op       ELSE NULL END) DESC,
+      (CASE WHEN _direction = 'asc'  THEN ps.source_op       ELSE NULL END) ASC
   );
 END
 $$;

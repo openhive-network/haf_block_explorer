@@ -594,9 +594,9 @@ sync_with_mock_data:
     "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh" --postgres-access="${POSTGRES_ACCESS}"
     echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
 
-    echo -e "\e[0Ksection_start:$(date +%s):verify[collapsed=true]\r\e[0KVerifying mock data..."
-    ./scripts/verify_mock_data.sh --host=docker --port=5432
-    echo -e "\e[0Ksection_end:$(date +%s):verify\r\e[0K"
+    echo -e "\e[0Ksection_start:$(date +%s):prepare[collapsed=true]\r\e[0KPreparing mock cache..."
+    ./scripts/prepare_mock_cache.sh --host=docker --port=5432
+    echo -e "\e[0Ksection_end:$(date +%s):prepare\r\e[0K"
 
     echo -e "\e[0Ksection_start:$(date +%s):save_cache[collapsed=true]\r\e[0KSaving mock cache..."
     EFFECTIVE_CACHE_KEY=$(cat /tmp/effective_cache_key)

@@ -107,6 +107,13 @@
     },
 
     {
+      "block_num": 91000005, "op_name": "hive::protocol::account_witness_proxy_operation", "op_pos": 2, "trx_in_block": 1,
+      "body": {"type": "account_witness_proxy_operation", "value": {
+        "account": "dan", "proxy": "blocktrades"
+      }}
+    },
+
+    {
       "block_num": 91000006, "op_name": "hive::protocol::create_proposal_operation", "op_pos": 0, "trx_in_block": 0,
       "body": {"type": "create_proposal_operation", "value": {
         "creator": "blocktrades", "receiver": "gtg",
