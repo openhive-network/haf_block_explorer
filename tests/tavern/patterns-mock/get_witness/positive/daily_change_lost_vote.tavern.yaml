@@ -1,0 +1,40 @@
+---
+# Witness daily vote change counts LOST votes (issue #142), asserted through the endpoint.
+#
+# patterns-mainnet cannot reach this: the daily-change window resolves to the HEAD block on
+# any past-dated dataset, so the cache is empty there and get_witness COALESCEs it to 0 --
+# a working feature and a deleted one are byte-identical. The mock dataset controls its own
+# head block (91000006), which is what makes the window reachable.
+#
+# Fixture: cvk approves gtg at 91000001 (outside the window) and un-votes at 91000006
+# (inside it). cvk holds no proxy and no proposal vote, so it leaves the current-voter set
+# entirely -- the account Cache 4 used to drop.
+#
+# Expected values are DERIVED, not captured: voters_num_daily_change -1 (one un-vote,
+# stake-free count) and votes_daily_change "-121206758926" (cvk's stake). Both read 0
+# without the fix. If a run disagrees, the FIX is wrong -- do not edit these to match.
+
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_witness"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          account-name: "gtg"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern
+          extra_kwargs:
+            ignore_tags: "<hafbe cache_update>"

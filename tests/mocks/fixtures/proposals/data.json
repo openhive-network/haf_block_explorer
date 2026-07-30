@@ -17,6 +17,12 @@
         "fee": {"nai": "@@000000013", "amount": "10000", "precision": 3}
       }}
     },
+    {
+      "block_num": 91000001, "op_name": "hive::protocol::account_witness_vote_operation", "op_pos": 2, "trx_in_block": 1,
+      "body": {"type": "account_witness_vote_operation", "value": {
+        "account": "cvk", "witness": "gtg", "approve": true
+      }}
+    },
 
     {
       "block_num": 91000002, "op_name": "hive::protocol::create_proposal_operation", "op_pos": 0, "trx_in_block": 0,
@@ -128,6 +134,13 @@
       "body": {"type": "proposal_fee_operation", "value": {
         "creator": "blocktrades", "treasury": "steem", "proposal_id": 9004,
         "fee": {"nai": "@@000000013", "amount": "10000", "precision": 3}
+      }}
+    },
+    {
+      "_comment": "issue #142: cvk removes its ONLY witness vote. The daily-change window collapses onto the head block, so this un-vote is inside it while the approve at 91000001 is outside. cvk holds no other governance state, so it leaves the current-voter set entirely -- the case that Cache 4 used to drop with its INNER JOIN. NOTE: no apostrophes in this file; install_mock_data.sh interpolates it into a single-quoted SQL string.",
+      "block_num": 91000006, "op_name": "hive::protocol::account_witness_vote_operation", "op_pos": 2, "trx_in_block": 1,
+      "body": {"type": "account_witness_vote_operation", "value": {
+        "account": "cvk", "witness": "gtg", "approve": false
       }}
     }
   ]

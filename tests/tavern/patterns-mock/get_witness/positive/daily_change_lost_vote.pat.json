@@ -1,0 +1,19 @@
+{
+  "account_creation_fee": 3000,
+  "bias": 0,
+  "block_size": 65536,
+  "feed_updated_at": "2016-09-15T05:23:54",
+  "hbd_interest_rate": 1000,
+  "last_confirmed_block_num": 4999861,
+  "missed_blocks": 1,
+  "price_feed": 0.578,
+  "rank": 24,
+  "signing_key": "STM6GmnhcBN9DxmFcj1e423Q2RkFYStUgSotviptAMSdy74eHQSYM",
+  "url": "https://steemit.com/witness-category/@gtg/witness-gtg",
+  "version": "0.13.0",
+  "vests": "57548658449068633",
+  "voters_num": 65,
+  "voters_num_daily_change": -1,
+  "votes_daily_change": "-121206758926",
+  "witness_name": "gtg"
+}

@@ -120,10 +120,11 @@ mock suite below — there is no separate SQL verifier. DB-internal invariants
 dedicated DB integration-test suite if ever needed, not alongside the API tests.
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
-56 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+57 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
 - `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
 - `get_proposal_votes/` — 11 positive + 5 negative
 - `get_proposal_votes_history/` — 12 positive + 3 negative (`filter_voter_*` pin the cache-hit and expired-view fallback stake branches; `tie_break_*` pin the same-block vote/un-vote ordering at the `page-size=1` pagination boundary; `proxied_voter` pins proxy zeroing)
+- `get_witness/` — 1 positive (`daily_change_lost_vote` pins the witness daily-change fix of issue #142; it lives here because the window collapses onto the HEAD block on every past-dated dataset, so patterns-mainnet cannot reach it — the cache is empty there and `get_witness` COALESCEs it to 0, making a working feature and a deleted one byte-identical)
 - `get_operation_type_statistics/` — 1 positive (`daily_no_range` pins the 1-year default window of issue #139; it lives here because it is the ONLY suite that can reach it — patterns-mainnet is pinned to block_log_5m, ~176 days, shorter than the window, so no fixture there can tell the clamp firing from it not firing)
 
 All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add tests here whenever a behaviour is unreachable from the mainnet dataset — mock data, not only proposals.
