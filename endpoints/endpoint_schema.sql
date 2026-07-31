@@ -3152,7 +3152,7 @@ declare
         "operationId": "hafbe_endpoints.get_hafbe_sync_status",
         "responses": {
           "200": {
-            "description": "Last block processed by haf_block_explorer and its timestamp.\n`last_block_time` is null if no block has been processed yet.\n\n* Returns `JSON`\n",
+            "description": "Last block processed by haf_block_explorer and its timestamp.\n`last_block_time` is null if no block has been processed yet.\nWhile the HAF instance is still in massive sync (indexes not yet\nbuilt) the call fails fast with an error rather than executing an\nunindexed lookup.\n\n* Returns `JSON`\n",
             "content": {
               "application/json": {
                 "schema": {
