@@ -204,6 +204,9 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/comment_permlinks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/witness.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/backend/endpoint_helpers/proposal.sql"
+  # sync_status() needs the sub-app context names (context name = schema name);
+  # pass them via custom.* GUCs so the DO block can bake them into the function.
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.btracker_schema = '${BTRACKER_SCHEMA}'; SET custom.reptracker_schema = '${REPTRACKER_SCHEMA}';" -f "$HAFBE_DIR/backend/endpoint_helpers/sync_status.sql"
 
   echo "Installing REST API endpoints..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/accounts/get_account_authority.sql"
@@ -219,6 +222,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/other/get_input_type.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/other/get_latest_blocks.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/other/get_hafbe_last_synced_block.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/other/get_hafbe_sync_status.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/witnesses/get_witness_voters_num.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/witnesses/get_witness_voters.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/witnesses/get_witness_votes_history.sql"

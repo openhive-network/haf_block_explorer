@@ -3120,8 +3120,9 @@ declare
         "tags": [
           "Other"
         ],
-        "summary": "Get last block number synced by haf_block_explorer",
-        "description": "Get the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/last-synced-block''`\n",
+        "summary": "Get last block number synced by haf_block_explorer (deprecated)",
+        "deprecated": true,
+        "description": "**Deprecated** \u2014 superseded by `/sync-status`, which returns the block\nnumber together with its timestamp (enabling single-call staleness\nchecks) and accounts for all of the app's HAF contexts. This endpoint\nremains for backward compatibility.\n\nGet the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/last-synced-block''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "responses": {
           "200": {
@@ -3137,6 +3138,44 @@ declare
           },
           "404": {
             "description": "No blocks synced"
+          }
+        }
+      }
+    },
+    "/sync-status": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "summary": "Get haf_block_explorer''s sync status",
+        "description": "Get the last block fully processed by haf_block_explorer as an object\ncontaining both the block number and its timestamp (UTC). This is the\nuniform HAF-app sync/health endpoint: the timestamp lets a consumer\ncompute staleness with a single call (`age = now() - last_block_time`)\nwithout needing a separate head-block reference. Supersedes the\ndeprecated `/last-synced-block`.\n\nhaf_block_explorer installs multiple HAF contexts (its own plus the\nbalance tracker and reputation tracker sub-apps); the reported block is\nthe least current block across those contexts, i.e. the lagging\ncontext, since that is what bounds the freshness of the API''s answers.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_sync_status();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/sync-status''`\n",
+        "operationId": "hafbe_endpoints.get_hafbe_sync_status",
+        "responses": {
+          "200": {
+            "description": "Last block processed by haf_block_explorer and its timestamp.\n`last_block_time` is null if no block has been processed yet.\n\n* Returns `JSON`\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "x-sql-datatype": "JSON",
+                  "properties": {
+                    "last_block_num": {
+                      "type": "integer",
+                      "description": "least block number processed across the app''s HAF contexts"
+                    },
+                    "last_block_time": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp of that block"
+                    }
+                  }
+                },
+                "example": {
+                  "last_block_num": 5000000,
+                  "last_block_time": "2016-09-15T19:47:21"
+                }
+              }
+            }
           }
         }
       }

@@ -5,8 +5,14 @@ SET ROLE hafbe_owner;
   get:
     tags:
       - Other
-    summary: Get last block number synced by haf_block_explorer
+    summary: Get last block number synced by haf_block_explorer (deprecated)
+    deprecated: true
     description: |
+      **Deprecated** — superseded by `/sync-status`, which returns the block
+      number together with its timestamp (enabling single-call staleness
+      checks) and accounts for all of the app's HAF contexts. This endpoint
+      remains for backward compatibility.
+
       Get the block number of the last block synced by haf_block_explorer.
 
       SQL example

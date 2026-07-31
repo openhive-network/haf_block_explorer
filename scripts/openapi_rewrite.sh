@@ -50,6 +50,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/transactions/get_operation_type_statistics.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
+../$endpoints/other/get_hafbe_sync_status.sql
 ../$endpoints/other/get_input_type.sql
 ../$endpoints/other/get_latest_blocks.sql"
 

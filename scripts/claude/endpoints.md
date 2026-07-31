@@ -119,7 +119,8 @@ and the page-window slicing in `get_operation_type_aggregation` /
 | Endpoint | Function | Description |
 |----------|----------|-------------|
 | `GET /version` | `get_hafbe_version` | HAFBE git commit hash |
-| `GET /headblock` | `get_hafbe_last_synced_block` | Last synced block number |
+| `GET /last-synced-block` | `get_hafbe_last_synced_block` | Last synced block number (deprecated, use `/sync-status`) |
+| `GET /sync-status` | `get_hafbe_sync_status` | Least processed block across the hafbe/btracker/reptracker contexts + its timestamp |
 | `GET /operation-type-counts` | `get_latest_blocks` | Operation histogram for recent blocks |
 | `GET /input-type/{input-value}` | `get_input_type` | Detect input type (block/tx/account) |
 
@@ -162,6 +163,7 @@ endpoints/
 ├── other/                   # Utility endpoints
 │   ├── get_hafbe_version.sql
 │   ├── get_hafbe_last_synced_block.sql
+│   ├── get_hafbe_sync_status.sql
 │   ├── get_latest_blocks.sql
 │   └── get_input_type.sql
 ├── types/                   # SQL type definitions with OpenAPI schemas
