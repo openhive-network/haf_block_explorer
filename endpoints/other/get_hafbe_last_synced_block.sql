@@ -10,7 +10,7 @@ SET ROLE hafbe_owner;
     description: |
       **Deprecated** — superseded by `/sync-status`, which returns the block
       number together with its timestamp (enabling single-call staleness
-      checks) and accounts for all of the app's HAF contexts. This endpoint
+      checks) and accounts for all of the app''s HAF contexts. This endpoint
       remains for backward compatibility.
 
       Get the block number of the last block synced by haf_block_explorer.
