@@ -3122,7 +3122,7 @@ declare
         ],
         "summary": "Get last block number synced by haf_block_explorer (deprecated)",
         "deprecated": true,
-        "description": "**Deprecated** \u2014 superseded by `/sync-status`, which returns the block\nnumber together with its timestamp (enabling single-call staleness\nchecks) and accounts for all of the app's HAF contexts. This endpoint\nremains for backward compatibility.\n\nGet the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/last-synced-block''`\n",
+        "description": "**Deprecated** \u2014 superseded by `/sync-status`, which returns the block\nnumber together with its timestamp (enabling single-call staleness\nchecks) and accounts for all of the app''s HAF contexts. This endpoint\nremains for backward compatibility.\n\nGet the block number of the last block synced by haf_block_explorer.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hafbe_last_synced_block();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/last-synced-block''`\n",
         "operationId": "hafbe_endpoints.get_hafbe_last_synced_block",
         "responses": {
           "200": {
