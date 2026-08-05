@@ -280,6 +280,7 @@ generate-wax-spec:
     API_TYPE: "rest"
     NPM_PACKAGE_SCOPE: "@hiveio"
     NPM_PACKAGE_NAME: "wax-api-hafbe"
+    WAX_SPEC_GENERATOR_VERSION: "1.7.1-260805090216"
     # Job uses artifacts, doesn't need submodules
     GIT_SUBMODULE_STRATEGY: none
   needs:
