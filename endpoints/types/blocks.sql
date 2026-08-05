@@ -34,16 +34,6 @@ hafbe_backend.block_operations:
       type: integer
       description: amount of operations in block
  */
--- WARNING: hafbe_backend.block_operations is the ROOT of the block-search type chain:
---   block_operations -> gathered_block.operations[] -> gatherer_result.blocks[]
---     -> the eight blocksearch_* gatherers (backend/endpoint_helpers/blocksearch_filters.sql)
---     -> blocksearch_build_result (backend/utilities/blocksearch.sql)
--- The CASCADE below therefore destroys ALL of the above, none of which are defined in this
--- file. A full install_app.sh run re-creates them afterwards (backend/types/blocksearch.sql,
--- then blocksearch.sql, then blocksearch_filters.sql, then endpoint_helpers/blocks.sql) and
--- self-heals; applying THIS FILE ALONE leaves /block-search answering HTTP 500 on every
--- variant. If you hot-patch it, re-apply those four files too -- or just re-run setup_api,
--- whose verify_api_surface check exists to catch exactly this.
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.block_operations CASCADE;
 CREATE TYPE hafbe_backend.block_operations AS (

@@ -65,6 +65,10 @@ SET ROLE hafbe_owner;
           and trips client timeouts. An explicitly supplied `from-block` is always honoured in
           full, at every granularity, so a chart always receives every period of the range it
           asked for. `monthly` and `yearly` are never defaulted.
+
+          The response carries no signal that this default was applied -- it is a flat array
+          with no total count and no echoed bounds. A client that needs to know the window it
+          actually got should read the first and last `date`, or pass `from-block` explicitly.
       - in: query
         name: to-block
         required: false
@@ -123,7 +127,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_type_statistics(
     "to-block" TEXT = NULL,
     "op-types" TEXT = NULL
 )
-RETURNS SETOF hafbe_backend.operation_type_stats
+RETURNS SETOF hafbe_backend.operation_type_stats 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET jit = OFF
@@ -169,9 +173,9 @@ BEGIN
   -- An unbounded daily histogram spans the whole chain (~3,750 periods / ~6.6 MB) and trips
   -- client timeouts, so an OMITTED from-block falls back to the most recent year. An explicit
   -- from-block is honoured in full; monthly/yearly are never defaulted. See issue #139.
-  _from_ts := hafbe_backend.aggregation_default_from(
-    _granularity, _from_ts, _to_ts, _block_range.first_block IS NULL
-  );
+  IF _granularity = 'daily' AND _block_range.first_block IS NULL THEN
+    _from_ts := GREATEST(_from_ts, DATE_TRUNC('day', _to_ts - INTERVAL '1 year'));
+  END IF;
 
   RETURN QUERY
     SELECT a.*

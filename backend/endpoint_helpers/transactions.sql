@@ -188,16 +188,6 @@ $$;
  * ~3.7k rows / ~400 kB — small enough that it is returned whole. Pagination (!494) was
  * removed because these rows feed time-series charts that need every period at once.
  */
--- Every signature this function has ever shipped with, so hot-patching THIS FILE ALONE
--- cannot leave a stale overload behind. (On a full install these are redundant: the
--- DROP TYPE ... CASCADE in endpoints/types/transactions.sql, applied earlier, has already
--- removed every overload. They exist for the partial-patch case.)
---   ..., TIMESTAMP, TIMESTAMP, INT, INT   -- !494, paginated
---   ..., INT, INT                         -- pre-!494, block-number range
---   ..., TIMESTAMP, TIMESTAMP             -- this MR, before _direction was dropped
-DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT, INT);
-DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP);
-DROP FUNCTION IF EXISTS hafbe_backend.get_transaction_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
     _granularity     hafbe_backend.granularity,
     _from_timestamp  TIMESTAMP,

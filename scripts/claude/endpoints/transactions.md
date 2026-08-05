@@ -102,8 +102,7 @@ period:
 
 Each entry nests a per-op-type array, so an unbounded `daily` series is ~3,750 periods /
 ~6.6 MB / ~4.4 s and trips client timeouts (issue #139). When `from-block` is **omitted**
-at `daily`, the range therefore falls back to `hafbe_backend.default_stats_window()`
-(1 year) via `hafbe_backend.aggregation_default_from()`. An explicit `from-block` is
+at `daily`, the range therefore falls back to a 1-year window. An explicit `from-block` is
 honoured in full at every granularity, and `monthly`/`yearly` are never defaulted.
 
 **Fields:**
@@ -172,11 +171,9 @@ Located in `backend/endpoint_helpers/`:
 
 | Function | File | Purpose |
 |----------|------|---------|
-| `get_transaction_aggregation()` | transactions.sql | Build the transaction-stats series for the range |
-| `get_operation_type_aggregation()` | operation_type_stats.sql | Build the per-op-type series for the range |
+| `get_transaction_aggregation()` | transactions.sql | Build the transaction-stats series for the range. **Returns rows UNORDERED** -- the endpoint applies the single authoritative `ORDER BY`; any other caller must sort for itself |
+| `get_operation_type_aggregation()` | operation_type_stats.sql | Build the per-op-type series for the range. **Returns rows UNORDERED** -- see above |
 | `aggregation_time_range()` | ../utilities/blocksearch.sql | Resolve (granularity, block range) to the period-truncated `[from_ts, to_ts]` window |
-| `aggregation_default_from()` | ../utilities/blocksearch.sql | Apply the 1-year fallback when `from-block` was omitted at `daily`; pure function, unit-testable with synthetic timestamps |
-| `default_stats_window()` | ../utilities/constants.sql | The fallback window itself (`INTERVAL '1 year'`) |
 | `blocksearch_range()` | ../utilities/blocksearch.sql | Normalizes the (from, to) block range (shared with block-search) |
 
 ## Related Processing

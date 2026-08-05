@@ -2945,7 +2945,7 @@ declare
               "type": "string",
               "default": null
             },
-            "description": "Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).\n\nWhen a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.\n\nWhen omitted at `daily` granularity, the range defaults to the most recent **1 year**\ninstead of the whole chain -- an unbounded daily histogram is ~3,750 periods / ~6.6 MB\nand trips client timeouts. An explicitly supplied `from-block` is always honoured in\nfull, at every granularity, so a chart always receives every period of the range it\nasked for. `monthly` and `yearly` are never defaulted.\n"
+            "description": "Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).\n\nWhen a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.\n\nWhen omitted at `daily` granularity, the range defaults to the most recent **1 year**\ninstead of the whole chain -- an unbounded daily histogram is ~3,750 periods / ~6.6 MB\nand trips client timeouts. An explicitly supplied `from-block` is always honoured in\nfull, at every granularity, so a chart always receives every period of the range it\nasked for. `monthly` and `yearly` are never defaulted.\n\nThe response carries no signal that this default was applied -- it is a flat array\nwith no total count and no echoed bounds. A client that needs to know the window it\nactually got should read the first and last `date`, or pass `from-block` explicitly.\n"
           },
           {
             "in": "query",

@@ -1,0 +1,30 @@
+---
+# The 1-year default window (issue #139), asserted through the real endpoint.
+#
+# This suite is the only one that can reach it. patterns-mainnet is pinned to block_log_5m
+# (2016-03-24 .. 2016-09-15, ~176 days), which is SHORTER than the window, so the clamp
+# provably never fires there and inverting its condition changes nothing. The mock dataset
+# runs to block 91000006 dated 2025-06-01 against the same 2016-03-24 genesis -- a ~9-year
+# span -- where an unbounded daily request is 3,357 periods and a clamped one is 366.
+  test_name: Hafbe PostgREST
+
+  marks:
+    - patterntest
+
+  includes:
+    - !include ../../../common.yaml
+
+  stages:
+    - name: test
+      request:
+        url: "{service.proto:s}://{service.server:s}:{service.port}/rpc/get_operation_type_statistics"
+        method: POST
+        headers:
+          content-type: application/json
+          accept: application/json
+        json:
+          granularity: "daily"
+      response:
+        status_code: 200
+        verify_response_with:
+          function: validate_response:compare_rest_response_with_pattern

@@ -115,16 +115,16 @@ Don't reintroduce it without a coordinated UI rollout.
 Payload is bounded by a **default range** instead. `get_operation_type_statistics` nests a
 per-op-type array in every period (~6.6 MB / ~4.4 s over full history at `daily`), so when
 `from-block` is OMITTED at `daily` granularity it falls back to
-`hafbe_backend.default_stats_window()` (1 year) via
-`hafbe_backend.aggregation_default_from()`. An explicit `from-block` is always honoured in
+a 1-year window. An explicit `from-block` is always honoured in
 full — charts must get every period they asked for — and `monthly` (~125 periods) /
 `yearly` (~11) are never defaulted, since defaulting `yearly` would collapse the Explorer's
 all-time chart to a single bar. `get_transaction_statistics` is never bounded: one
 pre-aggregated row per period keeps full-history `daily` at ~400 kB.
 
-Note the fallback is invisible to the Tavern suites — the 5M-block dataset spans <1 year, so
-it never fires there. `aggregation_default_from()` is a pure function specifically so it can
-be tested directly with synthetic timestamps.
+Note the fallback cannot fire on the 5M-block mainnet dataset (~176 days, shorter than the
+window), so no patterns-mainnet fixture can distinguish it firing from it not firing. The only
+suite that can reach it is patterns-mock, whose chain runs to 2025-06-01 against a 2016-03-24
+genesis (~9 years: 3,357 unbounded daily periods vs 366 clamped).
 
 ### Other Endpoints
 

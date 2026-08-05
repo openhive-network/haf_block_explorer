@@ -16,11 +16,11 @@
           content-type: application/json
           accept: application/json
         json:
-          granularity: "daily"
+          granularity: "monthly"
           direction: null
-          # Bounded range on purpose: this case exists to prove COALESCE("direction",'desc')
-          # normalises an explicit null, not to re-assert the full daily series that
-          # daily_no_range already pins. Without the bound the two fixtures are byte-identical.
+          # monthly + a bounded range on purpose: this case exists to prove
+          # COALESCE("direction",'desc') normalises an explicit null. Using daily over this
+          # range would make it byte-identical to change_range and assert nothing new.
           from-block: "4000000"
           to-block: "5000000"
       response:

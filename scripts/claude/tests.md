@@ -11,7 +11,6 @@ HAFBE uses a multi-layered testing strategy to ensure API correctness, data inte
 | **Performance** | Measure endpoint throughput | Before releases |
 | **Functional** | Test install/uninstall scripts | After script changes |
 | **Mock** | Drive a synthetic block range through the real processor + endpoints | When you cannot wait for a HAF sync past the feature's launch block (e.g. DHF launch at block ~22.3M) |
-| **SQL integration** | Assert SQL-level contracts directly, outside the REST API | When a behaviour is structurally unreachable from the Tavern suites, or asserting it through the API would need an unreasonably large fixture |
 
 ## Quick Reference
 
@@ -30,9 +29,6 @@ cd tests/tavern/patterns-mainnet && pytest -n 8 .
 
 # Functional tests
 ./tests/functional/test_scripts.sh --host=localhost
-
-# SQL integration checks (needs only an installed schema — no fixtures, no processed blocks)
-./tests/integration/run_sql_checks.sh --host=localhost
 ```
 
 ### Environment Variables
@@ -124,12 +120,13 @@ mock suite below — there is no separate SQL verifier. DB-internal invariants
 dedicated DB integration-test suite if ever needed, not alongside the API tests.
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
-55 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+56 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
 - `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
 - `get_proposal_votes/` — 11 positive + 5 negative
 - `get_proposal_votes_history/` — 12 positive + 3 negative (`filter_voter_*` pin the cache-hit and expired-view fallback stake branches; `tie_break_*` pin the same-block vote/un-vote ordering at the `page-size=1` pagination boundary; `proxied_voter` pins proxy zeroing)
+- `get_operation_type_statistics/` — 1 positive (`daily_no_range` pins the 1-year default window of issue #139; it lives here because it is the ONLY suite that can reach it — patterns-mainnet is pinned to block_log_5m, ~176 days, shorter than the window, so no fixture there can tell the clamp firing from it not firing)
 
-All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add new tests here when adding proposal-related features that require mock data.
+All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add tests here whenever a behaviour is unreachable from the mainnet dataset — mock data, not only proposals.
 
 ## CI/CD Integration
 
@@ -211,37 +208,6 @@ find_haf_image → prepare_haf_data → sync              → tests
 2. Download artifacts (container logs, test reports)
 3. Look for `docker/container-logs.txt` for service logs
 4. For Tavern: check `*.out.json` files for actual responses
-
-## SQL Integration Suite
-
-`tests/integration/` — a purpose-built DB integration suite, deliberately separate from the API
-tests. `tests/mocks/README.md` sets the rule this follows:
-
-> Assertions then run through the REST API via the Tavern pattern suite
-> (`tests/tavern/patterns-mock`). If you need to guard physical table layout, cache membership,
-> or ledger row counts, add a purpose-built DB integration-test suite rather than mixing SQL
-> assertions in with the API tests.
-
-```
-tests/integration/
-├── run_sql_checks.sh          # runner: applies every sql/*.sql with ON_ERROR_STOP
-└── sql/
-    └── verify_stats_window.sql  # hafbe_backend.aggregation_default_from() (issue #139)
-```
-
-Each check file prints a PASS/FAIL table and `RAISE EXCEPTION`s on failure, so `psql -v
-ON_ERROR_STOP=on` propagates a non-zero exit and CI job `sql-integration-test` fails.
-
-Requires only that HAFBE is installed — no fixtures, no processed blocks, no cache state.
-
-**When to add a check here instead of a Tavern test.** Only when the API route genuinely will
-not work. The current example: the 1-year default window on `/operation-type-statistics` never
-fires on the mainnet pattern dataset (~175 days, shorter than the window), so inverting its
-arming condition produces byte-identical fixtures there. The mock dataset does span it, but the
-resulting fixture would be ~40 kB / 366 rows — 32x the largest file in `patterns-mock` — and
-every row carries a `last_block_num` resolved by a LATERAL block lookup. Prefer Tavern whenever
-the response can be kept small (the `patterns-mock` tie-break tests shrink theirs with
-`page-size: 1`); reach for SQL only when it cannot.
 
 ## Expansion Rules
 

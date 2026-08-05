@@ -140,18 +140,9 @@ $$;
  *   _op_types        - optional filter; NULL = include all op_type_ids
  *
  * NOTE: unlike get_transaction_aggregation this emits a nested per-op-type array per
- * period, so an unbounded daily range is ~6.6 MB. The caller bounds an omitted range to
- * hafbe_backend.default_stats_window() rather than paginating here (issue #139).
+ * period, so an unbounded daily range is ~6.6 MB. The caller bounds an omitted range to the
+ * most recent year rather than paginating here (issue #139).
  */
--- Every signature this function has ever shipped with, so hot-patching THIS FILE ALONE
--- cannot leave a stale overload behind. (Redundant on a full install: the DROP TYPE ...
--- CASCADE in endpoints/types/transactions.sql, applied earlier, already removed them all.)
---   ..., TIMESTAMP, TIMESTAMP, INT, INT, INT[]  -- !494, paginated
---   ..., INT, INT, INT[]                        -- pre-!494, block-number range
---   ..., TIMESTAMP, TIMESTAMP, INT[]            -- this MR, before _direction was dropped
-DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT, INT, INT[]);
-DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, TIMESTAMP, TIMESTAMP, INT[]);
-DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT[]);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
     _granularity     hafbe_backend.granularity,
     _from_timestamp  TIMESTAMP,
