@@ -1,13 +1,9 @@
-{
-    "total_periods": 1,
-    "total_pages": 1,
-    "stats": [
-        {
-            "date": "2017-01-01T00:00:00",
-            "total_transactions": 6961192,
-            "total_operations": 0,
-            "operations": [],
-            "last_block_num": 5000000
-        }
-    ]
-}
+[
+  {
+    "date": "2017-01-01T00:00:00",
+    "last_block_num": 5000000,
+    "operations": [],
+    "total_operations": 0,
+    "total_transactions": 6961192
+  }
+]

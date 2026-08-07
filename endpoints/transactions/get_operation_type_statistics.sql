@@ -50,23 +50,6 @@ SET ROLE hafbe_owner;
 
           * `desc` - newest first
       - in: query
-        name: page
-        required: false
-        schema:
-          type: integer
-          default: 1
-          minimum: 1
-        description: Page number (1-indexed) of periods to return, in the sorted order.
-      - in: query
-        name: page-size
-        required: false
-        schema:
-          type: integer
-          default: 100
-          minimum: 1
-          maximum: 1000
-        description: Number of periods returned per page (max 1000).
-      - in: query
         name: from-block
         required: false
         schema:
@@ -76,6 +59,16 @@ SET ROLE hafbe_owner;
           Lower bound of the block range. Either a block-number (integer) or a timestamp (`YYYY-MM-DD HH:MI:SS`).
 
           When a `timestamp` is given, it is converted to the first block whose `created_at >= timestamp`.
+
+          When omitted at `daily` granularity, the range defaults to the most recent **1 year**
+          instead of the whole chain -- an unbounded daily histogram is ~3,750 periods / ~6.6 MB
+          and trips client timeouts. An explicitly supplied `from-block` is always honoured in
+          full, at every granularity, so a chart always receives every period of the range it
+          asked for. `monthly` and `yearly` are never defaulted.
+
+          The response carries no signal that this default was applied -- it is a flat array
+          with no total count and no echoed bounds. A client that needs to know the window it
+          actually got should read the first and last `date`, or pass `from-block` explicitly.
       - in: query
         name: to-block
         required: false
@@ -103,43 +96,38 @@ SET ROLE hafbe_owner;
     responses:
       '200':
         description: |
-          Paginated per-period operation-type histogram with transaction totals.
+          Every period in the requested range, as a flat array, each with its
+          operation-type histogram and transaction totals.
 
-          * Returns `hafbe_backend.operation_type_stats_return`
+          * Returns array of `hafbe_backend.operation_type_stats`
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/hafbe_backend.operation_type_stats_return'
-            example: {
-              "total_periods": 3752,
-              "total_pages": 38,
-              "stats": [
-                {
-                  "date": "2017-01-02T00:00:00",
-                  "total_transactions": 412000,
-                  "total_operations": 365000,
-                  "operations": [
-                    {"op_type_id": 0,  "op_count": 98000},
-                    {"op_type_id": 1,  "op_count": 45000},
-                    {"op_type_id": 18, "op_count": 210000}
-                  ],
-                  "last_block_num": 5000000
-                }
-              ]
-            }
+              $ref: '#/components/schemas/hafbe_backend.array_of_operation_type_stats'
+            example: [
+              {
+                "date": "2017-01-02T00:00:00",
+                "total_transactions": 412000,
+                "total_operations": 365000,
+                "operations": [
+                  {"op_type_id": 0,  "op_count": 98000},
+                  {"op_type_id": 1,  "op_count": 45000},
+                  {"op_type_id": 18, "op_count": 210000}
+                ],
+                "last_block_num": 5000000
+              }
+            ]
  */
 -- openapi-generated-code-begin
 DROP FUNCTION IF EXISTS hafbe_endpoints.get_operation_type_statistics;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_type_statistics(
     "granularity" hafbe_backend.granularity = 'yearly',
     "direction" hafbe_backend.sort_direction = 'desc',
-    "page" INT = 1,
-    "page-size" INT = 100,
     "from-block" TEXT = NULL,
     "to-block" TEXT = NULL,
     "op-types" TEXT = NULL
 )
-RETURNS hafbe_backend.operation_type_stats_return
+RETURNS SETOF hafbe_backend.operation_type_stats 
 -- openapi-generated-code-end
 LANGUAGE 'plpgsql' STABLE
 SET jit = OFF
@@ -151,26 +139,16 @@ DECLARE
   -- resolution, so the two can never observe different snapshots (see get_transaction_statistics).
   _current_block  INT               := hafbe_backend.get_hafbe_head_block();
   _op_types       INT[]             := NULL;
-  -- Normalize optional params: an explicit NULL (e.g. {"page-size": null} or
-  -- {"granularity": null}) must fall back to the signature default. PostgREST applies the
-  -- default only when a param is OMITTED, not when it is explicitly null, so a raw NULL
-  -- otherwise slips past the validators (NULL > 1000 / NULL <= 0 are NULL, not TRUE) into
-  -- LIMIT NULL (= "no limit"), and a NULL granularity/direction collapses the period series
-  -- / drops the sort. COALESCE every param that has a non-NULL default.
+  -- Normalize optional params: an explicit NULL (e.g. {"granularity": null}) must fall back
+  -- to the signature default. PostgREST applies the default only when a param is OMITTED,
+  -- not when it is explicitly null, so a raw NULL granularity/direction would otherwise
+  -- collapse the period series / drop the sort. COALESCE every param with a non-NULL default.
   _granularity    hafbe_backend.granularity    := COALESCE("granularity", 'yearly');
   _direction      hafbe_backend.sort_direction := COALESCE("direction", 'desc');
-  _page           INT               := COALESCE("page", 1);
-  _page_size      INT               := COALESCE("page-size", 100);
-  _total_periods  INT;
-  _total_pages    INT;
   _from_ts        TIMESTAMP;
   _to_ts          TIMESTAMP;
-  _result         hafbe_backend.operation_type_stats[];
 BEGIN
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _current_block);
-  PERFORM hafbe_backend.validate_limit(_page_size, 1000);
-  PERFORM hafbe_backend.validate_negative_limit(_page_size);
-  PERFORM hafbe_backend.validate_negative_page(_page);
 
   -- Parse op-types CSV (e.g. "0,1,18") into INT[]. NULL or empty -> no filter.
   IF "op-types" IS NOT NULL AND length(trim("op-types")) > 0 THEN
@@ -188,38 +166,28 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  -- Resolve the full period-truncated range ONCE (off the single _current_block read above),
-  -- then share the window with both the period count (total_pages) and the paged aggregation,
-  -- so they can never disagree and the range is resolved a single time.
+  -- Resolve the period-truncated range ONCE, off the single _current_block read above.
   SELECT from_ts, to_ts INTO _from_ts, _to_ts
   FROM hafbe_backend.aggregation_time_range(_granularity, _block_range.first_block, _block_range.last_block, _current_block);
 
-  _total_periods := hafbe_backend.aggregation_period_count(_granularity, _from_ts, _to_ts);
-  _total_pages   := hafah_backend.total_pages(_total_periods, _page_size);
+  -- An unbounded daily histogram spans the whole chain (~3,750 periods / ~6.6 MB) and trips
+  -- client timeouts, so an OMITTED from-block falls back to the most recent year. An explicit
+  -- from-block is honoured in full; monthly/yearly are never defaulted. See issue #139.
+  IF _granularity = 'daily' AND _block_range.first_block IS NULL THEN
+    _from_ts := GREATEST(_from_ts, DATE_TRUNC('day', _to_ts - INTERVAL '1 year'));
+  END IF;
 
-  PERFORM hafbe_backend.validate_page(_page, _total_pages);
-
-  _result := ARRAY(
-    SELECT a::hafbe_backend.operation_type_stats
+  RETURN QUERY
+    SELECT a.*
     FROM hafbe_backend.get_operation_type_aggregation(
       _granularity,
-      _direction,
       _from_ts,
       _to_ts,
-      _page,
-      _page_size,
       _op_types
     ) a
     ORDER BY
       (CASE WHEN _direction = 'desc' THEN a.date END) DESC,
-      (CASE WHEN _direction = 'asc'  THEN a.date END) ASC
-  );
-
-  RETURN (
-    COALESCE(_total_periods, 0),
-    COALESCE(_total_pages, 0),
-    COALESCE(_result, '{}'::hafbe_backend.operation_type_stats[])
-  )::hafbe_backend.operation_type_stats_return;
+      (CASE WHEN _direction = 'asc'  THEN a.date END) ASC;
 END
 $$;
 

@@ -1,30 +1,18 @@
-{
-    "total_periods": 176,
-    "total_pages": 59,
-    "stats": [
-        {
-            "date": "2016-09-16T00:00:00",
-            "trx_count": 61272,
-            "avg_trx": 2,
-            "min_trx": 0,
-            "max_trx": 22,
-            "last_block_num": 5000000
-        },
-        {
-            "date": "2016-09-15T00:00:00",
-            "trx_count": 78489,
-            "avg_trx": 2,
-            "min_trx": 0,
-            "max_trx": 26,
-            "last_block_num": 4976433
-        },
-        {
-            "date": "2016-09-14T00:00:00",
-            "trx_count": 77357,
-            "avg_trx": 2,
-            "min_trx": 0,
-            "max_trx": 23,
-            "last_block_num": 4947836
-        }
-    ]
-}
+[
+  {
+    "avg_trx": 2,
+    "date": "2016-10-01T00:00:00",
+    "last_block_num": 5000000,
+    "max_trx": 30,
+    "min_trx": 0,
+    "trx_count": 1175186
+  },
+  {
+    "avg_trx": 3,
+    "date": "2016-09-01T00:00:00",
+    "last_block_num": 4574687,
+    "max_trx": 89,
+    "min_trx": 0,
+    "trx_count": 3141793
+  }
+]

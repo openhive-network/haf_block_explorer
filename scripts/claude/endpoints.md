@@ -101,18 +101,30 @@ or `tests/mocks/README.md` for the three-step workflow.
 
 | Endpoint | Function | Description |
 |----------|----------|-------------|
-| `GET /transaction-statistics` | `get_transaction_statistics` | Aggregated tx stats (daily/monthly/yearly), paginated |
-| `GET /operation-type-statistics` | `get_operation_type_statistics` | Per-op-type counts + tx totals per period (daily/monthly/yearly), paginated |
+| `GET /transaction-statistics` | `get_transaction_statistics` | Aggregated tx stats (daily/monthly/yearly) |
+| `GET /operation-type-statistics` | `get_operation_type_statistics` | Per-op-type counts + tx totals per period (daily/monthly/yearly) |
 
-Both time-series endpoints are **paginated** (`page`/`page-size`, default page-size 100,
-max 1000) and return a wrapper object `{ total_periods, total_pages, stats: [...] }`
-rather than a bare array — mirroring the `total_*`/`total_pages`/array convention of
-`block_history`, `witnesses_return`, etc. Pagination is what keeps the full-history
-`daily` response bounded (a full chain is ~3,750 daily periods / ~6.9 MB as one array
-otherwise); `total_periods` is a pure function of the (granularity, range), independent
-of any `op-types` filter. See `hafbe_backend.aggregation_period_count()` for the count
-and the page-window slicing in `get_operation_type_aggregation` /
-`get_transaction_aggregation`.
+Both time-series endpoints return a **bare array** of period rows and are deliberately
+**not paginated**, unlike `block_history` / `witnesses_return`. They feed charts, which
+draw a whole range at once: a paged response would silently truncate a 180-day daily
+request to the first 100 points, or force ~38 round-trips to rebuild one series. MR !494
+paginated them and wrapped the payload in `{ total_periods, total_pages, stats }`; that
+broke every deployed Explorer UI and was reverted — see issue #139 / block_explorer_ui#759.
+Don't reintroduce it without a coordinated UI rollout.
+
+Payload is bounded by a **default range** instead. `get_operation_type_statistics` nests a
+per-op-type array in every period (~6.6 MB / ~4.4 s over full history at `daily`), so when
+`from-block` is OMITTED at `daily` granularity it falls back to
+a 1-year window. An explicit `from-block` is always honoured in
+full — charts must get every period they asked for — and `monthly` (~125 periods) /
+`yearly` (~11) are never defaulted, since defaulting `yearly` would collapse the Explorer's
+all-time chart to a single bar. `get_transaction_statistics` is never bounded: one
+pre-aggregated row per period keeps full-history `daily` at ~400 kB.
+
+Note the fallback cannot fire on the 5M-block mainnet dataset (~176 days, shorter than the
+window), so no patterns-mainnet fixture can distinguish it firing from it not firing. The only
+suite that can reach it is patterns-mock, whose chain runs to 2025-06-01 against a 2016-03-24
+genesis (~9 years: 3,357 unbounded daily periods vs 366 clamped).
 
 ### Other Endpoints
 
@@ -202,8 +214,9 @@ The time-series statistics endpoints (`get_transaction_statistics`,
 `hafbe_backend.blocksearch_range()` and convert the boundary blocks to
 period-truncated timestamps. A no-range call therefore spans genesis → the app's
 processed head; the row count reflects how far the app has processed (a
-still-syncing node legitimately returns fewer periods). Because that full-history
-`daily` series is large, these endpoints are **paginated** — see below.
+still-syncing node legitimately returns fewer periods). The one exception is
+`get_operation_type_statistics` at `daily` granularity, where an omitted `from-block`
+falls back to a 1-year window instead of genesis — see the Transaction Endpoints section.
 
 ### Response Caching
 
