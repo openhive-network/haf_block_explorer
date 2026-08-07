@@ -349,10 +349,8 @@ $$;
  * period-truncated [from_ts, to_ts] window the time-series aggregation operates over
  * (blocksearch_range + each boundary block's created_at, truncated to the period).
  *
- * current_block is passed IN (not read here) so the endpoint reads it ONCE and hands
- * the SAME value to both consumers -- aggregation_period_count (total_pages) and
- * get_*_aggregation (the paged data) -- guaranteeing they resolve the identical window
- * even if a block is committed mid-request. Cheap: normalize + two block look-ups.
+ * current_block is passed IN (not read here) so the endpoint reads it ONCE, guaranteeing the
+ * window cannot shift if a block is committed mid-request. Cheap: normalize + two look-ups.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_time_range(
     _granularity   hafbe_backend.granularity,
@@ -384,41 +382,6 @@ BEGIN
 
   from_ts := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __from)::TIMESTAMP);
   to_ts   := DATE_TRUNC(__granularity, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = __to)::TIMESTAMP);
-END
-$$;
-
-/*
- * aggregation_period_count: Number of periods the time-series aggregation emits for the
- * already-resolved [from_ts, to_ts] window, i.e. the total record count across all pages.
- * Drives total_pages for the paginated operation-type / transaction statistics endpoints.
- *
- * Takes the resolved timestamps (from aggregation_time_range) rather than re-resolving the
- * block range, so the endpoint resolves the window once and shares it with get_*_aggregation
- * -- no duplicated block-range resolution, no chance of the count and the data disagreeing.
- * Independent of any op-type filter (every period is one series row).
- */
-DROP FUNCTION IF EXISTS hafbe_backend.aggregation_period_count(hafbe_backend.granularity, INT, INT);
-CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_period_count(
-    _granularity    hafbe_backend.granularity,
-    _from_timestamp TIMESTAMP,
-    _to_timestamp   TIMESTAMP
-)
-RETURNS INT
-LANGUAGE 'plpgsql'
-STABLE
-AS
-$$
-DECLARE
-  __one_period INTERVAL := ('1 ' || (
-    CASE
-      WHEN _granularity = 'daily'   THEN 'day'
-      WHEN _granularity = 'monthly' THEN 'month'
-      WHEN _granularity = 'yearly'  THEN 'year'
-      ELSE NULL
-    END
-  ))::INTERVAL;
-BEGIN
-  RETURN (SELECT count(*)::INT FROM generate_series(_from_timestamp, _to_timestamp, __one_period));
 END
 $$;
 

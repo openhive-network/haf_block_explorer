@@ -16,9 +16,13 @@
           content-type: application/json
           accept: application/json
         json:
-          granularity: "daily"
+          granularity: "monthly"
           direction: null
-          page-size: 3
+          # monthly + a bounded range on purpose: this case exists to prove
+          # COALESCE("direction",'desc') normalises an explicit null. Using daily over this
+          # range would make it byte-identical to change_range and assert nothing new.
+          from-block: "4000000"
+          to-block: "5000000"
       response:
         status_code: 200
         verify_response_with:

@@ -134,29 +134,26 @@ $$;
  * in-progress period) to match the convention of get_transaction_aggregation.
  *
  * PARAMETERS:
- *   _granularity          - 'daily' | 'monthly' | 'yearly'
- *   _direction            - 'asc' | 'desc'
- *   _full_from_timestamp  - lower bound of the full range, period-truncated (from aggregation_time_range)
- *   _full_to_timestamp    - upper bound of the full range, period-truncated (from aggregation_time_range)
- *   _op_types             - optional filter; NULL = include all op_type_ids
+ *   _granularity     - 'daily' | 'monthly' | 'yearly'
+ *   _from_timestamp  - lower bound of the range, period-truncated (from aggregation_time_range)
+ *   _to_timestamp    - upper bound of the range, period-truncated (from aggregation_time_range)
+ *   _op_types        - optional filter; NULL = include all op_type_ids
+ *
+ * NOTE: unlike get_transaction_aggregation this emits a nested per-op-type array per
+ * period, so an unbounded daily range is ~6.6 MB. The caller bounds an omitted range to the
+ * most recent year rather than paginating here (issue #139).
  */
-DROP FUNCTION IF EXISTS hafbe_backend.get_operation_type_aggregation(hafbe_backend.granularity, hafbe_backend.sort_direction, INT, INT, INT, INT, INT[]);
 CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
-    _granularity          hafbe_backend.granularity,
-    _direction            hafbe_backend.sort_direction,
-    _full_from_timestamp  TIMESTAMP,
-    _full_to_timestamp    TIMESTAMP,
-    _page                 INT DEFAULT 1,
-    _page_size            INT DEFAULT 100,
-    _op_types             INT[] DEFAULT NULL
+    _granularity     hafbe_backend.granularity,
+    _from_timestamp  TIMESTAMP,
+    _to_timestamp    TIMESTAMP,
+    _op_types        INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.operation_type_stats
 LANGUAGE 'plpgsql' STABLE
 AS
 $$
 DECLARE
-  __from_timestamp      TIMESTAMP;
-  __to_timestamp        TIMESTAMP;
   __granularity         TEXT;
   __one_period          INTERVAL;
 BEGIN
@@ -171,30 +168,13 @@ BEGIN
 
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
-  -- The full period-truncated range [_full_from_timestamp, _full_to_timestamp] is resolved
-  -- once by the caller (aggregation_time_range) and passed in. Narrow it to the requested
-  -- page's contiguous period window, so only page_size periods are generated and aggregated
-  -- (bounds work AND payload). A slice of a regular series is contiguous, so [MIN,MAX]
-  -- reproduces exactly the page.
-  SELECT MIN(s.p), MAX(s.p)
-  INTO __from_timestamp, __to_timestamp
-  FROM (
-    SELECT p
-    FROM generate_series(_full_from_timestamp, _full_to_timestamp, __one_period) AS p
-    ORDER BY
-      (CASE WHEN _direction = 'desc' THEN p END) DESC,
-      (CASE WHEN _direction = 'asc'  THEN p END) ASC
-    OFFSET (GREATEST(_page, 1) - 1) * _page_size
-    LIMIT _page_size
-  ) s;
-
   RETURN QUERY (
     /*
      * Complete period series for the requested window, so periods with no
      * data still appear as a row in the response.
      */
     WITH date_series AS (
-      SELECT generate_series(__from_timestamp, __to_timestamp, __one_period) AS period
+      SELECT generate_series(_from_timestamp, _to_timestamp, __one_period) AS period
     ),
 
     /*
@@ -202,7 +182,7 @@ BEGIN
      */
     op_stats AS MATERIALIZED (
       SELECT s.date AS period, s.op_type_id, s.op_count, s.last_block_num
-      FROM hafbe_backend.get_operation_type_stats(_granularity, __from_timestamp, __to_timestamp, _op_types) s
+      FROM hafbe_backend.get_operation_type_stats(_granularity, _from_timestamp, _to_timestamp, _op_types) s
     ),
 
     /*
@@ -234,7 +214,7 @@ BEGIN
         ts.date::TIMESTAMP AS period,
         ts.trx_count::BIGINT AS trx_count,
         ts.last_block_num
-      FROM hafbe_backend.get_transaction_stats(_granularity, __from_timestamp, __to_timestamp) ts
+      FROM hafbe_backend.get_transaction_stats(_granularity, _from_timestamp, _to_timestamp) ts
     ),
 
     /*
@@ -285,9 +265,8 @@ BEGIN
       wb.operations,
       wb.last_block_num
     FROM with_block wb
-    ORDER BY
-      (CASE WHEN _direction = 'desc' THEN wb.period ELSE NULL END) DESC,
-      (CASE WHEN _direction = 'asc'  THEN wb.period ELSE NULL END) ASC
+    -- Deliberately unordered: the caller applies the single authoritative ORDER BY. Sorting
+    -- here as well meant a second full sort of ~3.7k rows each carrying a nested array.
   );
 END
 $$;

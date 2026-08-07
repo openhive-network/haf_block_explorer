@@ -1,62 +1,58 @@
-{
-    "total_periods": 7,
-    "total_pages": 1,
-    "stats": [
-        {
-            "date": "2016-04-01T00:00:00",
-            "trx_count": 10630,
-            "avg_trx": 0,
-            "min_trx": 0,
-            "max_trx": 21,
-            "last_block_num": 209768
-        },
-        {
-            "date": "2016-05-01T00:00:00",
-            "trx_count": 156423,
-            "avg_trx": 0,
-            "min_trx": 0,
-            "max_trx": 34,
-            "last_block_num": 1052190
-        },
-        {
-            "date": "2016-06-01T00:00:00",
-            "trx_count": 112714,
-            "avg_trx": 0,
-            "min_trx": 0,
-            "max_trx": 6,
-            "last_block_num": 1942555
-        },
-        {
-            "date": "2016-07-01T00:00:00",
-            "trx_count": 170235,
-            "avg_trx": 0,
-            "min_trx": 0,
-            "max_trx": 8,
-            "last_block_num": 2802785
-        },
-        {
-            "date": "2016-08-01T00:00:00",
-            "trx_count": 2194211,
-            "avg_trx": 2,
-            "min_trx": 0,
-            "max_trx": 38,
-            "last_block_num": 3687262
-        },
-        {
-            "date": "2016-09-01T00:00:00",
-            "trx_count": 3141793,
-            "avg_trx": 3,
-            "min_trx": 0,
-            "max_trx": 89,
-            "last_block_num": 4574687
-        },
-        {
-            "date": "2016-10-01T00:00:00",
-            "trx_count": 1175186,
-            "avg_trx": 2,
-            "min_trx": 0,
-            "max_trx": 30,
-            "last_block_num": 5000000
-        }
-    ]
-}
+[
+  {
+    "avg_trx": 0,
+    "date": "2016-04-01T00:00:00",
+    "last_block_num": 209768,
+    "max_trx": 21,
+    "min_trx": 0,
+    "trx_count": 10630
+  },
+  {
+    "avg_trx": 0,
+    "date": "2016-05-01T00:00:00",
+    "last_block_num": 1052190,
+    "max_trx": 34,
+    "min_trx": 0,
+    "trx_count": 156423
+  },
+  {
+    "avg_trx": 0,
+    "date": "2016-06-01T00:00:00",
+    "last_block_num": 1942555,
+    "max_trx": 6,
+    "min_trx": 0,
+    "trx_count": 112714
+  },
+  {
+    "avg_trx": 0,
+    "date": "2016-07-01T00:00:00",
+    "last_block_num": 2802785,
+    "max_trx": 8,
+    "min_trx": 0,
+    "trx_count": 170235
+  },
+  {
+    "avg_trx": 2,
+    "date": "2016-08-01T00:00:00",
+    "last_block_num": 3687262,
+    "max_trx": 38,
+    "min_trx": 0,
+    "trx_count": 2194211
+  },
+  {
+    "avg_trx": 3,
+    "date": "2016-09-01T00:00:00",
+    "last_block_num": 4574687,
+    "max_trx": 89,
+    "min_trx": 0,
+    "trx_count": 3141793
+  },
+  {
+    "avg_trx": 2,
+    "date": "2016-10-01T00:00:00",
+    "last_block_num": 5000000,
+    "max_trx": 30,
+    "min_trx": 0,
+    "trx_count": 1175186
+  }
+]
