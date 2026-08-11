@@ -293,7 +293,7 @@ Witness endpoints use cache tables for performance (updated in LIVE mode):
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
 | `hafbe_app.witness_votes_change_cache` | 24h vote changes |
-| `hafbe_app.account_vest_stats_cache` | Voter vesting power |
+| `hafbe_app.account_vest_stats_cache` | Voter vesting power — current voters/proxies/proposal voters, **plus** accounts with a witness-vote event in the daily-change window, which is what makes `votes_daily_change` / `voters_num_daily_change` count lost votes (issue #142) |
 
 ## Related Processing
 

@@ -59,7 +59,7 @@ Op 400: Vote for witness B
 ### Cache Tables (LIVE only)
 | Table | Purpose |
 |-------|---------|
-| `hafbe_app.account_vest_stats_cache` | Vesting power per account |
+| `hafbe_app.account_vest_stats_cache` | Vesting power per account (incl. voters with an event in the daily-change window) |
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
 | `hafbe_app.witness_votes_change_cache` | 24h vote changes |
@@ -132,9 +132,12 @@ INSERT INTO witness_votes_history (approve=FALSE)
 ### Cache 1: Account Vest Stats
 ```sql
 DELETE FROM account_vest_stats_cache;
-INSERT FROM hafbe_backend.account_vest_stats_view;
+INSERT FROM hafbe_backend.account_vest_stats(first_block_of_today);
 -- Contains: account_id, vests (total), account_vests (own), proxied_vests
 ```
+The window argument matters: `account_vest_stats()` covers current witness
+voters, proxy setters and proposal voters **plus** anyone with a witness vote
+event at or after that block. Cache 4 below depends on that fourth group.
 
 ### Cache 2: Witness Votes
 ```sql
@@ -142,6 +145,10 @@ DELETE FROM witness_votes_cache;
 INSERT SELECT witness_id, SUM(vests), COUNT(*) FROM current_witness_votes
   JOIN account_vest_stats_cache;
 ```
+The INNER JOIN here is provably total and must stay: it is driven by
+`current_witness_votes`, which *is* the first group of `account_vest_stats()`,
+populated by Cache 1 in the same transaction. Cache 4 is the one that lacks this
+property — do not "fix" Cache 2 to match it.
 
 ### Cache 3: Witness Rank
 ```sql
@@ -155,8 +162,21 @@ DELETE FROM witness_votes_change_cache;
 INSERT SELECT witness_id,
   SUM(CASE WHEN approve THEN vests ELSE -vests END),
   SUM(CASE WHEN approve THEN 1 ELSE -1 END)
-FROM witness_votes_history WHERE source_op_block >= first_block_of_today;
+FROM witness_votes_history
+  JOIN account_vest_stats_cache
+WHERE source_op >= hafd.operation_id(first_block_of_today, 0);
 ```
+Unlike Cache 2, this aggregates over **history**, a strict superset of the
+current-voter set. Issue #142: a voter whose last vote was removed inside the
+window is no longer current, so before the fourth group existed the INNER JOIN
+silently dropped its `-1`/`-vests` — counting gains but not losses. Sharing
+`first_block_of_today` with Cache 1 is what makes the join lossless; narrowing
+that group re-opens the bug.
+
+The predicate filters `source_op`, not the decoded block number, so it can use
+the BRIN index on `witness_votes_history(source_op)`. The decoded form matched no
+index (both btree indexes lead with `witness_id`, and Cache 4 has no witness
+filter), so it seq-scanned the whole table on every LIVE block.
 
 ## Data Flow
 
@@ -195,15 +215,23 @@ The cascade logic is in `process_proxy_ops()`. Changes here affect:
 
 ### Modifying cache calculations
 
-Cache functions use views from `hafbe_backend`:
-- `account_vest_stats_view` - Vest calculations
+Cache functions use these `hafbe_backend` objects:
+- `account_vest_stats(_first_block_num)` - Vest calculations; the argument bounds
+  which historical witness voters are included (issue #142)
 - `current_witness_votes_view` - Active votes
 - `witness_votes_history_view` - Vote history
+- `expired_voter_stats_view` - Same arithmetic over *all* accounts; used by the
+  endpoint-side fallbacks, not by the caches
 
-Modify these views to change what data is cached.
+Modify these to change what data is cached.
 
 ## Testing
 
 Witness vote changes can be tested via:
 - `tests/regression/` - Compare against hived snapshots
 - `tests/tavern/patterns-mainnet/` - API endpoint tests for witness votes
+
+Note for daily-change behaviour: every CI dataset is past-dated, so the window
+expression collapses onto the HIGHEST block present. Placing witness-vote ops in
+that block (91000006 for the mock range) is how you exercise daily-change through
+the endpoint — `patterns-mainnet` cannot reach it, because its head block is fixed.

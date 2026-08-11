@@ -159,7 +159,7 @@ For implementation details of each processor:
 ### Cache Tables (LIVE only)
 | Table | Purpose |
 |-------|---------|
-| `hafbe_app.account_vest_stats_cache` | Vesting power per account |
+| `hafbe_app.account_vest_stats_cache` | Vesting power per account — current voters/proxies/proposal voters, **plus** anyone with a witness vote event in the daily-change window (issue #142) |
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
 | `hafbe_app.witness_votes_change_cache` | 24h vote changes |

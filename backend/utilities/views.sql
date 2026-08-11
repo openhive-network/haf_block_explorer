@@ -186,18 +186,58 @@ LEFT JOIN account_withdraws dv ON dv.account = rapv.account_id
 GROUP BY rapv.proxy_id;
 
 /*
- * account_vest_stats_view: Complete vest statistics for accounts whose vesting
+ * account_vest_stats: Complete vest statistics for accounts whose vesting
  * power the API needs to report.
  *
- * Covers three groups (no longer disjoint — a single account may be in
- * multiple, e.g. casting both witness and proposal votes):
+ * Covers four groups (not disjoint — a single account may be in several, e.g.
+ * casting both witness and proposal votes):
  *   - direct witness voters   (used by get_witness_voters)
  *   - proxy setters           (used by get_account_proxies_power)
  *   - direct proposal voters  (used by proposal_vote_stats_cache refresh)
+ *   - voters with a witness vote event at or after _first_block_num
+ *     (used by witness_votes_change_cache — the "gained/lost votes" columns)
  *
  * UNION (not UNION ALL) is required: an account appearing in two groups
  * must collapse to a single row, otherwise downstream SUM(vests)
- * aggregations double-count them.
+ * aggregations double-count them. The fourth branch overlaps the first
+ * heavily, so this matters more than it used to.
+ *
+ * WHY THE FOURTH BRANCH (issue #142). The first three cover only CURRENT
+ * participants, but Cache 4 of process_witness_votes_cache() aggregates over
+ * HISTORY — a strict superset. A voter whose LAST witness vote was removed
+ * inside the window has left all three sets, so it had no row here and Cache
+ * 4's INNER JOIN silently dropped its -1 / -vests: gains were counted, losses
+ * vanished (block_explorer_ui#743). Two of the three removal paths produce that
+ * shape — an approve=FALSE history row for an account just deleted from
+ * current_witness_votes: an explicit un-vote, and the declined_voting_rights /
+ * expired_account_notification cascade in process_expired_accounts (which drops ALL
+ * of the account's votes at once). The proxy cascade in process_proxy_ops was NOT
+ * affected: it upserts current_account_proxies in the same call, so the second
+ * branch above already covered those accounts. Including the rest here makes that
+ * join lossless BY CONSTRUCTION.
+ *
+ * WHY IT IS WINDOW-BOUNDED. Bounding the branch to the same window Cache 4
+ * aggregates keeps growth proportional to daily churn instead of to all of
+ * history. This whole result is re-materialised into account_vest_stats_cache
+ * on EVERY LIVE block (~3 s), so unbounded growth would be paid forever.
+ *
+ * WHY A FUNCTION AND NOT A VIEW. Cache 1 and Cache 4 must aggregate over the
+ * same window or the INNER JOIN stops being total; a view cannot take that
+ * window as an argument, and re-deriving it inside the view body would let the
+ * two drift between statements (they straddle midnight otherwise).
+ * Note the consequence: a view body binds relation names at CREATE time (which
+ * is how install_app.sh pins the unqualified btracker relations below via
+ * SET SEARCH_PATH), whereas a function body resolves them at EXECUTION time,
+ * against the caller's search_path. That is already a hard requirement for any
+ * vest query — btracker_backend.nai_vests() reads `asset_table` unqualified and
+ * carries no SET search_path — so every caller that works today already sets it
+ * (scripts/process_blocks.sh, scripts/prepare_mock_cache.sh,
+ * PGRST_DB_EXTRA_SEARCH_PATH).
+ *
+ * PARAMETERS:
+ *   _first_block_num - inclusive lower bound, as a block number, on the witness
+ *                      vote events considered by the fourth branch. 0 = all of
+ *                      history.
  *
  * COLUMNS:
  *   account_id    - The account ID
@@ -209,26 +249,62 @@ GROUP BY rapv.proxy_id;
  *   vests = account_vests + proxied_vests
  *   account_vests = balance - delayed_vests
  */
-CREATE OR REPLACE VIEW hafbe_backend.account_vest_stats_view AS
-WITH tracked_accounts AS (
-  SELECT account_id FROM hafbe_backend.witness_voters_list_view
-  UNION
-  SELECT account_id FROM hafbe_app.current_account_proxies
-  UNION
-  SELECT voter_id AS account_id FROM hafbe_app.current_proposal_votes
+-- Superseded by the function below; dropped so upgraded databases do not keep a
+-- stale copy that silently omits the fourth group.
+DROP VIEW IF EXISTS hafbe_backend.account_vest_stats_view;
+
+CREATE OR REPLACE FUNCTION hafbe_backend.account_vest_stats(_first_block_num INT)
+RETURNS TABLE (
+    account_id    INT,
+    vests         BIGINT,
+    account_vests BIGINT,
+    proxied_vests BIGINT
 )
-SELECT
-  cw.account_id,
-  COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
-    + COALESCE(vpvv.proxied_vests, 0) AS vests,
-  COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
-  COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
-FROM tracked_accounts cw
-LEFT JOIN current_account_balances cab
-  ON cab.account = cw.account_id
-  AND cab.nai = btracker_backend.nai_vests()
-LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
-LEFT JOIN account_withdraws dv ON dv.account = cw.account_id;
+-- LANGUAGE sql, and deliberately WITHOUT SET clauses: a single-SELECT sql function
+-- is inlinable, so this is flattened into the caller's INSERT ... SELECT exactly as
+-- the view it replaced was. A plpgsql body would buffer every row through a
+-- tuplestore on each LIVE block and report a fixed 1000-row estimate; any SET clause
+-- here would block inlining too. The only caller already sets all three
+-- (db/process_witness_votes.sql), and they apply to the flattened statement.
+LANGUAGE sql STABLE
+AS
+$$
+    WITH tracked_accounts AS (
+      SELECT twv.account_id FROM hafbe_backend.witness_voters_list_view twv
+      UNION
+      SELECT tap.account_id FROM hafbe_app.current_account_proxies tap
+      UNION
+      SELECT tpv.voter_id AS account_id FROM hafbe_app.current_proposal_votes tpv
+      UNION
+      -- Compared against source_op rather than the decoded block number so the
+      -- predicate stays sargable: hafd.operation_id(b, 0) is the minimum
+      -- operation id in block b, and witness_votes_history carries a BRIN index
+      -- on source_op. Decoding per row (operation_id_to_block_num) would force a
+      -- seq scan of a forever-growing table on every LIVE block.
+      --
+      -- The IS NOT NULL guard is load-bearing: hafd.operation_id is a non-STRICT C
+      -- function that reads a NULL block number as 0, so without it a NULL window
+      -- (a chain whose genesis is after today's midnight, or an unprocessed context)
+      -- would silently widen this branch to ALL of history instead of matching
+      -- nothing, which is what the old `source_op_block >= NULL` did.
+      SELECT twh.voter_id AS account_id
+      FROM hafbe_app.witness_votes_history twh
+      WHERE _first_block_num IS NOT NULL
+        AND twh.source_op >= hafd.operation_id(_first_block_num, 0)
+    )
+    SELECT
+      cw.account_id,
+      COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
+        + COALESCE(vpvv.proxied_vests, 0) AS vests,
+      COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
+      COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
+    FROM tracked_accounts cw
+    LEFT JOIN current_account_balances cab
+      ON cab.account = cw.account_id
+      AND cab.nai = btracker_backend.nai_vests()
+    LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
+    LEFT JOIN account_withdraws dv ON dv.account = cw.account_id
+$$;
 
 -- proposal_paid_amounts view removed: paid_amount is now a running total column
 -- on hafbe_app.current_proposals, updated by process_proposal_pay_op. Endpoints

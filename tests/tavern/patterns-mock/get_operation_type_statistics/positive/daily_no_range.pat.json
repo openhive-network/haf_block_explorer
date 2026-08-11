@@ -4,6 +4,10 @@
     "last_block_num": 91000006,
     "operations": [
       {
+        "op_count": 2,
+        "op_type_id": 12
+      },
+      {
         "op_count": 1,
         "op_type_id": 13
       },
@@ -36,7 +40,7 @@
         "op_type_id": 92
       }
     ],
-    "total_operations": 16,
+    "total_operations": 18,
     "total_transactions": 0
   },
   {
