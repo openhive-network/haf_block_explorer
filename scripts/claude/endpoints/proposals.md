@@ -222,8 +222,9 @@ power at time of vote".
 **Stake sourcing** — two sources, chosen per *voter*, never per row (so a voter's approve and
 withdrawal rows always agree):
 1. `hafbe_app.account_vest_stats_cache` — the fast path, but it only tracks *current* witness voters,
-   proxy setters and proposal voters. A voter who withdrew approval and does nothing else in
-   governance has **no cache row**.
+   proxy setters and proposal voters, plus accounts with a witness-vote event in the daily-change
+   window (issue #142). That fourth group covers *witness*-vote history, not proposal-vote history,
+   so a voter who withdrew approval and does nothing else in governance still has **no cache row**.
 2. `hafbe_backend.expired_voter_stats_view` — same arithmetic over every account; always resolves.
    Joined **only** for the page's cache-miss voters, so an all-cache-hit page pays nothing for it.
 

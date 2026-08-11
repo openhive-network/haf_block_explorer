@@ -38,9 +38,11 @@ SET ROLE hafbe_owner;
  *
  * STAKE SOURCING (two sources, chosen per VOTER, never per row):
  *   - hafbe_app.account_vest_stats_cache is the fast path, but it only tracks
- *     current witness voters, current proxy setters and current proposal voters
- *     (see hafbe_backend.account_vest_stats_view.tracked_accounts). A voter who
- *     withdrew approval and does nothing else in governance has no cache row.
+ *     current witness voters, current proxy setters, current proposal voters and
+ *     accounts with a witness vote event in the daily-change window (see
+ *     hafbe_backend.account_vest_stats.tracked_accounts). A voter who withdrew
+ *     approval and does nothing else in governance still has no cache row —
+ *     that fourth group covers witness-vote history, not proposal-vote history.
  *   - hafbe_backend.expired_voter_stats_view runs the same arithmetic over
  *     hive.accounts_view (every account) and always resolves. It is joined ONLY
  *     for the page's cache-miss voters (missing_voters CTE), so a page of pure

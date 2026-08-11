@@ -622,6 +622,13 @@ $$;
  * Used to determine if we're transitioning from MASSIVE to LIVE stage.
  * Indexes are created once before entering LIVE processing.
  *
+ * The probe names the most recently ADDED index, not an arbitrary one, so that a
+ * newly added index also reaches databases that are already LIVE. Anyone adding an
+ * index to create_hafbe_indexes() must retarget it here too, otherwise the new index
+ * silently never exists on an existing deployment. This is a stopgap: the project has
+ * no schema-version mechanism, and a monotonic version compared against a code
+ * constant would generalise it.
+ *
  * @returns TRUE if indexes exist, FALSE otherwise
  */
 CREATE OR REPLACE FUNCTION hafbe_app.isIndexesCreated()
@@ -630,10 +637,17 @@ LANGUAGE 'plpgsql' STABLE
 AS
 $$
 BEGIN
+  -- Sentinel = the most recently ADDED index, not an arbitrary one. An already-LIVE
+  -- database never re-enters the gate that calls create_hafbe_indexes(), so pointing
+  -- this at the newest index is what makes a newly added index reach existing
+  -- deployments. Re-firing is safe: every statement in create_hafbe_indexes() is
+  -- CREATE INDEX IF NOT EXISTS, register_haf_indexes() registers IF NOT EXISTS
+  -- commands, and the two cache seeds beside it are re-run by single_processing on
+  -- the same block regardless.
   RETURN EXISTS(
       SELECT true FROM pg_index WHERE indexrelid =
       (
-        SELECT oid FROM pg_class WHERE relname = 'witness_votes_history_witness_voter'
+        SELECT oid FROM pg_class WHERE relname = 'witness_votes_history_source_op_brin'
       )
     );
 END
@@ -1138,6 +1152,8 @@ $$;
  *   - current_witness_votes_witness_id: Filter by witness
  *   - witness_votes_history_witness_id_source_op: Time-ordered history
  *   - witness_votes_history_witness_voter: Efficient voter filtering
+ *   - witness_votes_history_source_op_brin: Block-range suffix scans with no witness
+ *     filter (the daily-change cache refresh)
  *
  * Account Proxies:
  *   - account_proxies_history_account_id_source_op: Time-ordered history (also serves account filtering)
@@ -1161,6 +1177,17 @@ BEGIN
 
   -- Index for efficient voter filtering in get_witness_votes_history endpoint
   CREATE INDEX IF NOT EXISTS witness_votes_history_witness_voter ON hafbe_app.witness_votes_history USING btree (witness_id, voter_id);
+
+  -- Cache 4 of process_witness_votes_cache() reads a source_op range suffix of this
+  -- table on every LIVE block and has no witness filter, so neither index above can
+  -- serve it (both lead with witness_id). source_op rises monotonically with
+  -- insertion order, which is the ideal shape for BRIN: near-zero maintenance cost
+  -- and a tiny index, versus a seq scan of a forever-growing table every ~3 seconds.
+  -- autosummarize: this table is append-only and gets no vacuum request of its own
+  -- (only the cache tables do), so without it the newest ranges -- exactly the ones
+  -- the daily-change scan targets -- stay unsummarized until an autovacuum happens to
+  -- fire, and unsummarized ranges always test as matching.
+  CREATE INDEX IF NOT EXISTS witness_votes_history_source_op_brin ON hafbe_app.witness_votes_history USING brin (source_op) WITH (autosummarize = on);
 
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_source_op ON hafbe_app.account_proxies_history USING btree (account_id, source_op);
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);

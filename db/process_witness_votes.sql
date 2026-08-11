@@ -140,7 +140,9 @@ $$;
  * to keep the cached statistics up-to-date.
  *
  * CACHE TABLES UPDATED:
- *   - account_vest_stats_cache: Vesting power per account (own + proxied)
+ *   - account_vest_stats_cache: Vesting power per account (own + proxied),
+ *       covering current voters/proxies/proposal voters plus anyone with a
+ *       witness vote event in today's window (issue #142)
  *   - witness_votes_cache: Total votes and voter count per witness
  *   - witness_rank_cache: Witness rankings by vote weight
  *   - witness_votes_change_cache: Daily vote changes (for "24h change" stats)
@@ -156,11 +158,20 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS $$
 DECLARE
-  -- Find the first block of "today" for daily change calculations
+  -- Lower bound of the "daily change" window. Strictly this is the LAST block at or
+  -- before today's midnight -- i.e. usually the final block of yesterday -- and the
+  -- window below is inclusive of it, so one pre-midnight block counts as today. That
+  -- off-by-one is pre-existing behaviour, preserved deliberately; correcting it moves
+  -- published numbers and belongs in its own change.
+  -- CURRENT_DATE, not 'today'::DATE: the latter is a literal cast, folded to a
+  -- constant at PLAN time, so once plpgsql caches a generic plan the window
+  -- freezes at whatever day that plan was built and never rolls over. Both
+  -- consumers below (Cache 1's argument and Cache 4's predicate) read this one
+  -- variable, so they stay consistent within the block transaction either way.
   _first_block_num INT := (
     SELECT num
     FROM hive.blocks_view
-    WHERE created_at <= 'today'::DATE
+    WHERE created_at <= CURRENT_DATE
     ORDER BY num DESC
     LIMIT 1
   );
@@ -177,13 +188,19 @@ BEGIN
    */
   DELETE FROM hafbe_app.account_vest_stats_cache;
 
+  /*
+   * _first_block_num is passed so the account set also covers voters with a vote
+   * event inside today's window, including those who have just stopped being
+   * current voters. That is what makes Cache 4's INNER JOIN below lossless
+   * (issue #142); the two must share one window or they can drift apart.
+   */
   INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
   SELECT
     account_id,
     vests,
     account_vests,
     proxied_vests
-  FROM hafbe_backend.account_vest_stats_view;
+  FROM hafbe_backend.account_vest_stats(_first_block_num);
 
 
   /*
@@ -192,6 +209,15 @@ BEGIN
    * ===================================================================================
    * Caches total vote weight and voter count per witness.
    * Uses the account_vest_stats_cache we just populated.
+   *
+   * The INNER JOIN below is deliberate and provably total — do NOT "fix" it to
+   * match Cache 4 (issue #142). It is driven by current_witness_votes, which is
+   * exactly the set hafbe_backend.witness_voters_list_view aggregates and hence
+   * the first branch of tracked_accounts, so every driver key is a cache key.
+   * Cache 1 populated that cache in this same statement sequence, in the same
+   * transaction, with no intervening DML on current_witness_votes. Cache 4 is
+   * the one that lacks this property: it is driven by HISTORY, a strict superset.
+   * Same reasoning covers hafbe_backend.get_witness_voters.
    */
   DELETE FROM hafbe_app.witness_votes_cache;
 
@@ -241,6 +267,17 @@ BEGIN
    *   - Positive vests for approve=TRUE votes
    *   - Negative vests for approve=FALSE votes
    *   - Sum gives net change in vote weight
+   *
+   * The INNER JOIN is safe ONLY because Cache 1 was built with this same
+   * _first_block_num — see the fourth tracked_accounts branch in
+   * hafbe_backend.account_vest_stats() (issue #142). Narrowing it re-opens the bug.
+   *
+   * Filtering source_op rather than the decoded block number keeps the predicate
+   * sargable: hafd.operation_id(b, 0) is the minimum operation id in block b, so
+   * this is exactly equivalent to source_op_block >= _first_block_num -- EXCEPT for
+   * NULL, which is why the guard is explicit. hafd.operation_id is non-STRICT and
+   * reads a NULL block number as 0, so without it a NULL window would aggregate all
+   * of history rather than nothing.
    */
   DELETE FROM hafbe_app.witness_votes_change_cache;
 
@@ -251,7 +288,8 @@ BEGIN
     SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT                        AS voters_num_daily_change
   FROM hafbe_backend.witness_votes_history_view wvhc
   JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = wvhc.voter_id
-  WHERE wvhc.source_op_block >= _first_block_num
+  WHERE _first_block_num IS NOT NULL
+    AND wvhc.source_op >= hafd.operation_id(_first_block_num, 0)
   GROUP BY wvhc.witness_id;
 
 END
