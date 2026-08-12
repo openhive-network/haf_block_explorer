@@ -12,7 +12,7 @@ variables:
   # Pin to specific digest — the :2.2 tag was updated to an image without
   # passwordless sudo, breaking cache-manager and test scripts that use sudo.
   # Revert to tag once common-ci-configuration fixes the image.
-  HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner@sha256:1d94055f419c507ac8c8431478fe6292ef594e1edf42fe9fbe63b4bcdd1ae84e"
+  HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner@sha256:beef328b4722d5a40ce8ef7ae04f2aa67e53e7c724390a76922823151e470dd2"
   # HAF app role prefix for templates
   HAF_APP_ROLE_PREFIX: "hafbe"
   # Git configuration
