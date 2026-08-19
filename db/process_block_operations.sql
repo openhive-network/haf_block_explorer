@@ -45,7 +45,14 @@ BEGIN
       date_trunc('day',   bv.created_at)    AS by_day,
       date_trunc('month', bv.created_at)    AS by_month
     FROM hafbe_app.operations_view ov
+    -- The explicit range on bv.num is redundant with the join condition but
+    -- necessary: operations_view derives block_num from
+    -- hafd.operation_id_to_block_num(id), and the planner cannot propagate the
+    -- range through a join equivalence on a function expression - without it,
+    -- blocks_view is hash-joined in full (~22s/block at 109M blocks; with it,
+    -- an index range scan, <1ms).
     JOIN hafbe_app.blocks_view bv ON bv.num = ov.block_num
+                                 AND bv.num BETWEEN _from AND _to
     WHERE ov.block_num BETWEEN _from AND _to
       AND ov.id >= hafd.operation_id(_from, 0)
       AND ov.id <  hafd.operation_id(_to + 1, 0)
