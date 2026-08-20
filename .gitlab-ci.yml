@@ -115,7 +115,7 @@ verify_poetry_lock_stability_api_package:
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 verify_poetry_lock_stability_api_generation:
   stage: lint
@@ -123,13 +123,13 @@ verify_poetry_lock_stability_api_generation:
   variables:
     PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
   tags:
-    - public-runner-docker
+  - public-runner-docker
 
 find_haf_image:
   extends: .find_haf_image
   stage: detect
   variables:
-    UPSTREAM_BRANCH: "develop"
+    UPSTREAM_BRANCH: "1.29.0-rc1"
     HAF_PATTERNS_REF: "develop"
 
 # Quick Test Mode Setup - overrides HAF_UPSTREAM_COMMIT with cached version
