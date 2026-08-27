@@ -1227,4 +1227,60 @@ BEGIN
 END
 $$;
 
+
+-- ============================================================================
+-- GENERIC DRIVER ENTRY POINT AND APPLICATION REGISTRY (haf#341)
+-- ============================================================================
+
+/**
+ * process_blocks()
+ * ----------------
+ * Entry point for the generic HAF block-processing driver (haf_app_driver.py):
+ * processes one range delivered by hive.app_next_iteration for the
+ * hafbe_app + embedded balance-tracker context group. The driver owns the
+ * transaction, so this must not COMMIT. search_path is set to the embedded
+ * balance tracker's schema because its functions use unqualified names (the
+ * legacy loop got it from process_blocks.sh); temp_buffers as the legacy
+ * session had.
+ *
+ * @param _block_range  Range of blocks to process
+ */
+DO $$
+DECLARE
+  __btracker_schema VARCHAR;
+BEGIN
+  -- this file is loaded with search_path set to the embedded balance tracker schema
+  SHOW SEARCH_PATH INTO __btracker_schema;
+
+  EXECUTE format(
+    $BODY$
+      CREATE OR REPLACE PROCEDURE hafbe_app.process_blocks( _block_range hive.blocks_range )
+      LANGUAGE 'plpgsql'
+      SET search_path = %I, pg_catalog
+      SET temp_buffers = '16MB'
+      AS
+      $pb$
+      BEGIN
+        -- main() stamped the start of a processing session for the timing logs;
+        -- a gap since the last report means a (re)started processor
+        UPDATE hafbe_app.app_status
+        SET started_processing_at = clock_timestamp(),
+            last_reported_at = clock_timestamp()
+        WHERE started_processing_at IS NULL
+           OR last_reported_at < clock_timestamp() - interval '5 minutes';
+
+        PERFORM hafbe_app.log_and_process_blocks( 'hafbe_app', %L, _block_range );
+      END
+      $pb$
+    $BODY$, __btracker_schema, __btracker_schema);
+
+  -- The embedded balance tracker registered itself as a standalone application
+  -- during its own install; its context is driven by this loop instead.
+  IF EXISTS ( SELECT 1 FROM hafd.applications WHERE name = __btracker_schema ) THEN
+    PERFORM hive.app_unregister( __btracker_schema );
+  END IF;
+  PERFORM hive.app_register( 'hafbe_app', ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group, 'hafbe_app.process_blocks' );
+END
+$$;
+
 RESET ROLE;
