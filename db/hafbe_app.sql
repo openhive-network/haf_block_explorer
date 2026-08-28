@@ -908,7 +908,7 @@ BEGIN
     -- "Contexts {hafbe_app,hafbe_bal} are not synchronized".
     -- Idempotent in HAF: no-op after first LIVE block.
     PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
-    RAISE NOTICE '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
+    RAISE DEBUG '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
   END IF;
 
   SELECT hafbe_backend.get_sync_time(_time, 'time_on_start') INTO _time;
@@ -925,13 +925,18 @@ BEGIN
 
   INSERT INTO hafbe_app.sync_time_logs (block_num, time_json) VALUES (_block_range.first_block, _time);
 
-  RAISE NOTICE 'Processed blocks in % seconds',
-  ROUND(EXTRACT(epoch FROM (SELECT clock_timestamp() - last_reported_at FROM hafbe_app.app_status LIMIT 1)), 3);
+  -- per-range timing: a batch summary in massive sync, one line per block at
+  -- head - the driver's periodic summary covers the latter, so DEBUG there
+  IF hive.get_current_stage_name(_context_hafbe) = 'MASSIVE_PROCESSING' THEN
+    RAISE NOTICE 'Processed blocks in % seconds',
+    ROUND(EXTRACT(epoch FROM (SELECT clock_timestamp() - last_reported_at FROM hafbe_app.app_status LIMIT 1)), 3);
+    RAISE NOTICE 'Block processing running for % minutes',
+    ROUND((EXTRACT(epoch FROM (SELECT clock_timestamp() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
+  ELSE
+    RAISE DEBUG 'Processed block in % seconds',
+    ROUND(EXTRACT(epoch FROM (SELECT clock_timestamp() - last_reported_at FROM hafbe_app.app_status LIMIT 1)), 3);
+  END IF;
   UPDATE hafbe_app.app_status SET last_reported_at = clock_timestamp();
-
-  RAISE NOTICE 'Block processing running for % minutes
-  ',
-  ROUND((EXTRACT(epoch FROM (SELECT clock_timestamp() - started_processing_at FROM hafbe_app.app_status LIMIT 1)) / 60)::NUMERIC, 2);
 
 END
 $$;
