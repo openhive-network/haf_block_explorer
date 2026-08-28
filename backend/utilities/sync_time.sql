@@ -68,7 +68,9 @@ BEGIN
         )
       )
     );
-    RAISE NOTICE '% processed successfully. % seconds', _column_name, _time ->> _column_name;
+    -- per-component timing of every range; recorded in hafbe_app.sync_time_logs, so keep
+    -- it out of the block-processing log (one line per component per block at head)
+    RAISE DEBUG '% processed successfully. % seconds', _column_name, _time ->> _column_name;
   END IF;
 END
 $$;

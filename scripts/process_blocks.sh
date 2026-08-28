@@ -103,18 +103,15 @@ process_blocks() {
     # embedded balance tracker context) and idles on its own connection between
     # blocks. It ships with the psql base image. exec it directly so that it is
     # PID 1 and receives SIGTERM itself (a bash parent would swallow it until
-    # docker's kill); the optional log file is fed through a process substitution,
-    # which survives the exec. The driver stamps its own timestamps.
+    # docker's kill). The driver writes the optional log file and stamps its own
+    # timestamps.
     if command -v haf_app_driver.py >/dev/null 2>&1; then
         trap - EXIT INT QUIT TERM
         local limit_arg=()
         [ "$n_blocks" != "null" ] && limit_arg=(--stop-at-block="$n_blocks")
         date -uIseconds > /tmp/block_processing_startup_time.txt
-        if [[ "$log_file" == "STDOUT" ]]; then
-            exec haf_app_driver.py --app=hafbe_app --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer "${limit_arg[@]}"
-        else
-            exec haf_app_driver.py --app=hafbe_app --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer "${limit_arg[@]}" > >(tee -i "$log_file") 2>&1
-        fi
+        # the driver appends to the log file itself (STDOUT = none)
+        exec haf_app_driver.py --app=hafbe_app --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}"
     fi
     echo "WARNING: haf_app_driver.py not found, falling back to the legacy CALL main() loop"
 
