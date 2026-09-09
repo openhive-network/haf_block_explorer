@@ -20,6 +20,8 @@ tags:
     description: Information about blocks
   - name: Transactions
     description: Information about transactions
+  - name: HBD
+    description: HBD supply and interest rate history
   - name: Accounts
     description: Information about accounts
   - name: Witnesses
@@ -70,6 +72,10 @@ declare
     {
       "name": "Transactions",
       "description": "Information about transactions"
+    },
+    {
+      "name": "HBD",
+      "description": "HBD supply and interest rate history"
     },
     {
       "name": "Accounts",
@@ -1007,6 +1013,55 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_backend.operation_type_stats"
+        }
+      },
+      "hafbe_backend.hbd_granularity": {
+        "type": "string",
+        "enum": [
+          "daily",
+          "weekly",
+          "monthly",
+          "yearly"
+        ]
+      },
+      "hafbe_backend.hbd_status": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End of the UTC period, capped at the current time, as in transaction statistics. Values come from the last processed block of the period, which may be earlier than this label."
+          },
+          "hbd_supply": {
+            "type": "integer",
+            "format": "int64",
+            "x-sql-datatype": "BIGINT",
+            "description": "Total HBD supply in milli-HBD, including the treasury."
+          },
+          "virtual_supply": {
+            "type": "integer",
+            "format": "int64",
+            "x-sql-datatype": "BIGINT",
+            "description": "Virtual supply in milli-HIVE."
+          },
+          "debt_ratio_pct": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "x-sql-datatype": "NUMERIC",
+            "description": "Provisional formula from issue 147: 100 * current_hbd_supply / virtual_supply. The supplies have different asset units; this is not the protocol debt ratio. The definition is pending clarification. Null when virtual_supply is zero."
+          },
+          "hbd_interest_rate": {
+            "type": "integer",
+            "description": "Declared HBD interest rate in basis points; 1500 means 15%%."
+          }
+        }
+      },
+      "hafbe_backend.array_of_hbd_status": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.hbd_status"
         }
       },
       "hafbe_backend.proposal": {
@@ -3000,6 +3055,73 @@ declare
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    "/hbd/status": {
+      "get": {
+        "tags": [
+          "HBD"
+        ],
+        "summary": "HBD supply and interest rate history",
+        "description": "Returns the HBD state at the last processed block of each UTC period.\nUses the existing transaction statistics to select blocks. Weekly periods start on Monday.\nRange boundaries select whole periods, as in transaction statistics.\nPeriods without blocks retain the last available state.\n\nThe debt ratio uses the provisional formula from issue 147 while its definition is clarified.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hbd_status();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/hbd/status''`\n",
+        "operationId": "hafbe_endpoints.get_hbd_status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.hbd_granularity",
+              "default": "yearly"
+            },
+            "description": "Period size; daily, weekly, monthly or yearly."
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/hafbe_backend.sort_direction",
+              "default": "desc"
+            },
+            "description": "Sort periods from oldest to newest (asc) or newest to oldest (desc)."
+          },
+          {
+            "in": "query",
+            "name": "from-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Lower block boundary, supplied as a block number or timestamp, using the shared HAF block-range conversion. The containing calendar period is included in full. Omitted or null means the beginning of the processed history."
+          },
+          {
+            "in": "query",
+            "name": "to-block",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "description": "Upper block boundary, supplied as a block number or timestamp, using the shared HAF block-range conversion. The containing calendar period is included in full, up to the processed application head. Omitted or null means the processed head."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All periods in the requested range as a flat array, without pagination.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_hbd_status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid granularity, direction or block range."
           }
         }
       }
