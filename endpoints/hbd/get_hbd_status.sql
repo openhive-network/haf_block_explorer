@@ -94,10 +94,10 @@ BEGIN
   RETURN QUERY
     SELECT
       ab.date,
-      bv.current_hbd_supply::BIGINT,
-      bv.virtual_supply::BIGINT,
+      bv.current_hbd_supply::TEXT,
+      bv.virtual_supply::TEXT,
       -- TODO(#147): replace the provisional issue formula after the author clarifies the metric.
-      100::NUMERIC * bv.current_hbd_supply / NULLIF(bv.virtual_supply, 0),
+      ROUND(100::NUMERIC * bv.current_hbd_supply / NULLIF(bv.virtual_supply, 0), 3),
       bv.hbd_interest_rate::INT
     FROM hafbe_backend.get_aggregation_blocks(
       _granularity, _direction, _block_range.first_block, _block_range.last_block, _current_block

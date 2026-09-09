@@ -20,15 +20,16 @@ the final processed block of that month. Weeks start on Monday.
 | Field | Meaning |
 |-------|---------|
 | `period` | End of the UTC period capped at current time, as in transaction statistics |
-| `hbd_supply` | `current_hbd_supply` in milli-HBD, including treasury HBD |
-| `virtual_supply` | Virtual supply in milli-HIVE |
-| `debt_ratio_pct` | Provisional issue formula; numeric or null for zero virtual supply |
+| `hbd_supply` | `current_hbd_supply` in milli-HBD, including treasury HBD, as a JSON string |
+| `virtual_supply` | Virtual supply in milli-HIVE as a JSON string |
+| `debt_ratio_pct` | Provisional issue formula rounded to three decimal places; numeric or null for zero virtual supply |
 | `hbd_interest_rate` | Declared rate in basis points: `1500` means 15% |
 
 **The formula is provisional pending clarification in issue #147:**
 `100 * current_hbd_supply / virtual_supply`. It compares amounts in different
 asset units and must not be interpreted as the protocol debt ratio. The SQL
-uses `NUMERIC` without additional rounding and returns null for a zero denominator.
+uses `NUMERIC`, rounds the result to three decimal places and returns null for a zero denominator.
+Both supply fields preserve the full integer amount as text to avoid precision loss in JSON clients.
 Responses have a two-second cache lifetime while this definition is provisional.
 
 ## Implementation
@@ -44,8 +45,9 @@ come from the same block and the same application fork. The period label can be
 later than that block when synchronization is behind. Empty processed history
 returns an empty array. There are no new tables, state processors or backfill.
 
-## MVP tests
+## Tests
 
 Tavern requests live in `tests/tavern/patterns-mainnet/get_hbd_status/`.
-Their `.pat.json` files are intentionally empty pending operator review. Expected
-responses will be prepared afterwards using either a local HAF sync or CI output.
+Their `.pat.json` files originate from CI job `3270133` on the 5M-block mainnet
+fixture. Positive patterns reflect the supply strings and the debt ratio rounded
+to three decimal places; negative patterns preserve the validation errors.
