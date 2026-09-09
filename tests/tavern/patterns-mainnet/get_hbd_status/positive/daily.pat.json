@@ -1,0 +1,254 @@
+[
+  {
+    "debt_ratio_pct": 1.4968710747495555,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2413759427,
+    "period": "2016-09-16T00:00:00",
+    "virtual_supply": 161253662237
+  },
+  {
+    "debt_ratio_pct": 1.5150578171547382,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2431819497,
+    "period": "2016-09-15T00:00:00",
+    "virtual_supply": 160510012850
+  },
+  {
+    "debt_ratio_pct": 1.5355548231304637,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2449252807,
+    "period": "2016-09-14T00:00:00",
+    "virtual_supply": 159502791441
+  },
+  {
+    "debt_ratio_pct": 1.5513028345123026,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2456482624,
+    "period": "2016-09-13T00:00:00",
+    "virtual_supply": 158349650974
+  },
+  {
+    "debt_ratio_pct": 1.5528436677768034,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2444773929,
+    "period": "2016-09-12T00:00:00",
+    "virtual_supply": 157438509731
+  },
+  {
+    "debt_ratio_pct": 1.5577263326535764,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2435469199,
+    "period": "2016-09-11T00:00:00",
+    "virtual_supply": 156347693940
+  },
+  {
+    "debt_ratio_pct": 1.5606909128208517,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2424293400,
+    "period": "2016-09-10T00:00:00",
+    "virtual_supply": 155334626484
+  },
+  {
+    "debt_ratio_pct": 1.5653084869839993,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2417427810,
+    "period": "2016-09-09T00:00:00",
+    "virtual_supply": 154437788468
+  },
+  {
+    "debt_ratio_pct": 1.5625174810830686,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2398791699,
+    "period": "2016-09-08T00:00:00",
+    "virtual_supply": 153520951160
+  },
+  {
+    "debt_ratio_pct": 1.5656759639817914,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2389394330,
+    "period": "2016-09-07T00:00:00",
+    "virtual_supply": 152611037339
+  },
+  {
+    "debt_ratio_pct": 1.5672892911150627,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2376857249,
+    "period": "2016-09-06T00:00:00",
+    "virtual_supply": 151654022169
+  },
+  {
+    "debt_ratio_pct": 1.5661017872901937,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2360790959,
+    "period": "2016-09-05T00:00:00",
+    "virtual_supply": 150743136759
+  },
+  {
+    "debt_ratio_pct": 1.5622234753850321,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2340628662,
+    "period": "2016-09-04T00:00:00",
+    "virtual_supply": 149826750070
+  },
+  {
+    "debt_ratio_pct": 1.561129251092344,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2323491119,
+    "period": "2016-09-03T00:00:00",
+    "virtual_supply": 148834000604
+  },
+  {
+    "debt_ratio_pct": 1.5590356360600885,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2305665374,
+    "period": "2016-09-02T00:00:00",
+    "virtual_supply": 147890485674
+  },
+  {
+    "debt_ratio_pct": 1.562994799346646,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2297081366,
+    "period": "2016-09-01T00:00:00",
+    "virtual_supply": 146966667257
+  },
+  {
+    "debt_ratio_pct": 1.5618367377425133,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2281176625,
+    "period": "2016-08-31T00:00:00",
+    "virtual_supply": 146057303550
+  },
+  {
+    "debt_ratio_pct": 1.5619792387409388,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2266227842,
+    "period": "2016-08-30T00:00:00",
+    "virtual_supply": 145086937508
+  },
+  {
+    "debt_ratio_pct": 1.5616694475361141,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2248391487,
+    "period": "2016-08-29T00:00:00",
+    "virtual_supply": 143973584842
+  },
+  {
+    "debt_ratio_pct": 1.5630889215656838,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2235517256,
+    "period": "2016-08-28T00:00:00",
+    "virtual_supply": 143019199046
+  },
+  {
+    "debt_ratio_pct": 1.565315322788392,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2220895927,
+    "period": "2016-08-27T00:00:00",
+    "virtual_supply": 141881695954
+  },
+  {
+    "debt_ratio_pct": 1.5613278052882804,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2199503309,
+    "period": "2016-08-26T00:00:00",
+    "virtual_supply": 140873896023
+  },
+  {
+    "debt_ratio_pct": 1.5493376536517167,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2168424469,
+    "period": "2016-08-25T00:00:00",
+    "virtual_supply": 139958159791
+  },
+  {
+    "debt_ratio_pct": 1.534569545496107,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2134121796,
+    "period": "2016-08-24T00:00:00",
+    "virtual_supply": 139069734719
+  },
+  {
+    "debt_ratio_pct": 1.5396615443525765,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2127640737,
+    "period": "2016-08-23T00:00:00",
+    "virtual_supply": 138188860065
+  },
+  {
+    "debt_ratio_pct": 1.5434153281316656,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2119014089,
+    "period": "2016-08-22T00:00:00",
+    "virtual_supply": 137293834678
+  },
+  {
+    "debt_ratio_pct": 1.5439756705190528,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2106171075,
+    "period": "2016-08-21T00:00:00",
+    "virtual_supply": 136412193224
+  },
+  {
+    "debt_ratio_pct": 1.5320963462926853,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2076405084,
+    "period": "2016-08-20T00:00:00",
+    "virtual_supply": 135527056704
+  },
+  {
+    "debt_ratio_pct": 1.525871168636804,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2054689714,
+    "period": "2016-08-19T00:00:00",
+    "virtual_supply": 134656827931
+  },
+  {
+    "debt_ratio_pct": 1.5258693522941509,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2041277484,
+    "period": "2016-08-18T00:00:00",
+    "virtual_supply": 133777998813
+  },
+  {
+    "debt_ratio_pct": 1.5247437988801225,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2026288324,
+    "period": "2016-08-17T00:00:00",
+    "virtual_supply": 132893691746
+  },
+  {
+    "debt_ratio_pct": 1.5455020596620361,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2039737853,
+    "period": "2016-08-16T00:00:00",
+    "virtual_supply": 131978979921
+  },
+  {
+    "debt_ratio_pct": 1.5534913058267752,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2035805414,
+    "period": "2016-08-15T00:00:00",
+    "virtual_supply": 131047107014
+  },
+  {
+    "debt_ratio_pct": 1.5695158999232428,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2040676222,
+    "period": "2016-08-14T00:00:00",
+    "virtual_supply": 130019467920
+  },
+  {
+    "debt_ratio_pct": 1.558650724037856,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2011402492,
+    "period": "2016-08-13T00:00:00",
+    "virtual_supply": 129047673156
+  },
+  {
+    "debt_ratio_pct": 1.5433404312742205,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 1977658697,
+    "period": "2016-08-12T00:00:00",
+    "virtual_supply": 128141442868
+  }
+]
