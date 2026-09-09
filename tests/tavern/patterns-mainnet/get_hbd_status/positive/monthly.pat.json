@@ -1,0 +1,16 @@
+[
+  {
+    "debt_ratio_pct": 1.4968710747495555,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2413759427,
+    "period": "2016-10-01T00:00:00",
+    "virtual_supply": 161253662237
+  },
+  {
+    "debt_ratio_pct": 1.562994799346646,
+    "hbd_interest_rate": 1000,
+    "hbd_supply": 2297081366,
+    "period": "2016-09-01T00:00:00",
+    "virtual_supply": 146966667257
+  }
+]
