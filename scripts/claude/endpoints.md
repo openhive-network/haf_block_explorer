@@ -51,6 +51,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | Witnesses | `Witnesses` | Witness data, votes, rankings |
 | Proposals | `Proposals` | DHF proposal listings, current approvals, and vote history |
 | Transactions | `Transactions` | Transaction statistics and aggregations |
+| HBD | `HBD` | Periodic HBD supply and interest rate snapshots |
 | Other | `Other` | API metadata, input type detection |
 
 ## Endpoints Inventory
@@ -125,6 +126,16 @@ Note the fallback cannot fire on the 5M-block mainnet dataset (~176 days, shorte
 window), so no patterns-mainnet fixture can distinguish it firing from it not firing. The only
 suite that can reach it is patterns-mock, whose chain runs to 2025-06-01 against a 2016-03-24
 genesis (~9 years: 3,357 unbounded daily periods vs 366 clamped).
+
+### HBD Endpoints
+
+| Endpoint | Function | Description |
+|----------|----------|-------------|
+| `GET /hbd/status` | `get_hbd_status` | HBD supply, provisional debt ratio and interest rate at period-end blocks |
+
+Reuses transaction statistics through `hafbe_backend.get_aggregation_blocks()` and
+joins the selected blocks to the HAFBE context view. No new aggregation tables or
+processing are required. See [HBD endpoint details](endpoints/hbd.md).
 
 ### Other Endpoints
 

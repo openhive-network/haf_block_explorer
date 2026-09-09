@@ -64,6 +64,13 @@ YAML-based API pattern tests using pytest-tavern. Tests endpoint responses again
 
 [Detailed documentation](tests/tavern.md)
 
+The `get_hbd_status/` mainnet suite is an MVP prepared for review: 13 Tavern
+requests cover granularities, ranges, ordering, defaults, explicit nulls, and
+invalid inputs. Its matching `.pat.json` files are intentionally empty; no
+response patterns have been generated or verified. After the code review,
+patterns will be collected either from a local HAF sync or from failed CI
+test responses. Until then, the new cases are not expected to pass.
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 
