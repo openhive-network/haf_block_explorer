@@ -22,22 +22,14 @@ SET ROLE hafbe_owner;
 -- (same pattern as custom.is_forking / custom.swagger_url) and this DO block
 -- formats them into the function body.
 --
--- The block's timestamp is read through hafbe_app.blocks_view rather than
--- hafd.blocks: these are forking contexts, so once caught up the current block
--- usually still sits in hafd.blocks_reversible for a few hundred ms before OBI
--- makes it irreversible. Joining hafd.blocks alone returned a null time in that
--- window, which health checks read as "no block processed yet" and flapped the
--- backend. hafbe_app's view is valid for the sub-app contexts' blocks too: the
--- LEAST block is at or below hafbe_app's current block, so it is either
--- already in hafd.blocks or still held in hafd.blocks_reversible (HAF only
--- prunes reversible rows below every context's irreversible block), and the
--- view exposes both. The pre-sync case (block 0) still yields a null time.
---
--- The lookup is deliberately parameterized on a plain variable: joining a
--- forking context's blocks_view on another relation's column defeats predicate
--- pushdown into the view's UNION ALL and plans as a hash join over all of
--- hafd.blocks (measured at 74 s on a mainnet node), whereas
--- `WHERE num = <param>` is an index lookup in both branches.
+-- The block's timestamp comes from HAF's public hive.get_app_current_block_age()
+-- over the same context group (its minimum is the lagging context's block, the
+-- same block __block_num names) rather than from hafd.blocks (which only holds
+-- irreversible blocks and so returned a null time for a forking context's
+-- freshly processed head block) or from hafbe_app.blocks_view (which HAF
+-- recreates under an ACCESS EXCLUSIVE lock on every context attach/detach,
+-- stalling the endpoint behind the app's iteration transaction whenever the app
+-- catches up). See the comment in the function body.
 -- ============================================================================
 
 DO $$
@@ -56,7 +48,7 @@ BEGIN
       __block_num INT := (
         SELECT current_block_num
         FROM hafd.contexts
-        WHERE name IN ('hafbe_app', %L, %L)
+        WHERE name IN ('hafbe_app', %1$L, %2$L)
         ORDER BY current_block_num ASC
         LIMIT 1
       );
@@ -72,11 +64,24 @@ BEGIN
           USING ERRCODE = '55000';
       END IF;
 
+      -- Block timestamp via HAF's public API. hive.get_app_current_block_age()
+      -- reads hafd.contexts + hafd.blocks + hafd.blocks_reversible, so a freshly
+      -- processed, still-reversible head block resolves, and it touches no
+      -- context view: HAF recreates <ctx>.blocks_view under an ACCESS EXCLUSIVE
+      -- lock on every context attach/detach (which the HAF app loop does when
+      -- switching stages to catch up), so a lookup through the view queues
+      -- behind the app's whole iteration transaction (seen: 17 s -> statement
+      -- timeouts and haproxy check failures). now() is the transaction
+      -- timestamp on both sides of the subtraction, so now() - age is the
+      -- block's created_at exactly (HAF runs with a UTC session time zone).
+      -- Block 0 (pre-sync) has no row and HAF reports its age from the epoch,
+      -- hence the explicit null.
       RETURN json_build_object(
         'last_block_num', __block_num,
-        'last_block_time', to_char(
-          (SELECT b.created_at FROM hafbe_app.blocks_view b WHERE b.num = __block_num),
-          'YYYY-MM-DD"T"HH24:MI:SS')
+        'last_block_time', CASE WHEN __block_num > 0 THEN
+          to_char(now() - hive.get_app_current_block_age(ARRAY['hafbe_app', %1$L, %2$L]::hive.contexts_group),
+                  'YYYY-MM-DD"T"HH24:MI:SS')
+        END
       );
     END
     $pb$;
