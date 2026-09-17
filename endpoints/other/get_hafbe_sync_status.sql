@@ -74,8 +74,8 @@ DATA SOURCE:
   hafbe_backend.sync_status() — the LEAST current_block_num across the app's
   HAF contexts (hafbe_app plus the balance tracker and reputation tracker
   sub-app contexts, whose names are baked in at install time), joined to
-  hafbe_app.blocks_view for that block's created_at (covers blocks still in
-  hafd.blocks_reversible).
+  hive.get_app_current_block_age() over those contexts for that block's created_at
+  (covers blocks still in hafd.blocks_reversible; touches no context view).
 
 CACHING:
   No cache (max-age=0): used for real-time sync-status / health monitoring.
