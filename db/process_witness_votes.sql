@@ -135,9 +135,8 @@ $$;
  * ===================================================================================
  * PURPOSE: Refreshes cached witness vote statistics for fast API queries.
  *
- * This function rebuilds several cache tables used by the witness-related
- * API endpoints. It should be called periodically (e.g., every few minutes)
- * to keep the cached statistics up-to-date.
+ * This function refreshes several cache tables used by the witness-related
+ * API endpoints. It runs on every LIVE block (not during MASSIVE).
  *
  * CACHE TABLES UPDATED:
  *   - account_vest_stats_cache: Vesting power per account (own + proxied),
@@ -147,8 +146,18 @@ $$;
  *   - witness_rank_cache: Witness rankings by vote weight
  *   - witness_votes_change_cache: Daily vote changes (for "24h change" stats)
  *
- * NOTE: This uses DELETE + INSERT (full refresh) rather than incremental updates
- *   for simplicity and to avoid accumulating stale data.
+ * NOTE: Each cache is still fully RECOMPUTED every block, but it is applied with
+ *   MERGE so that only rows whose values actually changed are written (plus
+ *   inserts for new keys and deletes for keys that left the source set). The
+ *   result is identical to the old DELETE + INSERT, which rewrote all ~25,500
+ *   rows every block when typically ~150 change: ~4.9 MB of WAL per block
+ *   (~140 GB/day) and ~25k dead tuples per block. Whenever anything held an old
+ *   snapshot (a long API query, pg_dump, CREATE INDEX CONCURRENTLY) those dead
+ *   tuples could not be vacuumed, the tables bloated without bound, and the
+ *   per-block refresh slowed linearly until block processing fell behind.
+ *   MERGE ... WHEN NOT MATCHED BY SOURCE requires PostgreSQL 17+, HAF's floor.
+ *   Statement ORDER still matters: caches 2-4 read cache 1 (and 3 reads 2) as
+ *   refreshed earlier in this same transaction.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_cache()
 RETURNS VOID
@@ -186,21 +195,28 @@ BEGIN
    *   - account_vests: Account's own vesting power
    *   - proxied_vests: Vesting power proxied to this account by others
    */
-  DELETE FROM hafbe_app.account_vest_stats_cache;
-
   /*
    * _first_block_num is passed so the account set also covers voters with a vote
    * event inside today's window, including those who have just stopped being
    * current voters. That is what makes Cache 4's INNER JOIN below lossless
    * (issue #142); the two must share one window or they can drift apart.
    */
-  INSERT INTO hafbe_app.account_vest_stats_cache (account_id, vests, account_vests, proxied_vests)
-  SELECT
-    account_id,
-    vests,
-    account_vests,
-    proxied_vests
-  FROM hafbe_backend.account_vest_stats(_first_block_num);
+  MERGE INTO hafbe_app.account_vest_stats_cache t
+  USING (
+    SELECT
+      account_id,
+      vests,
+      account_vests,
+      proxied_vests
+    FROM hafbe_backend.account_vest_stats(_first_block_num)
+  ) s ON t.account_id = s.account_id
+  WHEN MATCHED AND (t.vests, t.account_vests, t.proxied_vests)
+       IS DISTINCT FROM (s.vests, s.account_vests, s.proxied_vests) THEN
+    UPDATE SET vests = s.vests, account_vests = s.account_vests, proxied_vests = s.proxied_vests
+  WHEN NOT MATCHED THEN
+    INSERT (account_id, vests, account_vests, proxied_vests)
+    VALUES (s.account_id, s.vests, s.account_vests, s.proxied_vests)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
 
   /*
@@ -219,16 +235,21 @@ BEGIN
    * the one that lacks this property: it is driven by HISTORY, a strict superset.
    * Same reasoning covers hafbe_backend.get_witness_voters.
    */
-  DELETE FROM hafbe_app.witness_votes_cache;
-
-  INSERT INTO hafbe_app.witness_votes_cache (witness_id, votes, voters_num)
-  SELECT
-    cwv.witness_id,
-    SUM(avs.vests)::BIGINT AS votes,
-    COUNT(*)               AS voters_num
-  FROM hafbe_backend.current_witness_votes_view cwv
-  JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
-  GROUP BY cwv.witness_id;
+  MERGE INTO hafbe_app.witness_votes_cache t
+  USING (
+    SELECT
+      cwv.witness_id,
+      SUM(avs.vests)::BIGINT AS votes,
+      COUNT(*)::INT          AS voters_num
+    FROM hafbe_backend.current_witness_votes_view cwv
+    JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
+    GROUP BY cwv.witness_id
+  ) s ON t.witness_id = s.witness_id
+  WHEN MATCHED AND (t.votes, t.voters_num) IS DISTINCT FROM (s.votes, s.voters_num) THEN
+    UPDATE SET votes = s.votes, voters_num = s.voters_num
+  WHEN NOT MATCHED THEN
+    INSERT (witness_id, votes, voters_num) VALUES (s.witness_id, s.votes, s.voters_num)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
 
   /*
@@ -241,19 +262,24 @@ BEGIN
    *   2. Number of voters (DESC)
    *   3. Witness ID (DESC) - tiebreaker
    */
-  DELETE FROM hafbe_app.witness_rank_cache;
-
-  INSERT INTO hafbe_app.witness_rank_cache (witness_id, rank)
-  SELECT
-    cw.witness_id,
-    ROW_NUMBER() OVER (
-      ORDER BY
-        COALESCE(wv.votes, 0) DESC,
-        COALESCE(wv.voters_num, 0) DESC,
-        cw.witness_id DESC
-    ) AS rank
-  FROM hafbe_app.current_witnesses cw
-  LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id;
+  MERGE INTO hafbe_app.witness_rank_cache t
+  USING (
+    SELECT
+      cw.witness_id,
+      (ROW_NUMBER() OVER (
+        ORDER BY
+          COALESCE(wv.votes, 0) DESC,
+          COALESCE(wv.voters_num, 0) DESC,
+          cw.witness_id DESC
+      ))::INT AS rank
+    FROM hafbe_app.current_witnesses cw
+    LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id
+  ) s ON t.witness_id = s.witness_id
+  WHEN MATCHED AND t.rank IS DISTINCT FROM s.rank THEN
+    UPDATE SET rank = s.rank
+  WHEN NOT MATCHED THEN
+    INSERT (witness_id, rank) VALUES (s.witness_id, s.rank)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
 
   /*
@@ -279,18 +305,26 @@ BEGIN
    * reads a NULL block number as 0, so without it a NULL window would aggregate all
    * of history rather than nothing.
    */
-  DELETE FROM hafbe_app.witness_votes_change_cache;
-
-  INSERT INTO hafbe_app.witness_votes_change_cache (witness_id, votes_daily_change, voters_num_daily_change)
-  SELECT
-    wvhc.witness_id,
-    SUM(CASE WHEN wvhc.approve THEN avs.vests ELSE -1 * avs.vests END)::BIGINT AS votes_daily_change,
-    SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT                        AS voters_num_daily_change
-  FROM hafbe_backend.witness_votes_history_view wvhc
-  JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = wvhc.voter_id
-  WHERE _first_block_num IS NOT NULL
-    AND wvhc.source_op >= hafd.operation_id(_first_block_num, 0)
-  GROUP BY wvhc.witness_id;
+  MERGE INTO hafbe_app.witness_votes_change_cache t
+  USING (
+    SELECT
+      wvhc.witness_id,
+      SUM(CASE WHEN wvhc.approve THEN avs.vests ELSE -1 * avs.vests END)::BIGINT AS votes_daily_change,
+      SUM(CASE WHEN wvhc.approve THEN 1 ELSE -1 END)::INT                        AS voters_num_daily_change
+    FROM hafbe_backend.witness_votes_history_view wvhc
+    JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = wvhc.voter_id
+    WHERE _first_block_num IS NOT NULL
+      AND wvhc.source_op >= hafd.operation_id(_first_block_num, 0)
+    GROUP BY wvhc.witness_id
+  ) s ON t.witness_id = s.witness_id
+  WHEN MATCHED AND (t.votes_daily_change, t.voters_num_daily_change)
+       IS DISTINCT FROM (s.votes_daily_change, s.voters_num_daily_change) THEN
+    UPDATE SET votes_daily_change = s.votes_daily_change,
+               voters_num_daily_change = s.voters_num_daily_change
+  WHEN NOT MATCHED THEN
+    INSERT (witness_id, votes_daily_change, voters_num_daily_change)
+    VALUES (s.witness_id, s.votes_daily_change, s.voters_num_daily_change)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
 END
 $$;

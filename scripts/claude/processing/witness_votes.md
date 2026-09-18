@@ -127,22 +127,35 @@ INSERT INTO witness_votes_history (approve=FALSE)
 
 ## Cache Processing (LIVE only)
 
-`process_witness_votes_cache()` runs after all other processors in LIVE mode:
+`process_witness_votes_cache()` runs after all other processors in LIVE mode.
+
+Every cache is fully **recomputed** each block but **applied with `MERGE`**
+(`WHEN MATCHED AND <values differ> THEN UPDATE`, `WHEN NOT MATCHED THEN INSERT`,
+`WHEN NOT MATCHED BY SOURCE THEN DELETE`; PostgreSQL 17+), so only rows whose
+values changed are written, typically ~150 of ~25,500. The former
+`DELETE` + `INSERT` of every row cost ~4.9 MB of WAL per block and left ~25k dead
+tuples per block; under any long-held snapshot those could not be vacuumed, the
+tables bloated, and the refresh slowed until block processing fell behind.
+Statement order still matters: caches 2-4 read cache 1 (and 3 reads 2) as
+refreshed earlier in the same transaction.
 
 ### Cache 1: Account Vest Stats
 ```sql
-DELETE FROM account_vest_stats_cache;
-INSERT FROM hafbe_backend.account_vest_stats(first_block_of_today);
+MERGE INTO account_vest_stats_cache USING hafbe_backend.account_vest_stats(first_block_of_today);
 -- Contains: account_id, vests (total), account_vests (own), proxied_vests
 ```
 The window argument matters: `account_vest_stats()` covers current witness
 voters, proxy setters and proposal voters **plus** anyone with a witness vote
 event at or after that block. Cache 4 below depends on that fourth group.
 
+`account_vest_stats()` reads each tracked account's own vests with keyed scalar
+subqueries (`pk_current_account_balances (account, nai)`, `pk_account_withdraws
+(account)`) rather than joins: joined, the planner scanned the VESTS balance of
+every account (~1.27M rows) to serve ~10k tracked ones, ~2/3 of the function's cost.
+
 ### Cache 2: Witness Votes
 ```sql
-DELETE FROM witness_votes_cache;
-INSERT SELECT witness_id, SUM(vests), COUNT(*) FROM current_witness_votes
+MERGE INTO witness_votes_cache USING SELECT witness_id, SUM(vests), COUNT(*) FROM current_witness_votes
   JOIN account_vest_stats_cache;
 ```
 The INNER JOIN here is provably total and must stay: it is driven by
@@ -152,14 +165,12 @@ property — do not "fix" Cache 2 to match it.
 
 ### Cache 3: Witness Rank
 ```sql
-DELETE FROM witness_rank_cache;
-INSERT SELECT witness_id, ROW_NUMBER() OVER (ORDER BY votes DESC, voters_num DESC);
+MERGE INTO witness_rank_cache USING SELECT witness_id, ROW_NUMBER() OVER (ORDER BY votes DESC, voters_num DESC);
 ```
 
 ### Cache 4: Daily Vote Changes
 ```sql
-DELETE FROM witness_votes_change_cache;
-INSERT SELECT witness_id,
+MERGE INTO witness_votes_change_cache USING SELECT witness_id,
   SUM(CASE WHEN approve THEN vests ELSE -vests END),
   SUM(CASE WHEN approve THEN 1 ELSE -1 END)
 FROM witness_votes_history

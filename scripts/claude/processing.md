@@ -66,8 +66,8 @@ Each block range calls processors in this order:
 6. `process_proposals()` - All proposal ops in one row-by-row processor: create/update/remove/pay + update_proposal_votes + decline/expired cleanup
 
 In LIVE mode, two cache refreshes run after the processors (in this order):
-- `process_witness_votes_cache()` - rebuilds `account_vest_stats_cache` + witness vote caches
-- `process_proposal_vote_stats_cache()` - rebuilds `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
+- `process_witness_votes_cache()` - recomputes `account_vest_stats_cache` + witness vote caches, applied with `MERGE` so only changed rows are written
+- `process_proposal_vote_stats_cache()` - same for `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
 
 ### Why process_proposals uses a FOR LOOP instead of CTE+CASE
 
