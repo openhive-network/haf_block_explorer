@@ -269,7 +269,7 @@ RETURNS TABLE (
 LANGUAGE sql STABLE
 AS
 $$
-    WITH tracked_accounts AS (
+    WITH tracked_accounts AS MATERIALIZED (
       SELECT twv.account_id FROM hafbe_backend.witness_voters_list_view twv
       UNION
       SELECT tap.account_id FROM hafbe_app.current_account_proxies tap
@@ -291,19 +291,38 @@ $$
       FROM hafbe_app.witness_votes_history twh
       WHERE _first_block_num IS NOT NULL
         AND twh.source_op >= hafd.operation_id(_first_block_num, 0)
+    ),
+    -- Own vests are fetched with keyed scalar lookups, NOT joins. Joined, the
+    -- planner hash-joins the ~10k tracked accounts against current_account_balances
+    -- read through idx_account_balance_nai_balance_idx (nai, balance DESC), i.e. the
+    -- VESTS row of EVERY account (~1.27M rows, ~450k buffer hits, ~235 of the
+    -- function's ~370 ms on a mainnet node) on every LIVE block. A scalar subquery
+    -- cannot be turned into a join, so each tracked account costs one probe of
+    -- pk_current_account_balances (account, nai) and one of pk_account_withdraws
+    -- (account): ~100 ms for the whole function, row-for-row identical output.
+    -- Both keys are unique, so the subqueries return at most one row.
+    own_vests AS (
+      SELECT
+        cw.account_id,
+        COALESCE((
+          SELECT cab.balance::BIGINT
+          FROM current_account_balances cab
+          WHERE cab.account = cw.account_id AND cab.nai = btracker_backend.nai_vests()
+        ), 0)
+        - COALESCE((
+          SELECT dv.delayed_vests::BIGINT
+          FROM account_withdraws dv
+          WHERE dv.account = cw.account_id
+        ), 0) AS account_vests
+      FROM tracked_accounts cw
     )
     SELECT
-      cw.account_id,
-      COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0)
-        + COALESCE(vpvv.proxied_vests, 0) AS vests,
-      COALESCE(cab.balance::BIGINT, 0) - COALESCE(dv.delayed_vests::BIGINT, 0) AS account_vests,
+      ov.account_id,
+      ov.account_vests + COALESCE(vpvv.proxied_vests, 0) AS vests,
+      ov.account_vests,
       COALESCE(vpvv.proxied_vests, 0) AS proxied_vests
-    FROM tracked_accounts cw
-    LEFT JOIN current_account_balances cab
-      ON cab.account = cw.account_id
-      AND cab.nai = btracker_backend.nai_vests()
-    LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = cw.account_id
-    LEFT JOIN account_withdraws dv ON dv.account = cw.account_id
+    FROM own_vests ov
+    LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = ov.account_id
 $$;
 
 -- proposal_paid_amounts view removed: paid_amount is now a running total column
