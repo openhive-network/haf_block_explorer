@@ -907,6 +907,23 @@ BEGIN
     -- context transitions, they desync and app_next_iteration fails with
     -- "Contexts {hafbe_app,hafbe_bal} are not synchronized".
     -- Idempotent in HAF: no-op after first LIVE block.
+    --
+    -- BEFORE forking is enabled, let the balance tracker do the part of its
+    -- massive-sync finalization that bulk-writes registered tables (it backfills
+    -- ~70M deferred by-day/by-month rollup rows). Once the contexts are forking,
+    -- HAF's rewind triggers copy every inserted row into the shadow tables; doing
+    -- the backfill after this point left hafd.shadow_hafbe_bal_balance_history_by_day
+    -- as a 6.7 GB file of empty pages, which never shrinks and which HAF's
+    -- per-block cleanup scans in full: 0.4-1.1 s lost on every later block
+    -- (haf#346). Left to itself the balance tracker would only get to it inside
+    -- btracker_process_blocks() below, i.e. too late. The function is a no-op
+    -- once finalized, so calling it on every LIVE block costs one index lookup.
+    -- Looked up dynamically so this keeps working against an older balance
+    -- tracker that does not have it yet.
+    IF to_regproc('finalize_massive_sync_before_forking') IS NOT NULL THEN
+      EXECUTE format('SELECT finalize_massive_sync_before_forking(%L)', _context_btracker);
+    END IF;
+
     PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
     RAISE DEBUG '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
   END IF;
