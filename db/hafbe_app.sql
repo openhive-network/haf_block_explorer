@@ -713,7 +713,8 @@ $$;
  *
  * Behavior by stage:
  * - MASSIVE_PROCESSING: Calls massive_processing() for batch sync,
- *   requests vacuum on witness/proxy tables
+ *   requests vacuum on witness/proxy tables during the initial sync only
+ *   (HAF also uses this stage for catch-ups of more than 101 blocks)
  * - LIVE: Creates indexes (once), calls single_processing(),
  *   requests vacuum on cache tables
  *
@@ -733,11 +734,21 @@ $$
 BEGIN
   IF hive.get_current_stage_name(_context_name) = 'MASSIVE_PROCESSING' THEN
     CALL hafbe_app.massive_processing(_block_range.first_block, _block_range.last_block, _logs);
-    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witness_votes', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witnesses', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_account_proxies', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposal_votes', interval '30 minutes');
-    PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposals', interval '30 minutes');
+    -- Initial sync only. HAF re-enters MASSIVE_PROCESSING for any catch-up of
+    -- more than 101 blocks (restart, stack switch, live drift), and HAF runs
+    -- every vacuum request as VACUUM FULL ANALYZE under an ACCESS EXCLUSIVE
+    -- lock, which stalls the next iteration and every API reader of these
+    -- tables for the rewrite. Catch-ups are short and autovacuum covers them;
+    -- the full rewrite only pays for itself over the genesis replay
+    -- (balance_tracker#64 for the same pattern on a 69 GB table).
+    -- isIndexesCreated() is false exactly until the first LIVE iteration.
+    IF NOT hafbe_app.isIndexesCreated() THEN
+      PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witness_votes', interval '30 minutes');
+      PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_witnesses', interval '30 minutes');
+      PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_account_proxies', interval '30 minutes');
+      PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposal_votes', interval '30 minutes');
+      PERFORM hive.app_request_table_vacuum('hafbe_app', 'current_proposals', interval '30 minutes');
+    END IF;
 
     RETURN;
   END IF;
