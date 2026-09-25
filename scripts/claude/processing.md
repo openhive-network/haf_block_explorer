@@ -24,6 +24,13 @@ HAFBE uses two synchronization stages defined in `db/hafbe_app.sql`:
 - **Batch size**: 10,000 blocks per iteration
 - **Optimization**: `synchronous_commit = OFF` for throughput
 - **Behavior**: No cache tables, indexes created after stage completes
+- **Not only the initial sync**: HAF re-enters this stage for any catch-up of
+  more than 101 blocks (restart, stack switch, slow live processing). Work that
+  is only meant for the genesis replay must key off `NOT isIndexesCreated()`,
+  not the stage name. `process_blocks()` does this for the `VACUUM` request on
+  the `current_*` tables: HAF runs it as `VACUUM FULL ANALYZE` under an ACCESS
+  EXCLUSIVE lock, which is fine once over a replay but stalled every
+  post-restart catch-up (see balance_tracker#64 for the same pattern)
 
 ### LIVE Mode
 
