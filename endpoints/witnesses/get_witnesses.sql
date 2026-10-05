@@ -8,7 +8,9 @@ SET ROLE hafbe_owner;
       - Witnesses
     summary: List witnesses
     description: |
-      List all witnesses (both active and standby)
+      List witnesses with optional voter, name, vote-weight and signing-key
+      filters. Filters compose before counting, sorting and pagination.
+      Each row also includes its global rank among enabled witnesses.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_witnesses(1,2);`
@@ -71,7 +73,15 @@ SET ROLE hafbe_owner;
 
            * `signing_key` - the witness'' block-signing public key
 
-           * `version` - the version of hived the witness is running
+           * `version` - the version of hived the witness is running, compared by numeric components
+
+           * `missed_blocks` - the total number of missed blocks
+
+           * `hbd_interest_rate` - the interest rate the witness is voting for
+
+           * `last_confirmed_block_num` - the last block number created by the witness
+
+           * `account_creation_fee` - the fee the witness is voting for
       - in: query
         name: direction
         required: false
@@ -84,6 +94,45 @@ SET ROLE hafbe_owner;
            * `asc` - Ascending, from A to Z or smallest to largest
 
            * `desc` - Descending, from Z to A or largest to smallest
+      - in: query
+        name: voter-name
+        required: false
+        schema:
+          type: [string, 'null']
+          default: NULL
+        description: |
+          Return witnesses voted for by this account. Resolve the complete
+          witness-proxy chain and use the terminal account''s votes when proxied.
+          Omit this parameter or pass null to leave votes unfiltered. An empty
+          or nonexistent account name returns the standard account-not-found error.
+      - in: query
+        name: witness-name
+        required: false
+        schema:
+          type: [string, 'null']
+          default: NULL
+        description: |
+          Match a literal, case-sensitive substring of the witness account name.
+          The characters %% and _ have no wildcard meaning. Null or an empty
+          string leaves names unfiltered.
+      - in: query
+        name: has-votes
+        required: false
+        schema:
+          type: [boolean, 'null']
+          default: NULL
+        description: |
+          True selects witnesses with positive vote weight; false selects
+          witnesses without positive vote weight. Null leaves vote weight unfiltered.
+      - in: query
+        name: is-disabled
+        required: false
+        schema:
+          type: [boolean, 'null']
+          default: NULL
+        description: |
+          True selects witnesses with a disabled signing key; false selects
+          witnesses with an enabled signing key. Null includes both.
     responses:
       '200':
         description: |
@@ -97,10 +146,14 @@ SET ROLE hafbe_owner;
             example: {
               "total_witnesses": 731,
               "total_pages": 366,
+              "current_version": "0.13.0",
+              "vote_source": null,
+              "voted_via": null,
               "witnesses": [
                 {
                   "witness_name": "roadscape",
                   "rank": 1,
+                  "real_rank": 1,
                   "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
                   "vests": "94172201023355097",
                   "votes_daily_change": "0",
@@ -120,6 +173,7 @@ SET ROLE hafbe_owner;
                 {
                   "witness_name": "arhag",
                   "rank": 2,
+                  "real_rank": 2,
                   "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
                   "vests": "91835048921097725",
                   "votes_daily_change": "0",
@@ -145,11 +199,15 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
     "page" INT = 1,
     "page-size" INT = 100,
     "sort" hafbe_backend.order_by_witness = 'votes',
-    "direction" hafbe_backend.sort_direction = 'desc'
+    "direction" hafbe_backend.sort_direction = 'desc',
+    "voter-name" TEXT = NULL,
+    "witness-name" TEXT = NULL,
+    "has-votes" BOOLEAN = NULL,
+    "is-disabled" BOOLEAN = NULL
 )
 RETURNS hafbe_backend.witnesses_return 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -164,6 +222,10 @@ DECLARE
   _page_size INT := COALESCE("page-size", 100);
   _sort hafbe_backend.order_by_witness := COALESCE("sort", 'votes');
   _direction hafbe_backend.sort_direction := COALESCE("direction", 'desc');
+  _voter_id INT;
+  _vote_source TEXT;
+  _voted_via TEXT;
+  _current_version TEXT;
 BEGIN
   PERFORM hafbe_backend.validate_limit(_page_size, 1000);
   PERFORM hafbe_backend.validate_negative_limit(_page_size);
@@ -171,7 +233,17 @@ BEGIN
 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
 
-  _ops_count   := hafbe_backend.get_witnesses_count();
+  SELECT source.voter_id, source.vote_source, source.voted_via
+    INTO _voter_id, _vote_source, _voted_via
+    FROM hafbe_backend.get_witness_vote_source("voter-name") source;
+
+  _current_version := hafbe_backend.get_current_witness_version();
+  _ops_count := hafbe_backend.get_witnesses_count(
+    _voter_id,
+    "witness-name",
+    "has-votes",
+    "is-disabled"
+  );
   _total_pages := hafah_backend.total_pages(_ops_count, _page_size);
 
   PERFORM hafbe_backend.validate_page(_page, _total_pages);
@@ -180,6 +252,7 @@ BEGIN
     SELECT 
       ba.witness_name,
       ba.rank,
+      ba.real_rank,
       ba.url,
       ba.vests,
       ba.votes_daily_change,
@@ -199,13 +272,20 @@ BEGIN
       _page,
       _page_size,
       _sort,
-      _direction
+      _direction,
+      _voter_id,
+      "witness-name",
+      "has-votes",
+      "is-disabled"
     ) ba
   ) row;
 
   RETURN (
     COALESCE(_ops_count,0),
     COALESCE(_total_pages,0),
+    _current_version,
+    _vote_source,
+    _voted_via,
     COALESCE(_result, '{}'::hafbe_backend.witness[])
   )::hafbe_backend.witnesses_return;
 

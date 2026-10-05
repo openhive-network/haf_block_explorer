@@ -14,9 +14,14 @@ hafbe_backend.witness:
     rank:
       type: integer
       description: >-
-        the current rank of the witness according to the votes cast on
-        the blockchain. The top 20 witnesses (ranks 1 - 20) will produce
-        blocks each round.
+        Global rank by vote weight, including witnesses with a disabled signing
+        key. Independent of list filters; real_rank gives the enabled-only rank.
+    real_rank:
+      type: [integer, 'null']
+      description: >-
+        Global rank among witnesses with an enabled signing key, ordered by
+        vote weight. This rank is independent of list filters and is null for
+        disabled witnesses.
     url:
       type: string
       description: the witness''s home page
@@ -88,6 +93,7 @@ DROP TYPE IF EXISTS hafbe_backend.witness CASCADE;
 CREATE TYPE hafbe_backend.witness AS (
     "witness_name" TEXT,
     "rank" INT,
+    "real_rank" INT,
     "url" TEXT,
     "vests" TEXT,
     "votes_daily_change" TEXT,
@@ -116,6 +122,23 @@ hafbe_backend.witnesses_return:
     total_pages:
       type: integer
       description: Total number of pages
+    current_version:
+      type: [string, 'null']
+      description: >-
+        Highest hived version observed among all witnesses, compared by numeric
+        version components. Independent of list filters; null when no witness
+        version is available.
+    vote_source:
+      type: [string, 'null']
+      enum: [direct, proxy, null]
+      description: >-
+        Whether voter-name uses its own witness votes or delegates them through
+        a proxy. Null when voter-name is omitted.
+    voted_via:
+      type: [string, 'null']
+      description: >-
+        Account whose witness votes are used after resolving the complete proxy
+        chain. Null for direct votes or when voter-name is omitted.
     witnesses:
       type: array
       items:
@@ -127,6 +150,9 @@ DROP TYPE IF EXISTS hafbe_backend.witnesses_return CASCADE;
 CREATE TYPE hafbe_backend.witnesses_return AS (
     "total_witnesses" INT,
     "total_pages" INT,
+    "current_version" TEXT,
+    "vote_source" TEXT,
+    "voted_via" TEXT,
     "witnesses" hafbe_backend.witness[]
 );
 -- openapi-generated-code-end

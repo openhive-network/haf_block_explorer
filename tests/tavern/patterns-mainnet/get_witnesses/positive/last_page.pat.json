@@ -1,10 +1,14 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
+  "current_version": "0.14.1",
+  "vote_source": null,
+  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "nxt",
       "rank": 12301,
+      "real_rank": 12301,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -24,6 +28,7 @@
     {
       "witness_name": "nxt1",
       "rank": 12302,
+      "real_rank": 12302,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -43,6 +48,7 @@
     {
       "witness_name": "dark",
       "rank": 12303,
+      "real_rank": 12303,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -62,6 +68,7 @@
     {
       "witness_name": "admin",
       "rank": 12304,
+      "real_rank": 12304,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -81,6 +88,7 @@
     {
       "witness_name": "steem",
       "rank": 12305,
+      "real_rank": 12305,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -100,6 +108,7 @@
     {
       "witness_name": "initminer",
       "rank": 12306,
+      "real_rank": 12306,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",

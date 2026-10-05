@@ -149,7 +149,11 @@ declare
           "block_size",
           "signing_key",
           "version",
-          "feed_updated_at"
+          "feed_updated_at",
+          "missed_blocks",
+          "hbd_interest_rate",
+          "last_confirmed_block_num",
+          "account_creation_fee"
         ]
       },
       "hafbe_backend.order_by_proposal": {
@@ -666,7 +670,14 @@ declare
           },
           "rank": {
             "type": "integer",
-            "description": "the current rank of the witness according to the votes cast on the blockchain. The top 20 witnesses (ranks 1 - 20) will produce blocks each round."
+            "description": "Global rank by vote weight, including witnesses with a disabled signing key. Independent of list filters; real_rank gives the enabled-only rank."
+          },
+          "real_rank": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Global rank among witnesses with an enabled signing key, ordered by vote weight. This rank is independent of list filters and is null for disabled witnesses."
           },
           "url": {
             "type": "string",
@@ -742,6 +753,32 @@ declare
           "total_pages": {
             "type": "integer",
             "description": "Total number of pages"
+          },
+          "current_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Highest hived version observed among all witnesses, compared by numeric version components. Independent of list filters; null when no witness version is available."
+          },
+          "vote_source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "direct",
+              "proxy",
+              null
+            ],
+            "description": "Whether voter-name uses its own witness votes or delegates them through a proxy. Null when voter-name is omitted."
+          },
+          "voted_via": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Account whose witness votes are used after resolving the complete proxy chain. Null for direct votes or when voter-name is omitted."
           },
           "witnesses": {
             "type": "array",
@@ -1271,7 +1308,7 @@ declare
           "Witnesses"
         ],
         "summary": "List witnesses",
-        "description": "List all witnesses (both active and standby)\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(1,2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses?page-size=2''`\n",
+        "description": "List witnesses with optional voter, name, vote-weight and signing-key\nfilters. Filters compose before counting, sorting and pagination.\nEach row also includes its global rank among enabled witnesses.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_witnesses(1,2);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/witnesses?page-size=2''`\n",
         "operationId": "hafbe_endpoints.get_witnesses",
         "parameters": [
           {
@@ -1305,7 +1342,7 @@ declare
               "$ref": "#/components/schemas/hafbe_backend.order_by_witness",
               "default": "votes"
             },
-            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `feed_updated_at` - feed update timestamp\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
+            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `feed_updated_at` - feed update timestamp\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running, compared by numeric components\n\n * `missed_blocks` - the total number of missed blocks\n\n * `hbd_interest_rate` - the interest rate the witness is voting for\n\n * `last_confirmed_block_num` - the last block number created by the witness\n\n * `account_creation_fee` - the fee the witness is voting for\n"
           },
           {
             "in": "query",
@@ -1316,6 +1353,58 @@ declare
               "default": "desc"
             },
             "description": "Sort order:\n\n * `asc` - Ascending, from A to Z or smallest to largest\n\n * `desc` - Descending, from Z to A or largest to smallest\n"
+          },
+          {
+            "in": "query",
+            "name": "voter-name",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "description": "Return witnesses voted for by this account. Resolve the complete\nwitness-proxy chain and use the terminal account''s votes when proxied.\nOmit this parameter or pass null to leave votes unfiltered. An empty\nor nonexistent account name returns the standard account-not-found error.\n"
+          },
+          {
+            "in": "query",
+            "name": "witness-name",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "description": "Match a literal, case-sensitive substring of the witness account name.\nThe characters %% and _ have no wildcard meaning. Null or an empty\nstring leaves names unfiltered.\n"
+          },
+          {
+            "in": "query",
+            "name": "has-votes",
+            "required": false,
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": null
+            },
+            "description": "True selects witnesses with positive vote weight; false selects\nwitnesses without positive vote weight. Null leaves vote weight unfiltered.\n"
+          },
+          {
+            "in": "query",
+            "name": "is-disabled",
+            "required": false,
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": null
+            },
+            "description": "True selects witnesses with a disabled signing key; false selects\nwitnesses with an enabled signing key. Null includes both.\n"
           }
         ],
         "responses": {
@@ -1329,10 +1418,14 @@ declare
                 "example": {
                   "total_witnesses": 731,
                   "total_pages": 366,
+                  "current_version": "0.13.0",
+                  "vote_source": null,
+                  "voted_via": null,
                   "witnesses": [
                     {
                       "witness_name": "roadscape",
                       "rank": 1,
+                      "real_rank": 1,
                       "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
                       "vests": "94172201023355097",
                       "votes_daily_change": "0",
@@ -1352,6 +1445,7 @@ declare
                     {
                       "witness_name": "arhag",
                       "rank": 2,
+                      "real_rank": 2,
                       "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
                       "vests": "91835048921097725",
                       "votes_daily_change": "0",

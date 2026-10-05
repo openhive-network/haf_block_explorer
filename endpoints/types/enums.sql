@@ -99,6 +99,10 @@ hafbe_backend.order_by_witness:
     - signing_key
     - version
     - feed_updated_at
+    - missed_blocks
+    - hbd_interest_rate
+    - last_confirmed_block_num
+    - account_creation_fee
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.order_by_witness CASCADE;
@@ -115,7 +119,11 @@ CREATE TYPE hafbe_backend.order_by_witness AS ENUM (
     'block_size',
     'signing_key',
     'version',
-    'feed_updated_at'
+    'feed_updated_at',
+    'missed_blocks',
+    'hbd_interest_rate',
+    'last_confirmed_block_num',
+    'account_creation_fee'
 );
 -- openapi-generated-code-end
 
