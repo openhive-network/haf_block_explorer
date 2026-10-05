@@ -32,16 +32,21 @@ hafbe_backend.hbd_status:
     hbd_supply:
       type: string
       description: Total HBD supply in milli-HBD, including the treasury, as a string to preserve integer precision.
+    hive_supply:
+      type: string
+      description: HIVE supply in milli-HIVE at the sampled block, as a string to preserve integer precision.
     virtual_supply:
       type: string
       description: Virtual supply in milli-HIVE as a string to preserve integer precision.
-    debt_ratio_pct:
+    debt_ratio_gross_pct:
       type: [number, 'null']
       x-sql-datatype: NUMERIC
       description: >-
-        Provisional formula from issue 147: 100 * current_hbd_supply / virtual_supply.
-        The supplies have different asset units; this is not the protocol debt ratio.
-        The definition is pending clarification. Rounded to three decimal places.
+        Gross HBD value share of virtual supply: 100 * (virtual_supply - hive_supply) / virtual_supply.
+        Uses the effective median price, including any hard-cap adjustment.
+        Equals the protocol debt ratio before HF24; from HF24 the protocol excludes treasury HBD
+        while this gross series includes it. Protocol threshold bands do not apply to this series.
+        Rounded to three decimal places.
         Null when virtual_supply is zero.
     hbd_interest_rate:
       type: integer
@@ -52,8 +57,9 @@ DROP TYPE IF EXISTS hafbe_backend.hbd_status CASCADE;
 CREATE TYPE hafbe_backend.hbd_status AS (
     "period" TIMESTAMP,
     "hbd_supply" TEXT,
+    "hive_supply" TEXT,
     "virtual_supply" TEXT,
-    "debt_ratio_pct" NUMERIC,
+    "debt_ratio_gross_pct" NUMERIC,
     "hbd_interest_rate" INT
 );
 -- openapi-generated-code-end

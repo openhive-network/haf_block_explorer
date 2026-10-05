@@ -1036,17 +1036,21 @@ declare
             "type": "string",
             "description": "Total HBD supply in milli-HBD, including the treasury, as a string to preserve integer precision."
           },
+          "hive_supply": {
+            "type": "string",
+            "description": "HIVE supply in milli-HIVE at the sampled block, as a string to preserve integer precision."
+          },
           "virtual_supply": {
             "type": "string",
             "description": "Virtual supply in milli-HIVE as a string to preserve integer precision."
           },
-          "debt_ratio_pct": {
+          "debt_ratio_gross_pct": {
             "type": [
               "number",
               "null"
             ],
             "x-sql-datatype": "NUMERIC",
-            "description": "Provisional formula from issue 147: 100 * current_hbd_supply / virtual_supply. The supplies have different asset units; this is not the protocol debt ratio. The definition is pending clarification. Rounded to three decimal places. Null when virtual_supply is zero."
+            "description": "Gross HBD value share of virtual supply: 100 * (virtual_supply - hive_supply) / virtual_supply. Uses the effective median price, including any hard-cap adjustment. Equals the protocol debt ratio before HF24; from HF24 the protocol excludes treasury HBD while this gross series includes it. Protocol threshold bands do not apply to this series. Rounded to three decimal places. Null when virtual_supply is zero."
           },
           "hbd_interest_rate": {
             "type": "integer",
@@ -3061,7 +3065,7 @@ declare
           "HBD"
         ],
         "summary": "HBD supply and interest rate history",
-        "description": "Returns the HBD state at the last processed block of each UTC period.\nUses the existing transaction statistics to select blocks. Weekly periods start on Monday.\nRange boundaries select whole periods, as in transaction statistics.\nPeriods without blocks retain the last available state.\n\nThe debt ratio uses the provisional formula from issue 147 while its definition is clarified.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hbd_status();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/hbd/status''`\n",
+        "description": "Returns the HBD state at the last processed block of each UTC period.\nUses the existing transaction statistics to select blocks. Weekly periods start on Monday.\nRange boundaries select whole periods, as in transaction statistics.\nPeriods without blocks retain the last available state.\n\nThe gross HBD value share is 100 * (virtual_supply - hive_supply) / virtual_supply.\nIt uses the effective median price already reflected in virtual supply, including\nany hard-cap adjustment. It equals the protocol debt ratio before HF24; from HF24\nthe protocol excludes treasury HBD, while this gross series includes it.\nProtocol print-rate and hard-cap thresholds must not be applied to this gross series.\nThe interest rate is a witness median and may alternate between adjacent values.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hbd_status();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/hbd/status''`\n",
         "operationId": "hafbe_endpoints.get_hbd_status",
         "parameters": [
           {

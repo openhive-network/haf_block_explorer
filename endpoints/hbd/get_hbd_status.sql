@@ -12,7 +12,12 @@ SET ROLE hafbe_owner;
       Range boundaries select whole periods, as in transaction statistics.
       Periods without blocks retain the last available state.
 
-      The debt ratio uses the provisional formula from issue 147 while its definition is clarified.
+      The gross HBD value share is 100 * (virtual_supply - hive_supply) / virtual_supply.
+      It uses the effective median price already reflected in virtual supply, including
+      any hard-cap adjustment. It equals the protocol debt ratio before HF24; from HF24
+      the protocol excludes treasury HBD, while this gross series includes it.
+      Protocol print-rate and hard-cap thresholds must not be applied to this gross series.
+      The interest rate is a witness median and may alternate between adjacent values.
 
       SQL example
       * `SELECT * FROM hafbe_endpoints.get_hbd_status();`
@@ -85,26 +90,47 @@ DECLARE
   _current_block INT := hafbe_backend.get_hafbe_head_block();
   _granularity   hafbe_backend.hbd_granularity := COALESCE("granularity", 'yearly');
   _direction     hafbe_backend.sort_direction := COALESCE("direction", 'desc');
+  _cache_safe_block INT := LEAST(_current_block, hive.app_get_irreversible_block('hafbe_app'));
+  _period_unit TEXT := CASE _granularity
+    WHEN 'daily' THEN 'day'
+    WHEN 'weekly' THEN 'week'
+    WHEN 'monthly' THEN 'month'
+    WHEN 'yearly' THEN 'year'
+  END;
 BEGIN
   PERFORM hafbe_backend.validate_block_num_too_high(_block_range.first_block, _current_block);
 
-  -- Keep even historical responses short-lived while the issue's formula is provisional.
-  PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  -- Bounds include whole periods. A historical upper bound inside an unfinished
+  -- period can still return changing state, so cache only fully processed,
+  -- irreversible periods for a year; unbounded or unfinished ranges retain 2s.
+  IF _block_range.last_block IS NOT NULL AND _block_range.last_block <= _cache_safe_block
+    AND EXISTS (
+      SELECT 1
+      FROM hafbe_app.blocks_view requested_block
+      JOIN hafbe_app.blocks_view safe_block ON safe_block.num = _cache_safe_block
+      WHERE requested_block.num = _block_range.last_block
+        AND DATE_TRUNC(_period_unit, requested_block.created_at)
+          + ('1 ' || _period_unit)::INTERVAL <= safe_block.created_at
+    ) THEN
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=31536000"}]', true);
+  ELSE
+    PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+  END IF;
 
   RETURN QUERY
     SELECT
       ab.date,
       bv.current_hbd_supply::TEXT,
+      bv.current_supply::TEXT,
       bv.virtual_supply::TEXT,
-      -- TODO(#147): replace the provisional issue formula after the author clarifies the metric.
-      ROUND(100::NUMERIC * bv.current_hbd_supply / NULLIF(bv.virtual_supply, 0), 3),
+      ROUND(100::NUMERIC * (bv.virtual_supply - bv.current_supply) / NULLIF(bv.virtual_supply, 0), 3),
       bv.hbd_interest_rate::INT
     FROM hafbe_backend.get_aggregation_blocks(
       _granularity, _direction, _block_range.first_block, _block_range.last_block, _current_block
     ) ab
     -- Keep each view lookup tied to one selected block; avoid joining the entire history.
     JOIN LATERAL (
-      SELECT b.current_hbd_supply, b.virtual_supply, b.hbd_interest_rate
+      SELECT b.current_hbd_supply, b.current_supply, b.virtual_supply, b.hbd_interest_rate
       FROM hafbe_app.blocks_view b
       WHERE b.num = ab.last_block_num AND b.num <= _current_block
       LIMIT 1

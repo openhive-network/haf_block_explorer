@@ -1,15 +1,17 @@
 [
   {
-    "debt_ratio_pct": 1.497,
+    "debt_ratio_gross_pct": 2.35,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2413759427",
+    "hive_supply": "157464400971",
     "period": "2016-10-01T00:00:00",
     "virtual_supply": "161253662237"
   },
   {
-    "debt_ratio_pct": 1.563,
+    "debt_ratio_gross_pct": 1.681,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2297081366",
+    "hive_supply": "144496687294",
     "period": "2016-09-01T00:00:00",
     "virtual_supply": "146966667257"
   }
