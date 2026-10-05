@@ -1,14 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "proctologic",
       "rank": 49,
-      "real_rank": 49,
       "url": "www.steemit.com/@proctologic",
       "vests": "14161723013952690",
       "votes_daily_change": "0",
@@ -28,7 +24,6 @@
     {
       "witness_name": "d-marim",
       "rank": 2568,
-      "real_rank": 2568,
       "url": "www.steemit.com",
       "vests": "0",
       "votes_daily_change": "0",
@@ -48,7 +43,6 @@
     {
       "witness_name": "falzxx",
       "rank": 2633,
-      "real_rank": 2633,
       "url": "www.steemit.com",
       "vests": "0",
       "votes_daily_change": "0",
@@ -68,7 +62,6 @@
     {
       "witness_name": "kushed",
       "rank": 30,
-      "real_rank": 30,
       "url": "www.saluscoin.info",
       "vests": "55056312337743434",
       "votes_daily_change": "0",
@@ -88,7 +81,6 @@
     {
       "witness_name": "complexring",
       "rank": 5,
-      "real_rank": 5,
       "url": "www.matthewniemerg.com",
       "vests": "86461784870510693",
       "votes_daily_change": "0",
@@ -108,7 +100,6 @@
     {
       "witness_name": "salvation",
       "rank": 85,
-      "real_rank": 85,
       "url": "witness.mayega.com",
       "vests": "68794680939204",
       "votes_daily_change": "0",
@@ -128,7 +119,6 @@
     {
       "witness_name": "wisconsin",
       "rank": 10443,
-      "real_rank": 10443,
       "url": "wisconsin.steemed.net",
       "vests": "0",
       "votes_daily_change": "0",
@@ -148,7 +138,6 @@
     {
       "witness_name": "adneu",
       "rank": 2286,
-      "real_rank": 2286,
       "url": "url",
       "vests": "0",
       "votes_daily_change": "0",
@@ -168,7 +157,6 @@
     {
       "witness_name": "rossco99",
       "rank": 148,
-      "real_rank": 148,
       "url": "url",
       "vests": "1547074267795",
       "votes_daily_change": "0",
@@ -188,7 +176,6 @@
     {
       "witness_name": "badger3196",
       "rank": 3509,
-      "real_rank": 3509,
       "url": "steemit.com/@badger3196",
       "vests": "0",
       "votes_daily_change": "0",
@@ -208,7 +195,6 @@
     {
       "witness_name": "badger3195",
       "rank": 3519,
-      "real_rank": 3519,
       "url": "steemit.com/@badger3195",
       "vests": "0",
       "votes_daily_change": "0",
@@ -228,7 +214,6 @@
     {
       "witness_name": "badger3194",
       "rank": 3525,
-      "real_rank": 3525,
       "url": "steemit.com/@badger3194",
       "vests": "0",
       "votes_daily_change": "0",
@@ -248,7 +233,6 @@
     {
       "witness_name": "badger3193",
       "rank": 3532,
-      "real_rank": 3532,
       "url": "steemit.com/@badger3193",
       "vests": "0",
       "votes_daily_change": "0",
@@ -268,7 +252,6 @@
     {
       "witness_name": "badger3192",
       "rank": 3495,
-      "real_rank": 3495,
       "url": "steemit.com/@badger3192",
       "vests": "0",
       "votes_daily_change": "0",
@@ -288,7 +271,6 @@
     {
       "witness_name": "badger3191",
       "rank": 3541,
-      "real_rank": 3541,
       "url": "steemit.com/@badger3191",
       "vests": "0",
       "votes_daily_change": "0",
@@ -308,7 +290,6 @@
     {
       "witness_name": "badger319",
       "rank": 3549,
-      "real_rank": 3549,
       "url": "steemit.com/@badger319",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +309,6 @@
     {
       "witness_name": "badger3186",
       "rank": 3510,
-      "real_rank": 3510,
       "url": "steemit.com/@badger3186",
       "vests": "0",
       "votes_daily_change": "0",
@@ -348,7 +328,6 @@
     {
       "witness_name": "badger3185",
       "rank": 3484,
-      "real_rank": 3484,
       "url": "steemit.com/@badger3185",
       "vests": "0",
       "votes_daily_change": "0",
@@ -368,7 +347,6 @@
     {
       "witness_name": "badger3184",
       "rank": 3488,
-      "real_rank": 3488,
       "url": "steemit.com/@badger3184",
       "vests": "0",
       "votes_daily_change": "0",
@@ -388,7 +366,6 @@
     {
       "witness_name": "badger3183",
       "rank": 3470,
-      "real_rank": 3470,
       "url": "steemit.com/@badger3183",
       "vests": "0",
       "votes_daily_change": "0",

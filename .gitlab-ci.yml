@@ -50,10 +50,7 @@ variables:
   HAFBE_MOCK_CACHE_TYPE: "haf_hafbe_mock"
   BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
   FF_NETWORK_PER_BUILD: 1
-  # Preserve the original fe9aaf53 image by digest; its short-SHA tag was removed.
-  # Compose combines the registry and version with ':' to form the OCI reference.
-  HAFAH_REGISTRY: "registry.gitlab.syncad.com/hive/hafah@sha256"
-  HAFAH_VERSION: "71cf4c7c2ca9f43e89047ee98a87659adeb0b4db52c00a88a34a540f9c40a9f2"
+  HAFAH_VERSION: "fe9aaf53"
   PYTEST_NUMBER_OF_PROCESSES: 8
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
@@ -111,26 +108,6 @@ lint_bash_scripts:
 lint_sql_scripts:
   extends: .haf_app_lint_sql
   stage: lint
-
-test_witness_endpoint_sql:
-  extends: .skip_test_on_docs_only
-  stage: test
-  image: postgres:16-alpine
-  needs: []
-  services:
-  - name: postgres:16-alpine
-    alias: endpoint-test-db
-  variables:
-    POSTGRES_DB: endpoint_tests
-    POSTGRES_USER: postgres
-    POSTGRES_HOST_AUTH_METHOD: trust
-    PGHOST: endpoint-test-db
-    PGUSER: postgres
-    PGDATABASE: endpoint_tests
-  script:
-  - psql -X -v ON_ERROR_STOP=1 -f tests/endpoint_sql/get_witnesses.sql
-  tags:
-  - public-runner-docker
 
 verify_poetry_lock_stability_api_package:
   stage: lint

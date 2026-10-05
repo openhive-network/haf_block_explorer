@@ -313,11 +313,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
     "page"      INT,
     "page-size" INT,
     "sort"      hafbe_backend.order_by_witness,
-    "direction" hafbe_backend.sort_direction,
-    _voter_id     INT = NULL,
-    _witness_name TEXT = NULL,
-    _has_votes    BOOLEAN = NULL,
-    _is_disabled  BOOLEAN = NULL
+    "direction" hafbe_backend.sort_direction
 )
 RETURNS SETOF hafbe_backend.witness
 LANGUAGE 'plpgsql' STABLE
@@ -333,7 +329,6 @@ BEGIN
         cw.witness_id,
         av.name,
         a.rank,
-        rr.real_rank,
         -- COALESCE provides defaults for witnesses without data
         COALESCE(cw.url, '')                                AS url,
         COALESCE(cw.price_feed, '0.000'::NUMERIC)           AS price_feed,
@@ -355,10 +350,6 @@ BEGIN
       JOIN hafbe_app.witness_rank_cache a              ON a.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_cache b        ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-      JOIN hafbe_backend.get_filtered_witness_ids(
-        _voter_id, _witness_name, _has_votes, _is_disabled
-      ) filtered ON filtered.witness_id = cw.witness_id
-      JOIN hafbe_backend.get_witness_real_ranks() rr ON rr.witness_id = cw.witness_id
       ORDER BY
         -- Sort by witness name
         (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN av.name                                                        ELSE NULL END) DESC,
@@ -394,17 +385,8 @@ BEGIN
         (CASE WHEN "direction" = 'desc' AND "sort" = 'signing_key'             THEN COALESCE(cw.signing_key, '')                                   ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'signing_key'             THEN COALESCE(cw.signing_key, '')                                   ELSE NULL END) ASC,
         -- Sort by node version
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'version' THEN hafbe_backend.get_witness_version_key(COALESCE(cw.version, '0.0.0')) END) DESC NULLS LAST,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'version' THEN hafbe_backend.get_witness_version_key(COALESCE(cw.version, '0.0.0')) END) ASC NULLS LAST,
-        -- Sort by the remaining displayed numeric witness properties
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'missed_blocks'           THEN COALESCE(cw.missed_blocks, 0)                                   ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'missed_blocks'           THEN COALESCE(cw.missed_blocks, 0)                                   ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'hbd_interest_rate'       THEN COALESCE(cw.hbd_interest_rate, 0)                               ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'hbd_interest_rate'       THEN COALESCE(cw.hbd_interest_rate, 0)                               ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'last_confirmed_block_num' THEN COALESCE(cw.last_created_block_num, 0)                         ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'last_confirmed_block_num' THEN COALESCE(cw.last_created_block_num, 0)                         ELSE NULL END) ASC,
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'account_creation_fee'    THEN COALESCE(cw.account_creation_fee, 0)                            ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'account_creation_fee'    THEN COALESCE(cw.account_creation_fee, 0)                            ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'version'                 THEN COALESCE(cw.version, '0.0.0')                                  ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'version'                 THEN COALESCE(cw.version, '0.0.0')                                  ELSE NULL END) ASC,
         -- Sort by feed update time
         (CASE WHEN "direction" = 'desc' AND "sort" = 'feed_updated_at'         THEN COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'feed_updated_at'         THEN COALESCE(cw.feed_updated_at, '1970-01-01 00:00:00'::TIMESTAMP) ELSE NULL END) ASC,
@@ -417,7 +399,6 @@ BEGIN
     SELECT
       ls.name::TEXT,
       ls.rank,
-      ls.real_rank,
       ls.url,
       ls.votes::TEXT,
       ls.votes_daily_change::TEXT,
@@ -479,7 +460,6 @@ BEGIN
     SELECT ROW(
       ls.witness,
       a.rank,
-      rr.real_rank,
       ls.url,
       COALESCE(all_votes.votes::TEXT, '0'),
       COALESCE(wvcc.votes_daily_change::TEXT, '0'),
@@ -498,7 +478,6 @@ BEGIN
     )
     FROM limited_set ls
     JOIN hafbe_app.witness_rank_cache a                 ON a.witness_id = ls.witness_id
-    JOIN hafbe_backend.get_witness_real_ranks() rr ON rr.witness_id = ls.witness_id
     LEFT JOIN hafbe_app.witness_votes_cache all_votes   ON all_votes.witness_id = ls.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_cache wvcc ON wvcc.witness_id = ls.witness_id
   );
@@ -566,25 +545,19 @@ END
 $$;
 
 /*
- * get_witnesses_count: Counts the same filtered witnesses as get_witnesses.
+ * get_witnesses_count: Counts total number of witnesses.
  *
- * RETURNS: Total count of witnesses matching all supplied filters
+ * RETURNS: Total count of registered witnesses
  */
-DROP FUNCTION IF EXISTS hafbe_backend.get_witnesses_count();
-CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses_count(
-    _voter_id     INT = NULL,
-    _witness_name TEXT = NULL,
-    _has_votes    BOOLEAN = NULL,
-    _is_disabled  BOOLEAN = NULL
-)
+CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses_count()
 RETURNS INT
-LANGUAGE sql STABLE
+LANGUAGE 'plpgsql' STABLE
 AS
 $$
-  SELECT COUNT(*)::INT
-  FROM hafbe_backend.get_filtered_witness_ids(
-    _voter_id, _witness_name, _has_votes, _is_disabled
-  );
+BEGIN
+  RETURN COUNT(*)
+  FROM hafbe_app.current_witnesses;
+END
 $$;
 
 RESET ROLE;

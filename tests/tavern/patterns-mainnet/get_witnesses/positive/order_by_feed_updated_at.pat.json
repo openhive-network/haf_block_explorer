@@ -1,14 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "jabbasteem",
       "rank": 28,
-      "real_rank": 28,
       "url": "https://steemit.com/witness-category/@jabbasteem/witness-jabbasteem",
       "vests": "60268580363975099",
       "votes_daily_change": "0",
@@ -28,7 +24,6 @@
     {
       "witness_name": "delegate.lafona",
       "rank": 19,
-      "real_rank": 19,
       "url": "https://steemit.com/witness-category/@delegate.lafona/delegate",
       "vests": "75048734135015576",
       "votes_daily_change": "0",
@@ -48,7 +43,6 @@
     {
       "witness_name": "arhag",
       "rank": 2,
-      "real_rank": 2,
       "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
       "vests": "91835048921097725",
       "votes_daily_change": "0",
@@ -68,7 +62,6 @@
     {
       "witness_name": "complexring",
       "rank": 5,
-      "real_rank": 5,
       "url": "www.matthewniemerg.com",
       "vests": "86461784870510693",
       "votes_daily_change": "0",
@@ -88,7 +81,6 @@
     {
       "witness_name": "royaltiffany",
       "rank": 52,
-      "real_rank": 52,
       "url": " ",
       "vests": "10987132582693094",
       "votes_daily_change": "0",
@@ -108,7 +100,6 @@
     {
       "witness_name": "fubar-bdhr",
       "rank": 88,
-      "real_rank": 88,
       "url": "https://steemit.com/witness-category/@fubar-bdhr/witness-proposal-fubar-bdhr",
       "vests": "45727367289001",
       "votes_daily_change": "0",
@@ -128,7 +119,6 @@
     {
       "witness_name": "ihashfury",
       "rank": 18,
-      "real_rank": 18,
       "url": "https://steemit.com/witness-category/@ihashfury/ihashfury-witness-thread",
       "vests": "75264658828531730",
       "votes_daily_change": "0",
@@ -148,7 +138,6 @@
     {
       "witness_name": "someguy123",
       "rank": 39,
-      "real_rank": 39,
       "url": "https://steemit.com/witness-category/@someguy123/someguy123-witness-thread",
       "vests": "35336030021992151",
       "votes_daily_change": "0",
@@ -168,7 +157,6 @@
     {
       "witness_name": "anyx",
       "rank": 32,
-      "real_rank": 32,
       "url": "https://steemit.com/witness-category/@anyx/witness-application-anyx",
       "vests": "54439516337394325",
       "votes_daily_change": "0",
@@ -188,7 +176,6 @@
     {
       "witness_name": "bhuz",
       "rank": 25,
-      "real_rank": 25,
       "url": "https://steemit.com/witness-category/@bhuz/bhuz-witness-thread",
       "vests": "63132734765646849",
       "votes_daily_change": "0",
@@ -208,7 +195,6 @@
     {
       "witness_name": "pharesim",
       "rank": 14,
-      "real_rank": 14,
       "url": "https://steemit.com/witness-category/@pharesim/witness-post",
       "vests": "76507320493505642",
       "votes_daily_change": "0",
@@ -228,7 +214,6 @@
     {
       "witness_name": "okay",
       "rank": 81,
-      "real_rank": 81,
       "url": "https://steemit.com/witness-category/@okay/new-witness-okay-a-great-addition-to-the-steem-network",
       "vests": "95253202327856",
       "votes_daily_change": "0",
@@ -248,7 +233,6 @@
     {
       "witness_name": "clayop",
       "rank": 7,
-      "real_rank": 7,
       "url": "https://steemit.com/witness-category/@clayop/witness-clayop",
       "vests": "82407076853959360",
       "votes_daily_change": "0",
@@ -268,7 +252,6 @@
     {
       "witness_name": "abit",
       "rank": 9,
-      "real_rank": 9,
       "url": "https://steemit.com/witness-category/@abit/abit-witness-post",
       "vests": "82298203765221553",
       "votes_daily_change": "0",
@@ -288,7 +271,6 @@
     {
       "witness_name": "furion",
       "rank": 113,
-      "real_rank": 113,
       "url": " ",
       "vests": "6624378606352",
       "votes_daily_change": "0",
@@ -308,7 +290,6 @@
     {
       "witness_name": "jocelyn",
       "rank": 68,
-      "real_rank": 68,
       "url": "",
       "vests": "444349892424320",
       "votes_daily_change": "0",
@@ -328,7 +309,6 @@
     {
       "witness_name": "error",
       "rank": 174,
-      "real_rank": 174,
       "url": "",
       "vests": "541469657693",
       "votes_daily_change": "0",
@@ -348,7 +328,6 @@
     {
       "witness_name": "idol",
       "rank": 72,
-      "real_rank": 72,
       "url": "https://steemit.com/witness-category/@idol/idol-witness",
       "vests": "164768283777071",
       "votes_daily_change": "0",
@@ -368,7 +347,6 @@
     {
       "witness_name": "joseph",
       "rank": 12,
-      "real_rank": 12,
       "url": "https://steemit.com/introduceyourself/@joseph/apples-and-oranges",
       "vests": "77764439974010608",
       "votes_daily_change": "0",
@@ -388,7 +366,6 @@
     {
       "witness_name": "steem-id",
       "rank": 44,
-      "real_rank": 44,
       "url": "https://keybase.io/jemekite",
       "vests": "21270939652882875",
       "votes_daily_change": "0",
