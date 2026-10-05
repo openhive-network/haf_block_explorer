@@ -98,8 +98,9 @@ SET ROLE hafbe_owner;
         name: voter-name
         required: false
         schema:
-          type: [string, 'null']
+          type: string
           default: NULL
+          nullable: true
         description: |
           Return witnesses voted for by this account. Resolve the complete
           witness-proxy chain and use the terminal account''s votes when proxied.
@@ -109,8 +110,9 @@ SET ROLE hafbe_owner;
         name: witness-name
         required: false
         schema:
-          type: [string, 'null']
+          type: string
           default: NULL
+          nullable: true
         description: |
           Match a literal, case-sensitive substring of the witness account name.
           The characters %% and _ have no wildcard meaning. Null or an empty
@@ -119,8 +121,9 @@ SET ROLE hafbe_owner;
         name: has-votes
         required: false
         schema:
-          type: [boolean, 'null']
+          type: boolean
           default: NULL
+          nullable: true
         description: |
           True selects witnesses with positive vote weight; false selects
           witnesses without positive vote weight. Null leaves vote weight unfiltered.
@@ -128,8 +131,9 @@ SET ROLE hafbe_owner;
         name: is-disabled
         required: false
         schema:
-          type: [boolean, 'null']
+          type: boolean
           default: NULL
+          nullable: true
         description: |
           True selects witnesses with a disabled signing key; false selects
           witnesses with an enabled signing key. Null includes both.

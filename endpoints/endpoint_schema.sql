@@ -1359,11 +1359,9 @@ declare
             "name": "voter-name",
             "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "default": null
+              "type": "string",
+              "default": null,
+              "nullable": true
             },
             "description": "Return witnesses voted for by this account. Resolve the complete\nwitness-proxy chain and use the terminal account''s votes when proxied.\nOmit this parameter or pass null to leave votes unfiltered. An empty\nor nonexistent account name returns the standard account-not-found error.\n"
           },
@@ -1372,11 +1370,9 @@ declare
             "name": "witness-name",
             "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "default": null
+              "type": "string",
+              "default": null,
+              "nullable": true
             },
             "description": "Match a literal, case-sensitive substring of the witness account name.\nThe characters %% and _ have no wildcard meaning. Null or an empty\nstring leaves names unfiltered.\n"
           },
@@ -1385,11 +1381,9 @@ declare
             "name": "has-votes",
             "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ],
-              "default": null
+              "type": "boolean",
+              "default": null,
+              "nullable": true
             },
             "description": "True selects witnesses with positive vote weight; false selects\nwitnesses without positive vote weight. Null leaves vote weight unfiltered.\n"
           },
@@ -1398,11 +1392,9 @@ declare
             "name": "is-disabled",
             "required": false,
             "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ],
-              "default": null
+              "type": "boolean",
+              "default": null,
+              "nullable": true
             },
             "description": "True selects witnesses with a disabled signing key; false selects\nwitnesses with an enabled signing key. Null includes both.\n"
           }
