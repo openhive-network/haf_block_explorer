@@ -115,10 +115,10 @@ lint_sql_scripts:
 test_witness_endpoint_sql:
   extends: .skip_test_on_docs_only
   stage: test
-  image: postgres:16-alpine
+  image: postgres:18-alpine
   needs: []
   services:
-  - name: postgres:16-alpine
+  - name: postgres:18-alpine
     alias: endpoint-test-db
   variables:
     POSTGRES_DB: endpoint_tests
