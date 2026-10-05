@@ -1,14 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "zzzzzzzzzzzzzzzz",
       "rank": 4878,
-      "real_rank": 4878,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -28,7 +24,6 @@
     {
       "witness_name": "zzzzzzzzzzzzzzz",
       "rank": 4992,
-      "real_rank": 4992,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -48,7 +43,6 @@
     {
       "witness_name": "zzzzzz",
       "rank": 4957,
-      "real_rank": 4957,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -68,7 +62,6 @@
     {
       "witness_name": "zzzzz",
       "rank": 10943,
-      "real_rank": 10943,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -88,7 +81,6 @@
     {
       "witness_name": "zzzz9999",
       "rank": 8063,
-      "real_rank": 8063,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -108,7 +100,6 @@
     {
       "witness_name": "zzzz-21ksk",
       "rank": 102,
-      "real_rank": 102,
       "url": "",
       "vests": "11454383405778",
       "votes_daily_change": "0",
@@ -128,7 +119,6 @@
     {
       "witness_name": "zzzz-18xij",
       "rank": 103,
-      "real_rank": 103,
       "url": "",
       "vests": "11454383405778",
       "votes_daily_change": "0",
@@ -148,7 +138,6 @@
     {
       "witness_name": "zzzz-17ssi",
       "rank": 104,
-      "real_rank": 104,
       "url": "",
       "vests": "11454383405778",
       "votes_daily_change": "0",
@@ -168,7 +157,6 @@
     {
       "witness_name": "zzzz-12dwj",
       "rank": 105,
-      "real_rank": 105,
       "url": "",
       "vests": "11454383405778",
       "votes_daily_change": "0",
@@ -188,7 +176,6 @@
     {
       "witness_name": "zzzz-09sfe",
       "rank": 101,
-      "real_rank": 101,
       "url": "",
       "vests": "11552363078925",
       "votes_daily_change": "0",
@@ -208,7 +195,6 @@
     {
       "witness_name": "zzzz-07aej",
       "rank": 100,
-      "real_rank": 100,
       "url": "",
       "vests": "14449028328861",
       "votes_daily_change": "0",
@@ -228,7 +214,6 @@
     {
       "witness_name": "zzzz-06xvb",
       "rank": 96,
-      "real_rank": 96,
       "url": "",
       "vests": "17539148080892",
       "votes_daily_change": "0",
@@ -248,7 +233,6 @@
     {
       "witness_name": "zzzz",
       "rank": 5094,
-      "real_rank": 5094,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -268,7 +252,6 @@
     {
       "witness_name": "zzz",
       "rank": 11836,
-      "real_rank": 11836,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -288,7 +271,6 @@
     {
       "witness_name": "zztop",
       "rank": 6616,
-      "real_rank": 6616,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -308,7 +290,6 @@
     {
       "witness_name": "zzalinor",
       "rank": 10940,
-      "real_rank": 10940,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +309,6 @@
     {
       "witness_name": "zyzzx-79fce385",
       "rank": 4245,
-      "real_rank": 4245,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -348,7 +328,6 @@
     {
       "witness_name": "zyzzx-6f70e8a5",
       "rank": 4618,
-      "real_rank": 4618,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -368,7 +347,6 @@
     {
       "witness_name": "zyzzx-602286c0",
       "rank": 4633,
-      "real_rank": 4633,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -388,7 +366,6 @@
     {
       "witness_name": "zyzzx-2d127d6b",
       "rank": 4634,
-      "real_rank": 4634,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",

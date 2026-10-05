@@ -1,14 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "initminer",
       "rank": 12306,
-      "real_rank": 12306,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -28,7 +24,6 @@
     {
       "witness_name": "steem",
       "rank": 12305,
-      "real_rank": 12305,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -48,7 +43,6 @@
     {
       "witness_name": "admin",
       "rank": 12304,
-      "real_rank": 12304,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -68,7 +62,6 @@
     {
       "witness_name": "dark",
       "rank": 12303,
-      "real_rank": 12303,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -88,7 +81,6 @@
     {
       "witness_name": "nxt1",
       "rank": 12302,
-      "real_rank": 12302,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -108,7 +100,6 @@
     {
       "witness_name": "nxt",
       "rank": 12301,
-      "real_rank": 12301,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -128,7 +119,6 @@
     {
       "witness_name": "nxt2",
       "rank": 12300,
-      "real_rank": 12300,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -148,7 +138,6 @@
     {
       "witness_name": "administrator",
       "rank": 12299,
-      "real_rank": 12299,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -168,7 +157,6 @@
     {
       "witness_name": "nxt3",
       "rank": 12298,
-      "real_rank": 12298,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -188,7 +176,6 @@
     {
       "witness_name": "cloop1",
       "rank": 12297,
-      "real_rank": 12297,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -208,7 +195,6 @@
     {
       "witness_name": "dantheman5",
       "rank": 12296,
-      "real_rank": 12296,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -228,7 +214,6 @@
     {
       "witness_name": "nxt4",
       "rank": 12295,
-      "real_rank": 12295,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -248,7 +233,6 @@
     {
       "witness_name": "thisisnice",
       "rank": 12294,
-      "real_rank": 12294,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -268,7 +252,6 @@
     {
       "witness_name": "moderator",
       "rank": 12293,
-      "real_rank": 12293,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -288,7 +271,6 @@
     {
       "witness_name": "dantheman1",
       "rank": 12292,
-      "real_rank": 12292,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -308,7 +290,6 @@
     {
       "witness_name": "cloop2",
       "rank": 12291,
-      "real_rank": 12291,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -328,7 +309,6 @@
     {
       "witness_name": "dantheman6",
       "rank": 12290,
-      "real_rank": 12290,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -348,7 +328,6 @@
     {
       "witness_name": "thisisnice0",
       "rank": 12289,
-      "real_rank": 12289,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -368,7 +347,6 @@
     {
       "witness_name": "root",
       "rank": 12288,
-      "real_rank": 12288,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -388,7 +366,6 @@
     {
       "witness_name": "nxt5",
       "rank": 12287,
-      "real_rank": 12287,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",

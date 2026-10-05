@@ -1,14 +1,10 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "witnesses": [
     {
       "witness_name": "dog",
       "rank": 11010,
-      "real_rank": 11010,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -28,7 +24,6 @@
     {
       "witness_name": "healthcare",
       "rank": 120,
-      "real_rank": 120,
       "url": "",
       "vests": "4579626618155",
       "votes_daily_change": "0",
@@ -48,7 +43,6 @@
     {
       "witness_name": "harvey",
       "rank": 198,
-      "real_rank": 198,
       "url": " ",
       "vests": "137816052015",
       "votes_daily_change": "0",
@@ -68,7 +62,6 @@
     {
       "witness_name": "dele-puppy",
       "rank": 43,
-      "real_rank": 43,
       "url": "https://steemit.com/witness-category/@dele-puppy/dele-puppy-witness-thread",
       "vests": "22997840701528730",
       "votes_daily_change": "0",
@@ -88,7 +81,6 @@
     {
       "witness_name": "adm",
       "rank": 11128,
-      "real_rank": 11128,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -108,7 +100,6 @@
     {
       "witness_name": "blackwidow",
       "rank": 47,
-      "real_rank": 47,
       "url": " ",
       "vests": "15286138088853117",
       "votes_daily_change": "0",
@@ -128,7 +119,6 @@
     {
       "witness_name": "proctologic",
       "rank": 49,
-      "real_rank": 49,
       "url": "www.steemit.com/@proctologic",
       "vests": "14161723013952690",
       "votes_daily_change": "0",
@@ -148,7 +138,6 @@
     {
       "witness_name": "eternal",
       "rank": 220,
-      "real_rank": 220,
       "url": "https://steemit.com/@eternal",
       "vests": "85904436277",
       "votes_daily_change": "0",
@@ -168,7 +157,6 @@
     {
       "witness_name": "teamsteem",
       "rank": 62,
-      "real_rank": 62,
       "url": " ",
       "vests": "871184348627249",
       "votes_daily_change": "0",
@@ -188,7 +176,6 @@
     {
       "witness_name": "datasecuritynode",
       "rank": 15,
-      "real_rank": 15,
       "url": "http://steemd.com/@datasecuritynode/datasecuritynode-witness-post",
       "vests": "76461930217792352",
       "votes_daily_change": "0",
@@ -208,7 +195,6 @@
     {
       "witness_name": "bitcube",
       "rank": 26,
-      "real_rank": 26,
       "url": "https://steemit.com/witness-category/@bitcube/bitcube-witness-post",
       "vests": "62345864158944565",
       "votes_daily_change": "0",
@@ -228,7 +214,6 @@
     {
       "witness_name": "ah1",
       "rank": 9043,
-      "real_rank": 9043,
       "url": "",
       "vests": "0",
       "votes_daily_change": "0",
@@ -248,7 +233,6 @@
     {
       "witness_name": "dr2073",
       "rank": 171,
-      "real_rank": 171,
       "url": "https://steemit.com/witness-category/@dr2073/witness-thread-dr2073",
       "vests": "680855558813",
       "votes_daily_change": "0",
@@ -268,7 +252,6 @@
     {
       "witness_name": "picokernel",
       "rank": 37,
-      "real_rank": 37,
       "url": "https://steemit.com/@picokernel",
       "vests": "42316314379002777",
       "votes_daily_change": "0",
@@ -288,7 +271,6 @@
     {
       "witness_name": "mrs.agsexplorer",
       "rank": 59,
-      "real_rank": 59,
       "url": "https://steemit.com/witness-category/@mrs.agsexplorer/6lpuyy-witness-mrs",
       "vests": "1515887409979754",
       "votes_daily_change": "0",
@@ -308,7 +290,6 @@
     {
       "witness_name": "crypto777",
       "rank": 41,
-      "real_rank": 41,
       "url": "https://steemit.com/introduceyourself/@jl777/steemit-is-crypto-s-first-mass-market-solution",
       "vests": "27750252823491744",
       "votes_daily_change": "0",
@@ -328,7 +309,6 @@
     {
       "witness_name": "kushed",
       "rank": 30,
-      "real_rank": 30,
       "url": "www.saluscoin.info",
       "vests": "55056312337743434",
       "votes_daily_change": "0",
@@ -348,7 +328,6 @@
     {
       "witness_name": "bue",
       "rank": 35,
-      "real_rank": 35,
       "url": "https://steemd.com/witness-category/@bue/bue-witness-post",
       "vests": "46759414437317426",
       "votes_daily_change": "0",
@@ -368,7 +347,6 @@
     {
       "witness_name": "fnait",
       "rank": 112,
-      "real_rank": 112,
       "url": " ",
       "vests": "6624378606352",
       "votes_daily_change": "0",
@@ -388,7 +366,6 @@
     {
       "witness_name": "liondani",
       "rank": 23,
-      "real_rank": 23,
       "url": "https://steemit.com/introduceyourself/@liondani/hi-liondani-here-aka-daniel-schwarz-happy-husband-father-steem-witness-steemit-enthusiast",
       "vests": "65350959490860519",
       "votes_daily_change": "0",

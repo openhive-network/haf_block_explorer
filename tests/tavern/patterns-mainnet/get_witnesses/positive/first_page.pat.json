@@ -1,15 +1,11 @@
 {
   "total_witnesses": 12306,
   "total_pages": 616,
-  "current_version": "0.14.1",
-  "vote_source": null,
-  "voted_via": null,
   "votes_updated_at": "2024-10-14T08:08:11.119424",
   "witnesses": [
     {
       "witness_name": "roadscape",
       "rank": 1,
-      "real_rank": 1,
       "url": "https://steemit.com/witness-category/@roadscape/witness-roadscape",
       "vests": "94172201023355097",
       "votes_daily_change": "0",
@@ -29,7 +25,6 @@
     {
       "witness_name": "arhag",
       "rank": 2,
-      "real_rank": 2,
       "url": "https://steemit.com/witness-category/@arhag/witness-arhag",
       "vests": "91835048921097725",
       "votes_daily_change": "0",
@@ -49,7 +44,6 @@
     {
       "witness_name": "smooth.witness",
       "rank": 3,
-      "real_rank": 3,
       "url": "https://steemit.com/witness-category/@smooth.witness/smooth-witness",
       "vests": "90358676844796116",
       "votes_daily_change": "0",
@@ -69,7 +63,6 @@
     {
       "witness_name": "xeldal",
       "rank": 4,
-      "real_rank": 4,
       "url": "https://steemit.com/witness-category/@xeldal/xeldal-witness-information",
       "vests": "87291679445052068",
       "votes_daily_change": "0",
@@ -89,7 +82,6 @@
     {
       "witness_name": "complexring",
       "rank": 5,
-      "real_rank": 5,
       "url": "www.matthewniemerg.com",
       "vests": "86461784870510693",
       "votes_daily_change": "0",
@@ -109,7 +101,6 @@
     {
       "witness_name": "riverhead",
       "rank": 6,
-      "real_rank": 6,
       "url": "https://steemit.com/witness-category/@riverhead/witness-proposal-riverhead",
       "vests": "82719898386771399",
       "votes_daily_change": "0",
@@ -129,7 +120,6 @@
     {
       "witness_name": "clayop",
       "rank": 7,
-      "real_rank": 7,
       "url": "https://steemit.com/witness-category/@clayop/witness-clayop",
       "vests": "82407076853959360",
       "votes_daily_change": "0",
@@ -149,7 +139,6 @@
     {
       "witness_name": "blocktrades",
       "rank": 8,
-      "real_rank": 8,
       "url": "https://blocktrades.us",
       "vests": "82373419958692803",
       "votes_daily_change": "0",
@@ -169,7 +158,6 @@
     {
       "witness_name": "abit",
       "rank": 9,
-      "real_rank": 9,
       "url": "https://steemit.com/witness-category/@abit/abit-witness-post",
       "vests": "82298203765221553",
       "votes_daily_change": "0",
@@ -189,7 +177,6 @@
     {
       "witness_name": "wackou",
       "rank": 10,
-      "real_rank": 10,
       "url": "https://steemit.com/witness-category/@wackou/wackou-witness-post",
       "vests": "78489849214425028",
       "votes_daily_change": "0",
@@ -209,7 +196,6 @@
     {
       "witness_name": "steemed",
       "rank": 11,
-      "real_rank": 11,
       "url": "steemed.steemed.net",
       "vests": "78385876330740967",
       "votes_daily_change": "0",
@@ -229,7 +215,6 @@
     {
       "witness_name": "joseph",
       "rank": 12,
-      "real_rank": 12,
       "url": "https://steemit.com/introduceyourself/@joseph/apples-and-oranges",
       "vests": "77764439974010608",
       "votes_daily_change": "0",
@@ -249,7 +234,6 @@
     {
       "witness_name": "jesta",
       "rank": 13,
-      "real_rank": 13,
       "url": "http://jesta.us",
       "vests": "76954605439526855",
       "votes_daily_change": "0",
@@ -269,7 +253,6 @@
     {
       "witness_name": "pharesim",
       "rank": 14,
-      "real_rank": 14,
       "url": "https://steemit.com/witness-category/@pharesim/witness-post",
       "vests": "76507320493505642",
       "votes_daily_change": "0",
@@ -289,7 +272,6 @@
     {
       "witness_name": "datasecuritynode",
       "rank": 15,
-      "real_rank": 15,
       "url": "http://steemd.com/@datasecuritynode/datasecuritynode-witness-post",
       "vests": "76461930217792352",
       "votes_daily_change": "0",
@@ -309,7 +291,6 @@
     {
       "witness_name": "boatymcboatface",
       "rank": 16,
-      "real_rank": 16,
       "url": "https://steemit.com/witness-category/@boatymcboatface/witness-node-boatymcboatface-hosted-in-australia",
       "vests": "75953872699754611",
       "votes_daily_change": "0",
@@ -329,7 +310,6 @@
     {
       "witness_name": "steemychicken1",
       "rank": 17,
-      "real_rank": 17,
       "url": "https://steemit.com/witness-category/@steemychicken1/witness-voting-steemychicken1",
       "vests": "75396638797606236",
       "votes_daily_change": "0",
@@ -349,7 +329,6 @@
     {
       "witness_name": "ihashfury",
       "rank": 18,
-      "real_rank": 18,
       "url": "https://steemit.com/witness-category/@ihashfury/ihashfury-witness-thread",
       "vests": "75264658828531730",
       "votes_daily_change": "0",
@@ -369,7 +348,6 @@
     {
       "witness_name": "delegate.lafona",
       "rank": 19,
-      "real_rank": 19,
       "url": "https://steemit.com/witness-category/@delegate.lafona/delegate",
       "vests": "75048734135015576",
       "votes_daily_change": "0",
@@ -389,7 +367,6 @@
     {
       "witness_name": "au1nethyb1",
       "rank": 20,
-      "real_rank": 20,
       "url": "https://steemit.com/witness-category/@au1nethyb1/au1nethyb1-witness-in-the-lan-down-under",
       "vests": "74499900091597385",
       "votes_daily_change": "0",
