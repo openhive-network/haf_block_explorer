@@ -140,14 +140,15 @@ Returns `hafbe_backend.proposal_votes_return`:
 - `proposal` — full nested proposal object (same as `hafbe_backend.proposal`); mirrors `condenser_api.ProposalVote.proposal` so the front end can display proposal details without a second request
 - `timestamp` — block timestamp at which this active vote was last (re)cast
 
-The current-vote helper selects the page into a local array, collects the distinct
-account IDs needed for that page, and resolves names once through
-`hafbe_app.accounts_view` using `id = ANY(account_ids)`. The final query joins this
-small name set for voter, creator, receiver and optional proxy. Its existing
-`force_custom_plan` setting lets PostgreSQL plan against the actual ID array.
-Keep proxy presence separate from proxy-name lookup: a missing proxy name must
-not restore the voter's direct voting power. This is a local alternative to the
-per-account lateral lookups; broader module reorganization is still a proposal.
+The current-vote helper carries the selected page's proposal metadata and proxy
+presence in an ordered local array. It collects the distinct account IDs needed
+for that page and resolves names once through `hafbe_app.accounts_view` using
+`id = ANY(account_ids)`. The final query joins this small name set for voter,
+creator, receiver and optional proxy, then restores page order with ordinality.
+`force_custom_plan` lets PostgreSQL plan against the actual ID array. Keep proxy
+presence separate from proxy-name lookup: a missing proxy name must not restore
+the voter's direct voting power. Missing vest cache entries return zero here;
+only the history helper uses a fallback.
 
 ---
 
@@ -235,7 +236,9 @@ withdrawal rows always agree):
    window (issue #142). That fourth group covers *witness*-vote history, not proposal-vote history,
    so a voter who withdrew approval and does nothing else in governance still has **no cache row**.
 2. `hafbe_backend.expired_voter_stats_view` — same arithmetic over every account; always resolves.
-   Joined **only** for the page's cache-miss voters, so an all-cache-hit page pays nothing for it.
+   Supplies stake **only** for the page's cache-miss voters. An all-cache-hit page
+   needs no fallback stake calculation; the planner can still perform startup
+   reads before finding that the cache-miss input is empty.
 
 **Naming diverges from the witness endpoint, deliberately.** `get_witness_votes_history` returns
 `vests` / `account_vests` / `proxied_vests`, does not zero under a proxy, and has no `proxy` field.
@@ -244,6 +247,25 @@ setting a proxy deletes witness votes, so the proxied case is unreachable there,
 survive a proxy and must be excluded from the proposal's total.
 
 ---
+
+## Backend organization
+
+`backend/endpoint_helpers/proposal.sql` contains the internal page types, shared
+status predicate, and the three read paths with their counts: proposal listing,
+current approvals and vote history. Internal types are declared before the
+functions that use them and remain separate from public API types.
+
+Endpoint wrappers retain validation, defaults, cache headers and public response
+types. Counts apply their existing filters independently of the joins used to
+render a page.
+
+Each read path separates page selection from response construction. Joins that
+determine page membership stay before LIMIT: the creator account in proposal
+listings, and voter account/block visibility in history. The listing carries
+proposal metadata and cached totals with its page; current votes fetch metadata
+and proxies after selecting vote rows. History uses
+`hive.accounts_view` for voter names and `hafbe_app.accounts_view` for proxy names.
+Its cache-miss fallback stays restricted to voters on the selected page.
 
 ## Data Sources
 
