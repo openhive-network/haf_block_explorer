@@ -548,14 +548,24 @@ BEGIN
       COALESCE(pav.name, '')::TEXT                AS proxy,
       bv.created_at                               AS "timestamp"
     FROM limited_set ls
-    JOIN hafbe_app.accounts_view              av  ON av.id           = ls.voter_id
+    -- Keep each account lookup parameterized by ID. OFFSET 0 prevents
+    -- subquery flattening into full scans of the fork-aware accounts view.
+    JOIN LATERAL (
+      SELECT name FROM hafbe_app.accounts_view WHERE id = ls.voter_id OFFSET 0
+    ) av ON TRUE
     JOIN hafbe_app.current_proposals          cp  ON cp.proposal_id  = ls.proposal_id
-    JOIN hafbe_app.accounts_view              cav ON cav.id          = cp.creator_id
-    JOIN hafbe_app.accounts_view              rav ON rav.id          = cp.receiver_id
+    JOIN LATERAL (
+      SELECT name FROM hafbe_app.accounts_view WHERE id = cp.creator_id OFFSET 0
+    ) cav ON TRUE
+    JOIN LATERAL (
+      SELECT name FROM hafbe_app.accounts_view WHERE id = cp.receiver_id OFFSET 0
+    ) rav ON TRUE
     LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id  = cp.proposal_id
     LEFT JOIN hafbe_app.account_vest_stats_cache  avs ON avs.account_id   = ls.voter_id
     LEFT JOIN hafbe_app.current_account_proxies   cap ON cap.account_id   = ls.voter_id
-    LEFT JOIN hafbe_app.accounts_view             pav ON pav.id           = cap.proxy_id
+    LEFT JOIN LATERAL (
+      SELECT name FROM hafbe_app.accounts_view WHERE id = cap.proxy_id OFFSET 0
+    ) pav ON TRUE
     JOIN hive.blocks_view                     bv  ON bv.num          = hafd.operation_id_to_block_num(ls.source_op)
     ORDER BY
       (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'asc'  THEN ls.voter_id    END) ASC,
