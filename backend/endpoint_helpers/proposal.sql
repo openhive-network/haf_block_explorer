@@ -495,12 +495,15 @@ SET jit = OFF
 SET plan_cache_mode = force_custom_plan
 AS $$
 DECLARE
+  __page_votes hafbe_app.current_proposal_votes[];
+  __account_ids INT[];
   __offset INT       := ((_page - 1) * _page_size);
   _now     TIMESTAMP := (SELECT created_at FROM hive.blocks_view WHERE num = hafbe_backend.get_hafbe_head_block());
 BEGIN
-  RETURN QUERY (
-    WITH limited_set AS MATERIALIZED (
-      SELECT cpv.voter_id, cpv.proposal_id, cpv.source_op
+  -- Select the page once, before looking up any account names.
+  SELECT array_agg(selected.vote) INTO __page_votes
+  FROM (
+      SELECT cpv AS vote
       FROM hafbe_app.current_proposal_votes cpv
       JOIN hafbe_app.current_proposals      cp  ON cp.proposal_id = cpv.proposal_id
       WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
@@ -517,56 +520,80 @@ BEGIN
         (CASE WHEN _sort = 'by_proposal_voter' AND _direction = 'desc' THEN cpv.voter_id    END) DESC
       OFFSET __offset
       LIMIT _page_size
+
+  ) selected;
+
+  -- Collect the distinct account IDs needed to render that page.
+  WITH page_accounts AS (
+    SELECT ls.voter_id, cp.creator_id, cp.receiver_id, cap.proxy_id
+    FROM unnest(__page_votes) ls
+    JOIN hafbe_app.current_proposals cp ON cp.proposal_id = ls.proposal_id
+    LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = ls.voter_id
+  ), account_ids AS (
+    SELECT voter_id AS id FROM page_accounts
+    UNION
+    SELECT creator_id FROM page_accounts
+    UNION
+    SELECT receiver_id FROM page_accounts
+    UNION
+    SELECT proxy_id FROM page_accounts WHERE proxy_id IS NOT NULL
+  )
+  SELECT array_agg(id) INTO __account_ids FROM account_ids;
+
+  -- The existing custom-plan setting exposes the actual ID array to the planner.
+  RETURN QUERY (
+    WITH page_data AS MATERIALIZED (
+      SELECT
+        ls.voter_id, ls.proposal_id, ls.source_op,
+        cp.creator_id, cp.receiver_id, cp.start_date, cp.end_date,
+        cp.daily_pay, cp.subject, cp.permlink, cp.paid_amount,
+        cap.account_id AS proxy_account_id, cap.proxy_id
+      FROM unnest(__page_votes) ls
+      JOIN hafbe_app.current_proposals cp ON cp.proposal_id = ls.proposal_id
+      LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = ls.voter_id
+    ),
+    account_names AS MATERIALIZED (
+      SELECT av.id, av.name
+      FROM hafbe_app.accounts_view av
+      WHERE av.id = ANY (__account_ids)
     )
     SELECT
       av.name::TEXT       AS voter_name,
       ROW(
-        cp.proposal_id,
-        cp.proposal_id,
+        ls.proposal_id,
+        ls.proposal_id,
         cav.name::TEXT,
         rav.name::TEXT,
-        cp.start_date,
-        cp.end_date,
-        cp.daily_pay::TEXT,
-        cp.subject,
-        cp.permlink,
+        ls.start_date,
+        ls.end_date,
+        ls.daily_pay::TEXT,
+        ls.subject,
+        ls.permlink,
         COALESCE(vsc.total_votes, 0)::TEXT,
         COALESCE(vsc.voters_num, 0),
-        cp.paid_amount::TEXT,
+        ls.paid_amount::TEXT,
         (CASE
-          WHEN _now > cp.end_date   THEN 'expired'
-          WHEN _now < cp.start_date THEN 'inactive'
+          WHEN _now > ls.end_date   THEN 'expired'
+          WHEN _now < ls.start_date THEN 'inactive'
           ELSE                            'active'
         END)::TEXT
       )::hafbe_backend.proposal AS proposal,
       (CASE
-        WHEN cap.account_id IS NOT NULL THEN '0'
+        WHEN ls.proxy_account_id IS NOT NULL THEN '0'
         ELSE COALESCE(avs.vests, 0)::TEXT
       END)                                       AS voter_vests,
       COALESCE(avs.account_vests, 0)::TEXT        AS direct_vests,
       COALESCE(avs.proxied_vests, 0)::TEXT        AS proxied_vests,
       COALESCE(pav.name, '')::TEXT                AS proxy,
       bv.created_at                               AS "timestamp"
-    FROM limited_set ls
-    -- Keep each account lookup parameterized by ID. OFFSET 0 prevents
-    -- subquery flattening into full scans of the fork-aware accounts view.
-    JOIN LATERAL (
-      SELECT name FROM hafbe_app.accounts_view WHERE id = ls.voter_id OFFSET 0
-    ) av ON TRUE
-    JOIN hafbe_app.current_proposals          cp  ON cp.proposal_id  = ls.proposal_id
-    JOIN LATERAL (
-      SELECT name FROM hafbe_app.accounts_view WHERE id = cp.creator_id OFFSET 0
-    ) cav ON TRUE
-    JOIN LATERAL (
-      SELECT name FROM hafbe_app.accounts_view WHERE id = cp.receiver_id OFFSET 0
-    ) rav ON TRUE
-    LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id  = cp.proposal_id
-    LEFT JOIN hafbe_app.account_vest_stats_cache  avs ON avs.account_id   = ls.voter_id
-    LEFT JOIN hafbe_app.current_account_proxies   cap ON cap.account_id   = ls.voter_id
-    LEFT JOIN LATERAL (
-      SELECT name FROM hafbe_app.accounts_view WHERE id = cap.proxy_id OFFSET 0
-    ) pav ON TRUE
-    JOIN hive.blocks_view                     bv  ON bv.num          = hafd.operation_id_to_block_num(ls.source_op)
+    FROM page_data ls
+    JOIN account_names av ON av.id = ls.voter_id
+    JOIN account_names cav ON cav.id = ls.creator_id
+    JOIN account_names rav ON rav.id = ls.receiver_id
+    LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = ls.proposal_id
+    LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = ls.voter_id
+    LEFT JOIN account_names pav ON pav.id = ls.proxy_id
+    JOIN hive.blocks_view bv ON bv.num = hafd.operation_id_to_block_num(ls.source_op)
     ORDER BY
       (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'asc'  THEN ls.voter_id    END) ASC,
       (CASE WHEN _sort = 'by_voter_proposal' AND _direction = 'desc' THEN ls.voter_id    END) DESC,

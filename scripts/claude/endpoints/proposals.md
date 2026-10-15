@@ -140,6 +140,15 @@ Returns `hafbe_backend.proposal_votes_return`:
 - `proposal` — full nested proposal object (same as `hafbe_backend.proposal`); mirrors `condenser_api.ProposalVote.proposal` so the front end can display proposal details without a second request
 - `timestamp` — block timestamp at which this active vote was last (re)cast
 
+The current-vote helper selects the page into a local array, collects the distinct
+account IDs needed for that page, and resolves names once through
+`hafbe_app.accounts_view` using `id = ANY(account_ids)`. The final query joins this
+small name set for voter, creator, receiver and optional proxy. Its existing
+`force_custom_plan` setting lets PostgreSQL plan against the actual ID array.
+Keep proxy presence separate from proxy-name lookup: a missing proxy name must
+not restore the voter's direct voting power. This is a local alternative to the
+per-account lateral lookups; broader module reorganization is still a proposal.
+
 ---
 
 ### GET /proposals/{proposal-id}/votes/history
