@@ -164,6 +164,11 @@ Tests require:
 2. **HAFBE schema**: Installed and synced (by `sync` job)
 3. **PostgREST**: Running for API tests
 
+CI pins the HAfAH dependency for `hafah-install` to the retained image digest
+for commit `fe9aaf53`, because its short-SHA tag is no longer available.
+`.gitlab-ci.yml` sets `HAFAH_REGISTRY` to the image path ending in `@sha256`
+and `HAFAH_VERSION` to the digest; Compose joins these values with `:`.
+
 `pattern-test-with-mock-data` additionally requires the mock cache (`sync_with_mock_data` job, sync stage). That job:
 - Checks NFS for a cached `haf_hafbe_mock` image; on miss, falls back to the HAFBE sync cache as base
 - Runs `docker/docker-compose-mocks.yml` (HAF + fixture installer + block processor)
