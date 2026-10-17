@@ -73,13 +73,12 @@ verification:
     adapter: command
     args: [".aidev/run-checks.sh", "full", "shellcheck", "sqlfluff", "sql-registered", "install", "reinstall", "sync", "regression", "tavern"]
     artifacts: ["test-results/full/"]
-  # baseline runs install only: AIDEV gives a project's baseline slot a ~330 s wall and
-  # no declared timeout reaches it yet (aidev#16246), and the full step list takes
-  # 5-15 minutes. Restore it, with `timeout: 2400`, once that lands.
   baseline:
     adapter: command
-    args: [".aidev/run-checks.sh", "baseline", "install"]
+    args: [".aidev/run-checks.sh", "baseline", "install", "reinstall", "sync", "regression", "tavern"]
     artifacts: ["test-results/baseline/"]
+    # The same 5-15 minute run as the canary, under the same declared wall.
+    timeout: 2400
   canary:
     adapter: command
     args: [".aidev/run-checks.sh", "canary", "shellcheck", "sqlfluff", "sql-registered", "install", "reinstall", "sync", "regression", "tavern"]
