@@ -34,9 +34,14 @@ the failure body. `regression` also writes one case per comparison
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
 
-A full run takes about 15 minutes, most of it the sync (about 5 minutes) and the
-installs; each install is many `psql` calls, so it takes longer the further the pull
-host is from the shared HAF.
+A full run takes 5 to 15 minutes, most of it the sync and the installs. The sync takes
+about 4 minutes on an idle shared HAF and longer when other clones are syncing at the
+same time (the reputation tracker is the long pole: a promote's baseline and canary
+syncing together took over 10 minutes); each install is many `psql` calls, so it takes
+longer the further the host is from the shared HAF. `canary` therefore declares
+`timeout: 2400` (its base wall is 900 s), and the processors run with a
+`statement_timeout` of `HAFBE_SYNC_TIMEOUT_S` (1800 s) so that a run killed from
+outside does not leave them syncing on the server.
 
 **HAfAH.** haf_block_explorer's SQL calls `hafah_backend` (account ids, operation
 bodies, paging), so HAfAH is installed first, as CI's compose does from the HAfAH image

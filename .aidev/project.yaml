@@ -81,6 +81,10 @@ verification:
     adapter: command
     args: [".aidev/run-checks.sh", "canary", "shellcheck", "sqlfluff", "sql-registered", "install", "reinstall", "sync", "regression", "tavern"]
     artifacts: ["test-results/canary/"]
+    # The run takes 5-15 minutes: the sync's time depends on the load on the shared
+    # HAF (concurrent clones syncing), the installs' on the host's distance from it.
+    # The canary's base wall is 900 s.
+    timeout: 2400
   # There is no coverage measurement for SQL; `coverage` runs the tree-wide checks
   # (AIDEV runs it in the post-implementation scan only). `static` and `system`
   # are left unbound: AIDEV runs neither for a project.

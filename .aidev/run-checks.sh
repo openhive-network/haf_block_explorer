@@ -253,12 +253,15 @@ sync_apps() {
     head="$(psql "$HAFBE_TEST_DB_URL" -Atc "select hive.app_get_irreversible_block()")" || return 1
     echo "shared HAF irreversible head: $head, target: $SYNC_TARGET"
     [ "$head" -ge "$SYNC_TARGET" ] || { echo "the shared HAF is not replayed to $SYNC_TARGET"; return 1; }
+    # statement_timeout bounds each processor on the server too: a run killed from
+    # outside (a gate's wall) cannot stop them, and they would go on syncing a clone
+    # nobody reads until the provider reaps it.
     psql "$HAFBE_TEST_DB_URL?application_name=reptracker_block_processing" -v ON_ERROR_STOP=on \
-        -c "SET ROLE reptracker_owner" -c "SET SEARCH_PATH TO reptracker_app" \
+        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE reptracker_owner" -c "SET SEARCH_PATH TO reptracker_app" \
         -c "CALL reptracker_app.main('reptracker_app', $SYNC_TARGET)" > "$out/sync-reptracker.log" 2>&1 &
     rep=$!; sync_pids+=("$rep")
     psql "$HAFBE_TEST_DB_URL?application_name=block_explorer_block_processing" -v ON_ERROR_STOP=on \
-        -c "SET ROLE hafbe_owner" -c "SET temp_buffers = '16MB'" -c "SET SEARCH_PATH TO hafbe_bal" \
+        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE hafbe_owner" -c "SET temp_buffers = '16MB'" -c "SET SEARCH_PATH TO hafbe_bal" \
         -c "CALL hafbe_app.main('hafbe_app', 'hafbe_bal', $SYNC_TARGET)" > "$out/sync-hafbe.log" 2>&1 &
     hafbe=$!; sync_pids+=("$hafbe")
     while [ "$(context_blocks "'hafbe_app', 'hafbe_bal'")" -lt "$SYNC_TARGET" ]; do
