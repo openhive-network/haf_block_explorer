@@ -99,3 +99,147 @@ verification:
 
 # Capability grants for target-side code. Empty until this project needs one.
 capabilities: []
+
+# Database queries planned against a captured full-scale shape (aidev
+# docs/operations/db-shape.md, docs/architecture/project-profile.md). `aidev db
+# shape plan/compare/hypo/check` install this tree's SQL (hafbe and the balance
+# tracker and reputation tracker submodules) on a throwaway copy of the shape with
+# .aidev/shape-apply.sh and plan the declared statements there; nothing reaches a
+# live database.
+performance:
+  mode: observe
+  # What the db_shape check watches: a diff touching none of these (or this profile)
+  # is reported `not applicable` without loading the shape. They name everything the
+  # apply installs and the scripts that install it. fnmatch globs, where `*` also
+  # crosses `/`; a submodule bump is its gitlink path.
+  inputs:
+    - backend/*.sql
+    - endpoints/*.sql
+    - db/*.sql
+    - scripts/install_app.sh
+    - submodules/btracker
+    - submodules/reptracker
+    - .aidev/shape-apply.sh
+    - .aidev/shape-psql.sh
+  shape:
+    # A full-scale haf_block_log (hafbe, balance tracker and reputation tracker synced
+    # to the head with HAF, 1.28.8), captured 2026-10-15; the same shape hive/HAfAH
+    # pins. No `source` is declared: planning needs only the artifact, and this
+    # profile declares no run-time decisions and opens no source to workflows.
+    artifact: 66e51296f6b1c1bd16a802018e47f61b9fb4dda1978733e4a87331d3327fdcc5
+    image: registry.gitlab.syncad.com/hive/haf:1.28.8
+    # Installs each tree's database code on its shape copy: scripts/install_app.sh's
+    # own files and order, each psql call fed to $AIDEV_DB_SHAPE_PSQL on stdin (the
+    # shape server has no network). See the script for what it leaves to the shape.
+    apply: {command: [.aidev/shape-apply.sh]}
+  # Every query below is an API call (`nested: true`): it is executed on the copy
+  # and every statement its functions run is planned, so a change to any helper
+  # behind an endpoint is compared statement by statement, base against candidate.
+  # The hot ones are what production calls most (a 60-minute capture of public API
+  # traffic, 2026-10-15); the slow ones are the full-scale worst cases measured on
+  # 2026-10-17 (haf_block_explorer#154). Parameters' columns name where their
+  # values live, for the value catalog.
+  queries:
+    # --- hot: production's most frequent hafbe calls --------------------------
+    # 36 % of hafbe requests.
+    - name: last-synced-block
+      sql: SELECT hafbe_endpoints.get_hafbe_last_synced_block()
+      nested: true
+      api_methods: ["rest:/hafbe-api/last-synced-block"]
+      role: {frequency: "about 35 requests/minute", waiter: "block explorer and exchange clients polling", latency_ms: 50}
+    # 32 % of hafbe requests, mostly exchanges polling their own accounts. Runs the
+    # balance tracker's and reputation tracker's account endpoints too. The pattern
+    # also matches /accounts/{name}/<sub-path> calls.
+    - name: account
+      sql: SELECT hafbe_endpoints.get_account(${account})
+      nested: true
+      parameters:
+        account: {column: hafd.accounts.name, value: blocktrades}
+      api_methods: ["rest:/hafbe-api/accounts/*"]
+      parameter_map: {account: path.3}
+      role: {frequency: "about 32 requests/minute", waiter: "exchange and wallet clients", latency_ms: 100}
+    - name: transaction-statistics
+      sql: SELECT hafbe_endpoints.get_transaction_statistics()
+      nested: true
+      api_methods: ["rest:/hafbe-api/transaction-statistics"]
+      role: {frequency: "about 3 requests/minute", waiter: "block explorer front page", latency_ms: 200}
+    - name: operation-type-counts
+      sql: SELECT hafbe_endpoints.get_latest_blocks()
+      nested: true
+      api_methods: ["rest:/hafbe-api/operation-type-counts"]
+      role: {frequency: "under 1 request/minute", waiter: "block explorer front page", latency_ms: 200}
+    - name: proxy-power
+      sql: SELECT hafbe_endpoints.get_account_proxies_power(${account})
+      nested: true
+      parameters:
+        account: {column: hafd.accounts.name, value: keychain}
+      api_methods: ["rest:/hafbe-api/accounts/*/proxy-power"]
+      parameter_map: {account: path.3}
+      role: {frequency: "under 1 request/minute", waiter: "block explorer account page", latency_ms: 200}
+    # --- slow at full scale (haf_block_explorer#154) ----------------------------
+    # 1.4 s: every account name read in name order to sort 863 delegators.
+    - name: proxy-power-by-account
+      sql: SELECT hafbe_endpoints.get_account_proxies_power(${account}, 1, 'account')
+      nested: true
+      parameters:
+        account: {column: hafd.accounts.name, value: keychain}
+      role: {frequency: "rare", waiter: "block explorer account page", latency_ms: 500}
+    # 5.3 s (sort=timestamp: every hafd.blocks row read) and 1.1 s (sort=voter).
+    - name: witness-voters-by-timestamp
+      sql: SELECT hafbe_endpoints.get_witness_voters(${witness}, NULL, 1, 100, 'timestamp')
+      nested: true
+      parameters:
+        witness: {column: hafd.accounts.name, value: stoodkev}
+      role: {frequency: "rare", waiter: "block explorer witness page", latency_ms: 500}
+    - name: witness-voters-by-voter
+      sql: SELECT hafbe_endpoints.get_witness_voters(${witness}, NULL, 20, 100, 'voter')
+      nested: true
+      parameters:
+        witness: {column: hafd.accounts.name, value: stoodkev}
+      role: {frequency: "rare", waiter: "block explorer witness page", latency_ms: 500}
+    - name: witnesses
+      sql: SELECT hafbe_endpoints.get_witnesses()
+      nested: true
+      api_methods: ["rest:/hafbe-api/witnesses"]
+      role: {frequency: "rare", waiter: "block explorer witnesses page", latency_ms: 200}
+    # 1.28.8 timed out (10 s) on every call; the develop rewrite answers in tens of ms.
+    - name: proposal-votes
+      sql: SELECT hafbe_endpoints.get_proposal_votes()
+      nested: true
+      api_methods: ["rest:/hafbe-api/proposals/votes"]
+      role: {frequency: "rare", waiter: "block explorer proposals page", latency_ms: 500}
+    - name: proposals
+      sql: SELECT hafbe_endpoints.get_proposals()
+      nested: true
+      api_methods: ["rest:/hafbe-api/proposals"]
+      role: {frequency: "rare", waiter: "block explorer proposals page", latency_ms: 500}
+    # 0.4-0.7 s: the proxy-name join reads every account.
+    - name: proposal-votes-history
+      sql: SELECT hafbe_endpoints.get_proposal_votes_history(${proposal})
+      nested: true
+      parameters:
+        proposal: {column: hafbe_app.proposal_votes_history.proposal_id, value: 0}
+      api_methods: ["rest:/hafbe-api/proposals/*/votes/history"]
+      parameter_map: {proposal: path.3}
+      role: {frequency: "rare", waiter: "block explorer proposal page", latency_ms: 500}
+    # 1.1-1.9 s once a session caches the generic plan (it reads the account's whole
+    # history); planned here as a custom plan only, see haf_block_explorer#154.
+    - name: block-search-by-account
+      sql: SELECT hafbe_endpoints.get_block_by_op(NULL, ${account})
+      nested: true
+      parameters:
+        account: {column: hafd.accounts.name, value: blocktrades}
+      api_methods: ["rest:/hafbe-api/block-search"]
+      parameter_map: {account: query.account-name}
+      role: {frequency: "rare", waiter: "block explorer block search", latency_ms: 500}
+    # 12-20 s on a session's first calls: the result's blocks lie far below the head.
+    - name: block-search-historical-range
+      sql: SELECT hafbe_endpoints.get_block_by_op('2', NULL, NULL, 100, 'desc', '50000000', '50100000')
+      nested: true
+      role: {frequency: "rare", waiter: "block explorer block search", latency_ms: 500}
+    # 0.26-0.96 s: every account_parameters row counted per call.
+    - name: total-wallet-addresses
+      sql: SELECT hafbe_endpoints.get_total_wallet_addresses()
+      nested: true
+      api_methods: ["rest:/hafbe-api/total_wallet_addresses"]
+      role: {frequency: "rare", waiter: "block explorer statistics page", latency_ms: 500}
