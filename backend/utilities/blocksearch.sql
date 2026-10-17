@@ -715,7 +715,7 @@ BEGIN
   RETURN QUERY (
     SELECT
       aov.block_num,
-      aov.op_type_id,
+      aov.op_type_id::INT,
       NULL::INT
     FROM hive.account_operations_view aov
     WHERE aov.op_type_id = _operation
