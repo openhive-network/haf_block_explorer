@@ -11,6 +11,7 @@
 --   hafbe_test.expected_witness_props - Expected witness data from hived
 --   hafbe_test.differing_accounts     - Accounts with discrepancies (output)
 --   hafbe_test.differing_witnesses    - Witnesses with discrepancies (output)
+--   hafbe_test.differing_wallet_days  - Days whose wallet count disagrees (output)
 --
 -- =============================================================================
 
@@ -85,6 +86,23 @@ CREATE TABLE hafbe_test.expected_witness_props (
  */
 CREATE TABLE hafbe_test.differing_witnesses (
   witness_id INT PRIMARY KEY
+);
+
+-- =============================================================================
+-- Wallet Statistics Tables
+-- =============================================================================
+
+/*
+ * differing_wallet_days: Output table listing days where
+ * hafbe_app.wallet_stats_by_day disagrees with account_parameters.
+ *
+ * Populated by hafbe_test.compare_wallet_stats().
+ * Empty = test passes; non-empty = discrepancies found.
+ */
+CREATE TABLE hafbe_test.differing_wallet_days (
+  day         DATE PRIMARY KEY,
+  stored      INT  NULL,  -- hafbe_app.wallet_stats_by_day.new_wallets (NULL = no row)
+  recomputed  INT  NULL   -- accounts in account_parameters created that day (NULL = none)
 );
 
 RESET ROLE;

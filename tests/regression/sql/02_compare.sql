@@ -15,6 +15,7 @@
 -- FUNCTIONS:
 --   hafbe_test.compare_accounts()           - Compare all accounts
 --   hafbe_test.compare_witnesses()          - Compare all witnesses
+--   hafbe_test.compare_wallet_stats()       - Compare wallet_stats_by_day with account_parameters
 --   hafbe_test.get_account_comparison(int)  - Debug helper for single account
 --   hafbe_test.get_witness_comparison(int)  - Debug helper for single witness
 --
@@ -352,6 +353,46 @@ BEGIN
     );
 
   RAISE NOTICE 'Witness comparison complete.';
+END
+$$;
+
+-- =============================================================================
+-- Wallet Statistics Comparison
+-- =============================================================================
+
+/*
+ * compare_wallet_stats: Compare hafbe_app.wallet_stats_by_day with the same
+ * aggregate recomputed from hafbe_app.account_parameters.
+ *
+ * Holds at any block the context is at: after massive sync, after LIVE blocks
+ * and after a fork rollback, since both tables are reverted together.
+ * Unlike the other comparisons it needs no hived snapshot.
+ *
+ * OUTPUT: Inserts differing days into hafbe_test.differing_wallet_days
+ */
+CREATE OR REPLACE FUNCTION hafbe_test.compare_wallet_stats()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS $$
+BEGIN
+  RAISE NOTICE 'Comparing hafbe wallet_stats_by_day with account_parameters...';
+
+  WITH recomputed AS MATERIALIZED (
+    SELECT
+      ap.created::DATE AS day,
+      COUNT(*)::INT    AS new_wallets
+    FROM hafbe_app.account_parameters ap
+    WHERE ap.created IS NOT NULL
+    GROUP BY ap.created::DATE
+  )
+  INSERT INTO hafbe_test.differing_wallet_days (day, stored, recomputed)
+  SELECT
+    COALESCE(ws.day, r.day),
+    ws.new_wallets,
+    r.new_wallets
+  FROM hafbe_app.wallet_stats_by_day ws
+  FULL JOIN recomputed r ON r.day = ws.day
+  WHERE ws.new_wallets IS DISTINCT FROM r.new_wallets;
 END
 $$;
 

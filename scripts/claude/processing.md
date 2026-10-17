@@ -148,6 +148,7 @@ For implementation details of each processor:
 | Table | Populated By | Purpose |
 |-------|--------------|---------|
 | `hafbe_app.account_parameters` | `process_account_stats()` | Account metadata |
+| `hafbe_app.wallet_stats_by_day` | `process_account_stats()` | Accounts created per day |
 | `hafbe_app.block_operations` | `process_block_operations()` | Op counts per block |
 | `hafbe_app.transaction_stats_by_day` | `process_transaction_stats()` | Daily tx stats |
 | `hafbe_app.transaction_stats_by_month` | `process_transaction_stats()` | Monthly tx stats |

@@ -39,6 +39,36 @@ Processes account-related operations to populate `hafbe_app.account_parameters` 
 | `created` | TIMESTAMP | Account creation timestamp |
 | `pending_claimed_accounts` | INT | Unclaimed account creation tokens |
 
+## Table: `hafbe_app.wallet_stats_by_day`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `day` | DATE | Day the accounts were created (PK) |
+| `new_wallets` | INT | Accounts whose `account_parameters.created` falls on that day |
+
+A cache of `COUNT(*) ... GROUP BY created::DATE` over `account_parameters`, read by
+`/total_wallet_addresses` instead of scanning the 2.6M-row table. It is written in
+the same statement that sets `created` (the account-creation upsert in
+`process_account_stats()`), so it is maintained in both MASSIVE and LIVE stages and
+needs no separate backfill at the end of massive sync. It is a registered table, so
+a fork rollback reverts it with `account_parameters`.
+
+The upsert's `RETURNING ap.account, ap.created` gives the post-statement values; a
+`NOT EXISTS` against `account_parameters` in a sibling CTE reads the statement
+snapshot (pre-upsert values). An account counts when `created` ends non-NULL and was
+NULL or absent before. Any new path that sets `created` must count it the same way.
+
+`db/hafbe_app.sql` creates the table in its own DO block (not the context-creation
+block), so reinstalling over an existing context creates it and backfills it from
+`account_parameters`. The backfill runs before `hive.app_register_table` (so the rows
+are not logged as a change of the context's current block) and gives each row a
+negative `hive_rowid` (rows present at registration would otherwise all get 0, and
+HAF reverts address rows by `hive_rowid`).
+
+`tests/regression` checks it: `hafbe_test.compare_wallet_stats()` recomputes the
+aggregate and lists differing days in `hafbe_test.differing_wallet_days`; it can be
+run at any block, including after a fork rollback.
+
 ## Key Patterns
 
 ### Parser Functions
@@ -99,7 +129,11 @@ operations_view_extended
             ├── final_values CTE (DISTINCT ON + window functions)
             │
             └── INSERT INTO account_parameters
-                ON CONFLICT DO UPDATE
+                ON CONFLICT DO UPDATE RETURNING account, created
+                    │
+                    └── new_wallets_by_day CTE (created newly set, per day)
+                            │
+                            └── UPSERT into wallet_stats_by_day (additive)
 ```
 
 ## How to Modify

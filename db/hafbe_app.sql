@@ -21,6 +21,7 @@
  *
  * 3. ACCOUNT PARAMETERS
  *    - account_parameters: Account metadata cache (voting, mining, recovery)
+ *    - wallet_stats_by_day: Daily count of newly created accounts
  *
  * 4. WITNESS VOTES & PROXIES
  *    - witness_votes_history: Complete vote change history
@@ -553,6 +554,50 @@ BEGIN
   PERFORM hive.app_context_detach('hafbe_app');
   PERFORM hive.app_set_current_block_num('hafbe_app', 0);
 
+END
+$$;
+
+------------- WALLET STATISTICS ----------------
+
+/*
+ * wallet_stats_by_day: Daily count of newly created wallets (accounts)
+ * --------------------------------------------------------------------
+ * One row per day: the number of hafbe_app.account_parameters rows whose
+ * `created` falls on that day. Maintained by process_account_stats() in the
+ * statement that sets `created`, read by get_total_wallet_address_aggregation().
+ *
+ * Created outside the context-creation block above so that a deployment whose
+ * context already exists gets it on reinstall: the block backfills it from
+ * account_parameters (empty on a fresh install) before registering it, so the
+ * backfill is not recorded as a change of the context's current, possibly
+ * reversible, block. Registration gives rows already in a table hive_rowid 0,
+ * and HAF's revert functions address rows by hive_rowid, so the backfilled rows
+ * carry their own: negative, which HAF's sequence for the table never issues.
+ */
+DO $$
+BEGIN
+  IF to_regclass('hafbe_app.wallet_stats_by_day') IS NOT NULL THEN
+    RETURN;
+  END IF;
+
+  CREATE TABLE hafbe_app.wallet_stats_by_day (
+    day         DATE   NOT NULL,            -- Day the wallets were created (PK)
+    new_wallets INT    NOT NULL,            -- Wallets created on this day
+    hive_rowid  BIGINT NOT NULL DEFAULT 0,  -- HAF row identity, see above
+
+    CONSTRAINT pk_wallet_stats_by_day PRIMARY KEY (day)
+  );
+
+  INSERT INTO hafbe_app.wallet_stats_by_day (day, new_wallets, hive_rowid)
+  SELECT
+    ap.created::DATE,
+    COUNT(*)::INT,
+    -ROW_NUMBER() OVER (ORDER BY ap.created::DATE)
+  FROM hafbe_app.account_parameters ap
+  WHERE ap.created IS NOT NULL
+  GROUP BY ap.created::DATE;
+
+  PERFORM hive.app_register_table( 'hafbe_app', 'wallet_stats_by_day', 'hafbe_app' );
 END
 $$;
 

@@ -5,7 +5,8 @@
 #
 # PURPOSE:
 #   Compares HAF Block Explorer's computed account and witness data against
-#   expected values from a hived node snapshot to detect regressions.
+#   expected values from a hived node snapshot to detect regressions, and
+#   checks that hafbe_app.wallet_stats_by_day equals the aggregate it caches.
 #
 # WORKFLOW:
 #   1. Install the regression test schema (hafbe_test)
@@ -20,7 +21,7 @@
 #
 # EXIT CODES:
 #   0 - All data matches
-#   1 - One or more accounts/witnesses have discrepancies
+#   1 - One or more accounts/witnesses/wallet days have discrepancies
 #
 # -----------------------------------------------------------------------------
 # RECREATING THE FIXTURES
@@ -66,7 +67,7 @@ OPTIONS:
     --port=NUMBER       PostgreSQL port (default: 5432)
     --user=USERNAME     PostgreSQL user (default: haf_admin)
     --schema=SCHEMA     HAF Block Explorer schema name (default: hafbe_app)
-    --type=TYPE         Test type: account, witness, or all (default: all)
+    --type=TYPE         Test type: account, witness, wallet, or all (default: all)
     --help              Show this help message
 EOF
 }
@@ -282,6 +283,36 @@ if [ "$TEST_TYPE" = "witness" ] || [ "$TEST_TYPE" = "all" ]; then
 
     # Cleanup decompressed file
     rm -f "$SCRIPT_DIR/witnesses_dump.json"
+fi
+
+# -----------------------------------------------------------------------------
+# Wallet Statistics Tests
+# -----------------------------------------------------------------------------
+if [ "$TEST_TYPE" = "wallet" ] || [ "$TEST_TYPE" = "all" ]; then
+    echo "=============================================="
+    echo "Running Wallet Statistics Regression Tests"
+    echo "=============================================="
+
+    echo "Step 2c: Comparing wallet_stats_by_day with account_parameters..."
+    psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" \
+        -c "TRUNCATE hafbe_test.differing_wallet_days;" \
+        -c "SELECT hafbe_test.compare_wallet_stats();" \
+        2>&1 | tee -i >(eval "$timestamper" >> "$SCRIPT_DIR/regression_test.log")
+    echo ""
+
+    echo "Step 3c: Checking wallet statistics results..."
+    DIFFERING_DAYS=$(psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -t -A \
+        -c "SELECT COUNT(*) FROM hafbe_test.differing_wallet_days;")
+
+    if [ "$DIFFERING_DAYS" -eq 0 ]; then
+        echo "  SUCCESS: wallet_stats_by_day matches account_parameters!"
+    else
+        echo "  FAILURE: $DIFFERING_DAYS days have discrepancies"
+        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" \
+            -c "SELECT * FROM hafbe_test.differing_wallet_days ORDER BY day LIMIT 20;"
+        OVERALL_RESULT=1
+    fi
+    echo ""
 fi
 
 # -----------------------------------------------------------------------------

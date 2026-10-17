@@ -270,6 +270,8 @@ Returns array of `hafbe_backend.proxy_power`:
 
 Chain-wide wallet (account) creation counts grouped by period plus a running cumulative total. Powers live wallet-count tickers and chain-growth charts.
 
+Reads `hafbe_app.wallet_stats_by_day` (one row per day, see [processing/accounts.md](../processing/accounts.md)) and rolls it up to month or year, as `/transaction-statistics` does; the baseline (wallets before the range) is a sum over the same table.
+
 #### Parameters
 
 | Parameter | Type | Required | Default | Description |
