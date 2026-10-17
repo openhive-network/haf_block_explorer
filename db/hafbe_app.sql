@@ -1008,7 +1008,7 @@ BEGIN
   -- hafbe_app and embedded hafbe_bal contexts driven by this loop.
   PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']);
 
-  IF _maxBlockLimit != NULL THEN
+  IF _maxBlockLimit IS NOT NULL THEN
     RAISE NOTICE 'Max block limit is specified as: %', _maxBlockLimit;
   END IF;
 
