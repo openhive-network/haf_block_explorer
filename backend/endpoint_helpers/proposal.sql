@@ -44,10 +44,9 @@ CREATE TYPE hafbe_backend.proposal_vote_page_row AS (
 
 DROP TYPE IF EXISTS hafbe_backend.proposal_vote_history_page_row CASCADE;
 CREATE TYPE hafbe_backend.proposal_vote_history_page_row AS (
-  voter_name TEXT,
   voter_id INT,
   approve BOOLEAN,
-  created_at TIMESTAMP
+  source_op_block INT
 );
 
 -- =============================================================================
@@ -57,7 +56,9 @@ CREATE TYPE hafbe_backend.proposal_vote_history_page_row AS (
 /*
  * Proposal vote history carries CURRENT governance stake, not a snapshot from
  * the vote's block. Read the page first, then enrich its voters from the cache
- * and resolve only cache misses through expired_voter_stats_view.
+ * and resolve only cache misses through expired_voter_stats_view. Voter names
+ * and block timestamps are also resolved for the page rows only: every vote
+ * has its voter account and block, so they never decide which rows qualify.
  *
  * A current proxy zeros voter_vests, but preserves direct_vests/proxied_vests.
  * Detect the proxy by its account_id, even when its name is not visible.
@@ -84,18 +85,15 @@ DECLARE
   __offset INT := ((_page - 1) * _page_size);
   _page_rows hafbe_backend.proposal_vote_history_page_row[];
 BEGIN
-  -- Keep both visibility joins before LIMIT. ARRAY preserves this ORDER BY;
-  -- ordinality below carries the chosen order through the enrichment joins.
+  -- ARRAY preserves this ORDER BY; ordinality below carries the chosen order
+  -- through the enrichment joins.
   _page_rows := ARRAY(
     SELECT ROW(
-      av.name::TEXT,
       pvh.voter_id,
       pvh.approve,
-      bv.created_at
+      pvh.source_op_block
     )::hafbe_backend.proposal_vote_history_page_row
     FROM hafbe_backend.proposal_votes_history_view pvh
-    JOIN hive.blocks_view bv   ON bv.num = pvh.source_op_block
-    JOIN hive.accounts_view av ON av.id = pvh.voter_id
     WHERE
       pvh.proposal_id = _proposal_id AND
       (_filter_account IS NULL OR pvh.voter_id = _filter_account) AND
@@ -117,19 +115,33 @@ BEGIN
   RETURN QUERY (
     -- Read each page row's cache entry once. vests is NOT NULL in the cache,
     -- so a NULL here identifies a missing entry rather than a zero balance.
+    -- Names and timestamps are per-row LIMIT 1 probes: joining the context
+    -- views inflates their estimates and the planner then scans all of them.
     WITH paged_stats AS MATERIALIZED (
       SELECT
-        page.voter_name,
+        av.name AS voter_name,
         page.voter_id,
         page.approve,
-        page.created_at,
+        bv.created_at,
         page.page_order,
         avs.vests,
         avs.account_vests,
         avs.proxied_vests
       FROM unnest(_page_rows) WITH ORDINALITY AS page(
-        voter_name, voter_id, approve, created_at, page_order
+        voter_id, approve, source_op_block, page_order
       )
+      CROSS JOIN LATERAL (
+        SELECT b.created_at
+        FROM hive.blocks_view b
+        WHERE b.num = page.source_op_block
+        LIMIT 1
+      ) bv
+      CROSS JOIN LATERAL (
+        SELECT a.name
+        FROM hive.accounts_view a
+        WHERE a.id = page.voter_id
+        LIMIT 1
+      ) av
       LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = page.voter_id
     ),
     missing_voters AS (
@@ -151,7 +163,7 @@ BEGIN
     )
     -- Keep the public composite's positional field order and TEXT amounts.
     SELECT
-      ps.voter_name                                         AS voter_name,
+      ps.voter_name::TEXT                                   AS voter_name,
       ps.approve                                            AS approve,
       (CASE
         WHEN cap.account_id IS NOT NULL THEN '0'

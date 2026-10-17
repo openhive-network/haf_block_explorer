@@ -176,30 +176,24 @@ BEGIN
      * =========================================================================
      * CTE: limited_set
      * =========================================================================
-     * WHY MATERIALIZED: Complex filters and joins, pagination applied.
+     * WHY MATERIALIZED: Pagination must happen before the per-row lookups.
      *
-     * PURPOSE: Fetch vote history with vest stats at time of vote.
+     * PURPOSE: Select the page from the vote rows alone, then fetch each page
+     * row's stats, voter name and block timestamp. Every vote has a voter
+     * account and a block, so enriching after OFFSET picks the same rows;
+     * enriching first joined them for every vote the OFFSET skipped.
      *
      * NOTE: Uses LEFT JOIN to account_vest_stats_cache because voters who
      * removed their vote won't have current stats. These will be filled
      * from expired_voter_stats_view in later CTEs.
      */
-    WITH limited_set AS MATERIALIZED (
+    WITH paged_votes AS MATERIALIZED (
       SELECT
-        av.name,
         cwv.voter_id,
         cwv.approve,
-        avs.vests,
-        avs.account_vests,
-        avs.proxied_vests,
         cwv.source_op,
-        cwv.source_op_block,
-        bv.created_at
+        cwv.source_op_block
       FROM hafbe_backend.witness_votes_history_view cwv
-      -- LEFT JOIN: voter may no longer be active, stats may be NULL
-      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
-      JOIN hive.blocks_view bv                         ON bv.num = cwv.source_op_block
-      JOIN hive.accounts_view av                       ON av.id = cwv.voter_id
       WHERE
         cwv.witness_id = "witness" AND
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account") AND
@@ -223,6 +217,34 @@ BEGIN
         (CASE WHEN "direction" = 'asc'  THEN cwv.source_op       ELSE NULL END) ASC
       OFFSET __offset
       LIMIT "page-size"
+    ),
+
+    limited_set AS MATERIALIZED (
+      SELECT
+        av.name,
+        pv.voter_id,
+        pv.approve,
+        avs.vests,
+        avs.account_vests,
+        avs.proxied_vests,
+        pv.source_op,
+        pv.source_op_block,
+        bv.created_at
+      FROM paged_votes pv
+      -- LEFT JOIN: voter may no longer be active, stats may be NULL
+      LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = pv.voter_id
+      CROSS JOIN LATERAL (
+        SELECT b.created_at
+        FROM hive.blocks_view b
+        WHERE b.num = pv.source_op_block
+        LIMIT 1
+      ) bv
+      CROSS JOIN LATERAL (
+        SELECT a.name
+        FROM hive.accounts_view a
+        WHERE a.id = pv.voter_id
+        LIMIT 1
+      ) av
     ),
 
     /*
@@ -344,10 +366,13 @@ DECLARE
   __offset INT := ((("page" - 1) * "page-size"));
 BEGIN
   RETURN QUERY (
-    WITH limited_set AS (
+    -- Paginate before resolving names: joining hive.accounts_view inflates its
+    -- estimate and the planner scans every account. The name is probed per
+    -- witness only when it is the sort key ("sort" = 'witness' folds away in
+    -- the custom plan otherwise), then once per page row below.
+    WITH limited_set AS MATERIALIZED (
       SELECT
         cw.witness_id,
-        av.name,
         a.rank,
         -- COALESCE provides defaults for witnesses without data
         COALESCE(cw.url, '')                                AS url,
@@ -366,14 +391,19 @@ BEGIN
         COALESCE(cw.last_created_block_num, 0)              AS last_created_block_num,
         COALESCE(cw.account_creation_fee, 0)                AS account_creation_fee
       FROM hafbe_app.current_witnesses cw
-      JOIN hive.accounts_view av                       ON av.id = cw.witness_id
       JOIN hafbe_app.witness_rank_cache a              ON a.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_cache b        ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
+      LEFT JOIN LATERAL (
+        SELECT av.name
+        FROM hive.accounts_view av
+        WHERE av.id = cw.witness_id AND "sort" = 'witness'
+        LIMIT 1
+      ) wn ON TRUE
       ORDER BY
         -- Sort by witness name
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN av.name                                                        ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'witness'                 THEN av.name                                                        ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN wn.name                                                        ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'witness'                 THEN wn.name                                                        ELSE NULL END) ASC,
         -- Sort by rank
         (CASE WHEN "direction" = 'desc' AND "sort" = 'rank'                    THEN a.rank                                                         ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'rank'                    THEN a.rank                                                         ELSE NULL END) ASC,
@@ -417,7 +447,7 @@ BEGIN
       LIMIT "page-size"
     )
     SELECT
-      ls.name::TEXT,
+      wav.name::TEXT,
       ls.rank,
       ls.url,
       ls.votes::TEXT,
@@ -435,6 +465,12 @@ BEGIN
       ls.last_created_block_num,
       ls.account_creation_fee
     FROM limited_set ls
+    CROSS JOIN LATERAL (
+      SELECT av.name
+      FROM hive.accounts_view av
+      WHERE av.id = ls.witness_id
+      LIMIT 1
+    ) wav
   );
 END
 $$;
