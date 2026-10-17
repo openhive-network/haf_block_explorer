@@ -82,8 +82,11 @@ BEGIN
    * =============================================================================
    * GENERAL PATH: sort by 'account' or 'proxied_vests'
    * =============================================================================
-   * Sort key (name, vests) is only known after joins, so we must materialize
-   * the full delegator set before sorting/paginating.
+   * Sort key (name, vests) is only known after the per-row lookups, so we
+   * must materialize the full delegator set before sorting/paginating.
+   * Names are probed per delegator (LIMIT 1 on accounts_view, an index
+   * lookup; joining the context view makes the planner walk all accounts),
+   * and the block timestamp is probed only for the page rows.
    *
    * Vests come from hafbe_app.account_vest_stats_cache (refreshed every block
    * by process_witness_votes_cache), which now covers proxy setters, so this
@@ -93,16 +96,20 @@ BEGIN
     WITH scored AS (
       SELECT
         cap.source_op,
+        cap.source_op_block,
         av.name,
-        bv.created_at,
         COALESCE(avs.vests, 0) AS vests
       FROM hafbe_backend.current_account_proxies_view cap
-      JOIN hive.accounts_view av                       ON av.id = cap.account_id
-      JOIN hive.blocks_view bv                         ON bv.num = cap.source_op_block
+      CROSS JOIN LATERAL (
+        SELECT a.name
+        FROM hive.accounts_view a
+        WHERE a.id = cap.account_id
+        LIMIT 1
+      ) av
       LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cap.account_id
       WHERE cap.proxy_id = _account_id
     ),
-    limited_set AS (
+    limited_set AS MATERIALIZED (
       SELECT *
       FROM scored s
       ORDER BY
@@ -120,9 +127,15 @@ BEGIN
     )
     SELECT
       ls.name::TEXT,
-      ls.created_at,
+      bv.created_at,
       ls.vests::TEXT
-    FROM limited_set ls;
+    FROM limited_set ls
+    CROSS JOIN LATERAL (
+      SELECT b.created_at
+      FROM hive.blocks_view b
+      WHERE b.num = ls.source_op_block
+      LIMIT 1
+    ) bv;
 END
 $$;
 

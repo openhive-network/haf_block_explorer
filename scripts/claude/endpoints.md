@@ -229,6 +229,19 @@ still-syncing node legitimately returns fewer periods). The one exception is
 `get_operation_type_statistics` at `daily` granularity, where an omitted `from-block`
 falls back to a 1-year window instead of genesis — see the Transaction Endpoints section.
 
+### Context-View Lookups
+
+Do not join HAF context views (`hive.accounts_view`, `hafbe_app.accounts_view`,
+`hive.blocks_view`) on a key in endpoint helpers. Their irreversible branch gets a
+default selectivity, so the planner inflates their row estimates and picks hash or
+merge joins that scan all of `hafd.accounts` or walk `hafd.blocks`. Resolve names and
+timestamps with a per-row `CROSS JOIN LATERAL (... WHERE id = outer.col LIMIT 1)`
+(`LEFT JOIN LATERAL ... ON TRUE` for an outer join) or an `id = ANY(array)` lookup,
+and paginate on the base rows before the lookups unless the looked-up value is the
+sort key. PL/pgSQL statements switch to a generic plan after five calls per session;
+a CASE-ordered `ORDER BY ... LIMIT` needs `SET plan_cache_mode = force_custom_plan`
+to stay index-ordered (e.g. `blocksearch_account`).
+
 ### Response Caching
 
 Endpoints set `Cache-Control` headers:

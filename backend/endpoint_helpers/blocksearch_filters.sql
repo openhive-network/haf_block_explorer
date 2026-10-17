@@ -533,6 +533,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account(
 )
 RETURNS hafbe_backend.gatherer_result
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_custom_plan
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF
