@@ -814,7 +814,13 @@ BEGIN
       encode(bv.prev, 'hex') AS prev,
       g.operations
     FROM unnest(_gathered.blocks) AS g(block_num, operations)
-    JOIN hive.blocks_view bv ON bv.num = g.block_num
+    -- A per-row probe: joining the context view lets the planner merge-join pk_hive_blocks from the head.
+    CROSS JOIN LATERAL (
+      SELECT b.created_at, b.producer_account_id, b.hash, b.prev
+      FROM hive.blocks_view b
+      WHERE b.num = g.block_num
+      LIMIT 1
+    ) bv
   ) row;
 
   RETURN (

@@ -52,15 +52,19 @@ BEGIN
      * =========================================================================
      * CTE: limited_set
      * =========================================================================
-     * WHY MATERIALIZED: Complex multi-way sort with joins, pagination applied.
+     * WHY MATERIALIZED: Pagination must happen before the per-row lookups.
      *
      * PURPOSE: Fetch voters with their vesting stats, sorted and paginated.
      *
      * JOINS:
      *   - current_witness_votes_view: Active votes for the witness
      *   - account_vest_stats_cache: Pre-calculated vest breakdowns
-     *   - blocks_view: Vote timestamp from block
-     *   - accounts_view: Voter account name
+     *   - accounts_view: Voter name, probed per voter only when sorting by it
+     *
+     * WHY LATERAL LOOKUPS: Joining the HAF context views (accounts_view,
+     * blocks_view) on a key inflates their row estimates, and the planner
+     * then scans all accounts or all blocks. A LIMIT 1 probe per row is
+     * always an index lookup.
      *
      * DYNAMIC SORT:
      *   Uses CASE expressions to enable sorting by different columns.
@@ -69,15 +73,19 @@ BEGIN
      */
     WITH limited_set AS MATERIALIZED (
       SELECT
-        av.name,
+        cwv.voter_id,
+        cwv.source_op_block,
         avs.vests,
         avs.account_vests,
-        avs.proxied_vests,
-        bv.created_at
+        avs.proxied_vests
       FROM hafbe_backend.current_witness_votes_view cwv
       JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = cwv.voter_id
-      JOIN hive.blocks_view bv                    ON bv.num = cwv.source_op_block
-      JOIN hive.accounts_view av                  ON av.id = cwv.voter_id
+      LEFT JOIN LATERAL (
+        SELECT av.name
+        FROM hive.accounts_view av
+        WHERE av.id = cwv.voter_id AND "sort" = 'voter'
+        LIMIT 1
+      ) vn ON TRUE
       WHERE
         cwv.witness_id = "witness" AND
         ("filter_account" IS NULL OR cwv.voter_id = "filter_account")
@@ -92,8 +100,8 @@ BEGIN
         (CASE WHEN "direction" = 'desc' AND "sort" = 'proxied_vests'  THEN avs.proxied_vests   ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'proxied_vests'  THEN avs.proxied_vests   ELSE NULL END) ASC,
         -- Sort by voter name alphabetically
-        (CASE WHEN "direction" = 'desc' AND "sort" = 'voter'          THEN av.name             ELSE NULL END) DESC,
-        (CASE WHEN "direction" = 'asc'  AND "sort" = 'voter'          THEN av.name             ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' AND "sort" = 'voter'          THEN vn.name             ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  AND "sort" = 'voter'          THEN vn.name             ELSE NULL END) ASC,
         -- Sort by vote timestamp (using block number as proxy)
         (CASE WHEN "direction" = 'desc' AND "sort" = 'timestamp'      THEN cwv.source_op_block ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'  AND "sort" = 'timestamp'      THEN cwv.source_op_block ELSE NULL END) ASC,
@@ -105,12 +113,24 @@ BEGIN
     )
     -- Cast numeric values to TEXT to avoid JSON compression issues with large numbers
     SELECT
-      ls.name::TEXT,
+      av.name::TEXT,
       ls.vests::TEXT,
       ls.account_vests::TEXT,
       ls.proxied_vests::TEXT,
-      ls.created_at
+      bv.created_at
     FROM limited_set ls
+    CROSS JOIN LATERAL (
+      SELECT a.name
+      FROM hive.accounts_view a
+      WHERE a.id = ls.voter_id
+      LIMIT 1
+    ) av
+    CROSS JOIN LATERAL (
+      SELECT b.created_at
+      FROM hive.blocks_view b
+      WHERE b.num = ls.source_op_block
+      LIMIT 1
+    ) bv
   );
 END
 $$;

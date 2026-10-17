@@ -164,7 +164,13 @@ BEGIN
     FROM paged_stats ps
     LEFT JOIN fallback_stats                   fs  ON fs.account_id  = ps.voter_id
     LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = ps.voter_id
-    LEFT JOIN hafbe_app.accounts_view           pav ON pav.id         = cap.proxy_id
+    -- A per-row probe: joining the context view hashes every account.
+    LEFT JOIN LATERAL (
+      SELECT a.name
+      FROM hafbe_app.accounts_view a
+      WHERE a.id = cap.proxy_id
+      LIMIT 1
+    ) pav ON TRUE
     ORDER BY ps.page_order
   );
 END
@@ -251,8 +257,10 @@ END $$;
 /*
  * Select the proposal page, collect its account IDs, then resolve display names.
  * Creator names and vote totals participate in selection because they are sort
- * keys. The INNER creator join also determines eligibility for every sort mode;
- * moving it after pagination would change pages when a name is missing.
+ * keys. The inner creator lookup also determines eligibility for every sort mode;
+ * moving it after pagination would change pages when a name is missing. It is a
+ * per-row LIMIT 1 probe: joining the context view inflates its estimate and the
+ * planner then hashes every account.
  *
  * The page carries proposal metadata and cached totals into the final SELECT.
  * paid_amount comes from current_proposals; payments need no per-request sum.
@@ -307,7 +315,12 @@ BEGIN
         COALESCE(vsc.total_votes, 0) AS total_votes,
         COALESCE(vsc.voters_num, 0) AS voters_num
       FROM eligible_proposals ep
-      JOIN hafbe_app.accounts_view av ON av.id = ep.creator_id
+      CROSS JOIN LATERAL (
+        SELECT a.name
+        FROM hafbe_app.accounts_view a
+        WHERE a.id = ep.creator_id
+        LIMIT 1
+      ) av
       LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = ep.proposal_id
     )
     SELECT ROW(
