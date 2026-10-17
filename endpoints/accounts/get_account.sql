@@ -114,9 +114,34 @@ DECLARE
   __profile_image TEXT;
   
   _account_id INT := hafah_backend.get_account_id("account-name", TRUE);
+
+  _result_balance       btracker_backend.balance;
+  _result_reputation    INT;
+  _result_json_metadata hafbe_backend.json_metadata;
+  _result_parameters    hafbe_backend.account_parameters;
+  _result_votes         hafbe_backend.account_votes;
+  _result_proxy         TEXT;
+  _result_count         INT;
+  _result_proxied_votes TEXT[];
+  _result_hbd_interest  RECORD;
+  _is_witness           BOOLEAN;
 BEGIN
   -- 2s because this endpoint result is live account parameters and balances 
   PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
+
+  -- Plain assignments are PL/pgSQL simple expressions, planned once per session;
+  -- a single statement joining the helpers' function scans was planned anew on
+  -- each of a session's first five calls.
+  _result_balance       := btracker_endpoints.get_account_balances("account-name");
+  _result_reputation    := reptracker_endpoints.get_account_reputation("account-name");
+  _result_json_metadata := hafbe_backend.get_json_metadata(_account_id);
+  _result_parameters    := hafbe_backend.get_account_parameters(_account_id);
+  _result_votes         := hafbe_backend.get_account_witness_votes(_account_id);
+  _result_proxy         := hafbe_backend.get_account_proxy(_account_id);
+  _result_count         := hafbe_backend.get_account_ops_count(_account_id);
+  _result_proxied_votes := hafbe_backend.get_account_proxied_vsf_votes(_account_id);
+  SELECT * INTO _result_hbd_interest FROM hafbe_backend.get_account_hbd_interest(_account_id);
+  _is_witness           := EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id);
 
   RETURN (
       --general
@@ -134,7 +159,7 @@ BEGIN
       --metadata
       COALESCE(_result_json_metadata.json_metadata,''),
       COALESCE(_result_json_metadata.posting_json_metadata, ''),
-      COALESCE((SELECT hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata)), ''),
+      COALESCE(hafbe_backend.parse_profile_picture(_result_json_metadata.json_metadata, _result_json_metadata.posting_json_metadata), ''),
 
       --balance
       COALESCE(_result_balance.hbd_balance, 0)::BIGINT,
@@ -178,23 +203,13 @@ BEGIN
 
       --hidden, shouldn't be shown on account page
       COALESCE(_result_count, 0)::INT,
-      EXISTS (SELECT NULL FROM hafbe_app.current_witnesses WHERE witness_id = _account_id),
+      _is_witness,
 
       --liquid HBD interest state (raw chain fields from Balance Tracker)
       COALESCE(_result_hbd_interest.hbd_seconds, '0')::TEXT,
       COALESCE(_result_hbd_interest.hbd_seconds_last_update, hafbe_backend.default_timestamp()),
       COALESCE(_result_hbd_interest.hbd_last_interest_payment, hafbe_backend.default_timestamp())
-  )::hafbe_backend.account
-  FROM
-    btracker_endpoints.get_account_balances("account-name")      _result_balance,
-    reptracker_endpoints.get_account_reputation("account-name")  _result_reputation,
-    hafbe_backend.get_json_metadata(_account_id)              _result_json_metadata,
-    hafbe_backend.get_account_parameters(_account_id)         _result_parameters,
-    hafbe_backend.get_account_witness_votes(_account_id)      _result_votes,
-    hafbe_backend.get_account_proxy(_account_id)              _result_proxy,
-    hafbe_backend.get_account_ops_count(_account_id)          _result_count,
-    hafbe_backend.get_account_proxied_vsf_votes(_account_id)  _result_proxied_votes,
-    hafbe_backend.get_account_hbd_interest(_account_id)       _result_hbd_interest;
+  )::hafbe_backend.account;
 END
 $$;
 
