@@ -100,6 +100,13 @@ HAFBE delegates some processing to integrated submodules:
 - **Called via**: `btracker_process_blocks()` in `log_and_process_blocks()`
 - **Purpose**: Account balances (HIVE, HBD, VESTS, savings, delegations)
 - **Schema**: `hafbe_bal`
+- **Finalization**: on the first LIVE block `log_and_process_blocks()` calls
+  btracker's `finalize_massive_sync_before_forking()` before switching both
+  contexts to forking. Besides backfilling the rollups, it sets the history
+  tables back to LOGGED and queues one `'freeze'` vacuum request
+  (`VACUUM (FREEZE, ANALYZE)`) per history table, or none with a NOTICE on a HAF
+  without request kinds. The tables' insert-only autovacuum reloptions are set
+  at install
 - **Docs**: `submodules/btracker/scripts/claude/`
 
 ### Reputation Tracker (reptracker)
