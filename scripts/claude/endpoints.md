@@ -264,7 +264,7 @@ Endpoint logic is implemented in `backend/endpoint_helpers/`:
 | Helper File | Used By | Purpose |
 |-------------|---------|---------|
 | `account_parameters.sql` | Account endpoints | Query account state |
-| `total_wallet_addresses.sql` | `get_total_wallet_addresses` endpoint | Wallet-count aggregation from `account_parameters` |
+| `total_wallet_addresses.sql` | `get_total_wallet_addresses` endpoint | Wallet-count rollup from `wallet_stats_by_day` |
 | `witness.sql` | Witness endpoints | Witness data retrieval |
 | `blocksearch.sql` | Block search | Operation filtering logic |
 

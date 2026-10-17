@@ -5,7 +5,8 @@ SET ROLE hafbe_owner;
  *
  * Core operations: Extracts account creation info (mined, recovery_account, created),
  * recovery events, voting rights changes, and account token claims. Updates the
- * hafbe_app.account_parameters table with latest values.
+ * hafbe_app.account_parameters table with latest values, and counts the accounts
+ * created into hafbe_app.wallet_stats_by_day.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_account_stats(_from INT, _to INT)
 RETURNS VOID
@@ -176,7 +177,7 @@ BEGIN
       ) AS created
     FROM parsed_operations po
     ORDER BY account_name
-  )
+  ),
 
   /*
    * UPSERT with field-specific COALESCE patterns:
@@ -195,18 +196,54 @@ BEGIN
    * LATE BINDING: Resolve account_id via subquery on already-reduced data
    * (one row per account after DISTINCT ON).
    */
-  INSERT INTO hafbe_app.account_parameters AS ap (account, mined, recovery_account, created)
-  SELECT
-    (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = fv.account_name) AS account_id,
-    fv.mined,
-    fv.recovery_account,
-    fv.created
-  FROM final_values fv
-  ON CONFLICT ON CONSTRAINT pk_account_parameters
-  DO UPDATE SET
-    mined            = COALESCE(ap.mined, EXCLUDED.mined, hafbe_backend.default_mined()),
-    recovery_account = COALESCE(EXCLUDED.recovery_account, ap.recovery_account, hafbe_backend.default_recovery_account()),
-    created          = COALESCE(ap.created, EXCLUDED.created, hafbe_backend.default_timestamp());
+  upsert_account_parameters AS (
+    INSERT INTO hafbe_app.account_parameters AS ap (account, mined, recovery_account, created)
+    SELECT
+      (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = fv.account_name) AS account_id,
+      fv.mined,
+      fv.recovery_account,
+      fv.created
+    FROM final_values fv
+    ON CONFLICT ON CONSTRAINT pk_account_parameters
+    DO UPDATE SET
+      mined            = COALESCE(ap.mined, EXCLUDED.mined, hafbe_backend.default_mined()),
+      recovery_account = COALESCE(EXCLUDED.recovery_account, ap.recovery_account, hafbe_backend.default_recovery_account()),
+      created          = COALESCE(ap.created, EXCLUDED.created, hafbe_backend.default_timestamp())
+    RETURNING ap.account, ap.created
+  ),
+
+  /*
+   * ===================================================================================
+   * CTE: new_wallets_by_day
+   * ===================================================================================
+   * PURPOSE: Count the accounts whose `created` this upsert set, per day, for
+   *          hafbe_app.wallet_stats_by_day.
+   *
+   * `created` never changes once set (COALESCE(ap.created, ...) above), and this is
+   * the only statement that sets it, so an account counts exactly when the upsert
+   * leaves it non-NULL and it was NULL or absent before. `before_upsert` reads the
+   * statement's snapshot, which does not see the upsert's own writes.
+   */
+  new_wallets_by_day AS (
+    SELECT
+      uap.created::DATE AS day,
+      COUNT(*)::INT     AS new_wallets
+    FROM upsert_account_parameters uap
+    WHERE uap.created IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM hafbe_app.account_parameters before_upsert
+        WHERE before_upsert.account = uap.account
+          AND before_upsert.created IS NOT NULL
+      )
+    GROUP BY uap.created::DATE
+  )
+
+  INSERT INTO hafbe_app.wallet_stats_by_day AS ws (day, new_wallets)
+  SELECT day, new_wallets
+  FROM new_wallets_by_day
+  ON CONFLICT ON CONSTRAINT pk_wallet_stats_by_day DO UPDATE SET
+    new_wallets = ws.new_wallets + EXCLUDED.new_wallets;
 
 
   /*

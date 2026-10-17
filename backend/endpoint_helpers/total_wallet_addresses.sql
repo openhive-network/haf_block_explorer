@@ -3,14 +3,13 @@ SET ROLE hafbe_owner;
 /*
  * get_total_wallet_address_aggregation: Returns new-wallet counts + cumulative total per period.
  *
- * Source: hafbe_app.account_parameters.created — already populated by
- * process_account_stats(), one row per Hive account, no extra sync work needed.
- * An index on account_parameters(created) makes the range scan fast.
+ * Source: hafbe_app.wallet_stats_by_day — wallets created per day, maintained
+ * by process_account_stats() (one row per day, not per account).
  *
  * Steps:
  *   1. Convert block range → timestamp range (period-boundary truncated).
  *   2. Generate a complete date series so empty periods appear with 0.
- *   3. Count new wallets per period from account_parameters.
+ *   3. Roll the daily counts up to the requested period.
  *   4. Compute baseline = wallets created before the requested range start,
  *      so total_wallets is the absolute chain count, not just within-range.
  *   5. Running SUM over date series gives total_wallets per row.
@@ -63,10 +62,10 @@ BEGIN
   __one_period := ('1 ' || __granularity)::INTERVAL;
 
   -- Wallets created strictly before the requested window (absolute chain baseline).
-  SELECT COALESCE(COUNT(*), 0)::INT
+  SELECT COALESCE(SUM(ws.new_wallets), 0)::INT
   INTO __baseline
-  FROM hafbe_app.account_parameters
-  WHERE created < __from_timestamp;
+  FROM hafbe_app.wallet_stats_by_day ws
+  WHERE ws.day < __from_timestamp::DATE;
 
   RETURN QUERY (
     WITH date_series AS (
@@ -75,12 +74,12 @@ BEGIN
 
     counts AS MATERIALIZED (
       SELECT
-        DATE_TRUNC(__granularity, ap.created) AS period,
-        COUNT(*)::INT AS new_wallets
-      FROM hafbe_app.account_parameters ap
-      WHERE ap.created BETWEEN __from_timestamp
-                           AND __to_timestamp + __one_period - INTERVAL '1 second'
-      GROUP BY DATE_TRUNC(__granularity, ap.created)
+        DATE_TRUNC(__granularity, ws.day::TIMESTAMP) AS period,
+        SUM(ws.new_wallets)::INT AS new_wallets
+      FROM hafbe_app.wallet_stats_by_day ws
+      WHERE ws.day >= __from_timestamp::DATE
+        AND ws.day <  (__to_timestamp + __one_period)::DATE
+      GROUP BY DATE_TRUNC(__granularity, ws.day::TIMESTAMP)
     ),
 
     filled AS (

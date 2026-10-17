@@ -66,6 +66,7 @@ tests/regression/
 |-------|---------|
 | `hafbe_test.differing_accounts` | Account IDs with mismatched data |
 | `hafbe_test.differing_witnesses` | Witness IDs with mismatched data |
+| `hafbe_test.differing_wallet_days` | Days where `wallet_stats_by_day` disagrees with `account_parameters` (stored vs recomputed) |
 
 ## What Gets Compared
 
@@ -77,6 +78,12 @@ tests/regression/
 - `created` - Account creation timestamp
 - `proxy` - Account's voting proxy
 - `recovery_account` - Account's recovery trustee
+
+### Wallet Statistics
+`hafbe_test.compare_wallet_stats()` (`--type=wallet`) needs no snapshot: it recomputes
+accounts created per day from `account_parameters` and compares it with
+`hafbe_app.wallet_stats_by_day`. Run it after sync, after LIVE blocks or after a fork
+rollback; it holds at any block.
 
 ### Witness Fields
 - `url` - Witness URL

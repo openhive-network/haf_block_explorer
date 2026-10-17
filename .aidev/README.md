@@ -23,7 +23,7 @@ the failure body. `regression` also writes one case per comparison
 | `install` | a per-run copy-on-write clone of the shared HAF (below); HAfAH into it from the runtime image's `/opt/hafah`, then `scripts/install_app.sh --blocksearch-indexes=true` (as CI's compose) as `haf_shared_consumer`: balance tracker into `hafbe_bal` and reputation tracker from `submodules/`, then haf_block_explorer | `sync` (its `hafah-install` and `backend-setup` services) |
 | `reinstall` | `install_app.sh` over the installed apps, `scripts/uninstall_app.sh` (checks the `hafbe_*` schemas are gone), `install_app.sh` again | `setup-scripts-test` |
 | `sync` | haf_block_explorer's block processing (with the balance tracker) and the reputation tracker's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
-| `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000 | `regression-test` |
+| `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000, and `hafbe_app.wallet_stats_by_day` with the aggregate over `account_parameters` it caches | `regression-test` |
 | `tavern` | `.aidev/hafbe_tavern.py`: `tests/tavern/patterns-mainnet` against PostgREST over the synced clone (`postgrest.py`, as `docker/docker-compose-test.yml` starts it), 4 xdist workers, run from a copy in `test-results/<suite>/tavern/` (the comparator writes each answer, `.out.json`, beside its test) | `pattern-test` |
 
 | Slot | Steps | Shared HAF |

@@ -18,7 +18,9 @@
 #     its tables and its block-processing procedures, and decide that from
 #     hafd.contexts, which a shape restores without rows. The shape already carries
 #     the source's tables with their statistics, which are what the plans need, and
-#     no API statement calls the processing procedures;
+#     no API statement calls the processing procedures. The copy of db/hafbe_app.sql
+#     keeps the CREATE TABLE of a table added since the shape was captured
+#     (hafbe_app.wallet_stats_by_day), empty and without statistics;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh.
 # Everything else (types, views, backend and endpoint functions, grants) installs
@@ -57,6 +59,18 @@ sed -n '/INSERT INTO asset_table/,/;/p' submodules/btracker/db/btracker_app.sql 
     | sed 's/;[[:space:]]*$/ ON CONFLICT DO NOTHING;/' >> "$stage/submodules/btracker/db/btracker_app.sql"
 if ! grep -q "INSERT INTO asset_table" "$stage/submodules/btracker/db/btracker_app.sql"; then
     echo "submodules/btracker/db/btracker_app.sql no longer seeds asset_table: update .aidev/shape-apply.sh" >&2
+    exit 1
+fi
+# A table hafbe_app.sql adds after the shape was captured is not in the shape: create
+# it (empty, without statistics) so the API functions that read it can run.
+{
+    echo "SET ROLE hafbe_owner;"
+    sed -n '/CREATE TABLE hafbe_app.wallet_stats_by_day/,/);/p' db/hafbe_app.sql \
+        | sed 's/CREATE TABLE /CREATE TABLE IF NOT EXISTS /'
+    echo "RESET ROLE;"
+} >> "$stage/db/hafbe_app.sql"
+if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.wallet_stats_by_day" "$stage/db/hafbe_app.sql"; then
+    echo "db/hafbe_app.sql no longer creates hafbe_app.wallet_stats_by_day: update .aidev/shape-apply.sh" >&2
     exit 1
 fi
 hash="$(git rev-parse HEAD 2>/dev/null || echo aidev)"
