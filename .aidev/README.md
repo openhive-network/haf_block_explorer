@@ -30,7 +30,7 @@ the failure body. `regression` also writes one case per comparison
 |---|---|---|
 | quick, coverage | shellcheck, sqlfluff, sql-registered | no |
 | full, canary | those plus install, reinstall, sync, regression, tavern | yes |
-| baseline | install, reinstall, sync, regression, tavern | yes |
+| baseline | install (AIDEV kills a project's baseline at about 330 s, and no declared timeout reaches it yet: aidev#16246) | yes |
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
 
