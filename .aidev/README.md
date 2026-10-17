@@ -30,21 +30,16 @@ the failure body. `regression` also writes one case per comparison
 |---|---|---|
 | quick, coverage | shellcheck, sqlfluff, sql-registered | no |
 | full, canary | those plus install, reinstall, sync, regression, tavern | yes |
-| baseline | install — temporarily (see below) | yes |
+| baseline | install, reinstall, sync, regression, tavern | yes |
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
-
-**`baseline` is narrowed to `install` temporarily.** AIDEV currently gives a project's
-baseline slot a wall of about 330 s and passes it no declared timeout (aidev#16246), so
-the full step list (5-15 minutes) is killed there. When that issue lands, `baseline` goes
-back to `install reinstall sync regression tavern` with `timeout: 2400`, like `canary`.
 
 A full run takes 5 to 15 minutes, most of it the sync and the installs. The sync takes
 about 4 minutes on an idle shared HAF and longer when other clones are syncing at the
 same time (the reputation tracker is the long pole: a promote's baseline and canary
 syncing together took over 10 minutes); each install is many `psql` calls, so it takes
-longer the further the host is from the shared HAF. `canary` therefore declares
-`timeout: 2400` (its base wall is 900 s), and the processors run with a
+longer the further the host is from the shared HAF. `canary` and `baseline` therefore
+declare `timeout: 2400` (the canary's base wall is 900 s), and the processors run with a
 `statement_timeout` of `HAFBE_SYNC_TIMEOUT_S` (1800 s) so that a run killed from
 outside does not leave them syncing on the server.
 
