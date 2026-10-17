@@ -22,3 +22,8 @@ docker/srv
 
 # Downloaded HAF scripts (for openapi_rewrite.sh)
 scripts/haf_scripts/
+
+# AIDEV's profile and checks (.aidev/) are tracked despite `.*` above; their
+# reports (.aidev/run-checks.sh) are not.
+!/.aidev/
+test-results/

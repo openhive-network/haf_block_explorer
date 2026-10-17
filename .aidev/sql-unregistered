@@ -1,0 +1,4 @@
+# .sql files scripts/install_app.sh deliberately does not apply (run-checks.sh sql-registered).
+# db/indexes.sql: superseded by hafbe_app.register_haf_indexes() (hafbe_app.sql), which
+# registers the HAF indexes at the MASSIVE->LIVE switch since 5b7b588.
+db/indexes.sql

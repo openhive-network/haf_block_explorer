@@ -29,8 +29,9 @@ detect_changes:
   extends: .haf_app_detect_changes
   variables:
     # Skip patterns: files matching these don't require HAF sync
-    # (tests, docs, markdown, readme, changelog, license, claude instructions)
-    HAF_APP_SKIP_PATTERNS: '^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE|^CLAUDE'
+    # (tests, docs, markdown, readme, changelog, license, claude instructions,
+    # AIDEV's profile and checks)
+    HAF_APP_SKIP_PATTERNS: '^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE|^CLAUDE|^\.aidev/'
   script:
     # Run the parent template's detection first
     - !reference [.haf_app_detect_changes, script]
