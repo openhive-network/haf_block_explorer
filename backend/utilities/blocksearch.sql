@@ -218,7 +218,9 @@ CREATE TYPE hafbe_backend.gathered_block AS (
  *   total_pages       - Total number of pages available
  *   min_block_num     - Minimum block number found (for cursor calculation)
  *   pre_grouped_count - Count of operations before grouping (for cursor saturation check)
- *   max_page_limit    - __max_page_count * _limit (for cursor saturation check)
+ *   max_page_limit    - __max_page_count * _limit (for cursor saturation check);
+ *                       NULL when the gatherer already narrowed range_from/range_to
+ *                       to the blocks it fully covered
  *   range_from        - Normalized start of block range
  *   range_to          - Normalized end of block range
  *
@@ -226,6 +228,7 @@ CREATE TYPE hafbe_backend.gathered_block AS (
  *   The cursor_from value is calculated by blocksearch_build_result using:
  *   - If min_block_num IS NULL: no results, cursor = range_from
  *   - If min_block_num = 1: at genesis, cursor = 1
+ *   - If max_page_limit IS NULL: range already narrowed, cursor = range_from
  *   - If pre_grouped_count != max_page_limit: not saturated, cursor = range_from
  *   - Otherwise: saturated results, cursor = min_block_num - 1
  */
@@ -690,9 +693,10 @@ $$;
  *   _from       - Starting block number
  *   _to         - Ending block number
  *   _order_is   - Sort direction ('asc' or 'desc')
- *   _limit      - Maximum number of results
+ *   _limit      - Number of operations to return; more are returned when the last
+ *                 block reached has further operations, so no block is cut short
  *
- * RETURNS: Set of (block_num, op_type_id, NULL) rows
+ * RETURNS: Set of (block_num, op_type_id, NULL) rows, one per operation
  *          Note: op_count is NULL since we're searching by account, not aggregating
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.find_blocks_with_op_and_account(
@@ -725,7 +729,7 @@ BEGIN
     ORDER BY
       (CASE WHEN _order_is = 'desc' THEN aov.block_num ELSE NULL END) DESC,
       (CASE WHEN _order_is = 'asc' THEN aov.block_num ELSE NULL END) ASC
-    LIMIT _limit
+    FETCH FIRST _limit ROWS WITH TIES
   );
 END
 $$;
@@ -756,6 +760,7 @@ $$;
  *   The cursor indicates where to start the next paginated request.
  *   - NULL min_block_num: no results found, keep original range_from
  *   - min_block_num = 1: at genesis, cursor = 1
+ *   - NULL max_page_limit: the gatherer narrowed the range itself, keep range_from
  *   - Not saturated (pre_grouped_count != max_page_limit): more data available, keep range_from
  *   - Saturated: results capped, cursor = min_block_num - 1 (start before current results)
  */
@@ -791,6 +796,8 @@ BEGIN
       _gathered.range_from
     WHEN _gathered.min_block_num = 1 THEN
       1
+    WHEN _gathered.max_page_limit IS NULL THEN
+      _gathered.range_from
     WHEN _gathered.pre_grouped_count != _gathered.max_page_limit THEN
       _gathered.range_from
     ELSE

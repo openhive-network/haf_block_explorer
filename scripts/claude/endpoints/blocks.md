@@ -92,6 +92,17 @@ Path filters allow searching within operation bodies. This requires:
 
 Filter format: `value.<path>=<value>`
 
+### Account + Several Operation Types
+
+`blocksearch_account_multi_op` gathers each type separately, capped at
+`10 * page-size` operations per type (`find_blocks_with_op_and_account`, whose
+`FETCH FIRST ... WITH TIES` never cuts the last block short). When a type exceeds
+its cap, `block_range` is narrowed to the blocks every type fully covers (`from`
+in `desc`, `to` in `asc`), and the totals and pages describe that range only.
+Every block in the returned `block_range` has the full `op_count` of each
+requested type; the rest of the requested range is read by requesting again with
+`to-block = from - 1` (`desc`) or `from-block = to + 1` (`asc`).
+
 ### Caching
 
 - Historical data (to_block <= irreversible): `max-age=31536000`
