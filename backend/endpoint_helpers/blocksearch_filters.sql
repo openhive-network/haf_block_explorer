@@ -959,7 +959,13 @@ $$;
 /*
  * blocksearch_account_multi_op: Gathers blocks with multiple operations for an account.
  *
- * Uses CROSS JOIN with find_blocks_with_op_and_account for efficient multi-op search.
+ * Gathers each operation type separately with find_blocks_with_op_and_account, capped
+ * at __max_page_count * _limit operations per type like blocksearch_account_op. A type
+ * that exceeds its cap covers the blocks only up to the last block it reached, so the
+ * result is narrowed to the block range every type fully covers: in that range each
+ * block has every requested type with its full op_count. The narrowed range is returned
+ * as range_from/range_to; the rest of the requested range is fetched by continuing from
+ * just outside it.
  *
  * PARAMETERS:
  *   _operations - Array of operation type IDs to filter by
@@ -970,7 +976,8 @@ $$;
  *   _page       - Page number (1-based)
  *   _limit      - Page size
  *
- * RETURNS: gatherer_result with paginated blocks matching account and any operation
+ * RETURNS: gatherer_result with paginated blocks matching account and any operation,
+ *          max_page_limit NULL (the range is already narrowed to what was covered)
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_multi_op(
     _operations INT[],
@@ -983,6 +990,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_multi_op(
 )
 RETURNS hafbe_backend.gatherer_result
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_custom_plan
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF
@@ -990,7 +998,8 @@ AS
 $$
 DECLARE
   __hafbe_current_block      INT := (SELECT current_block_num FROM hafd.contexts WHERE name = 'hafbe_app');
-  __max_page_count           INT := array_length(_operations, 1);
+  __max_page_count           INT := 10;
+  __type_limit               INT := __max_page_count * _limit;
   __min_block_num            INT;
   __count_pre_grouped_blocks INT;
   __count                    INT;
@@ -1003,14 +1012,36 @@ BEGIN
   INTO __from, __to
   FROM hafbe_backend.blocksearch_range(_from, _to, __hafbe_current_block);
 
-  WITH gather_operations AS MATERIALIZED (
+  WITH capped_operations AS MATERIALIZED (
     SELECT
       moh.block_num,
       moh.op_type_id
     FROM
       unnest(_operations) AS op_type_id
     CROSS JOIN
-      hafbe_backend.find_blocks_with_op_and_account(op_type_id, _account_id, __from, __to, _order_is, _limit) moh
+      hafbe_backend.find_blocks_with_op_and_account(op_type_id, _account_id, __from, __to, _order_is, __type_limit + 1) moh
+  ),
+  -- Types with more operations than the cap: complete only up to their last block.
+  cut_types AS MATERIALIZED (
+    SELECT
+      op_type_id,
+      (CASE WHEN _order_is = 'desc' THEN MIN(block_num) ELSE MAX(block_num) END) AS cut_block
+    FROM capped_operations
+    GROUP BY op_type_id
+    HAVING COUNT(*) > __type_limit
+  ),
+  covered_range AS MATERIALIZED (
+    SELECT
+      (CASE WHEN _order_is = 'desc' THEN COALESCE(MAX(cut_block), __from) ELSE __from END) AS from_block,
+      (CASE WHEN _order_is = 'asc' THEN COALESCE(MIN(cut_block), __to) ELSE __to END) AS to_block
+    FROM cut_types
+  ),
+  gather_operations AS MATERIALIZED (
+    SELECT
+      co.block_num,
+      co.op_type_id
+    FROM capped_operations co
+    JOIN covered_range cr ON co.block_num BETWEEN cr.from_block AND cr.to_block
   ),
   group_by_type_and_block AS (
     SELECT
@@ -1068,8 +1099,10 @@ BEGIN
         (CASE WHEN _order_is = 'asc' THEN block_num ELSE NULL END) ASC
       )
       FROM filter_page
-    )
-  INTO __count, __total_pages, __min_block_num, __count_pre_grouped_blocks, __blocks;
+    ),
+    (SELECT from_block FROM covered_range),
+    (SELECT to_block FROM covered_range)
+  INTO __count, __total_pages, __min_block_num, __count_pre_grouped_blocks, __blocks, __from, __to;
 
   RETURN (
     COALESCE(__blocks, '{}'::hafbe_backend.gathered_block[]),
@@ -1077,7 +1110,7 @@ BEGIN
     COALESCE(__total_pages, 0),
     __min_block_num,
     __count_pre_grouped_blocks,
-    __max_page_count * _limit,
+    NULL,
     __from,
     __to
   )::hafbe_backend.gatherer_result;
