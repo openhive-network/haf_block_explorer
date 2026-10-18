@@ -20,7 +20,7 @@
 FROM postgrest/postgrest:v16.4@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df AS postgrest
 
 # HAFAH_VERSION in .gitlab-ci.yml; move both together.
-FROM registry.gitlab.syncad.com/hive/hafah@sha256:71cf4c7c2ca9f43e89047ee98a87659adeb0b4db52c00a88a34a540f9c40a9f2 AS hafah
+FROM registry.gitlab.syncad.com/hive/hafah@sha256:ec41e81144f5845e445ef890b426e40099f8fe4487161f9a1d75b29c19e8c304 AS hafah
 
 FROM python:3.14-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72
 
