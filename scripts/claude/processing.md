@@ -54,6 +54,7 @@ All processing functions are in `db/process_*.sql` files.
 | `massive_processing()` | `hafbe_app.sql` | Processes block ranges during bulk sync |
 | `single_processing()` | `hafbe_app.sql` | Processes individual blocks in live mode |
 | `process_account_stats()` | `process_account_stats.sql` | Account creation, recovery, voting rights |
+| `process_account_ops_count()` | `process_account_ops_count.sql` | Operation count per account (forking context only; `finalize_account_ops_count()` fills it at the end of massive sync) |
 | `process_block_operations()` | `process_block_operations.sql` | Op counts per block + daily/monthly per-op-type rollups (single scan, three sinks) |
 | `process_transaction_stats()` | `process_transaction_stats.sql` | Daily/monthly transaction aggregations |
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
@@ -66,6 +67,7 @@ All processing functions are in `db/process_*.sql` files.
 
 Each block range calls processors in this order:
 1. `process_account_stats()` - Account parameters
+   - `process_account_ops_count()` - Operation count per account
 2. `process_block_operations()` - Op counts per block + per-day/month per-op-type rollups
 3. `process_transaction_stats()` - Transaction aggregations
 4. `process_witness_stats()` - Witness metadata

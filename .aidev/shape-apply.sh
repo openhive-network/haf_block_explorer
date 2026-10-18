@@ -73,6 +73,21 @@ if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.wallet_stats_by_day" "$stage/
     echo "db/hafbe_app.sql no longer creates hafbe_app.wallet_stats_by_day: update .aidev/shape-apply.sh" >&2
     exit 1
 fi
+# The same for hafbe_app.account_ops_count, whose DO block also fills and registers
+# it in the HAF context the shape restores without rows: the copy keeps only its
+# CREATE TABLE.
+ops_count_sql="$stage/db/process_account_ops_count.sql"
+sed -i '/^DO \$\$/,/^\$\$;/d' "$ops_count_sql"
+{
+    echo "SET ROLE hafbe_owner;"
+    sed -n '/CREATE TABLE hafbe_app.account_ops_count/,/);/p' db/process_account_ops_count.sql \
+        | sed 's/CREATE TABLE /CREATE TABLE IF NOT EXISTS /'
+    echo "RESET ROLE;"
+} >> "$ops_count_sql"
+if grep -q '^DO \$\$' "$ops_count_sql" || ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.account_ops_count" "$ops_count_sql"; then
+    echo "db/process_account_ops_count.sql no longer creates hafbe_app.account_ops_count in one DO block: update .aidev/shape-apply.sh" >&2
+    exit 1
+fi
 hash="$(git rev-parse HEAD 2>/dev/null || echo aidev)"
 echo "TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$hash');" \
     > "$stage/scripts/set_version_in_sql.pgsql"

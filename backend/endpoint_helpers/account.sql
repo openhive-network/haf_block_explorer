@@ -266,13 +266,13 @@ $$;
 /*
  * get_account_ops_count: Gets total operation count for an account.
  *
- * Uses the account_op_seq_no which is a sequential counter for all
- * operations involving this account.
+ * Reads hafbe_app.account_ops_count, which block processing keeps equal to the
+ * newest account_op_seq_no + 1 of the account's operations.
  *
  * PARAMETERS:
  *   _account - Account ID to get operation count for
  *
- * RETURNS: Total number of operations (seq_no + 1 since 0-indexed)
+ * RETURNS: Total number of operations, NULL for an account without operations
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
 RETURNS INT
@@ -281,12 +281,11 @@ SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
-  -- account_op_seq_no is 0-indexed, so add 1 for count
-  RETURN aov.account_op_seq_no + 1
-  FROM hive.account_operations_view aov
-  WHERE aov.account_id = _account
-  ORDER BY aov.account_op_seq_no DESC
-  LIMIT 1;
+  RETURN (
+    SELECT aoc.ops_count
+    FROM hafbe_app.account_ops_count aoc
+    WHERE aoc.account_id = _account
+  );
 END
 $$;
 

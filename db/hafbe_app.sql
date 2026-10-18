@@ -22,6 +22,7 @@
  * 3. ACCOUNT PARAMETERS
  *    - account_parameters: Account metadata cache (voting, mining, recovery)
  *    - wallet_stats_by_day: Daily count of newly created accounts
+ *    - account_ops_count: Operation count per account (db/process_account_ops_count.sql)
  *
  * 4. WITNESS VOTES & PROXIES
  *    - witness_votes_history: Complete vote change history
@@ -855,6 +856,7 @@ BEGIN
   END IF;
 
   PERFORM hafbe_app.process_account_stats(_from, _to);
+  PERFORM hafbe_app.process_account_ops_count(_from, _to);
   PERFORM hafbe_app.process_block_operations(_from, _to);
   PERFORM hafbe_app.process_transaction_stats(_from, _to);
   PERFORM hafbe_app.process_witness_stats(_from, _to);
@@ -904,6 +906,7 @@ BEGIN
   END IF;
 
   PERFORM hafbe_app.process_account_stats(_block, _block);
+  PERFORM hafbe_app.process_account_ops_count(_block, _block);
   PERFORM hafbe_app.process_block_operations(_block, _block);
   PERFORM hafbe_app.process_transaction_stats(_block, _block);
   PERFORM hafbe_app.process_witness_stats(_block, _block);
@@ -979,6 +982,9 @@ BEGIN
     IF to_regproc('finalize_massive_sync_before_forking') IS NOT NULL THEN
       EXECUTE format('SELECT finalize_massive_sync_before_forking(%L)', _context_btracker);
     END IF;
+    -- Same reason: fills account_ops_count, which massive sync leaves to this
+    -- point. Up to the block before this range, which single_processing() adds.
+    PERFORM hafbe_app.finalize_account_ops_count(_block_range.first_block - 1);
 
     PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
     RAISE DEBUG '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
@@ -1302,6 +1308,11 @@ BEGIN
   -- Register indexes on HAF tables (deferred from install time).
   -- hived's poll_and_create_indexes() will build them concurrently in the background.
   PERFORM hafbe_app.register_haf_indexes();
+
+  -- For a database whose massive sync is finished from outside the main loop
+  -- (CI's sync job): log_and_process_blocks() does it on the first LIVE block,
+  -- after which the context is forking and this is a no-op.
+  PERFORM hafbe_app.finalize_account_ops_count(hive.app_get_current_block_num('hafbe_app'));
 END
 $$;
 
