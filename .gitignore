@@ -27,3 +27,5 @@ scripts/haf_scripts/
 # reports (.aidev/run-checks.sh) are not.
 !/.aidev/
 test-results/
+__pycache__/
+*.pyc
