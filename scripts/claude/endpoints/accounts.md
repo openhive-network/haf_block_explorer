@@ -83,7 +83,7 @@ curl "http://localhost:3000/hafbe-api/accounts/blocktrades"
 
 This endpoint aggregates data from multiple sources:
 - `btracker_endpoints.get_account_balances()` - Balance data
-- `reptracker_endpoints.get_account_reputation()` - Reputation score
+- `reptracker_endpoints.get_account_reputation()` - Reputation score (25 for an account with no or zero raw reputation, as in hivemind)
 - `hafbe_backend.get_json_metadata()` - Profile metadata
 - `hafbe_backend.get_account_parameters()` - Account settings
 - `hafbe_backend.get_account_witness_votes()` - Witness votes

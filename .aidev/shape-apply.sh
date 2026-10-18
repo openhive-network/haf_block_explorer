@@ -106,9 +106,19 @@ eval "shape_psql=($AIDEV_DB_SHAPE_PSQL)"
 # schemas cannot be dropped as HAfAH's are (they hold the tables whose statistics the
 # plans need), so give each app's schemas and objects back to the owner role they
 # have in production, and let the app roles create schemas in the copy.
+# The balance tracker's views and functions read columns and a table its
+# btracker_app.sql defines after the shape's capture: add them first, catalog only
+# (nullable, no rewrite, no statistics), with HAF's event triggers on registered
+# tables off (replica role), as the balance tracker's own .aidev/shape-apply.sh does.
 "${shape_psql[@]}" -v ON_ERROR_STOP=1 -v db="$AIDEV_DB_SHAPE_DATABASE" <<'SQL'
 SET client_min_messages = warning;
 GRANT CREATE, CONNECT ON DATABASE :"db" TO hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user;
+SET session_replication_role = replica;
+ALTER TABLE hafbe_bal.account_balance_history ADD COLUMN IF NOT EXISTS op_type_id SMALLINT;
+ALTER TABLE hafbe_bal.account_savings_history ADD COLUMN IF NOT EXISTS op_type_id SMALLINT;
+CREATE TABLE IF NOT EXISTS hafbe_bal.balance_totals
+  (nai SMALLINT NOT NULL, holders BIGINT NOT NULL, total NUMERIC NOT NULL, CONSTRAINT pk_balance_totals PRIMARY KEY (nai));
+RESET session_replication_role;
 DO $$
 DECLARE
   r RECORD;
