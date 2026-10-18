@@ -69,6 +69,51 @@ HAF reverts address rows by `hive_rowid`).
 aggregate and lists differing days in `hafbe_test.differing_wallet_days`; it can be
 run at any block, including after a fork rollback.
 
+## Table: `hafbe_app.account_ops_count`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `account_id` | INT | Account ID (PK) |
+| `ops_count` | INT | Newest `account_op_seq_no + 1` of the account's operations |
+
+Read by `hafbe_backend.get_account_ops_count()` (`/accounts/{a}`), so the endpoint
+never plans against `hafd.account_operations`: the first plan of a query on that
+table in a backend opens every 1 GB segment file of the table and its indexes
+(about 5 ms at full scale), and every new pgbouncer server connection pays it again.
+Accounts without operations have no row (NULL, as before).
+
+Maintained by `db/process_account_ops_count.sql`:
+
+- `process_account_ops_count(_from, _to)` runs in `massive_processing()` and
+  `single_processing()` and adds, per account, the number of the range's operations
+  that `hive.get_impacted_accounts()` returns it for: HAF writes one
+  `account_operations` row per such pair (checked on the 5M-block HAF: identical for
+  all 92,462 accounts). `hafd.account_operations` has no index by block, so the
+  range cannot be read from it. It does nothing while the context is not forking:
+  decoding every operation costs about 2 us, hours over the whole chain.
+- `finalize_account_ops_count(_last_block)` sets every account's count from one
+  backward probe of `hafd.account_operations`' `(account_id, account_op_seq_no)`
+  index (`account_ops_counts_until()`; through the context's
+  `account_operations_view` the planner sorts all of an account's rows instead, so
+  the bound must be an irreversible block). `log_and_process_blocks()`
+  calls it on the first LIVE block, before `hive.app_context_set_forking()` (as the
+  balance tracker's finalization: no shadow rows), up to the block before; and
+  `create_hafbe_indexes()` up to the context's block, for a sync finished from
+  outside the main loop (CI). A no-op once the context is forking.
+
+Like `wallet_stats_by_day`, the table is created in its own DO block, so a
+reinstall over an existing context gets it. For a forking context the block fills it
+to the irreversible block, adds the context's reversible blocks with
+`process_account_ops_count()`, gives the rows negative `hive_rowid`s and only then
+registers it; a fork that reverts a block processed before that reinstall does not
+revert those rows. A context still in its initial massive sync is left to
+`finalize_account_ops_count()`.
+
+`tests/regression` checks it: `hafbe_test.compare_account_ops_count()` recomputes the
+newest `account_op_seq_no + 1` per account from the context's view and lists
+differences in `hafbe_test.differing_ops_counts`; after LIVE blocks and after a fork
+rollback too.
+
 ## Key Patterns
 
 ### Parser Functions

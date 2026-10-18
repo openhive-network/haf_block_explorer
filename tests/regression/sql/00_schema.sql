@@ -12,6 +12,7 @@
 --   hafbe_test.differing_accounts     - Accounts with discrepancies (output)
 --   hafbe_test.differing_witnesses    - Witnesses with discrepancies (output)
 --   hafbe_test.differing_wallet_days  - Days whose wallet count disagrees (output)
+--   hafbe_test.differing_ops_counts   - Accounts whose stored op count disagrees (output)
 --
 -- =============================================================================
 
@@ -103,6 +104,24 @@ CREATE TABLE hafbe_test.differing_wallet_days (
   day         DATE PRIMARY KEY,
   stored      INT  NULL,  -- hafbe_app.wallet_stats_by_day.new_wallets (NULL = no row)
   recomputed  INT  NULL   -- accounts in account_parameters created that day (NULL = none)
+);
+
+-- =============================================================================
+-- Account Operation Count Tables
+-- =============================================================================
+
+/*
+ * differing_ops_counts: Output table listing accounts where
+ * hafbe_app.account_ops_count disagrees with the account's newest
+ * account_op_seq_no + 1.
+ *
+ * Populated by hafbe_test.compare_account_ops_count().
+ * Empty = test passes; non-empty = discrepancies found.
+ */
+CREATE TABLE hafbe_test.differing_ops_counts (
+  account_id  INT PRIMARY KEY,
+  stored      INT NULL,  -- hafbe_app.account_ops_count.ops_count (NULL = no row)
+  recomputed  INT NULL   -- newest account_op_seq_no + 1 (NULL = no operations)
 );
 
 RESET ROLE;

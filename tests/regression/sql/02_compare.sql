@@ -16,6 +16,7 @@
 --   hafbe_test.compare_accounts()           - Compare all accounts
 --   hafbe_test.compare_witnesses()          - Compare all witnesses
 --   hafbe_test.compare_wallet_stats()       - Compare wallet_stats_by_day with account_parameters
+--   hafbe_test.compare_account_ops_count()  - Compare account_ops_count with account_operations
 --   hafbe_test.get_account_comparison(int)  - Debug helper for single account
 --   hafbe_test.get_witness_comparison(int)  - Debug helper for single witness
 --
@@ -393,6 +394,51 @@ BEGIN
   FROM hafbe_app.wallet_stats_by_day ws
   FULL JOIN recomputed r ON r.day = ws.day
   WHERE ws.new_wallets IS DISTINCT FROM r.new_wallets;
+END
+$$;
+
+-- =============================================================================
+-- Account Operation Count Comparison
+-- =============================================================================
+
+/*
+ * compare_account_ops_count: Compare hafbe_app.account_ops_count with each
+ * account's newest account_op_seq_no + 1 in the context's account operations view.
+ *
+ * Holds at any block the context is at once massive sync is finalized: after
+ * LIVE blocks and after a fork rollback, since the view and the registered
+ * table follow the context's block together. Needs no hived snapshot.
+ *
+ * OUTPUT: Inserts differing accounts into hafbe_test.differing_ops_counts
+ */
+CREATE OR REPLACE FUNCTION hafbe_test.compare_account_ops_count()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS $$
+BEGIN
+  RAISE NOTICE 'Comparing hafbe account_ops_count with account_operations...';
+
+  WITH recomputed AS MATERIALIZED (
+    SELECT
+      av.id AS account_id,
+      newest.account_op_seq_no + 1 AS ops_count
+    FROM hafbe_app.accounts_view av
+    CROSS JOIN LATERAL (
+      SELECT aov.account_op_seq_no
+      FROM hafbe_app.account_operations_view aov
+      WHERE aov.account_id = av.id
+      ORDER BY aov.account_op_seq_no DESC
+      LIMIT 1
+    ) newest
+  )
+  INSERT INTO hafbe_test.differing_ops_counts (account_id, stored, recomputed)
+  SELECT
+    COALESCE(aoc.account_id, r.account_id),
+    aoc.ops_count,
+    r.ops_count
+  FROM hafbe_app.account_ops_count aoc
+  FULL JOIN recomputed r ON r.account_id = aoc.account_id
+  WHERE aoc.ops_count IS DISTINCT FROM r.ops_count;
 END
 $$;
 

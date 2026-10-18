@@ -6,7 +6,8 @@
 # PURPOSE:
 #   Compares HAF Block Explorer's computed account and witness data against
 #   expected values from a hived node snapshot to detect regressions, and
-#   checks that hafbe_app.wallet_stats_by_day equals the aggregate it caches.
+#   checks that hafbe_app.wallet_stats_by_day equals the aggregate it caches
+#   and hafbe_app.account_ops_count the newest account_op_seq_no + 1.
 #
 # WORKFLOW:
 #   1. Install the regression test schema (hafbe_test)
@@ -21,7 +22,7 @@
 #
 # EXIT CODES:
 #   0 - All data matches
-#   1 - One or more accounts/witnesses/wallet days have discrepancies
+#   1 - One or more accounts/witnesses/wallet days/op counts have discrepancies
 #
 # -----------------------------------------------------------------------------
 # RECREATING THE FIXTURES
@@ -67,7 +68,7 @@ OPTIONS:
     --port=NUMBER       PostgreSQL port (default: 5432)
     --user=USERNAME     PostgreSQL user (default: haf_admin)
     --schema=SCHEMA     HAF Block Explorer schema name (default: hafbe_app)
-    --type=TYPE         Test type: account, witness, wallet, or all (default: all)
+    --type=TYPE         Test type: account, witness, wallet, opscount, or all (default: all)
     --help              Show this help message
 EOF
 }
@@ -310,6 +311,36 @@ if [ "$TEST_TYPE" = "wallet" ] || [ "$TEST_TYPE" = "all" ]; then
         echo "  FAILURE: $DIFFERING_DAYS days have discrepancies"
         psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" \
             -c "SELECT * FROM hafbe_test.differing_wallet_days ORDER BY day LIMIT 20;"
+        OVERALL_RESULT=1
+    fi
+    echo ""
+fi
+
+# -----------------------------------------------------------------------------
+# Account Operation Count Tests
+# -----------------------------------------------------------------------------
+if [ "$TEST_TYPE" = "opscount" ] || [ "$TEST_TYPE" = "all" ]; then
+    echo "=============================================="
+    echo "Running Account Operation Count Regression Tests"
+    echo "=============================================="
+
+    echo "Step 2d: Comparing account_ops_count with account_operations..."
+    psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" \
+        -c "TRUNCATE hafbe_test.differing_ops_counts;" \
+        -c "SELECT hafbe_test.compare_account_ops_count();" \
+        2>&1 | tee -i >(eval "$timestamper" >> "$SCRIPT_DIR/regression_test.log")
+    echo ""
+
+    echo "Step 3d: Checking account operation count results..."
+    DIFFERING_COUNTS=$(psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -t -A \
+        -c "SELECT COUNT(*) FROM hafbe_test.differing_ops_counts;")
+
+    if [ "$DIFFERING_COUNTS" -eq 0 ]; then
+        echo "  SUCCESS: account_ops_count matches account_operations!"
+    else
+        echo "  FAILURE: $DIFFERING_COUNTS accounts have discrepancies"
+        psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" \
+            -c "SELECT * FROM hafbe_test.differing_ops_counts ORDER BY account_id LIMIT 20;"
         OVERALL_RESULT=1
     fi
     echo ""

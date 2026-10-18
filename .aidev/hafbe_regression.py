@@ -9,8 +9,9 @@ the hived snapshots at block 5000000 (accounts_dump.json.gz,
 witnesses_dump.json.gz) through hafbe_test.load_expected_account_stats /
 load_expected_witness_props, run hafbe_test.compare_accounts() (search path
 hafbe_app), hafbe_test.compare_witnesses() (search path hafbe_bal) and
-hafbe_test.compare_wallet_stats(), and fail when hafbe_test.differing_accounts,
-differing_witnesses or differing_wallet_days has rows.
+hafbe_test.compare_wallet_stats() and hafbe_test.compare_account_ops_count(), and
+fail when hafbe_test.differing_accounts, differing_witnesses, differing_wallet_days
+or differing_ops_counts has rows.
 
 The one difference is the loading: load_expected_data.py calls the load
 function once per record, one round trip each (92,462 accounts), which takes
@@ -95,6 +96,23 @@ def run_wallet_stats(conn) -> tuple[bool, str]:
     return True, f"all {days} wallet_stats_by_day rows match account_parameters"
 
 
+
+def run_ops_count(conn) -> tuple[bool, str]:
+    with conn.cursor() as cur:
+        cur.execute("TRUNCATE hafbe_test.differing_ops_counts")
+        cur.execute("SELECT hafbe_test.compare_account_ops_count()")
+        cur.execute("SELECT count(*) FROM hafbe_app.account_ops_count")
+        accounts = cur.fetchone()[0]
+        cur.execute("SELECT account_id, stored, recomputed FROM hafbe_test.differing_ops_counts ORDER BY account_id LIMIT 20")
+        differing = cur.fetchall()
+    conn.commit()
+    if differing:
+        detail = "\n".join(f"account {a}: stored {stored}, recomputed {recomputed}" for a, stored, recomputed in differing)
+        return False, f"account_ops_count differs from account_operations for these accounts (first 20):\n{detail}"
+    if not accounts:
+        return False, "account_ops_count is empty"
+    return True, f"all {accounts} account_ops_count rows match account_operations"
+
 def main(out: str) -> int:
     url = os.environ["HAFBE_TEST_DB_URL"]
     subprocess.run(["bash", os.path.join(REGRESSION, "install_test_schema.sh"), f"--url={url}"], check=True)
@@ -109,6 +127,10 @@ def main(out: str) -> int:
         ok, message = run_wallet_stats(conn)
         print(("PASS " if ok else "FAIL ") + message)
         cases.append(("wallet_stats", ok, message, time.monotonic() - t0))
+        t0 = time.monotonic()
+        ok, message = run_ops_count(conn)
+        print(("PASS " if ok else "FAIL ") + message)
+        cases.append(("ops_count", ok, message, time.monotonic() - t0))
     with open(os.path.join(out, "regression.xml"), "w", encoding="utf-8") as handle:
         failures = sum(1 for c in cases if not c[1])
         handle.write('<?xml version="1.0" encoding="UTF-8"?>\n')

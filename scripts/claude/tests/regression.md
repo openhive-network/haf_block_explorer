@@ -67,6 +67,7 @@ tests/regression/
 | `hafbe_test.differing_accounts` | Account IDs with mismatched data |
 | `hafbe_test.differing_witnesses` | Witness IDs with mismatched data |
 | `hafbe_test.differing_wallet_days` | Days where `wallet_stats_by_day` disagrees with `account_parameters` (stored vs recomputed) |
+| `hafbe_test.differing_ops_counts` | Accounts where `account_ops_count` disagrees with the newest `account_op_seq_no + 1` (stored vs recomputed) |
 
 ## What Gets Compared
 
@@ -84,6 +85,12 @@ tests/regression/
 accounts created per day from `account_parameters` and compares it with
 `hafbe_app.wallet_stats_by_day`. Run it after sync, after LIVE blocks or after a fork
 rollback; it holds at any block.
+
+### Account Operation Counts
+`hafbe_test.compare_account_ops_count()` (`--type=opscount`) needs no snapshot either:
+it recomputes each account's newest `account_op_seq_no + 1` from
+`hafbe_app.account_operations_view` and compares it with `hafbe_app.account_ops_count`.
+It holds at any block once massive sync is finalized (the table is filled at that point).
 
 ### Witness Fields
 - `url` - Witness URL
