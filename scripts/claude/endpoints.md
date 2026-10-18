@@ -238,7 +238,10 @@ merge joins that scan all of `hafd.accounts` or walk `hafd.blocks`. Resolve name
 timestamps with a per-row `CROSS JOIN LATERAL (... WHERE id = outer.col LIMIT 1)`
 (`LEFT JOIN LATERAL ... ON TRUE` for an outer join) or an `id = ANY(array)` lookup,
 and paginate on the base rows before the lookups unless the looked-up value is the
-sort key. PL/pgSQL statements switch to a generic plan after five calls per session;
+sort key. When it is the sort key over a large set, resolve it once with
+`id = ANY(ARRAY(...))` and page on `(id, key)` alone before enriching: a per-row probe
+re-runs the view's reversible branch for every row (`get_witnesses` with
+`sort = 'witness'`, ~15k witnesses). PL/pgSQL statements switch to a generic plan after five calls per session;
 a CASE-ordered `ORDER BY ... LIMIT` needs `SET plan_cache_mode = force_custom_plan`
 to stay index-ordered (e.g. `blocksearch_account`).
 

@@ -367,10 +367,30 @@ DECLARE
 BEGIN
   RETURN QUERY (
     -- Paginate before resolving names: joining hive.accounts_view inflates its
-    -- estimate and the planner scans every account. The name is probed per
-    -- witness only when it is the sort key ("sort" = 'witness' folds away in
-    -- the custom plan otherwise), then once per page row below.
-    WITH limited_set AS MATERIALIZED (
+    -- estimate and the planner scans every account. When the name is the sort
+    -- key, witness_page resolves all names in one id = ANY(array) lookup and
+    -- pages them on (id, name) alone, and limited_set only enriches that page.
+    -- For every other sort witness_page folds to an empty result in the custom
+    -- plan, and names are probed once per page row below.
+    WITH witness_page AS MATERIALIZED (
+      SELECT av.id, av.name
+      FROM hive.accounts_view av
+      WHERE
+        "sort" = 'witness' AND
+        av.id = ANY(ARRAY(
+          SELECT cw.witness_id
+          FROM hafbe_app.current_witnesses cw
+          JOIN hafbe_app.witness_rank_cache a ON a.witness_id = cw.witness_id
+        ))
+      ORDER BY
+        (CASE WHEN "direction" = 'desc' THEN av.name ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  THEN av.name ELSE NULL END) ASC,
+        (CASE WHEN "direction" = 'desc' THEN av.id   ELSE NULL END) DESC,
+        (CASE WHEN "direction" = 'asc'  THEN av.id   ELSE NULL END) ASC
+      OFFSET __offset
+      LIMIT "page-size"
+    ),
+    limited_set AS MATERIALIZED (
       SELECT
         cw.witness_id,
         a.rank,
@@ -394,12 +414,8 @@ BEGIN
       JOIN hafbe_app.witness_rank_cache a              ON a.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_cache b        ON b.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_cache c ON c.witness_id = cw.witness_id
-      LEFT JOIN LATERAL (
-        SELECT av.name
-        FROM hive.accounts_view av
-        WHERE av.id = cw.witness_id AND "sort" = 'witness'
-        LIMIT 1
-      ) wn ON TRUE
+      LEFT JOIN witness_page wn ON wn.id = cw.witness_id
+      WHERE "sort" <> 'witness' OR wn.id IS NOT NULL
       ORDER BY
         -- Sort by witness name
         (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN wn.name                                                        ELSE NULL END) DESC,
@@ -443,7 +459,7 @@ BEGIN
         -- Tiebreaker: witness_id for stable ordering
         (CASE WHEN "direction" = 'desc'                                        THEN cw.witness_id                                                  ELSE NULL END) DESC,
         (CASE WHEN "direction" = 'asc'                                         THEN cw.witness_id                                                  ELSE NULL END) ASC
-      OFFSET __offset
+      OFFSET (CASE WHEN "sort" = 'witness' THEN 0 ELSE __offset END)
       LIMIT "page-size"
     )
     SELECT
