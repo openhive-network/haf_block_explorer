@@ -242,6 +242,16 @@ sort key. PL/pgSQL statements switch to a generic plan after five calls per sess
 a CASE-ordered `ORDER BY ... LIMIT` needs `SET plan_cache_mode = force_custom_plan`
 to stay index-ordered (e.g. `blocksearch_account`).
 
+The opposite holds for single-row primary-key lookups on hot endpoints: their
+generic plan equals the custom one, so `SET plan_cache_mode = force_generic_plan`
+spares the five custom replans each new DB session pays (pgbouncer keeps opening
+server sessions). `get_account` does this for its `hafbe_backend` helpers in
+`account.sql`, and calls them as PL/pgSQL assignments (simple expressions, planned
+once) rather than one statement joining their function scans. A helper whose plan
+depends on a skewed value (`get_account_proxied_vsf_votes`, by `proxy_id`) keeps
+custom plans. Note that a `SET` on an endpoint also applies to every function it
+calls, including the balance and reputation trackers'.
+
 ### Response Caching
 
 Endpoints set `Cache-Control` headers:

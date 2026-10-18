@@ -3,6 +3,13 @@
 -- =============================================================================
 -- Functions for retrieving various account-related information including
 -- proxied votes, witness votes, profile data, and account parameters.
+--
+-- Helpers whose lookups are all primary-key (or bounded PK-prefix) equalities
+-- run with plan_cache_mode = force_generic_plan: their generic plan is the
+-- custom one, so replanning it on each of a session's first five calls is pure
+-- overhead. get_account_proxied_vsf_votes keeps custom plans: proxy_id is
+-- skewed (one proxy holds about half of all proxied accounts) and its plan
+-- changes with the value.
 -- =============================================================================
 
 SET ROLE hafbe_owner;
@@ -131,6 +138,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_votes(_account INT)
 RETURNS hafbe_backend.account_votes
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
@@ -164,6 +172,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
 RETURNS TEXT
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
@@ -235,6 +244,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_json_metadata(_account INT)
 RETURNS hafbe_backend.json_metadata
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
@@ -267,6 +277,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
 RETURNS INT
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
@@ -336,6 +347,7 @@ $$;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_parameters(_account INT)
 RETURNS hafbe_backend.account_parameters
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
@@ -384,6 +396,7 @@ RETURNS TABLE(
     "hbd_last_interest_payment" TIMESTAMP
 )
 LANGUAGE 'plpgsql' STABLE
+SET plan_cache_mode = force_generic_plan
 AS
 $$
 BEGIN
