@@ -70,6 +70,15 @@ files originate from the responses saved by CI job `3270133`. Positive patterns
 have been adapted to the current response format: supply amounts are strings
 and the numeric debt ratio is rounded to three decimal places.
 
+### Early Block Processing Test
+`tests/early_block_processing/run_test.sh` (CI job `regression-test`, as
+`haf_admin`) sets `hafd.indexes_constraints` the way a keep-monotonic massive sync
+leaves it, inside a transaction it rolls back. It checks that the hafbe_app group is
+delivered blocks then and not with drop-all, that it needs both contexts opted in,
+and that `finalize_account_ops_count()` waits for the `hafd.account_operations`
+indexes. It needs a synced hafbe_app that is not forking yet. It skips (exit 0) on a
+HAF without `massive_sync_class` (before haf#379), which includes AIDEV's shared HAF.
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 
