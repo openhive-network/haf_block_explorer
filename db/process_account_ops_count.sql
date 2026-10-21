@@ -45,6 +45,12 @@ $$;
  * that HAF's rewind triggers do not copy a row per account into the shadow table
  * (haf#346). A no-op once the context is forking.
  *
+ * The only block-processing step that reads hafd.account_operations. When the
+ * massive sync started while hived replayed (early block processing), hived
+ * restores that table's indexes only when the replay ends, and rebuilds the table
+ * with CLUSTER under an ACCESS EXCLUSIVE lock: this waits until it is done, which
+ * takes about 2.5 hours on mainnet. Raises when the wait times out.
+ *
  * PARAMETERS:
  *   _last_block - Last block the context has processed (irreversible, as every
  *                 block a non-forking context processes)
@@ -57,6 +63,14 @@ $$
 BEGIN
   IF hive.app_is_forking('hafbe_app') THEN
     RETURN;
+  END IF;
+
+  -- A HAF older than haf#379 delivers blocks only once every core index exists.
+  IF to_regprocedure('hive.wait_for_core_indexes(hive.contexts_group, text, text, interval, interval)') IS NOT NULL THEN
+    PERFORM hive.wait_for_core_indexes(
+      (SELECT a.contexts FROM hafd.applications a WHERE a.name = 'hafbe_app')::hive.contexts_group,
+      'hafd.account_operations', NULL, '6 hours'
+    );
   END IF;
 
   INSERT INTO hafbe_app.account_ops_count AS aoc (account_id, ops_count)

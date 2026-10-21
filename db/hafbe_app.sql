@@ -967,7 +967,14 @@ BEGIN
     -- "Contexts {hafbe_app,hafbe_bal} are not synchronized".
     -- Idempotent in HAF: no-op after first LIVE block.
     --
-    -- BEFORE forking is enabled, let the balance tracker do the part of its
+    -- BEFORE forking is enabled, fill account_ops_count (massive sync leaves it to
+    -- this point), up to the block before this range, which single_processing()
+    -- adds. First in the transaction: it may wait for hived to restore
+    -- hafd.account_operations, and must not hold locks of the writes below while
+    -- hived re-attaches the constraints of its tables.
+    PERFORM hafbe_app.finalize_account_ops_count(_block_range.first_block - 1);
+    --
+    -- Then let the balance tracker do the part of its
     -- massive-sync finalization that bulk-writes registered tables (it backfills
     -- ~70M deferred by-day/by-month rollup rows). Once the contexts are forking,
     -- HAF's rewind triggers copy every inserted row into the shadow tables; doing
@@ -982,10 +989,6 @@ BEGIN
     IF to_regproc('finalize_massive_sync_before_forking') IS NOT NULL THEN
       EXECUTE format('SELECT finalize_massive_sync_before_forking(%L)', _context_btracker);
     END IF;
-    -- Same reason: fills account_ops_count, which massive sync leaves to this
-    -- point. Up to the block before this range, which single_processing() adds.
-    PERFORM hafbe_app.finalize_account_ops_count(_block_range.first_block - 1);
-
     PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
     RAISE DEBUG '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
   END IF;
@@ -1369,6 +1372,19 @@ BEGIN
     PERFORM hive.app_unregister( __btracker_schema );
   END IF;
   PERFORM hive.app_register( 'hafbe_app', ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group, 'hafbe_app.process_blocks' );
+
+  -- Let the group process irreversible blocks while hived still replays
+  -- (psql-massive-index-policy = keep-monotonic). A group starts early only when
+  -- every one of its contexts opted in. Block processing reads hafd tables by
+  -- block or operation id range, through indexes that policy keeps; the one step
+  -- that needs a deferred index waits for it (finalize_account_ops_count). A HAF
+  -- older than haf#379 has no such option and starts the group once its indexes
+  -- are all restored, as before.
+  IF to_regprocedure('hive.app_context_set_early_block_processing(hive.contexts_group, boolean)') IS NOT NULL THEN
+    PERFORM hive.app_context_set_early_block_processing( ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group );
+  ELSE
+    RAISE NOTICE 'HAF has no hive.app_context_set_early_block_processing: hafbe_app starts after HAF''s index restore';
+  END IF;
 END
 $$;
 

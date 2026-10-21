@@ -44,6 +44,43 @@ HAFBE uses two synchronization stages defined in `db/hafbe_app.sql`:
 SELECT hive.get_current_stage_name('hafbe_app');  -- Returns 'MASSIVE_PROCESSING' or 'LIVE'
 ```
 
+### Starting while hived replays (early block processing)
+
+The install opts both contexts of the group (`hafbe_app` and the balance
+tracker's `hafbe_bal`) in with `hive.app_context_set_early_block_processing`
+(last block of `db/hafbe_app.sql`; skipped with a NOTICE on a HAF before haf#379).
+When hived runs with `psql-massive-index-policy = keep-monotonic`,
+`hive.app_next_iteration` then delivers irreversible blocks while hived still
+replays, with HAF's `defer` core indexes missing. With the default `drop-all`
+policy nothing changes.
+
+- **Block processing reads only `keep` indexes**: every `process_*` function
+  selects operations by `block_num` plus an operation-id range (`pk_hive_operations`
+  / `hive_operations_block_num_id_idx`), transactions by `block_num`
+  (`hive_transactions_block_num_trx_in_block_idx`), and blocks by `num` range
+  (`pk_hive_blocks`; the per-producer stats group the range by
+  `producer_account_id`, they never look a producer up). Nothing reads by
+  `trx_hash`, by operation type without a block range, or through an expression
+  index on operation bodies. Account names are resolved through `accounts_view`
+  (`hafd.accounts` indexes: still `defer` on HAF develop 78c84a95; haf#381 moves
+  them to `keep`, hafbe does not wait for them).
+- **`hafd.account_operations`** is read only by `finalize_account_ops_count()`, at
+  the first LIVE block (and from `create_hafbe_indexes()`). It calls
+  `hive.wait_for_core_indexes(<group>, 'hafd.account_operations', NULL, '6 hours')`
+  first: hived rebuilds that table with `CLUSTER` when the replay ends.
+  `log_and_process_blocks()` calls it first in that transaction, before the
+  balance tracker's finalization writes anything.
+  `process_account_ops_count()` does nothing until the context is forking, and
+  reads `operations_view` by block range when it does.
+- **The massive sync cannot end early**: the stage comes from
+  `hive.app_next_iteration`, which compares the context's block with
+  `hive.get_estimated_hive_head_block()` (the real chain head), not with hived's
+  irreversible head, so the group stays in `MASSIVE_PROCESSING` while hived
+  replays. Everything that ends the massive sync (`create_hafbe_indexes()`, the
+  account_ops_count fill, the balance tracker's finalization, the switch to
+  forking) runs on the first LIVE iteration.
+- **Test**: `tests/early_block_processing/run_test.sh` (see `tests.md`).
+
 ## Processing Functions Inventory
 
 All processing functions are in `db/process_*.sql` files.
