@@ -15,13 +15,11 @@ Both return `hafbe_backend.hardfork`:
 
 ## Rules
 
-- **Source.** HF1 onward come from HAF's public `hive.applied_hardforks_view`, not
-  the private `hafd.applied_hardforks`. Its `block_num` is `NOT NULL`, so no row is
-  dropped. Its reversible rows follow HAF's head fork rather than the `hafbe_app`
-  context's fork: for the seconds between a fork switch and hafbe processing it, a
-  reversible hardfork row and its timestamp can disagree. Only 2-second responses can
-  see it. HAF does not create `hafbe_app.applied_hardforks_view` on 1.28.8; switch to
-  it once it does.
+- **Source.** HF1 onward come from `hafbe_app.applied_hardforks_view`, the view HAF
+  creates for the `hafbe_app` context, not from the private `hafd.applied_hardforks`.
+  It follows the context's own fork and block, like `hafbe_app.blocks_view`, so a
+  hardfork and its timestamp always come from the same snapshot. `block_num` is
+  `NOT NULL`, so no row is dropped.
 - **HF0.** HAF records no hardfork operation for the genesis protocol, so it is
   synthesised at block 1. This keeps the inverse lookup total: every block from 1
   up belongs to an era.

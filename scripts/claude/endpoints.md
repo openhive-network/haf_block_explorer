@@ -145,7 +145,7 @@ processing are required. See [HBD endpoint details](endpoints/hbd.md).
 | `GET /hardforks` | `get_hardforks` | Every applied hardfork with its activation block and time; HF0 reported at block 1 |
 | `GET /hardforks/{block-num}` | `get_hardfork_at_block` | The hardfork in force at a block |
 
-Reads HAF's `hive.applied_hardforks_view`, bounded by the processed head. No tables or
+Reads the `hafbe_app` context's `applied_hardforks_view`, bounded by the processed head. No tables or
 processing. See [Hardfork endpoint details](endpoints/hardforks.md).
 
 ### Other Endpoints

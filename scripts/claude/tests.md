@@ -74,7 +74,7 @@ The `get_hardforks/` and `get_hardfork_at_block/` suites (#145) check the 14 har
 of the 5M-block fixture (HF0 at block 1, HF1-HF13), era boundaries (block 1, the last
 block before HF1, the HF1 activation block, HF7/HF8 an hour apart, the head block),
 the 400 paths (0, negative, null, head + 1) and `Cache-Control`. Their patterns were
-written from a synced node's `hive.applied_hardforks_view`, not saved from CI.
+written from a synced node's `hafbe_app.applied_hardforks_view`, not saved from CI.
 
 ### Early Block Processing Test
 `tests/early_block_processing/run_test.sh` (CI job `regression-test`, as
