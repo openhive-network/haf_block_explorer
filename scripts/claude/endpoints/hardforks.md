@@ -15,9 +15,13 @@ Both return `hafbe_backend.hardfork`:
 
 ## Rules
 
-- **Source.** HF1 onward come from HAF's public `hive.applied_hardforks_view`
-  (irreversible plus current-fork reversible rows), not the private
-  `hafd.applied_hardforks`. Its `block_num` is `NOT NULL`, so no row is dropped.
+- **Source.** HF1 onward come from HAF's public `hive.applied_hardforks_view`, not
+  the private `hafd.applied_hardforks`. Its `block_num` is `NOT NULL`, so no row is
+  dropped. Its reversible rows follow HAF's head fork rather than the `hafbe_app`
+  context's fork: for the seconds between a fork switch and hafbe processing it, a
+  reversible hardfork row and its timestamp can disagree. Only 2-second responses can
+  see it. HAF does not create `hafbe_app.applied_hardforks_view` on 1.28.8; switch to
+  it once it does.
 - **HF0.** HAF records no hardfork operation for the genesis protocol, so it is
   synthesised at block 1. This keeps the inverse lookup total: every block from 1
   up belongs to an era.
@@ -39,9 +43,9 @@ Both return `hafbe_backend.hardfork`:
 
 `hafbe_backend.get_hardforks(_current_block)` (`backend/endpoint_helpers/hardforks.sql`)
 builds the list and looks up each timestamp with a `LEFT JOIN LATERAL ... LIMIT 1`
-on `hafbe_app.blocks_view`, per the context-view guidance in `endpoints.md`. The
-inverse endpoint calls it bounded by the requested block and keeps the highest
-hardfork. No tables, processing or backfill. On a synced node the full list takes
+on `hafbe_app.blocks_view`, per the context-view guidance in `endpoints.md`.
+`hafbe_backend.get_hardfork_at_block(_block_num)` picks the highest hardfork at or
+below the block first and then looks up that one timestamp. No tables, processing or backfill. On a synced node the full list takes
 about 20 ms (29 rows).
 
 ## Tests
@@ -50,4 +54,9 @@ about 20 ms (29 rows).
 The 5M-block mainnet fixture holds HF1 to HF13 (HF14 is at block 5,137,542), so the
 list pattern has 14 rows. The inverse tests cover block 1, the last block before
 HF1, the HF1 activation block, HF7 and HF8 one hour apart, and the head block; the
-negative tests cover 0, a negative number and head + 1.
+negative tests cover 0, a negative number, null and head + 1. `Cache-Control` is
+asserted on the list (2 s) and on an irreversible lookup (1 year).
+
+Not testable on this fixture: the 2-second branch of the lookup (every fixture
+block is irreversible), the head bound on the list (HAF stops at 5M, below HF14),
+reversible hardfork rows, and the nginx rewrites (Tavern calls `/rpc/*` directly).

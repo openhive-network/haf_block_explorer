@@ -51,7 +51,6 @@ AS
 $$
 DECLARE
   _current_block INT := hafbe_backend.get_hafbe_head_block();
-  _result hafbe_backend.hardfork;
 BEGIN
   IF "block-num" IS NULL OR "block-num" < 1 THEN
     RAISE EXCEPTION 'Block_num ''%'' must be 1 or greater.', COALESCE("block-num"::TEXT, 'NULL');
@@ -65,12 +64,7 @@ BEGIN
     PERFORM set_config('response.headers', '[{"Cache-Control": "public, max-age=2"}]', true);
   END IF;
 
-  SELECT h.* INTO _result
-  FROM hafbe_backend.get_hardforks("block-num") h
-  ORDER BY h.hardfork_num DESC
-  LIMIT 1;
-
-  RETURN _result;
+  RETURN hafbe_backend.get_hardfork_at_block("block-num");
 END
 $$;
 
