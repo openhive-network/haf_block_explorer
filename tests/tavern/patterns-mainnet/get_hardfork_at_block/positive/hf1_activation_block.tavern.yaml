@@ -19,5 +19,7 @@
           block-num: 905693
       response:
         status_code: 200
+        headers:
+          Cache-Control: "public, max-age=31536000"
         verify_response_with:
           function: validate_response:compare_rest_response_with_pattern

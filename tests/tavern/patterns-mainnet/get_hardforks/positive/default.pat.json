@@ -1,72 +1,72 @@
 [
   {
-    "block_num": 1,
     "hardfork_num": 0,
+    "block_num": 1,
     "timestamp": "2016-03-24T16:05:00"
   },
   {
-    "block_num": 905693,
     "hardfork_num": 1,
+    "block_num": 905693,
     "timestamp": "2016-04-25T17:30:00"
   },
   {
-    "block_num": 934585,
     "hardfork_num": 2,
+    "block_num": 934585,
     "timestamp": "2016-04-26T18:00:15"
   },
   {
-    "block_num": 953363,
     "hardfork_num": 3,
+    "block_num": 953363,
     "timestamp": "2016-04-27T13:00:00"
   },
   {
-    "block_num": 1041497,
     "hardfork_num": 4,
+    "block_num": 1041497,
     "timestamp": "2016-04-30T15:00:00"
   },
   {
-    "block_num": 1934236,
     "hardfork_num": 5,
+    "block_num": 1934236,
     "timestamp": "2016-05-31T17:00:00"
   },
   {
-    "block_num": 2790882,
     "hardfork_num": 6,
+    "block_num": 2790882,
     "timestamp": "2016-06-30T14:00:00"
   },
   {
-    "block_num": 2889019,
     "hardfork_num": 7,
+    "block_num": 2889019,
     "timestamp": "2016-07-04T00:00:00"
   },
   {
-    "block_num": 2889959,
     "hardfork_num": 8,
+    "block_num": 2889959,
     "timestamp": "2016-07-04T01:00:00"
   },
   {
-    "block_num": 3202773,
     "hardfork_num": 9,
+    "block_num": 3202773,
     "timestamp": "2016-07-14T23:05:30"
   },
   {
-    "block_num": 3239649,
     "hardfork_num": 10,
+    "block_num": 3239649,
     "timestamp": "2016-07-16T07:18:18"
   },
   {
-    "block_num": 3276913,
     "hardfork_num": 11,
+    "block_num": 3276913,
     "timestamp": "2016-07-17T15:00:00"
   },
   {
-    "block_num": 3533567,
     "hardfork_num": 12,
+    "block_num": 3533567,
     "timestamp": "2016-07-26T15:00:03"
   },
   {
-    "block_num": 4105155,
     "hardfork_num": 13,
+    "block_num": 4105155,
     "timestamp": "2016-08-15T14:00:00"
   }
 ]
