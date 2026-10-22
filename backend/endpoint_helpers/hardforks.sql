@@ -4,13 +4,11 @@ SET ROLE hafbe_owner;
  * get_hardforks: every hardfork applied at or below _current_block, with the block
  * that applied it and that block's timestamp.
  *
- * HF1 onward come from HAF's public hive.applied_hardforks_view, not the private
- * hafd.applied_hardforks. Its reversible rows follow HAF's head fork, not the
- * hafbe_app context's fork, so for the few seconds after a fork switch that hafbe
- * has not processed yet, a reversible hardfork row and the hafbe_app.blocks_view
- * timestamp can disagree. Only the 2-second responses can see that (irreversible
- * blocks agree), and a hardfork activates about once a year. HAF does not create
- * hafbe_app.applied_hardforks_view on 1.28.8; use it once it does.
+ * HF1 onward come from hafbe_app.applied_hardforks_view, the view HAF creates for
+ * the hafbe_app context, not from the private hafd.applied_hardforks. Like
+ * hafbe_app.blocks_view, which supplies the timestamp, it follows the context's own
+ * fork and block, so a hardfork row and its timestamp always come from the same
+ * snapshot. The explicit bound keeps the result at hafbe's processed head.
  *
  * HF0 is the genesis protocol: no hardfork operation applies it, so it is reported
  * at block 1. That keeps the inverse lookup total - every block belongs to an era.
@@ -29,7 +27,7 @@ $$
     WHERE _current_block >= 1
     UNION ALL
     SELECT ah.hardfork_num::INT, ah.block_num
-    FROM hive.applied_hardforks_view ah
+    FROM hafbe_app.applied_hardforks_view ah
     WHERE ah.block_num <= _current_block
   ) h
   LEFT JOIN LATERAL (
@@ -59,7 +57,7 @@ $$
       WHERE _block_num >= 1
       UNION ALL
       SELECT ah.hardfork_num::INT, ah.block_num
-      FROM hive.applied_hardforks_view ah
+      FROM hafbe_app.applied_hardforks_view ah
       WHERE ah.block_num <= _block_num
     ) x
     ORDER BY x.hardfork_num DESC
