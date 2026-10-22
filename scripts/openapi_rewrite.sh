@@ -31,6 +31,7 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/types/operations.sql
 ../$endpoints/types/transactions.sql
 ../$endpoints/types/hbd.sql
+../$endpoints/types/hardforks.sql
 ../$endpoints/types/proposals.sql
 ../$endpoints/witnesses/get_witnesses.sql
 ../$endpoints/witnesses/get_witness.sql
@@ -50,6 +51,8 @@ ENDPOINTS_IN_ORDER="
 ../$endpoints/transactions/get_transaction_statistics.sql
 ../$endpoints/transactions/get_operation_type_statistics.sql
 ../$endpoints/hbd/get_hbd_status.sql
+../$endpoints/hardforks/get_hardforks.sql
+../$endpoints/hardforks/get_hardfork_at_block.sql
 ../$endpoints/other/get_hafbe_version.sql
 ../$endpoints/other/get_hafbe_last_synced_block.sql
 ../$endpoints/other/get_hafbe_sync_status.sql
