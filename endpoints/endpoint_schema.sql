@@ -22,6 +22,8 @@ tags:
     description: Information about transactions
   - name: HBD
     description: HBD supply and interest rate history
+  - name: Hardforks
+    description: Hive hardforks and the protocol era of a block
   - name: Accounts
     description: Information about accounts
   - name: Witnesses
@@ -76,6 +78,10 @@ declare
     {
       "name": "HBD",
       "description": "HBD supply and interest rate history"
+    },
+    {
+      "name": "Hardforks",
+      "description": "Hive hardforks and the protocol era of a block"
     },
     {
       "name": "Accounts",
@@ -1062,6 +1068,30 @@ declare
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/hafbe_backend.hbd_status"
+        }
+      },
+      "hafbe_backend.hardfork": {
+        "type": "object",
+        "properties": {
+          "hardfork_num": {
+            "type": "integer",
+            "description": "Hardfork number. 0 is the genesis protocol, which no hardfork operation applies."
+          },
+          "block_num": {
+            "type": "integer",
+            "description": "Block that applied the hardfork; 1 for hardfork 0."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Production time (UTC) of that block. It can be later than the scheduled hardfork time that database_api.get_hardfork_properties reports."
+          }
+        }
+      },
+      "hafbe_backend.array_of_hardforks": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/hafbe_backend.hardfork"
         }
       },
       "hafbe_backend.proposal": {
@@ -3122,6 +3152,81 @@ declare
           },
           "400": {
             "description": "Invalid granularity, direction or block range."
+          }
+        }
+      }
+    },
+    "/hardforks": {
+      "get": {
+        "tags": [
+          "Hardforks"
+        ],
+        "summary": "Hive hardforks with their activation block and time",
+        "description": "Lists every hardfork the chain has applied, oldest first, with the block that\napplied it and the timestamp of that block. Only hardforks at or below the last block\nthis API has processed are listed.\n\nHardfork 0 is the genesis protocol. No hardfork operation applies it, so it is\nreported at block 1.\n\nThe timestamp is the production time of the activation block. It can be later\nthan the scheduled hardfork time reported by `database_api.get_hardfork_properties`:\na hardfork applies only once enough witnesses run it. HF24, scheduled for\n2020-10-06 14:00 UTC, was applied in block 47797680 at 2020-10-14 19:31:24 UTC.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hardforks();`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/hardforks''`\n",
+        "operationId": "hafbe_endpoints.get_hardforks",
+        "responses": {
+          "200": {
+            "description": "All applied hardforks as a flat array, ordered by hardfork number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.array_of_hardforks"
+                },
+                "example": [
+                  {
+                    "hardfork_num": 0,
+                    "block_num": 1,
+                    "timestamp": "2016-03-24T16:05:00"
+                  },
+                  {
+                    "hardfork_num": 1,
+                    "block_num": 905693,
+                    "timestamp": "2016-04-25T17:30:00"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hardforks/{block-num}": {
+      "get": {
+        "tags": [
+          "Hardforks"
+        ],
+        "summary": "The hardfork in force at a block",
+        "description": "Returns the most recent hardfork applied at or before the given block: the\nprotocol era the block belongs to. A block that applies a hardfork already\nbelongs to the era of that hardfork. Blocks before hardfork 1 return hardfork 0, the\ngenesis protocol, reported at block 1.\n\nSQL example\n* `SELECT * FROM hafbe_endpoints.get_hardfork_at_block(45000000);`\n\nREST call example\n* `GET ''https://%1$s/hafbe-api/hardforks/45000000''`\n",
+        "operationId": "hafbe_endpoints.get_hardfork_at_block",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block-num",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Block number, from 1 up to the last block this API has processed."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The hardfork in force at that block.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/hafbe_backend.hardfork"
+                },
+                "example": {
+                  "hardfork_num": 23,
+                  "block_num": 41818752,
+                  "timestamp": "2020-03-20T14:00:00"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The block number is below 1 or above the last processed block."
           }
         }
       }

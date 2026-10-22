@@ -52,6 +52,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | Proposals | `Proposals` | DHF proposal listings, current approvals, and vote history |
 | Transactions | `Transactions` | Transaction statistics and aggregations |
 | HBD | `HBD` | Periodic HBD supply and interest rate snapshots |
+| Hardforks | `Hardforks` | Applied hardforks and the protocol era of a block |
 | Other | `Other` | API metadata, input type detection |
 
 ## Endpoints Inventory
@@ -137,6 +138,16 @@ Reuses transaction statistics through `hafbe_backend.get_aggregation_blocks()` a
 joins the selected blocks to the HAFBE context view. No new aggregation tables or
 processing are required. See [HBD endpoint details](endpoints/hbd.md).
 
+### Hardfork Endpoints
+
+| Endpoint | Function | Description |
+|----------|----------|-------------|
+| `GET /hardforks` | `get_hardforks` | Every applied hardfork with its activation block and time; HF0 reported at block 1 |
+| `GET /hardforks/{block-num}` | `get_hardfork_at_block` | The hardfork in force at a block |
+
+Reads HAF's `hive.applied_hardforks_view`, bounded by the processed head. No tables or
+processing. See [Hardfork endpoint details](endpoints/hardforks.md).
+
 ### Other Endpoints
 
 | Endpoint | Function | Description |
@@ -181,6 +192,9 @@ endpoints/
 │   └── get_proposal_votes_history.sql
 ├── block-search/            # Block search endpoints
 │   └── get_block_by_op.sql
+├── hardforks/               # Hardfork endpoints
+│   ├── get_hardforks.sql
+│   └── get_hardfork_at_block.sql
 ├── transactions/            # Transaction endpoints
 │   └── get_transaction_statistics.sql
 ├── other/                   # Utility endpoints
@@ -278,6 +292,7 @@ Endpoint logic is implemented in `backend/endpoint_helpers/`:
 |-------------|---------|---------|
 | `account_parameters.sql` | Account endpoints | Query account state |
 | `total_wallet_addresses.sql` | `get_total_wallet_addresses` endpoint | Wallet-count rollup from `wallet_stats_by_day` |
+| `hardforks.sql` | Hardfork endpoints | Applied hardforks bounded by the processed head |
 | `witness.sql` | Witness endpoints | Witness data retrieval |
 | `blocksearch.sql` | Block search | Operation filtering logic |
 
@@ -292,6 +307,7 @@ For implementation details of each endpoint category:
 | Witnesses | [endpoints/witnesses.md](endpoints/witnesses.md) |
 | Transactions | [endpoints/transactions.md](endpoints/transactions.md) |
 | Proposals | [endpoints/proposals.md](endpoints/proposals.md) |
+| Hardforks | [endpoints/hardforks.md](endpoints/hardforks.md) |
 
 ## How to Add an Endpoint
 
