@@ -180,10 +180,10 @@ The `performance-test` job in `.gitlab-ci.yml`:
 - Extends `.hafbe_test_base` template
 - Runs with 15-minute timeout
 - Test parameters: `--database-size=6000 --test-loop-count=1000`
-- Compresses results with 7z
+- Compresses results with xz
 - Converts to JUnit XML via `m2u`
 - Artifacts:
   - `tests/performance/result/result_report/` - HTML dashboard
-  - `tests/performance/results.tar.7z` - Compressed raw data
+  - `tests/performance/results.tar.xz` - Compressed raw data
   - `tests/performance/junit-result.xml` - JUnit report
   - `jmeter.log` - JMeter execution log
