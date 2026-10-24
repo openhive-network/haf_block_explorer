@@ -9,6 +9,8 @@ stages:
 
 variables:
   # HAF app role prefix for templates
+  HAF_APP_TEST_RUNNER_TAG: "def5b1305654921d3aed9db76ce41242c102f816"
+  HAF_APP_SKIP_PATTERNS: "^__never_matches__$"
   HAF_APP_ROLE_PREFIX: "hafbe"
   # Git configuration
   # Fetch strategy reuses workspace between jobs, reducing GitLab server load.
@@ -53,7 +55,7 @@ variables:
   # Enable CI-specific PostgreSQL config with reduced memory for HAF service containers
   HAF_CI_MODE: "1"
   # Common CI configuration reference for fetching scripts
-  COMMON_CI_REF: "develop"
+  COMMON_CI_REF: "def5b1305654921d3aed9db76ce41242c102f816"
   COMMON_CI_URL: "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${COMMON_CI_REF}"
   # Set to "true" to run poetry update before install (uses latest dependency versions)
   TEST_WITH_LATEST_DEPENDENCIES: "false"
@@ -87,7 +89,7 @@ include:
 - template: Workflows/Branch-Pipelines.gitlab-ci.yml
 # Common CI templates from common-ci-configuration
 - project: hive/common-ci-configuration
-  ref: develop
+  ref: def5b1305654921d3aed9db76ce41242c102f816
   file:
   - '/templates/haf_app_testing.gitlab-ci.yml'
   - '/templates/haf_data_preparation.gitlab-ci.yml'
