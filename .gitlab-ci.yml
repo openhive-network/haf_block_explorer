@@ -8,11 +8,6 @@ stages:
 - cleanup
 
 variables:
-  # Shared HAF app test runner from common-ci-configuration
-  # Pin to specific digest — the :2.2 tag was updated to an image without
-  # passwordless sudo, breaking cache-manager and test scripts that use sudo.
-  # Revert to tag once common-ci-configuration fixes the image.
-  HAF_APP_TEST_RUNNER_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/haf-app-test-runner@sha256:1d94055f419c507ac8c8431478fe6292ef594e1edf42fe9fbe63b4bcdd1ae84e"
   # HAF app role prefix for templates
   HAF_APP_ROLE_PREFIX: "hafbe"
   # Git configuration
@@ -928,7 +923,7 @@ performance-test:
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning performance tests..."
 
     timeout -k 1m 15m ./tests/performance/run_performance_tests.sh --postgresql-host=${HAF_HOST} --postgrest-host=${POSTGREST_HOST} --database-size=6000 --test-loop-count=1000
-    tar -cf - $(pwd)/tests/performance/result* | 7z a -si -mx9 tests/performance/results.tar.7z
+    tar -cf - $(pwd)/tests/performance/result* | xz -9 -T0 > tests/performance/results.tar.xz
     cat jmeter.log | python3 docker/ci/parse-jmeter-output.py
     m2u --input $(pwd)/tests/performance/result/result.xml --output $(pwd)/tests/performance/junit-result.xml
 
@@ -937,7 +932,7 @@ performance-test:
     paths:
     - docker/container-logs.txt
     - tests/performance/result/result_report/
-    - tests/performance/results.tar.7z
+    - tests/performance/results.tar.xz
     - jmeter.log
     when: always
     reports:
