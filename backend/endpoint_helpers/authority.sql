@@ -31,7 +31,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.create_authority_object(
     _weight INT
 )
 RETURNS JSON
-LANGUAGE 'plpgsql' IMMUTABLE
+LANGUAGE plpgsql IMMUTABLE
 AS
 $$
 BEGIN
@@ -64,7 +64,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
     _key_kind   hafd.key_type
 )
 RETURNS hafbe_backend.authority_type
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -181,7 +181,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_memo(
     _account_id INT
 )
 RETURNS TEXT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -217,7 +217,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_signing(
     _account_id INT
 )
 RETURNS TEXT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16

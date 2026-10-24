@@ -100,7 +100,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(
 )
 RETURNS hafbe_backend.account 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16

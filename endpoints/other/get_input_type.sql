@@ -51,7 +51,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_input_type(
 )
 RETURNS hafbe_backend.input_type_return 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE

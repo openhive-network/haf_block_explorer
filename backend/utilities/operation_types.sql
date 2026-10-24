@@ -249,7 +249,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_history_allowed_op_types()
 RETURNS INT[] -- noqa: LT01, CP05
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -273,7 +273,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_history_operation_types(
     _operations TEXT
 )
 RETURNS INT []-- noqa: LT01, CP05
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET JIT = OFF
 AS
 $$

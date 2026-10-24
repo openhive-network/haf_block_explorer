@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_vote_op(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __voter_id   INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proxy_ops(
     _proxy BOOLEAN
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');
@@ -202,7 +202,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_expired_accounts(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');

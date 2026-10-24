@@ -56,7 +56,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_witness_set_properties_operation(
     _value JSONB
 )
 RETURNS hafbe_backend.witness_properties
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __props_text     TEXT := _value->>'props';
@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_witness_update_operation(
     _value JSONB
 )
 RETURNS hafbe_backend.witness_properties
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.witness_properties;
@@ -170,7 +170,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_feed_publish_operation(
     _value JSONB
 )
 RETURNS hafbe_backend.witness_properties
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __base_amount  NUMERIC := (_value -> 'exchange_rate' -> 'base' ->> 'amount')::NUMERIC;
@@ -221,7 +221,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_pow_witness_properties(
     _value JSONB
 )
 RETURNS hafbe_backend.witness_properties
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.witness_properties;
@@ -273,7 +273,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_pow2_witness_properties(
     _value JSONB
 )
 RETURNS hafbe_backend.witness_properties
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.witness_properties;
@@ -314,7 +314,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_block_version(
     _extensions JSONB
 )
 RETURNS TEXT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 BEGIN
   IF _extensions IS NULL THEN

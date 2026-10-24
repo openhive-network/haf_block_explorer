@@ -10,7 +10,8 @@
 BEGIN;
 
 CREATE TEMPORARY TABLE early_group ON COMMIT DROP AS
-SELECT contexts::hive.contexts_group AS contexts FROM hafd.applications WHERE name = 'hafbe_app';
+SELECT contexts::hive.contexts_group AS contexts FROM hafd.applications
+WHERE name = 'hafbe_app';
 
 DO $$
 DECLARE
@@ -55,7 +56,8 @@ $$;
 RESET statement_timeout;
 
 -- Once hived restored them, the fill runs.
-UPDATE hafd.indexes_constraints SET status = 'created' WHERE contexts @> ARRAY[0] AND table_name = 'hafd.account_operations';
+UPDATE hafd.indexes_constraints SET status = 'created'
+WHERE contexts @> ARRAY[0] AND table_name = 'hafd.account_operations';
 DELETE FROM hafbe_app.account_ops_count;
 SELECT hafbe_app.finalize_account_ops_count(hive.app_get_current_block_num('hafbe_app'));
 DO $$

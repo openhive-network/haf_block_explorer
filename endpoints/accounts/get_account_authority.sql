@@ -76,7 +76,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account_authority(
 )
 RETURNS hafbe_backend.account_authority 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16

@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters(
     "direction"      hafbe_backend.sort_direction
 )
 RETURNS SETOF hafbe_backend.witness_voter
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 AS
 $$
@@ -164,7 +164,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history(
     "to-block"       INT
 )
 RETURNS SETOF hafbe_backend.witness_votes_history_record
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 AS
 $$
@@ -358,7 +358,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
     "direction" hafbe_backend.sort_direction
 )
 RETURNS SETOF hafbe_backend.witness
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 AS
 $$
@@ -504,7 +504,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness(
     _witness_id INT
 )
 RETURNS hafbe_backend.witness
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 AS
 $$
@@ -574,7 +574,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_voters_count(
     _filter_account_id INT
 )
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -602,7 +602,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_witness_votes_history_count(
     _block_range       hive.blocks_range
 )
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -623,7 +623,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses_count()
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN

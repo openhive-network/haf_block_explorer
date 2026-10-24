@@ -41,7 +41,7 @@ BEGIN
   $BODY$
     CREATE OR REPLACE FUNCTION hafbe_backend.sync_status()
     RETURNS JSON
-    LANGUAGE 'plpgsql' STABLE
+    LANGUAGE plpgsql STABLE
     AS
     $pb$
     DECLARE

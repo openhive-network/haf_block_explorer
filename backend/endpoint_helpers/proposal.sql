@@ -74,7 +74,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_history(
     _to_block       INT
 )
 RETURNS SETOF hafbe_backend.proposal_votes_history_record
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
@@ -198,7 +198,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_history_count(
     _block_range       hive.blocks_range
 )
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -226,7 +226,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.proposal_status_matches(
     _now        TIMESTAMP
 )
 RETURNS BOOLEAN
-LANGUAGE 'sql' IMMUTABLE
+LANGUAGE sql IMMUTABLE
 AS $$
   SELECT NOT _removed AND CASE _status
     WHEN 'all'      THEN TRUE
@@ -249,7 +249,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals_count(
     _search       TEXT  DEFAULT NULL
 )
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   _now TIMESTAMP := (SELECT created_at FROM hive.blocks_view WHERE num = hafbe_backend.get_hafbe_head_block());
@@ -289,7 +289,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals(
     _search       TEXT  DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.proposal
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF
@@ -421,7 +421,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes_count(
     _voter_id    INT DEFAULT NULL
 )
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   _now TIMESTAMP := (SELECT created_at FROM hive.blocks_view WHERE num = hafbe_backend.get_hafbe_head_block());
@@ -446,7 +446,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_proposal_votes(
     _voter_id    INT DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.proposal_vote
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF

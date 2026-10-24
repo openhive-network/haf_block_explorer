@@ -167,7 +167,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_comment_operations(
 )
 RETURNS hafbe_backend.operation_history 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF

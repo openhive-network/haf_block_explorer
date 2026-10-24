@@ -46,7 +46,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_blocks_by_ops(
     _setof_keys  JSON
 )
 RETURNS hafbe_backend.block_history
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE

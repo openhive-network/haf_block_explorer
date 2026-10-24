@@ -38,7 +38,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_producer_reward(_block_num INT)
 RETURNS BIGINT
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -64,7 +64,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_block_operation_aggregation(_block_num INT)
 RETURNS hafbe_backend.block_operations[]
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -91,7 +91,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.build_json_for_single_operation(
     _op_count   INT
 )
 RETURNS hafbe_backend.block_operations[]
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -110,7 +110,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_trx_count(_block_num INT)
 RETURNS INT
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -271,7 +271,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_no_filter_count(
     _current_block INT
 )
 RETURNS hafbe_backend.blocksearch_filter_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 SET JIT = OFF
 AS
@@ -320,7 +320,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_range(
     _current_block INT
 )
 RETURNS hafbe_backend.blocksearch_filter_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 SET JIT = OFF
 AS
@@ -363,7 +363,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.aggregation_time_range(
     OUT from_ts    TIMESTAMP,
     OUT to_ts      TIMESTAMP
 )
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -409,7 +409,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_range(
     _current_block INT
 )
 RETURNS hafbe_backend.blocksearch_account_filter_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET JIT = OFF
 AS
@@ -483,7 +483,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_by_op_count(
     _limit         INT
 )
 RETURNS hafbe_backend.blocksearch_filter_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -566,7 +566,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_calculate_pages(
     _limit    INT
 )
 RETURNS hafbe_backend.calculate_pages_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET JIT = OFF
 AS
@@ -656,7 +656,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.find_blocks_with_op(
     _limit     INT
 )
 RETURNS SETOF hafbe_backend.find_blocks_with_op_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -708,7 +708,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.find_blocks_with_op_and_account(
     _limit      INT
 )
 RETURNS SETOF hafbe_backend.find_blocks_with_op_return
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -769,7 +769,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_build_result(
     _order_is hafbe_backend.sort_direction
 )
 RETURNS hafbe_backend.block_history
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16

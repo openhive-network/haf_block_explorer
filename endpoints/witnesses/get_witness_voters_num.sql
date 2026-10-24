@@ -43,7 +43,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_voters_num(
 )
 RETURNS INT 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE

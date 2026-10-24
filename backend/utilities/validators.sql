@@ -38,7 +38,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_limit(
     _given_limit_name TEXT DEFAULT 'page-size'
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -73,7 +73,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_negative_limit(
     _given_limit_name TEXT DEFAULT 'page-size'
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -108,7 +108,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_page(
     _max_page   INT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -132,7 +132,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_negative_page(_given_page BIGINT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -164,7 +164,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_witness(
     _account_name TEXT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -200,7 +200,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_block_num_too_high(
     _current_block INT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -225,7 +225,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_comment_search_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -246,7 +246,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_block_search_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -278,7 +278,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.validate_path_filter_keys(
     _set_of_keys     JSON
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -329,7 +329,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.validate_single_operation_type(_operation_types INT[])
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
