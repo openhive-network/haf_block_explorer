@@ -157,12 +157,19 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Autovacuum settings as for hafbe_app's history tables (hafbe_app.sql), and
+  -- a lower update-driven trigger too: live sync updates these rows far more
+  -- often than it inserts new ones.
   CREATE TABLE hafbe_app.account_ops_count (
     account_id INT    NOT NULL,            -- Account ID (FK to hive.accounts_view)
     ops_count  INT    NOT NULL,            -- Newest account_op_seq_no + 1
     hive_rowid BIGINT NOT NULL DEFAULT 0,  -- HAF row identity, see above
 
     CONSTRAINT pk_account_ops_count PRIMARY KEY (account_id)
+  ) WITH (
+    autovacuum_vacuum_insert_scale_factor = 0.005,
+    autovacuum_vacuum_scale_factor = 0.01,
+    autovacuum_freeze_min_age = 0
   );
 
   IF hive.app_is_forking('hafbe_app') THEN

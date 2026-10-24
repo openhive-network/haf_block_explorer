@@ -39,6 +39,26 @@ HAFBE uses two synchronization stages defined in `db/hafbe_app.sql`:
 - **Optimization**: `synchronous_commit = ON` for data safety
 - **Behavior**: Updates cache tables, indexes already exist
 
+### Visibility map after the massive sync
+
+hafbe keeps its indexes and never calls `hive.app_restore_indexes()`, so HAF
+queues no freeze for it: `request_tables_freeze()` queues one `'freeze'` vacuum
+request (`VACUUM (FREEZE, ANALYZE)`, run by hived after the transaction commits)
+for every table the massive sync writes except the `current_*` tables (VACUUM
+FULLed during the sync) and the LIVE-only caches. `log_and_process_blocks()`
+calls it on the first LIVE block, after `finalize_account_ops_count()` and the
+balance tracker's finalization; `create_hafbe_indexes()` calls it for a sync
+finished outside the main loop (CI). Both only while the context is not forking
+yet, i.e. once. On a HAF without request kinds (before haf#360) it skips with a
+NOTICE.
+
+The insert-only and insert-mostly tables (`block_operations`, the `*_history`
+tables, `proposal_payments`, the `*_stats_by_day` tables, `wallet_stats_by_day`,
+`account_ops_count`) are created with `autovacuum_vacuum_insert_scale_factor =
+0.005` and `autovacuum_freeze_min_age = 0` (`account_ops_count` also with
+`autovacuum_vacuum_scale_factor = 0.01`), so autovacuum keeps them all-visible
+and frozen while live. Install only: an existing table keeps its reloptions.
+
 **Stage detection:**
 ```sql
 SELECT hive.get_current_stage_name('hafbe_app');  -- Returns 'MASSIVE_PROCESSING' or 'LIVE'
