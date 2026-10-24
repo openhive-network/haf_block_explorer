@@ -1,5 +1,6 @@
-# Files that had sqlfluff violations when AIDEV was onboarded (2026-10-16); run-checks.sh
-# sqlfluff reports theirs and fails on a violation anywhere else. Remove a file once it is clean.
+# Files with sqlfluff violations under the sqlfluff of the runtime base (4.4.0, ccc's
+# python-test-tools, 2026-10-24); run-checks.sh sqlfluff reports theirs and fails on a
+# violation anywhere else. Remove a file once it is clean.
 backend/operation_parsers/account_operations.sql
 backend/operation_parsers/witness_stats_parsers.sql
 backend/utilities/sync_time.sql

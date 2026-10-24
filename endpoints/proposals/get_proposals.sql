@@ -137,7 +137,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_proposals(
 )
 RETURNS hafbe_backend.proposals_return 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16

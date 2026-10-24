@@ -38,7 +38,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations(
     _body_limit      INT
 )
 RETURNS SETOF hafbe_backend.operation
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET enable_hashjoin = OFF
 AS
 $$
@@ -162,7 +162,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_comment_operations_count(
     _operation_types INT[]
 )
 RETURNS BIGINT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET enable_hashjoin = OFF
 AS
 $$

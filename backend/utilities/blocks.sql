@@ -25,7 +25,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_haf_head_block()
 RETURNS INT -- noqa: LT01, CP05
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$
@@ -48,7 +48,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_hafbe_head_block()
 RETURNS INT -- noqa: LT01, CP05
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$

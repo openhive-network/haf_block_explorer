@@ -27,7 +27,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.rest_raise_missing_account(_account_name TEXT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -48,7 +48,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.rest_raise_missing_witness(_account_name TEXT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -77,7 +77,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.raise_block_num_too_high_exception(
     _head_block_num INT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$
@@ -97,7 +97,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.raise_unknown_hash_exception(_hash TEXT)
 RETURNS VOID
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 IMMUTABLE
 AS
 $$

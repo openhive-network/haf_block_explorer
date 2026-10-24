@@ -9,7 +9,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_transaction_stats(_from INT, _to INT)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF

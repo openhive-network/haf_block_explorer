@@ -18,7 +18,7 @@ the failure body. `regression` also writes one case per comparison
 | Step | What | CI job it stands for |
 |---|---|---|
 | `shellcheck` | ShellCheck at its default severity on every `*.sh` outside `submodules/` | `lint_bash_scripts` (error severity; the tree is clean at the default) |
-| `sqlfluff` | sqlfluff 2.1.4 with `.sqlfluff` on the tree; fails on a violation in a file not listed in `sqlfluff-baseline` | `lint_sql_scripts` |
+| `sqlfluff` | the runtime base's sqlfluff (4.4.0 at adoption, the version CI's lint runs) with `.sqlfluff` on the tree; fails on a violation in a file not listed in `sqlfluff-baseline` | `lint_sql_scripts` |
 | `sql-registered` | every `.sql` file under `db/`, `backend/` and `endpoints/` is applied by `scripts/install_app.sh`, except those `sql-unregistered` lists (a file it misses never reaches a database) | — |
 | `install` | a per-run copy-on-write clone of the shared HAF (below); HAfAH into it from the runtime image's `/opt/hafah`, then `scripts/install_app.sh --blocksearch-indexes=true` (as CI's compose) as `haf_shared_consumer`: balance tracker into `hafbe_bal` and reputation tracker from `submodules/`, then haf_block_explorer | `sync` (its `hafah-install` and `backend-setup` services) |
 | `reinstall` | `install_app.sh` over the installed apps, `scripts/uninstall_app.sh` (checks the `hafbe_*` schemas are gone), `install_app.sh` again | `setup-scripts-test` |
@@ -47,7 +47,7 @@ outside does not leave them syncing on the server.
 bodies, paging), so HAfAH is installed first, as CI's compose does from the HAfAH image
 `.gitlab-ci.yml` pins (`HAFAH_REGISTRY`/`HAFAH_VERSION`, HAfAH fe9aaf53). The runtime
 image copies that image's sources to `/opt/hafah`; when `HAFAH_VERSION` moves, move
-the `hafah` stage of `runtime/Dockerfile` with it and rebuild. `reinstall` leaves HAfAH
+the `hafah` stage of `runtime/Dockerfile` with it (AIDEV rebuilds). `reinstall` leaves HAfAH
 installed.
 
 The install steps copy `db/ backend/ endpoints/ scripts/` and both submodules to a
@@ -71,10 +71,14 @@ same host. `hafbe_regression.py` copies the records into a temporary table in on
 `COPY` and loads them with one `SELECT` of the same `hafbe_test` functions; the
 schema install, the comparisons and the verdict are `run_test.sh`'s.
 
-**sqlfluff.** CI's `lint_sql_scripts` fails only on `code: L0..` lines, which sqlfluff
-2.x never prints, so it has never failed. The tree had 64 violations in 6 files when
-AIDEV was onboarded; `sqlfluff-baseline` lists those files, the step reports their
-violations and fails on any elsewhere. Drop a file from the list once it is clean.
+**sqlfluff.** The step runs the sqlfluff of the runtime base, ccc's `python-test-tools`,
+the image CI's `lint_sql_scripts` (ccc's `.haf_app_lint_sql`) runs in, so both lint with
+the same version. CI's job fails only on `code: L0..` lines, which sqlfluff 2 and later
+never print, so it does not fail. Rules `.sqlfluff` lists under `warnings` are printed as
+`::notice` and do not count. Under sqlfluff 4.4.0 six files have violations;
+`sqlfluff-baseline` lists them, the step reports their violations and fails on any
+elsewhere. Drop a file from the list once it is clean; when a base update brings new
+findings, fix them or regenerate the list under the new version.
 
 **`db/indexes.sql`** is not applied by `install_app.sh`: since 5b7b588 the HAF
 indexes are registered by `hafbe_app.register_haf_indexes()` at the MASSIVE→LIVE
@@ -133,7 +137,10 @@ To run the stack checks by hand against the shared HAF (`aidev session status
 haf-shared` shows its endpoint), with the submodules checked out:
 
 ```bash
-image="$(grep -o 'registry[^"]*aidev-tests@sha256:[0-9a-f]*' .aidev/project.yaml)"
+image=hafbe-aidev-runtime:local
+docker build -t "$image" --build-arg \
+    BASE_IMAGE=registry.gitlab.syncad.com/hive/common-ci-configuration/python-test-tools:develop \
+    .aidev/runtime
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w \
     -e AIDEV_EXTERNAL_HAF_HOST=<host> -e AIDEV_EXTERNAL_HAF_PORT=<port> "$image" \
     .aidev/run-checks.sh full shellcheck sqlfluff sql-registered install reinstall sync regression tavern
@@ -141,24 +148,18 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w \
 
 ## The test runtime image (`runtime/`)
 
-The checks run in a container with your uid: `python:3.14-alpine` (hive/tests_api needs
-Python >= 3.14), the `postgrest` binary of `postgrest/postgrest:v16.4` (CI's test
-compose file runs `latest`), `bash`, `git`, `psql` and `shellcheck` from Alpine's
-repository, and pinned `tavern`, `pytest`, `pytest-xdist`, `psycopg2-binary`,
-`sqlfluff` 2.1.4 (with `click` < 8.2, which it needs) and hive/tests_api
-(`validate_response`, the tavern tests' comparator) at the commit the Dockerfile's
-`TESTS_API_COMMIT` names, and HAfAH's SQL sources from CI's HAfAH image at
-`/opt/hafah`; all bases pinned by digest, nothing installed at run time.
+`project.yaml` `environment.base` follows common-ci-configuration's
+`python-test-tools:develop`, the image CI's lint and test templates run in, whose tool
+versions ccc's `docker-bake.hcl` defines. AIDEV builds `runtime/Dockerfile` on the
+digest that tag names before a run and rebuilds when the tag moves or the Dockerfile
+changes; nothing here is re-pinned by hand (aidev `docs/operations/project-test-runtimes.md`,
+*A followed base*). The base provides `bash`, `git`, `psql`, `shellcheck`, `sqlfluff`,
+`postgrest`, `pytest`, `pytest-xdist` and `tavern`; the Dockerfile adds what it lacks,
+with no version pins: `psycopg2-binary`, hive/tests_api (`validate_response`, the tavern
+tests' comparator) from its default branch as CI's `pattern-test` clones it, and
+HAfAH's SQL sources from CI's HAfAH image at `/opt/hafah`. Checks run with your uid and
+nothing is installed at run time. `environment.image` is only the seed pin read before
+a slot resolves (the base's digest at adoption) and does not need to move.
 
-When `runtime/Dockerfile` changes, rebuild and re-pin **in the same commit**:
-
-```bash
-.aidev/runtime/build.sh --push   # registry digest if aidev-<input hash> exists, else build + push
-# put the printed repo@sha256:<digest> into project.yaml environment.image
-```
-
-To build through a pull-through registry cache near the build host, set
-`AIDEV_IMAGE_CACHE_BY_REGION` to `region=host:port` pairs, e.g.
-`eu=cache.example.org:5001,*=cache2.example.org:5001`: a pair applies when its region is
-a label of the host's FQDN, and `*` applies to any other host. Unset, the image is built
-straight from the registries.
+A base update that breaks a check is fixed forward here (or in ccc); reproducing an
+older tool version is not a goal.

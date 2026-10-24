@@ -35,7 +35,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.count_ops_in_range(_from INT, _to INT)
 RETURNS TABLE(block_num INT, op_type_id SMALLINT, op_count BIGINT)
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 ROWS 60000
 SET jit = OFF
 SET enable_bitmapscan = OFF
@@ -66,7 +66,7 @@ END $$;
 
 CREATE OR REPLACE FUNCTION hafbe_app.process_block_operations(_from INT, _to INT)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET jit = OFF

@@ -295,7 +295,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_block_by_op(
 )
 RETURNS hafbe_backend.block_history 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 AS

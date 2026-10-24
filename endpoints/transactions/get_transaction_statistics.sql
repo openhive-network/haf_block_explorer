@@ -108,7 +108,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_transaction_statistics(
 )
 RETURNS SETOF hafbe_backend.transaction_stats 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET jit = OFF
 AS
 $$

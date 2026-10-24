@@ -89,7 +89,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_latest_blocks(
 )
 RETURNS SETOF hafbe_backend.latest_blocks 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET JIT = OFF
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16

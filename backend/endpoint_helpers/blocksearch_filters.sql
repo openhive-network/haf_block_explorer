@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_no_filter(
     _limit    INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET JIT = OFF
@@ -139,7 +139,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_single_op(
     _limit     INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET JIT = OFF
@@ -265,7 +265,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_key_value(
     _setof_keys  JSON
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -408,7 +408,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_multi_op(
     _limit      INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
 SET JIT = OFF
@@ -532,7 +532,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account(
     _limit      INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
@@ -673,7 +673,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_op(
     _limit      INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 SET JIT = OFF
@@ -815,7 +815,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_key_value(
     _setof_keys  JSON
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16
@@ -989,7 +989,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.blocksearch_account_multi_op(
     _limit      INT
 )
 RETURNS hafbe_backend.gatherer_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 SET join_collapse_limit = 16
 SET from_collapse_limit = 16

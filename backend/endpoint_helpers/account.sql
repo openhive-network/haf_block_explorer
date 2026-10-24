@@ -84,7 +84,7 @@ CREATE TYPE hafbe_backend.json_metadata AS (
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxied_vsf_votes(_account INT)
 RETURNS TEXT[]
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -137,7 +137,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_witness_votes(_account INT)
 RETURNS hafbe_backend.account_votes
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$
@@ -171,7 +171,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxy(_account INT)
 RETURNS TEXT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$
@@ -207,7 +207,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_profile_picture(
     posting_json_metadata TEXT
 )
 RETURNS TEXT
-LANGUAGE 'plpgsql' IMMUTABLE
+LANGUAGE plpgsql IMMUTABLE
 AS
 $$
 DECLARE
@@ -243,7 +243,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_json_metadata(_account INT)
 RETURNS hafbe_backend.json_metadata
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$
@@ -276,7 +276,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_ops_count(_account INT)
 RETURNS INT
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$
@@ -302,7 +302,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_last_vote(_account INT)
 RETURNS TIMESTAMP
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE
@@ -345,7 +345,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_parameters(_account INT)
 RETURNS hafbe_backend.account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$
@@ -390,11 +390,11 @@ $$;
 -- RETURNS: one row of (hbd_seconds, hbd_seconds_last_update, hbd_last_interest_payment)
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_hbd_interest(_account INT)
 RETURNS TABLE(
-    "hbd_seconds" TEXT,
-    "hbd_seconds_last_update" TIMESTAMP,
-    "hbd_last_interest_payment" TIMESTAMP
+    hbd_seconds TEXT,
+    hbd_seconds_last_update TIMESTAMP,
+    hbd_last_interest_payment TIMESTAMP
 )
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_generic_plan
 AS
 $$

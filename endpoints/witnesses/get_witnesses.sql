@@ -149,7 +149,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witnesses(
 )
 RETURNS hafbe_backend.witnesses_return 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16

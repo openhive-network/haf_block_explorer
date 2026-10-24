@@ -48,7 +48,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_sync_time(
           _column_name TEXT
 )
 RETURNS JSONB
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 AS
 $$

@@ -44,7 +44,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.compare_accounts()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   RAISE NOTICE 'Comparing hafbe account stats with expected values...';
@@ -197,7 +197,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.compare_witnesses()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   RAISE NOTICE 'Comparing hafbe witness props with expected values...';
@@ -373,7 +373,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.compare_wallet_stats()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   RAISE NOTICE 'Comparing hafbe wallet_stats_by_day with account_parameters...';
@@ -413,7 +413,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.compare_account_ops_count()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   RAISE NOTICE 'Comparing hafbe account_ops_count with account_operations...';
@@ -457,7 +457,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.get_account_comparison(_account_id INT)
 RETURNS SETOF hafbe_test.account_comparison_type
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 BEGIN
   -- Row 1: Expected values
@@ -516,7 +516,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.get_witness_comparison(_witness_id INT)
 RETURNS SETOF hafbe_test.witness_comparison_type
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 BEGIN
   -- Row 1: Expected values
