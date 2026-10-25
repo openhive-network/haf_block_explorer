@@ -43,7 +43,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.operation_type_stats_by_year(
     _op_types INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.op_stats_flat
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -78,7 +78,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_stats(
     _op_types    INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.op_stats_flat
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -150,7 +150,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_operation_type_aggregation(
     _op_types        INT[] DEFAULT NULL
 )
 RETURNS SETOF hafbe_backend.operation_type_stats
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE

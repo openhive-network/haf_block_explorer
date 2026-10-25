@@ -138,7 +138,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_witness_votes_history(
 )
 RETURNS hafbe_backend.witness_votes_history 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET from_collapse_limit = 16
 SET join_collapse_limit = 16

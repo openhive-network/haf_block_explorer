@@ -43,7 +43,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_update_op(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __proposal_id  INT       := (_body ->> 'proposal_id')::INT;
@@ -84,7 +84,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_remove_op(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   -- Write FALSE history rows while votes still exist, before deleting them.
@@ -126,7 +126,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_pay_op(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __proposal_id INT    := (_body ->> 'proposal_id')::INT;
@@ -177,7 +177,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_vote_op(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __voter_id INT     := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'voter');
@@ -237,7 +237,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_expired_account(
     _id   BIGINT
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __account_id INT := (SELECT av.id FROM hafbe_app.accounts_view av WHERE av.name = _body ->> 'account');

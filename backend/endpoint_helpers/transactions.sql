@@ -63,7 +63,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.transaction_stats_by_year(
     _to   TIMESTAMP
 )
 RETURNS SETOF hafbe_backend.trx_stats
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -116,7 +116,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_stats(
     _to          TIMESTAMP
 )
 RETURNS SETOF hafbe_backend.trx_stats
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -194,7 +194,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_transaction_aggregation(
     _to_timestamp    TIMESTAMP
 )
 RETURNS SETOF hafbe_backend.transaction_stats
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 DECLARE

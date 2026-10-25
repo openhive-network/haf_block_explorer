@@ -129,7 +129,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_operation_type_statistics(
 )
 RETURNS SETOF hafbe_backend.operation_type_stats 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET jit = OFF
 AS
 $$

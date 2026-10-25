@@ -57,7 +57,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_hafbe_sync_status;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_sync_status()
 RETURNS JSON
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 /*

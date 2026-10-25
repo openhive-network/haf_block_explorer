@@ -9,10 +9,10 @@
 #   - shellcheck      ShellCheck on every *.sh outside submodules/ (CI's
 #                     lint_bash_scripts fails on error severity only; the tree is clean
 #                     at the default severity, so this holds it there)
-#   - sqlfluff        sqlfluff 2.1.4 with .sqlfluff (CI's lint_sql_scripts) on the tree;
-#                     fails on a violation in a file not listed in
-#                     .aidev/sqlfluff-baseline (the files that had violations when
-#                     AIDEV was onboarded), and reports those files' violations
+#   - sqlfluff        the runtime base's sqlfluff (CI's lint_sql_scripts runs the same
+#                     image) with .sqlfluff on the tree; fails on a violation in a file
+#                     not listed in .aidev/sqlfluff-baseline, and reports those files'
+#                     violations. Rules .sqlfluff lists as warnings are not violations
 #   - sql-registered  every .sql file under db/, backend/ and endpoints/ is applied by
 #                     scripts/install_app.sh, except those .aidev/sql-unregistered lists
 #   - install         a copy-on-write clone of the shared 5M-block HAF for this run
@@ -87,16 +87,17 @@ run_sqlfluff() {
     sqlfluff --version
     local report="$out/sqlfluff.txt" file count new=0
     # sqlfluff exits 1 on any violation; the verdict is the baseline comparison below.
-    sqlfluff lint --dialect postgres --format github-annotation-native . > "$report" 2>&1
+    # Violations are printed as ::error; rules .sqlfluff lists under `warnings` as ::notice.
+    sqlfluff lint --dialect postgres --format github-annotation-native --annotation-level failure . > "$report" 2>&1
     while read -r count file; do
         if grep -qxF "$file" .aidev/sqlfluff-baseline; then
             echo "known (in .aidev/sqlfluff-baseline): $file: $count violation(s)"
         else
             echo "NEW: $file: $count violation(s)"
-            grep -F "file=$file," "$report"
+            grep '^::error ' "$report" | grep -F "file=$file,"
             new=1
         fi
-    done < <(grep -o 'file=[^,]*' "$report" | sed 's/^file=//' | sort | uniq -c)
+    done < <(grep '^::error ' "$report" | grep -o 'file=[^,]*' | sed 's/^file=//' | sort | uniq -c)
     if grep -q 'Traceback' "$report"; then
         cat "$report"; return 1
     fi

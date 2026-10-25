@@ -25,11 +25,17 @@ branches:
   handoff: develop
 
 # How this project's suites execute (#13892): one kind, stated once.
+# The runtime follows common-ci-configuration's python-test-tools, the image CI's
+# lint and test templates run in: AIDEV builds .aidev/runtime/Dockerfile on whatever
+# `develop` names now and rebuilds when it moves, so the checks run ccc's tool
+# versions and this repository pins none. `image` is the seed pin consumers read
+# before a slot resolves: python-test-tools:develop's digest at adoption.
 environment:
   kind: "container"
-  # Built by .aidev/runtime/build.sh from .aidev/runtime/Dockerfile (its only input).
-  image: "registry.gitlab.syncad.com/hive/haf_block_explorer/aidev-tests@sha256:359f753904463f87c8f8636e31728207fd25525ef4d6de9e23bde8180aef9059"
+  image: "registry.gitlab.syncad.com/hive/common-ci-configuration/python-test-tools@sha256:6f7fb3acf0c4f5551cf9fa58a382fbae66c9c47b06510b31685553581ef1409e"
   inputs: [".aidev/runtime/Dockerfile"]
+  build: {dockerfile: ".aidev/runtime/Dockerfile", context: ".aidev/runtime"}
+  base: {image: "registry.gitlab.syncad.com/hive/common-ci-configuration/python-test-tools:develop", follow: true}
 
 issues:
   intake_label: todo

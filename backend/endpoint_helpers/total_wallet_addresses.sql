@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_total_wallet_address_aggregation(
     _to_block    INT
 )
 RETURNS SETOF hafbe_backend.wallet_stats
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 STABLE
 SET jit = OFF
 AS

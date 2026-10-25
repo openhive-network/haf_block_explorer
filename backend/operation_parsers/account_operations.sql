@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_pow_operation(
     _timestamp TIMESTAMP
 )
 RETURNS hafbe_backend.impacted_account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.impacted_account_parameters;
@@ -76,7 +76,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_pow2_operation(
     _timestamp TIMESTAMP
 )
 RETURNS hafbe_backend.impacted_account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.impacted_account_parameters;
@@ -122,7 +122,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_account_created_operation(
     _is_hf11   BOOLEAN
 )
 RETURNS hafbe_backend.impacted_account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   _new_account TEXT := _body ->> 'new_account_name';
@@ -175,7 +175,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_account_create_operation(
     _timestamp TIMESTAMP
 )
 RETURNS hafbe_backend.impacted_account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.impacted_account_parameters;
@@ -214,7 +214,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_changed_recovery_account_operatio
     _body JSONB
 )
 RETURNS hafbe_backend.impacted_account_parameters
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.impacted_account_parameters;
@@ -264,7 +264,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_recover_account_operation(
     _timestamp TIMESTAMP
 )
 RETURNS hafbe_backend.recover_account_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.recover_account_result;
@@ -310,7 +310,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_decline_voting_rights_operation(
     _body JSONB
 )
 RETURNS hafbe_backend.decline_voting_rights_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.decline_voting_rights_result;
@@ -356,7 +356,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.parse_claim_account_operation(
     _body JSONB
 )
 RETURNS hafbe_backend.claim_account_result
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS $$
 DECLARE
   __result hafbe_backend.claim_account_result;

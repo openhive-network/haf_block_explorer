@@ -41,7 +41,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.load_expected_account_stats(_account_data JSONB)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
   INSERT INTO hafbe_test.expected_account_stats (
@@ -107,7 +107,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_test.load_expected_witness_props(_witness_data JSONB)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
   __base_amount  NUMERIC;

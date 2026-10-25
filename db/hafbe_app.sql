@@ -618,7 +618,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.continueProcessing()
 RETURNS BOOLEAN
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -634,7 +634,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.allowProcessing()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
@@ -653,7 +653,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.stopProcessing()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
@@ -679,7 +679,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.isIndexesCreated()
 RETURNS BOOLEAN
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -709,7 +709,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.isCommentSearchIndexesCreated()
 RETURNS BOOLEAN
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -732,7 +732,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.isBlockSearchIndexesCreated()
 RETURNS BOOLEAN
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -774,7 +774,7 @@ CREATE OR REPLACE FUNCTION hafbe_app.process_blocks(
     _logs BOOLEAN = true
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
@@ -841,7 +841,7 @@ CREATE OR REPLACE PROCEDURE hafbe_app.massive_processing(
     IN _to INT,
     IN _logs BOOLEAN
 )
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 AS
 $$
 DECLARE
@@ -891,7 +891,7 @@ CREATE OR REPLACE PROCEDURE hafbe_app.single_processing(
     IN _block INT,
     IN _logs BOOLEAN
 )
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 AS
 $$
 DECLARE
@@ -949,7 +949,7 @@ CREATE OR REPLACE FUNCTION hafbe_app.log_and_process_blocks(
     _block_range hive.blocks_range
 )
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 DECLARE
@@ -1051,7 +1051,7 @@ CREATE OR REPLACE PROCEDURE hafbe_app.main(
     IN _appContext_btracker hive.context_name,
     IN _maxBlockLimit INT = NULL
 )
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 AS
 $$
 DECLARE
@@ -1124,7 +1124,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.register_haf_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 DECLARE
@@ -1252,7 +1252,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.create_hafbe_indexes()
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
@@ -1347,7 +1347,7 @@ BEGIN
   EXECUTE format(
     $BODY$
       CREATE OR REPLACE PROCEDURE hafbe_app.process_blocks( _block_range hive.blocks_range )
-      LANGUAGE 'plpgsql'
+      LANGUAGE plpgsql
       SET search_path = %I, pg_catalog
       SET temp_buffers = '16MB'
       AS

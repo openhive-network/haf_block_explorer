@@ -34,7 +34,7 @@ DROP FUNCTION IF EXISTS hafbe_endpoints.get_hafbe_version;
 CREATE OR REPLACE FUNCTION hafbe_endpoints.get_hafbe_version()
 RETURNS TEXT 
 -- openapi-generated-code-end
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN

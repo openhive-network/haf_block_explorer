@@ -29,7 +29,7 @@ CREATE OR REPLACE FUNCTION hafbe_backend.get_account_proxies_power(
     _direction  hafbe_backend.sort_direction DEFAULT 'desc'
 )
 RETURNS SETOF hafbe_backend.proxy_power
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 SET plan_cache_mode = force_custom_plan
 AS
 $$

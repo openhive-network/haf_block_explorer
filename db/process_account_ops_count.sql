@@ -15,7 +15,7 @@ SET ROLE hafbe_owner;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.account_ops_counts_until(_last_block INT)
 RETURNS TABLE (account_id INT, ops_count INT)
-LANGUAGE 'plpgsql' STABLE
+LANGUAGE plpgsql STABLE
 AS
 $$
 BEGIN
@@ -57,7 +57,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.finalize_account_ops_count(_last_block INT)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
@@ -95,7 +95,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_account_ops_count(_from INT, _to INT)
 RETURNS VOID
-LANGUAGE 'plpgsql' VOLATILE
+LANGUAGE plpgsql VOLATILE
 AS
 $$
 BEGIN
