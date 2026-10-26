@@ -79,6 +79,14 @@ and that `finalize_account_ops_count()` waits for the `hafd.account_operations`
 indexes. It needs a synced hafbe_app that is not forking yet. It skips (exit 0) on a
 HAF without `massive_sync_class` (before haf#379), which includes AIDEV's shared HAF.
 
+### Post-Sync Freeze Test
+`tests/post_sync_freeze/run_test.sh` (CI job `regression-test`, as `haf_admin`)
+checks the autovacuum reloptions the install gives hafbe's insert-only and
+insert-mostly tables, and that `hafbe_app.request_tables_freeze()` queues a
+`'freeze'` vacuum request for every table registered in the `hafbe_app` context
+except the `current_*` ones, inside a transaction it rolls back. It skips (exit 0)
+on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 

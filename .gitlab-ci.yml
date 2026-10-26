@@ -880,6 +880,8 @@ regression-test:
     ./run_test.sh --host=${HAF_HOST} --type=all
     cd ../early_block_processing
     ./run_test.sh --host=${HAF_HOST}
+    cd ../post_sync_freeze
+    ./run_test.sh --host=${HAF_HOST}
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:

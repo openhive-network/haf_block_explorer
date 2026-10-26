@@ -136,6 +136,13 @@ BEGIN
 
   INSERT INTO hafbe_app.version VALUES('unspecified (generate and apply set_version_in_sql.pgsql)');
 
+  -- Insert-only and insert-mostly history tables are created WITH a small
+  -- autovacuum_vacuum_insert_scale_factor (hafd.account_operations has 0.005):
+  -- the default 0.2 waits for another fifth of the table to be inserted, which
+  -- for block_operations is years of live sync. autovacuum_freeze_min_age = 0
+  -- freezes each page on that visit, so the tables stay all-visible (index-only
+  -- scans skip the heap) and the anti-wraparound vacuum has nothing left to do.
+
   ------------- BLOCK OPERATIONS ----------------
 
   /*
@@ -149,7 +156,7 @@ BEGIN
     block_num  INT NOT NULL,  -- Block number containing the operations
     op_type_id INT NOT NULL,  -- Operation type ID (from hive.operation_types)
     op_count   INT NOT NULL   -- Count of this operation type in the block
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
 
   PERFORM hive.app_register_table( 'hafbe_app', 'block_operations', 'hafbe_app' );
 
@@ -197,7 +204,7 @@ BEGIN
     voter_id   INT     NOT NULL,  -- Account ID casting the vote
     approve    BOOLEAN NOT NULL,  -- TRUE=vote added, FALSE=vote removed
     source_op  BIGINT  NOT NULL   -- Operation ID that triggered this change
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'witness_votes_history', 'hafbe_app' );
 
   /*
@@ -228,7 +235,7 @@ BEGIN
     proxy_id   INT     NOT NULL,  -- Account ID being set as proxy
     proxy      BOOLEAN NOT NULL,  -- TRUE=proxy set, FALSE=proxy cleared
     source_op  BIGINT  NOT NULL   -- Operation ID that triggered this change
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'account_proxies_history', 'hafbe_app' );
 
   /*
@@ -264,7 +271,7 @@ BEGIN
     voter_id    INT     NOT NULL,
     approve     BOOLEAN NOT NULL,
     source_op   BIGINT  NOT NULL
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'proposal_votes_history', 'hafbe_app' );
 
   /*
@@ -331,7 +338,7 @@ BEGIN
     source_op   BIGINT NOT NULL,
 
     CONSTRAINT pk_proposal_payments PRIMARY KEY (source_op)
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'proposal_payments', 'hafbe_app' );
 
   ------------- TRANSACTION STATISTICS ----------------
@@ -371,7 +378,7 @@ BEGIN
     updated_at     TIMESTAMP NOT NULL,  -- Date of statistics (serves as PK)
 
     CONSTRAINT pk_transaction_stats_by_day PRIMARY KEY (updated_at)
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'transaction_stats_by_day', 'hafbe_app' );
 
   ------------- OPERATION TYPE STATISTICS ----------------
@@ -406,7 +413,7 @@ BEGIN
     last_block_num INT       NOT NULL,  -- Last block included in this period+type
 
     CONSTRAINT pk_operation_type_stats_by_day PRIMARY KEY (updated_at, op_type_id)
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
   PERFORM hive.app_register_table( 'hafbe_app', 'operation_type_stats_by_day', 'hafbe_app' );
 
   ------------- WITNESS STATISTICS ----------------
@@ -587,7 +594,7 @@ BEGIN
     hive_rowid  BIGINT NOT NULL DEFAULT 0,  -- HAF row identity, see above
 
     CONSTRAINT pk_wallet_stats_by_day PRIMARY KEY (day)
-  );
+  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
 
   INSERT INTO hafbe_app.wallet_stats_by_day (day, new_wallets, hive_rowid)
   SELECT
@@ -926,6 +933,67 @@ END
 $$;
 
 /**
+ * request_tables_freeze()
+ * -----------------------
+ * Ask HAF for one VACUUM (FREEZE, ANALYZE) of every table the massive sync
+ * writes, which hafbe calls once its initial sync is done. The sync only
+ * inserts and updates, and autovacuum's insert trigger scales with the table, so
+ * without it a large share of their pages is not all-visible when the node goes
+ * live, and all of the freezing is left to a forced anti-wraparound vacuum.
+ * hafbe keeps its indexes and never calls hive.app_restore_indexes(), which
+ * would request this itself.
+ *
+ * VACUUM cannot run inside the application's transaction: hived runs the
+ * requests after the requesting transaction commits.
+ *
+ * The current_* tables are left out: process_blocks() requests their VACUUM FULL
+ * during massive sync and autovacuum keeps them small after it. The caches are
+ * filled only in LIVE and get their own periodic VACUUM FULL.
+ *
+ * Needs the request kind of hive/haf#360 (the _kind argument of
+ * hive.app_request_table_vacuum). Without it the requests are skipped with a
+ * NOTICE: the only other kind is VACUUM FULL, a rewrite under an ACCESS
+ * EXCLUSIVE lock that leaves no visibility map either.
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.request_tables_freeze()
+RETURNS VOID
+LANGUAGE 'plpgsql' VOLATILE
+AS
+$$
+DECLARE
+  __table TEXT;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE pronamespace = 'hive'::regnamespace
+      AND proname = 'app_request_table_vacuum'
+      AND pronargs = 4
+  ) THEN
+    RAISE NOTICE 'hafbe: HAF has no non-FULL vacuum request kind; skipping the VACUUM (FREEZE, ANALYZE) of hafbe_app''s tables after its massive sync';
+    RETURN;
+  END IF;
+
+  FOREACH __table IN ARRAY ARRAY[
+    'block_operations',
+    'account_parameters',
+    'account_ops_count',
+    'wallet_stats_by_day',
+    'witness_votes_history',
+    'account_proxies_history',
+    'proposal_votes_history',
+    'proposal_payments',
+    'transaction_stats_by_day',
+    'transaction_stats_by_month',
+    'operation_type_stats_by_day',
+    'operation_type_stats_by_month',
+    'sync_time_logs'
+  ] LOOP
+    PERFORM hive.app_request_table_vacuum('hafbe_app', __table, _kind => 'freeze');
+  END LOOP;
+END
+$$;
+
+/**
  * log_and_process_blocks()
  * ------------------------
  * High-level orchestrator that coordinates multi-component processing.
@@ -988,6 +1056,11 @@ BEGIN
     -- tracker that does not have it yet.
     IF to_regproc('finalize_massive_sync_before_forking') IS NOT NULL THEN
       EXECUTE format('SELECT finalize_massive_sync_before_forking(%L)', _context_btracker);
+    END IF;
+    -- After those bulk writes, once: only the first LIVE block finds the
+    -- context not forking yet.
+    IF NOT hive.app_is_forking(_context_hafbe) THEN
+      PERFORM hafbe_app.request_tables_freeze();
     END IF;
     PERFORM hive.app_context_set_forking(ARRAY[_context_hafbe, _context_btracker]);
     RAISE DEBUG '[SINGLE]  Attempting to process block: <%>', _block_range.first_block;
@@ -1316,6 +1389,9 @@ BEGIN
   -- (CI's sync job): log_and_process_blocks() does it on the first LIVE block,
   -- after which the context is forking and this is a no-op.
   PERFORM hafbe_app.finalize_account_ops_count(hive.app_get_current_block_num('hafbe_app'));
+  IF NOT hive.app_is_forking('hafbe_app') THEN
+    PERFORM hafbe_app.request_tables_freeze();
+  END IF;
 END
 $$;
 
