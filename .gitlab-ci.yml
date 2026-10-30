@@ -997,6 +997,39 @@ pattern-test-with-mock-data:
     pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml "${JUNIT_REPORT}" "${TAVERN_DIR}"
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
+# The public REST paths through this pipeline's postgrest-rewriter image (#169): values
+# with a PostgREST operator prefix reach their function, and PostgREST's reserved
+# parameters still work. The other test jobs call PostgREST directly.
+rewriter-test:
+  extends: .test-with-docker-compose-tavern
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+    COMPOSE_PROFILES: "rewriter"
+    REWRITER_IMAGE: "${CI_REGISTRY_IMAGE}/postgrest-rewriter:${CI_COMMIT_SHORT_SHA}"
+    REWRITER_PORT: "3080"
+    TAVERN_DIR: "${CI_PROJECT_DIR}/tests/rewriter"
+    JUNIT_REPORT: "${CI_PROJECT_DIR}/tests/rewriter/report.xml"
+  before_script:
+  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  - !reference [.test-with-docker-compose-tavern, before_script]
+  artifacts:
+    paths:
+    - docker/container-logs.txt
+    when: always
+    reports:
+      junit: "${CI_PROJECT_DIR}/tests/rewriter/report.xml"
+  script:
+  - |
+    . venv/bin/activate
+    for i in $(seq 1 30); do
+      curl -s -o /dev/null --max-time 5 "http://${POSTGREST_HOST}:${REWRITER_PORT}/version" && break
+      sleep 2
+    done
+    curl -s --max-time 15 "http://${POSTGREST_HOST}:${REWRITER_PORT}/version"; echo
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning rewriter tests..."
+    pytest -n "${PYTEST_NUMBER_OF_PROCESSES}" --junitxml "${JUNIT_REPORT}" "${TAVERN_DIR}"
+    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+
 # Publish to registry.hive.blog on protected tags only
 # Uses pull/retag/push pattern - no rebuild
 publish_images:

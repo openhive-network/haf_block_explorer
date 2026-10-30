@@ -66,12 +66,27 @@ services:
       PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
       PGRST_DB_EXTRA_SEARCH_PATH: hafbe_bal, reptracker_app
     networks:
-      - haf-network-test
+      haf-network-test:
+        # The name the rewriter image proxies to (docker/haf_block_explorer_nginx.conf.template).
+        aliases:
+          - block-explorer-postgrest
     ports:
       - "3000:3000"
       - "3001:3001"
     # Note: The postgrest image is minimal and has no curl/wget, so we can't use healthcheck.
     # The wait-for-postgrest.sh script uses the HAF container to curl PostgREST instead.
+
+  # The postgrest-rewriter image this pipeline built, in front of PostgREST, for the tests
+  # that call the public REST paths (tests/rewriter). Only started with the "rewriter" profile.
+  rewriter:
+    image: ${REWRITER_IMAGE:-registry.gitlab.syncad.com/hive/haf_block_explorer/postgrest-rewriter:latest}
+    profiles: ["rewriter"]
+    depends_on:
+      - postgrest
+    networks:
+      - haf-network-test
+    ports:
+      - "3080:80"
 
 networks:
   haf-network-test:
