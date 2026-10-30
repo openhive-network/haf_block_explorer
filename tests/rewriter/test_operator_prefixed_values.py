@@ -5,7 +5,10 @@ PGRST202). The rewriter forwards GETs as form POSTs, so each case here must answ
 the rewriter exactly as a direct JSON POST of the same arguments does.
 
 Every TEXT argument of every endpoint is covered: the account names and free text the
-rewrite rules take from the path, and every TEXT query parameter.
+rewrite rules take from the path, and every TEXT query parameter. Equality with the oracle
+proves the value was read as an argument; where an endpoint's answer does not depend on the
+value on this lane (e.g. `search` over the 5M lane's empty proposal tables), it proves only
+that. test_value_arrives_unchanged checks the value itself, through an endpoint that echoes it.
 """
 import pytest
 
@@ -57,6 +60,9 @@ CASES = [
     ("/hbd/status", "get_hbd_status", {}, "from-block", QUERY),
     ("/hbd/status", "get_hbd_status", {}, "to-block", QUERY),
     ("/operation-type-counts", "get_latest_blocks", {}, "block-num", QUERY),
+    # The catch-all rule (/<function> -> /rpc/<function>) with the arguments in the query string.
+    ("/get_witness", "get_witness", {}, "account-name", QUERY),
+    ("/get_input_type", "get_input_type", {}, "input-value", QUERY),
 ]
 
 
@@ -79,17 +85,35 @@ def test_value_reaches_function_verbatim(case, value):
     assert got == want
 
 
+@pytest.mark.parametrize("value", VALUES)
+@pytest.mark.parametrize("path", ["/input-type/{v}", "/get_input_type?input-value={v}"])
+def test_value_arrives_unchanged(path, value):
+    """get_input_type answers an input that matches nothing with that input, so the value
+    the function received is visible: as a path segment and as a query parameter."""
+    if "?" in path:
+        status, body = via_rewriter(path.split("?")[0], {"input-value": value})
+    else:
+        status, body = via_rewriter(path.replace("{v}", value))
+    assert status == 200, body
+    assert body["input_value"] == [value], body
+
+
 def test_block_search_path_filter_unchanged():
     """The path-filter encoding (the template's Lua above the rewrite rules) still reaches
     get_block_by_op, now in the form body, together with an operator-prefixed argument."""
-    params = [("operation-types", "1"), ("account-name", "blocktrades"),
-              ("path-filter", "value.author=blocktrades")]
-    got = via_rewriter("/block-search", params)
-    want = direct_post("get_block_by_op", {
-        "operation-types": "1", "account-name": "blocktrades",
-        "path-filter": path_filter("value.author=blocktrades")})
-    assert want[0] == 200, want
-    assert got == want
+    def search(author):
+        params = [("operation-types", "1"), ("account-name", "blocktrades"),
+                  ("path-filter", f"value.author={author}")]
+        got = via_rewriter("/block-search", params)
+        want = direct_post("get_block_by_op", {
+            "operation-types": "1", "account-name": "blocktrades",
+            "path-filter": path_filter(f"value.author={author}")})
+        assert want[0] == 200, want
+        assert got == want
+        return got
+
+    # A filter that matches nothing answers differently, so the filter was applied.
+    assert search("blocktrades") != search("no-such-author")
 
     got = via_rewriter("/block-search", [("operation-types", "1"), ("account-name", "not.existing"),
                                          ("path-filter", "value.author=not.existing")])

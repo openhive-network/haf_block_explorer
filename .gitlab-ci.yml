@@ -226,7 +226,10 @@ prepare_haf_data:
       docker manifest inspect "$1" > /dev/null
       return $?
     }
-    if image-exists "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}"; then
+    # The rewriter image is checked too: build_instance.sh pushes it after the main image, so a
+    # build that failed in between would otherwise never produce it (rewriter-test needs it).
+    if image-exists "$CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG}" \
+       && image-exists "$CI_REGISTRY_IMAGE/postgrest-rewriter:${BASE_TAG}"; then
       echo "Image $CI_REGISTRY_IMAGE${NAME:+/$NAME}${BASE_REPO_NAME:+/$BASE_REPO_NAME}:${BASE_TAG} already exists. Skipping..."
       if [[ -n "$CI_COMMIT_TAG" && "$TARGET" == "full-ci" ]]; then
         echo "Tagging pre-existing image with Git tag..."
@@ -1009,9 +1012,6 @@ rewriter-test:
     REWRITER_PORT: "3080"
     TAVERN_DIR: "${CI_PROJECT_DIR}/tests/rewriter"
     JUNIT_REPORT: "${CI_PROJECT_DIR}/tests/rewriter/report.xml"
-  before_script:
-  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-  - !reference [.test-with-docker-compose-tavern, before_script]
   artifacts:
     paths:
     - docker/container-logs.txt
@@ -1022,7 +1022,8 @@ rewriter-test:
   - |
     . venv/bin/activate
     for i in $(seq 1 30); do
-      curl -s -o /dev/null --max-time 5 "http://${POSTGREST_HOST}:${REWRITER_PORT}/version" && break
+      curl -sf -o /dev/null --max-time 5 "http://${POSTGREST_HOST}:${REWRITER_PORT}/version" && break
+      [ "$i" -eq 30 ] && { echo "The rewriter did not answer /version within 60 s"; exit 1; }
       sleep 2
     done
     curl -s --max-time 15 "http://${POSTGREST_HOST}:${REWRITER_PORT}/version"; echo

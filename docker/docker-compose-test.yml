@@ -76,8 +76,9 @@ services:
     # Note: The postgrest image is minimal and has no curl/wget, so we can't use healthcheck.
     # The wait-for-postgrest.sh script uses the HAF container to curl PostgREST instead.
 
-  # The postgrest-rewriter image this pipeline built, in front of PostgREST, for the tests
-  # that call the public REST paths (tests/rewriter). Only started with the "rewriter" profile.
+  # A postgrest-rewriter image in front of PostgREST, for the tests that call the public REST
+  # paths (tests/rewriter). Only started with the "rewriter" profile. CI sets REWRITER_IMAGE to
+  # the image its pipeline built; without it this is develop's :latest, not a local template.
   rewriter:
     image: ${REWRITER_IMAGE:-registry.gitlab.syncad.com/hive/haf_block_explorer/postgrest-rewriter:latest}
     profiles: ["rewriter"]
@@ -86,7 +87,7 @@ services:
     networks:
       - haf-network-test
     ports:
-      - "3080:80"
+      - "${REWRITER_PORT:-3080}:80"
 
 networks:
   haf-network-test:

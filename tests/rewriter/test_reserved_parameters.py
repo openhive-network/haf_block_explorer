@@ -4,7 +4,30 @@ The rewriter moves a GET's function arguments into a form body but keeps PostgRE
 reserved parameters (select, columns, on_conflict, ...limit, ...offset, ...order, ...and,
 ...or) in the URL, so they still shape the result instead of becoming unknown arguments.
 """
+import pathlib
+import re
+
 from common import direct_get, direct_post, postgrest_code, rewriter_post, via_rewriter
+
+ENDPOINTS = pathlib.Path(__file__).resolve().parents[2] / "endpoints"
+
+
+def test_no_endpoint_argument_has_a_reserved_name():
+    """The rewriter keeps these names in the URL, so a function argument with one of them
+    would never reach the function. Checked against every hafbe_endpoints signature."""
+    reserved = {"select", "columns", "on_conflict"}
+    reserved_last = {"limit", "offset", "order", "and", "or"}
+    signature = re.compile(r"CREATE OR REPLACE FUNCTION hafbe_endpoints\.(\w+)\s*\((.*?)\)\s*RETURNS",
+                           re.S | re.I)
+    seen, bad = 0, []
+    for sql in ENDPOINTS.rglob("*.sql"):
+        for fn, params in signature.findall(sql.read_text(encoding="utf-8")):
+            seen += 1
+            for name in re.findall(r'"([^"]+)"', re.sub(r"--[^\n]*", "", params)):
+                if name in reserved or name.rsplit(".", 1)[-1] in reserved_last:
+                    bad.append(f"{fn}({name})")
+    assert seen >= 20, f"found only {seen} endpoint signatures under {ENDPOINTS}"
+    assert not bad, bad
 
 
 def _rows(ans):

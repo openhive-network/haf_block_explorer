@@ -188,9 +188,10 @@ curl "http://localhost:3000/rpc/get_witness?_witness_name=blocktrades"
 (`400 PGRST100`, or the argument is dropped and `404 PGRST202`). Direct PostgREST callers with
 such values must POST them, as JSON or form-encoded. The public REST paths are not affected: the
 postgrest-rewriter (`docker/haf_block_explorer_nginx.conf.template`) forwards every GET of a
-function to PostgREST as a form-encoded POST, keeping PostgREST's own parameters (`select`,
-`columns`, `on_conflict`, and names ending in `limit`, `offset`, `order`, `and` or `or`) in the
-URL. So an endpoint function cannot take an argument with one of those names.
+function to PostgREST as a form-encoded POST, keeping PostgREST's own parameters in the URL:
+`select`, `columns`, `on_conflict`, and any name whose last dot-separated part is `limit`,
+`offset`, `order`, `and` or `or` (`child.limit`, `not.or`; `page-limit` is an ordinary
+argument). So an endpoint function cannot take an argument with one of those names.
 
 ### Docker Deployment
 
