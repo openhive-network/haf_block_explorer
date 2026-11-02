@@ -172,6 +172,8 @@ detect → lint → build → sync → test → publish
 | `performance-test` | Performance | HTML report, JUnit XML |
 | `setup-scripts-test` | Functional | - |
 
+The generated Python API client (`scripts/python_api_package`) is tested by `python_api_client_test` (async test against a public API node) and `test_python_api_wheel` (built wheel imports, version is set). Both run in `${PYTHON_TEST_TOOLS_IMAGE}` and take pytest and pytest-asyncio from it, at the versions in common-ci-configuration's `docker-bake.hcl`; `poetry install --only main` adds only the package's runtime dependencies to the image's `/python_venv`. Do not add pytest or pytest-asyncio to the package's `pyproject.toml`.
+
 `pattern-test` runs against the 5M-block mainnet sync cache. `pattern-test-with-mock-data` runs against the `haf_hafbe_mock` cache prepared by `sync_with_mock_data` — it covers endpoints whose data only exists in the synthetic 91M block range (proposals, DHF votes).
 
 ### Pipeline Requirements

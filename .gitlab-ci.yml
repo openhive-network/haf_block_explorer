@@ -683,8 +683,24 @@ sync_with_mock_data:
   - data-cache-storage
   - fast
 
+# The API-client tests take pytest and pytest-asyncio from python-test-tools, at
+# the versions in common-ci-configuration's docker-bake.hcl; the package's
+# runtime dependencies are installed next to them in the image's /python_venv.
+.python_api_package_test_base:
+  extends: .job-defaults
+  image: "${PYTHON_TEST_TOOLS_IMAGE}"
+  variables:
+    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
+    # Job uses artifacts, doesn't need submodules
+    GIT_SUBMODULE_STRATEGY: none
+  before_script:
+  - python3 -V
+  - pytest --version
+  - pip list | grep -i -E '^pytest(-asyncio)? '
+  - !reference [.update_deps_for_tests, script]
+
 python_api_client_test:
-  extends: .project_develop_configuration_template
+  extends: .python_api_package_test_base
   stage: test
   rules:
   - if: $DOCS_ONLY == "true"
@@ -693,23 +709,16 @@ python_api_client_test:
   needs:
   - job: generate_python_api_client
     artifacts: true
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    # Job uses artifacts, doesn't need submodules
-    GIT_SUBMODULE_STRATEGY: none
-  parallel:
-    matrix:
-    - PYTHON_VERSION: ["3.12", "3.14"]
   before_script:
-  - !reference [.project_develop_configuration_template, before_script]
-  - !reference [.update_deps_for_tests, script]
+  - !reference [.python_api_package_test_base, before_script]
+  - poetry -C "${PYPROJECT_DIR}" install --only main
   script:
-  - poetry run -C "${PYPROJECT_DIR}" pytest "${PYPROJECT_DIR}/tests/test_generated_api_client.py"
+  - pytest "${PYPROJECT_DIR}/tests/test_generated_api_client.py"
   tags:
   - public-runner-docker
 
 test_python_api_wheel:
-  extends: .project_develop_configuration_template
+  extends: .python_api_package_test_base
   stage: test
   rules:
   - if: $DOCS_ONLY == "true"
@@ -719,16 +728,10 @@ test_python_api_wheel:
   - job: build_python_api_client_wheel
     artifacts: true
   variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
     DIST_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package/dist"
-    GIT_SUBMODULE_STRATEGY: none
-  parallel:
-    matrix:
-    - PYTHON_VERSION: ["3.12", "3.14"]
   before_script:
-  - !reference [.configuration_template, before_script]
-  - !reference [.update_deps_for_tests, script]
-  - poetry -C "${PYPROJECT_DIR}" install --no-root
+  - !reference [.python_api_package_test_base, before_script]
+  - poetry -C "${PYPROJECT_DIR}" install --only main --no-root
   script:
   - pip install --no-deps "${DIST_DIR}"/*.whl
   - pytest "${PYPROJECT_DIR}/tests/test_package_import.py" -v
