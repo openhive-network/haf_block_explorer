@@ -14,7 +14,8 @@
 #                     not listed in .aidev/sqlfluff-baseline, and reports those files'
 #                     violations. Rules .sqlfluff lists as warnings are not violations
 #   - sql-registered  every .sql file under db/, backend/ and endpoints/ is applied by
-#                     scripts/install_app.sh, except those .aidev/sql-unregistered lists
+#                     scripts/install_app.sh, except those .aidev/sql-unregistered lists;
+#                     and db/builtin_roles.sql grants l2_framework_user to hafbe_user
 #   - install         a copy-on-write clone of the shared 5M-block HAF for this run
 #                     (haf_shared.clone_run_database on AIDEV_EXTERNAL_HAF_HOST:_PORT, as
 #                     haf_shared_consumer); HAfAH into it from the runtime image's
@@ -117,7 +118,23 @@ sql_registered() {
         fi
     done < <(find db backend endpoints -name '*.sql' | sort)
     [ "$missing" -eq 0 ] && echo "every other .sql file under db/, backend/ and endpoints/ is applied"
+    builtin_roles_grant || missing=1
     return "$missing"
+}
+
+# The harness gets hafbe_user's l2_framework_user membership from the shared HAF and
+# stages db/builtin_roles.sql empty, so no database step notices when the repository's
+# file stops making the grant production depends on: read it from the source. Comments
+# are stripped first, so a commented-out grant does not count.
+builtin_roles_grant() {
+    local f=db/builtin_roles.sql
+    if perl -0777 -pe 's{/\*.*?\*/}{}gs; s/--[^\n]*//g' "$f" \
+            | grep -Eiq 'GRANT[[:space:]]+l2_framework_user[[:space:]]+TO[[:space:]]+hafbe_user[[:space:]]*;'; then
+        echo "$f grants l2_framework_user to hafbe_user"
+    else
+        echo "$f does not grant l2_framework_user to hafbe_user (GRANT l2_framework_user TO hafbe_user;): the authority endpoint cannot read l2 in production"
+        return 1
+    fi
 }
 
 # The install scripts write their logs and version files next to themselves and read
