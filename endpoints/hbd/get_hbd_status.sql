@@ -135,7 +135,7 @@ BEGIN
       bv.virtual_supply::TEXT,
       ROUND(100::NUMERIC * (bv.virtual_supply - bv.current_supply) / NULLIF(bv.virtual_supply, 0), 3),
       hafbe_backend.hbd_protocol_debt_ratio_pct(
-        bv.current_hbd_supply::BIGINT, bv.current_supply::BIGINT, bv.virtual_supply::BIGINT, tr.balance,
+        bv.current_hbd_supply::BIGINT, bv.current_supply::BIGINT, bv.virtual_supply::BIGINT, NULL::BIGINT,
         _hf24_block IS NOT NULL AND ab.last_block_num >= _hf24_block
       ),
       bv.hbd_interest_rate::INT
