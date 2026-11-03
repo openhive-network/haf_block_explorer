@@ -69,11 +69,31 @@
  * 3. process_blocks() dispatches to massive or single processing
  * 4. Individual process_* functions handle specific data types
  *
+ * Account authorities (owner/active/posting/memo) are read from the l2_framework
+ * app's l2.authority_* tables (backend/endpoint_helpers/authority.sql), so
+ * l2_framework must be installed first.
+ *
  * @see builtin_roles.sql for database role definitions
  * @see db/process_*.sql files for individual processing logic
  */
 
 SET ROLE hafbe_owner;
+
+-- ============================================================================
+-- REQUIRED APPLICATIONS
+-- ============================================================================
+-- Checked from the catalogs, which need no privilege on the l2 schema, so the
+-- failure names the missing application rather than a relation.
+DO $$
+BEGIN
+  IF NOT hive.app_context_exists('l2') OR (
+    SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'l2' AND c.relname IN ('authority_threshold', 'authority_key', 'authority_account')
+  ) <> 3 THEN
+    RAISE EXCEPTION 'haf_block_explorer requires the l2_framework application (context and schema l2 with its authority tables): install l2_framework first';
+  END IF;
+END
+$$;
 
 -- ============================================================================
 -- SCHEMA AND TABLE CREATION
@@ -103,7 +123,6 @@ BEGIN
 
   -- Register state providers for hafbe_app
   PERFORM hive.app_state_provider_import('METADATA', 'hafbe_app');
-  PERFORM hive.app_state_provider_import('KEYAUTH',  'hafbe_app');
 
   ------------- CONTROL TABLES ----------------
 
@@ -562,6 +581,21 @@ BEGIN
   PERFORM hive.app_context_detach('hafbe_app');
   PERFORM hive.app_set_current_block_num('hafbe_app', 0);
 
+END
+$$;
+
+-- Installs made before authorities moved to l2_framework imported the KEYAUTH
+-- state provider; dropping it removes its hafd.hafbe_app_keyauth_*,
+-- hafd.hafbe_app_accountauth_a and hafd.hafbe_app_authority_definition tables.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM hafd.state_providers_registered sp
+    JOIN hafd.contexts c ON c.id = sp.context_id
+    WHERE c.name = 'hafbe_app' AND sp.state_provider = 'KEYAUTH'
+  ) THEN
+    PERFORM hive.app_state_provider_drop('KEYAUTH', 'hafbe_app');
+  END IF;
 END
 $$;
 

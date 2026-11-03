@@ -50,9 +50,9 @@ issues:
 # The slots that install haf_block_explorer (every one without `stack: false`)
 # reach the shared HAF the `haf` project hosts (sandbox.shared haf, a HAF replayed
 # to block 5000000) as AIDEV_EXTERNAL_HAF_HOST/_PORT. .aidev/run-checks.sh takes a
-# copy-on-write clone of it per run, installs the candidate's SQL (with the balance
-# tracker and reputation tracker submodules) into the clone, syncs all three to
-# block 5000000 in it (about five minutes) and drops it on exit, so no data is
+# copy-on-write clone of it per run, installs the candidate's SQL (with the
+# l2_framework, balance tracker and reputation tracker submodules) into the clone,
+# syncs them all to block 5000000 in it (about five minutes) and drops it on exit, so no data is
 # copied and no image is built. The consumer role is trusted from the fleet LAN: no
 # secret. See .aidev/README.md.
 sandbox:
@@ -126,6 +126,7 @@ performance:
     - scripts/install_app.sh
     - submodules/btracker
     - submodules/reptracker
+    - submodules/l2_framework
     - .aidev/shape-apply.sh
     - .aidev/shape-psql.sh
   shape:

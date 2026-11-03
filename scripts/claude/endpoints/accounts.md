@@ -131,6 +131,16 @@ Returns `hafbe_backend.account_authority`:
 }
 ```
 
+#### Data sources (`backend/endpoint_helpers/authority.sql`)
+
+- owner/active/posting and memo: l2_framework's `l2.authority_threshold`,
+  `l2.authority_key` and `l2.authority_account`, the rows effective at hafbe's head
+  block (`valid_from <= B AND (valid_to IS NULL OR valid_to > B)`,
+  `B = hafbe_backend.get_hafbe_head_block()`); when l2_framework is behind B its
+  latest rows are the effective ones.
+- witness_signing: `hafbe_app.current_witnesses.signing_key`; `''` for an account
+  that is not a witness.
+
 ---
 
 ### GET /accounts/{account-name}/operations/comments/{permlink}

@@ -28,6 +28,7 @@ services:
     volumes:
       - ../submodules/btracker:/home/hived/haf_block_explorer/submodules/btracker
       - ../submodules/reptracker:/home/hived/haf_block_explorer/submodules/reptracker
+      - ../submodules/l2_framework:/home/hived/haf_block_explorer/submodules/l2_framework
       # Mount .git for generate_version_sql.sh scripts
       - ../.git:/home/hived/haf_block_explorer/.git
 
