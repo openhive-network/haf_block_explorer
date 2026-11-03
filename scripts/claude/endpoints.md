@@ -132,7 +132,7 @@ genesis (~9 years: 3,357 unbounded daily periods vs 366 clamped).
 
 | Endpoint | Function | Description |
 |----------|----------|-------------|
-| `GET /hbd/status` | `get_hbd_status` | HBD supply, provisional debt ratio and interest rate at period-end blocks |
+| `GET /hbd/status` | `get_hbd_status` | HBD and HIVE supply, gross and protocol (treasury-adjusted) debt ratios and interest rate at period-end blocks |
 
 Reuses transaction statistics through `hafbe_backend.get_aggregation_blocks()` and
 joins the selected blocks to the HAFBE context view. No new aggregation tables or

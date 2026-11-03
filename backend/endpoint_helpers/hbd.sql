@@ -1,7 +1,7 @@
 SET ROLE hafbe_owner;
 
 /*
- * The HBD debt ratio the chain acts on (hived database::calculate_HBD_percent), as a percent.
+ * The HBD debt ratio as hived computes it (database::calculate_HBD_percent), as a percent.
  *
  * Inputs are the stored block values in the chain's smallest units (milli-HBD, milli-HIVE)
  * and the treasury's liquid HBD at the same block. virtual_supply - hive_supply is the HBD
@@ -14,8 +14,9 @@ SET ROLE hafbe_owner;
  * from what remains; an empty remainder gives 0, as in hived. Savings and reward HBD of
  * the treasury are not subtracted: the protocol uses its liquid balance only.
  *
- * Rounded to three decimals. The chain computes basis points (uint16, rounded since HF21),
- * so the two agree up to its 0.01% step. NULL when virtual_supply is 0.
+ * Rounded to three decimals. hived computes basis points (uint16, rounded since HF21) during
+ * block processing, slightly before the end-of-block state these inputs come from, so the
+ * two can differ by about its 0.01% step. NULL when virtual_supply is 0.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.hbd_protocol_debt_ratio_pct(
     _hbd_supply        BIGINT,
