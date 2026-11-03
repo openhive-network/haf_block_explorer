@@ -19,7 +19,7 @@ the failure body. `regression` also writes one case per comparison
 |---|---|---|
 | `shellcheck` | ShellCheck at its default severity on every `*.sh` outside `submodules/` | `lint_bash_scripts` (error severity; the tree is clean at the default) |
 | `sqlfluff` | the runtime base's sqlfluff (4.4.0 at adoption, the version CI's lint runs) with `.sqlfluff` on the tree; fails on a violation in a file not listed in `sqlfluff-baseline` | `lint_sql_scripts` |
-| `sql-registered` | every `.sql` file under `db/`, `backend/` and `endpoints/` is applied by `scripts/install_app.sh`, except those `sql-unregistered` lists (a file it misses never reaches a database) | — |
+| `sql-registered` | every `.sql` file under `db/`, `backend/` and `endpoints/` is applied by `scripts/install_app.sh`, except those `sql-unregistered` lists (a file it misses never reaches a database); and `db/builtin_roles.sql` grants `l2_framework_user` to `hafbe_user` | — |
 | `install` | a per-run copy-on-write clone of the shared HAF (below); HAfAH into it from the runtime image's `/opt/hafah`, then `scripts/install_app.sh --blocksearch-indexes=true` (as CI's compose) as `haf_shared_consumer`: l2_framework into `l2`, balance tracker into `hafbe_bal` and reputation tracker from `submodules/`, then haf_block_explorer | `sync` (its `hafah-install` and `backend-setup` services) |
 | `reinstall` | `install_app.sh` over the installed apps, `scripts/uninstall_app.sh` (checks the `hafbe_*` schemas are gone), `install_app.sh` again | `setup-scripts-test` |
 | `sync` | haf_block_explorer's block processing (with the balance tracker), the reputation tracker's and l2_framework's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
@@ -68,7 +68,9 @@ member of the owner and grants `l2_framework_user` to `hafbe_user`, as
 its `db/builtin_roles.sql` emptied, like the trackers': `l2_framework_owner` owns
 schema `l2` and its tables, the sync runs l2_framework's processor as
 `l2_framework_owner`, and haf_block_explorer reads `l2` as `hafbe_user` only through
-the `l2_framework_user` grant, which the sync step checks. When the shared HAF lacks
+the `l2_framework_user` grant, which the sync step checks. Because the shared HAF
+supplies that membership at runtime, the `sql-registered` step reads
+`db/builtin_roles.sql` and fails when it no longer makes the production grant. When the shared HAF lacks
 those roles or memberships, the first step that opens a clone fails naming them and
 hive/haf#421. `.aidev/shape-apply.sh` installs only l2_framework's tables on the shape
 (empty: the shape was captured without l2_framework, and without its roles, so there
