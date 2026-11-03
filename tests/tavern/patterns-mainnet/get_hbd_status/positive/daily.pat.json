@@ -1,6 +1,7 @@
 [
   {
     "debt_ratio_gross_pct": 2.35,
+    "debt_ratio_protocol_pct": 2.35,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2413759427",
     "hive_supply": "157464400971",
@@ -9,6 +10,7 @@
   },
   {
     "debt_ratio_gross_pct": 2.367,
+    "debt_ratio_protocol_pct": 2.367,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2431819497",
     "hive_supply": "156710294886",
@@ -17,6 +19,7 @@
   },
   {
     "debt_ratio_gross_pct": 2.32,
+    "debt_ratio_protocol_pct": 2.32,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2449252807",
     "hive_supply": "155803013787",
@@ -25,6 +28,7 @@
   },
   {
     "debt_ratio_gross_pct": 2.173,
+    "debt_ratio_protocol_pct": 2.173,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2456482624",
     "hive_supply": "154909199120",
@@ -33,6 +37,7 @@
   },
   {
     "debt_ratio_gross_pct": 2.157,
+    "debt_ratio_protocol_pct": 2.157,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2444773929",
     "hive_supply": "154042990386",
@@ -41,6 +46,7 @@
   },
   {
     "debt_ratio_gross_pct": 2.031,
+    "debt_ratio_protocol_pct": 2.031,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2435469199",
     "hive_supply": "153172375558",
@@ -49,6 +55,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.951,
+    "debt_ratio_protocol_pct": 1.951,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2424293400",
     "hive_supply": "152304259734",
@@ -57,6 +64,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.947,
+    "debt_ratio_protocol_pct": 1.947,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2417427810",
     "hive_supply": "151431037461",
@@ -65,6 +73,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.922,
+    "debt_ratio_protocol_pct": 1.922,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2398791699",
     "hive_supply": "150570407865",
@@ -73,6 +82,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.909,
+    "debt_ratio_protocol_pct": 1.909,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2389394330",
     "hive_supply": "149697141815",
@@ -81,6 +91,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.864,
+    "debt_ratio_protocol_pct": 1.864,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2376857249",
     "hive_supply": "148827794763",
@@ -89,6 +100,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.845,
+    "debt_ratio_protocol_pct": 1.845,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2360790959",
     "hive_supply": "147962464252",
@@ -97,6 +109,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.819,
+    "debt_ratio_protocol_pct": 1.819,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2340628662",
     "hive_supply": "147101920429",
@@ -105,6 +118,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.746,
+    "debt_ratio_protocol_pct": 1.746,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2323491119",
     "hive_supply": "146235017250",
@@ -113,6 +127,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.706,
+    "debt_ratio_protocol_pct": 1.706,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2305665374",
     "hive_supply": "145367875856",
@@ -121,6 +136,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.681,
+    "debt_ratio_protocol_pct": 1.681,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2297081366",
     "hive_supply": "144496687294",
@@ -129,6 +145,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.662,
+    "debt_ratio_protocol_pct": 1.662,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2281176625",
     "hive_supply": "143630519907",
@@ -137,6 +154,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.6,
+    "debt_ratio_protocol_pct": 1.6,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2266227842",
     "hive_supply": "142764982752",
@@ -145,6 +163,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.441,
+    "debt_ratio_protocol_pct": 1.441,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2248391487",
     "hive_supply": "141899422954",
@@ -153,6 +172,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.392,
+    "debt_ratio_protocol_pct": 1.392,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2235517256",
     "hive_supply": "141028533636",
@@ -161,6 +181,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.213,
+    "debt_ratio_protocol_pct": 1.213,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2220895927",
     "hive_supply": "140160071205",
@@ -169,6 +190,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.118,
+    "debt_ratio_protocol_pct": 1.118,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2199503309",
     "hive_supply": "139299448415",
@@ -177,6 +199,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.076,
+    "debt_ratio_protocol_pct": 1.076,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2168424469",
     "hive_supply": "138452309466",
@@ -185,6 +208,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.06,
+    "debt_ratio_protocol_pct": 1.06,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2134121796",
     "hive_supply": "137595893700",
@@ -193,6 +217,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.06,
+    "debt_ratio_protocol_pct": 1.06,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2127640737",
     "hive_supply": "136724551231",
@@ -201,6 +226,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.046,
+    "debt_ratio_protocol_pct": 1.046,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2119014089",
     "hive_supply": "135857214957",
@@ -209,6 +235,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.043,
+    "debt_ratio_protocol_pct": 1.043,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2106171075",
     "hive_supply": "134990065557",
@@ -217,6 +244,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.03,
+    "debt_ratio_protocol_pct": 1.03,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2076405084",
     "hive_supply": "134130684758",
@@ -225,6 +253,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.027,
+    "debt_ratio_protocol_pct": 1.027,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2054689714",
     "hive_supply": "133274129604",
@@ -233,6 +262,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.026,
+    "debt_ratio_protocol_pct": 1.026,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2041277484",
     "hive_supply": "132405250001",
@@ -241,6 +271,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.021,
+    "debt_ratio_protocol_pct": 1.021,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2026288324",
     "hive_supply": "131536499299",
@@ -249,6 +280,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.008,
+    "debt_ratio_protocol_pct": 1.008,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2039737853",
     "hive_supply": "130648426854",
@@ -257,6 +289,7 @@
   },
   {
     "debt_ratio_gross_pct": 0.972,
+    "debt_ratio_protocol_pct": 0.972,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2035805414",
     "hive_supply": "129773932897",
@@ -265,6 +298,7 @@
   },
   {
     "debt_ratio_gross_pct": 0.866,
+    "debt_ratio_protocol_pct": 0.866,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2040676222",
     "hive_supply": "128893266915",
@@ -273,6 +307,7 @@
   },
   {
     "debt_ratio_gross_pct": 0.788,
+    "debt_ratio_protocol_pct": 0.788,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2011402492",
     "hive_supply": "128031299992",
@@ -281,6 +316,7 @@
   },
   {
     "debt_ratio_gross_pct": 0.76,
+    "debt_ratio_protocol_pct": 0.76,
     "hbd_interest_rate": 1000,
     "hbd_supply": "1977658697",
     "hive_supply": "127167226762",

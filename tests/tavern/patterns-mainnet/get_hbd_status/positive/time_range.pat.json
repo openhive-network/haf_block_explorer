@@ -1,6 +1,7 @@
 [
   {
     "debt_ratio_gross_pct": 1.441,
+    "debt_ratio_protocol_pct": 1.441,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2248391487",
     "hive_supply": "141899422954",
@@ -9,6 +10,7 @@
   },
   {
     "debt_ratio_gross_pct": 1.046,
+    "debt_ratio_protocol_pct": 1.046,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2119014089",
     "hive_supply": "135857214957",
@@ -17,6 +19,7 @@
   },
   {
     "debt_ratio_gross_pct": 0.972,
+    "debt_ratio_protocol_pct": 0.972,
     "hbd_interest_rate": 1000,
     "hbd_supply": "2035805414",
     "hive_supply": "129773932897",

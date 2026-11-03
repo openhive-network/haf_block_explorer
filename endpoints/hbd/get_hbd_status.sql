@@ -17,6 +17,12 @@ SET ROLE hafbe_owner;
       any hard-cap adjustment. It equals the protocol debt ratio before HF24; from HF24
       the protocol excludes treasury HBD, while this gross series includes it.
       Protocol print-rate and hard-cap thresholds must not be applied to this gross series.
+
+      The protocol debt ratio is the one the chain acts on. From HF24 it leaves the
+      treasury''s (hive.fund) liquid HBD at the sampled block out of the HBD supply and
+      revalues the rest at the same price; before HF24 it equals the gross share.
+      The print-rate and hard-cap thresholds apply to this series. It matches the chain''s
+      basis-point value up to its 0.01%% step.
       The interest rate is a witness median and may alternate between adjacent values.
 
       SQL example
@@ -91,6 +97,10 @@ DECLARE
   _granularity   hafbe_backend.hbd_granularity := COALESCE("granularity", 'yearly');
   _direction     hafbe_backend.sort_direction := COALESCE("direction", 'desc');
   _cache_safe_block INT := LEAST(_current_block, hive.app_get_irreversible_block('hafbe_app'));
+  -- From HF24 the protocol ratio leaves the treasury's liquid HBD out (NULL before HF24).
+  _hf24_block    INT := (SELECT ah.block_num FROM hafbe_app.applied_hardforks_view ah WHERE ah.hardfork_num = 24);
+  _treasury      INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = 'hive.fund');
+  _nai_hbd       INT := btracker_backend.nai_hbd();
   _period_unit TEXT := CASE _granularity
     WHEN 'daily' THEN 'day'
     WHEN 'weekly' THEN 'week'
@@ -124,6 +134,10 @@ BEGIN
       bv.current_supply::TEXT,
       bv.virtual_supply::TEXT,
       ROUND(100::NUMERIC * (bv.virtual_supply - bv.current_supply) / NULLIF(bv.virtual_supply, 0), 3),
+      hafbe_backend.hbd_protocol_debt_ratio_pct(
+        bv.current_hbd_supply::BIGINT, bv.current_supply::BIGINT, bv.virtual_supply::BIGINT, tr.balance,
+        _hf24_block IS NOT NULL AND ab.last_block_num >= _hf24_block
+      ),
       bv.hbd_interest_rate::INT
     FROM hafbe_backend.get_aggregation_blocks(
       _granularity, _direction, _block_range.first_block, _block_range.last_block, _current_block
@@ -135,6 +149,16 @@ BEGIN
       WHERE b.num = ab.last_block_num AND b.num <= _current_block
       LIMIT 1
     ) bv ON TRUE
+    -- The treasury's liquid HBD after the sampled block (its last change at or before it),
+    -- one index probe per period; only read from HF24 on.
+    LEFT JOIN LATERAL (
+      SELECT h.balance
+      FROM btracker_backend.account_balance_history_view h
+      WHERE _hf24_block IS NOT NULL AND ab.last_block_num >= _hf24_block
+        AND h.account = _treasury AND h.nai = _nai_hbd AND h.source_op_block <= ab.last_block_num
+      ORDER BY h.source_op_block DESC, h.balance_seq_no DESC
+      LIMIT 1
+    ) tr ON TRUE
     ORDER BY
       (CASE WHEN _direction = 'desc' THEN ab.date END) DESC,
       (CASE WHEN _direction = 'asc' THEN ab.date END) ASC;
