@@ -19,12 +19,13 @@
 #                     (haf_shared.clone_run_database on AIDEV_EXTERNAL_HAF_HOST:_PORT, as
 #                     haf_shared_consumer); HAfAH into it from the runtime image's
 #                     /opt/hafah (what CI's compose installs from its HAfAH image), then
-#                     scripts/install_app.sh: balance tracker (schema hafbe_bal) and
-#                     reputation tracker from submodules/, then haf_block_explorer
+#                     scripts/install_app.sh: l2_framework (schema l2), balance tracker
+#                     (schema hafbe_bal) and reputation tracker from submodules/, then
+#                     haf_block_explorer
 #   - reinstall       what CI's setup-scripts-test does: install_app.sh over the installed
 #                     apps, scripts/uninstall_app.sh, then install_app.sh again
-#   - sync            the block processors of haf_block_explorer (with balance tracker) and
-#                     reputation tracker to block 5000000 in the clone, then what CI's
+#   - sync            the block processors of haf_block_explorer (with balance tracker),
+#                     reputation tracker and l2_framework to block 5000000 in the clone, then what CI's
 #                     sync job and wait-for-haf-be-startup.sh do after it: the witness
 #                     votes cache, hafbe's indexes and the HAF indexes it registered
 #   - regression      tests/regression against the synced clone (.aidev/hafbe_regression.py)
@@ -121,30 +122,37 @@ sql_registered() {
 
 # The install scripts write their logs and version files next to themselves and read
 # the version from git, which a workflow checkout may not have: stage the sources (the
-# app's and both submodules') in a scratch directory and write the versions there. The
+# app's and the submodules') in a scratch directory and write the versions there. The
 # shared HAF provides the six app roles and the consumer may neither create nor drop
 # roles, so the staged db/builtin_roles.sql files are empty and the staged uninstall
 # drops the schemas only (DROP OWNED BY would revoke the roles' grants on every other
 # run's clone too: database privileges are cluster-wide). install_app.sh and
 # uninstall_app.sh name database haf_block_log; the staged copies name the clone.
+# The shared HAF has no l2_framework roles, so the staged l2_framework install owns
+# its schema as hafbe_owner and grants its read access to hafbe_user, the roles
+# that l2_framework_owner and l2_framework_user (granted to hafbe_user) stand for.
 stage=""
 stage_sources() {
     [ -n "$stage" ] && return 0
     local d m hash
-    for m in btracker reptracker; do
+    for m in btracker reptracker l2_framework; do
         if [ ! -f "submodules/$m/scripts/install_app.sh" ]; then
-            echo "submodules/$m is not checked out: the install steps need both submodules"
+            echo "submodules/$m is not checked out: the install steps need all three submodules"
             return 1
         fi
     done
     stage="$(mktemp -d)"
     mkdir -p "$stage/submodules"
     cp -r db backend endpoints scripts "$stage/"
-    cp -r submodules/btracker submodules/reptracker "$stage/submodules/"
+    cp -r submodules/btracker submodules/reptracker submodules/l2_framework "$stage/submodules/"
     for d in "$stage" "$stage/submodules/btracker" "$stage/submodules/reptracker"; do
         echo "-- the app's roles are provided by the shared HAF" > "$d/db/builtin_roles.sql"
         printf '#!/bin/sh\n# versions are written by .aidev/run-checks.sh\n' > "$d/scripts/generate_version_sql.sh"
     done
+    echo "-- the shared HAF has no l2_framework roles: hafbe_owner and hafbe_user stand in" \
+        > "$stage/submodules/l2_framework/db/builtin_roles.sql"
+    sed -i 's/l2_framework_owner/hafbe_owner/g; s/l2_framework_user/hafbe_user/g' \
+        "$stage/submodules/l2_framework/scripts/install_app.sh"
     hash="$(git rev-parse HEAD 2>/dev/null || echo aidev)"
     echo "TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$hash');" \
         > "$stage/scripts/set_version_in_sql.pgsql"
@@ -245,12 +253,14 @@ context_blocks() {
     psql "$HAFBE_TEST_DB_URL" -Atc "select coalesce(min(current_block_num), 0) from hafd.contexts where name in ($1)"
 }
 
-# The block processors as scripts/process_blocks.sh and the reptracker's run them
-# without haf_app_driver.py (the legacy CALL main() loop), each as its owner role.
+# The block processors as scripts/process_blocks.sh and the reptracker's and
+# l2_framework's run them without haf_app_driver.py (the legacy CALL main() loop), each
+# as its owner role (l2_framework's as hafbe_owner, see stage_sources). The
+# reptracker's and l2_framework's main() return at the target.
 # hafbe's main() does not return at its limit (it waits for the next block), so it is
 # stopped with hafbe_app.stopProcessing() once both of its contexts reach the target.
 sync_apps() {
-    local head t0=$SECONDS rep hafbe
+    local head t0=$SECONDS rep l2 hafbe
     head="$(psql "$HAFBE_TEST_DB_URL" -Atc "select hive.app_get_irreversible_block()")" || return 1
     echo "shared HAF irreversible head: $head, target: $SYNC_TARGET"
     [ "$head" -ge "$SYNC_TARGET" ] || { echo "the shared HAF is not replayed to $SYNC_TARGET"; return 1; }
@@ -261,6 +271,10 @@ sync_apps() {
         -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE reptracker_owner" -c "SET SEARCH_PATH TO reptracker_app" \
         -c "CALL reptracker_app.main('reptracker_app', $SYNC_TARGET)" > "$out/sync-reptracker.log" 2>&1 &
     rep=$!; sync_pids+=("$rep")
+    psql "$HAFBE_TEST_DB_URL?application_name=l2_framework_processing" -v ON_ERROR_STOP=on \
+        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE hafbe_owner" -c "SET SEARCH_PATH TO l2" \
+        -c "CALL l2.main('l2', $SYNC_TARGET)" > "$out/sync-l2.log" 2>&1 &
+    l2=$!; sync_pids+=("$l2")
     psql "$HAFBE_TEST_DB_URL?application_name=block_explorer_block_processing" -v ON_ERROR_STOP=on \
         -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE hafbe_owner" -c "SET temp_buffers = '16MB'" -c "SET SEARCH_PATH TO hafbe_bal" \
         -c "CALL hafbe_app.main('hafbe_app', 'hafbe_bal', $SYNC_TARGET)" > "$out/sync-hafbe.log" 2>&1 &
@@ -280,6 +294,9 @@ sync_apps() {
     while kill -0 "$rep" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
     wait "$rep" || { echo "reptracker block processing failed:"; tail -30 "$out/sync-reptracker.log"; return 1; }
     [ "$(context_blocks "'reptracker_app'")" -ge "$SYNC_TARGET" ] || { echo "reptracker_app short of $SYNC_TARGET"; return 1; }
+    while kill -0 "$l2" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
+    wait "$l2" || { echo "l2_framework block processing failed:"; tail -30 "$out/sync-l2.log"; return 1; }
+    [ "$(context_blocks "'l2'")" -ge "$SYNC_TARGET" ] || { echo "l2 short of $SYNC_TARGET"; return 1; }
     echo "synced in $((SECONDS - t0))s"
     # What CI's sync job runs after the processors, then wait-for-haf-be-startup.sh's
     # index steps (hived, which builds registered indexes in production, is not running).

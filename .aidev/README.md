@@ -20,9 +20,9 @@ the failure body. `regression` also writes one case per comparison
 | `shellcheck` | ShellCheck at its default severity on every `*.sh` outside `submodules/` | `lint_bash_scripts` (error severity; the tree is clean at the default) |
 | `sqlfluff` | the runtime base's sqlfluff (4.4.0 at adoption, the version CI's lint runs) with `.sqlfluff` on the tree; fails on a violation in a file not listed in `sqlfluff-baseline` | `lint_sql_scripts` |
 | `sql-registered` | every `.sql` file under `db/`, `backend/` and `endpoints/` is applied by `scripts/install_app.sh`, except those `sql-unregistered` lists (a file it misses never reaches a database) | — |
-| `install` | a per-run copy-on-write clone of the shared HAF (below); HAfAH into it from the runtime image's `/opt/hafah`, then `scripts/install_app.sh --blocksearch-indexes=true` (as CI's compose) as `haf_shared_consumer`: balance tracker into `hafbe_bal` and reputation tracker from `submodules/`, then haf_block_explorer | `sync` (its `hafah-install` and `backend-setup` services) |
+| `install` | a per-run copy-on-write clone of the shared HAF (below); HAfAH into it from the runtime image's `/opt/hafah`, then `scripts/install_app.sh --blocksearch-indexes=true` (as CI's compose) as `haf_shared_consumer`: l2_framework into `l2`, balance tracker into `hafbe_bal` and reputation tracker from `submodules/`, then haf_block_explorer | `sync` (its `hafah-install` and `backend-setup` services) |
 | `reinstall` | `install_app.sh` over the installed apps, `scripts/uninstall_app.sh` (checks the `hafbe_*` schemas are gone), `install_app.sh` again | `setup-scripts-test` |
-| `sync` | haf_block_explorer's block processing (with the balance tracker) and the reputation tracker's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
+| `sync` | haf_block_explorer's block processing (with the balance tracker), the reputation tracker's and l2_framework's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
 | `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000, and `hafbe_app.wallet_stats_by_day` with the aggregate over `account_parameters` it caches | `regression-test` |
 | `tavern` | `.aidev/hafbe_tavern.py`: `tests/tavern/patterns-mainnet` against PostgREST over the synced clone (`postgrest.py`, as `docker/docker-compose-test.yml` starts it), 4 xdist workers, run from a copy in `test-results/<suite>/tavern/` (the comparator writes each answer, `.out.json`, beside its test) | `pattern-test` |
 
@@ -50,11 +50,24 @@ image copies that image's sources to `/opt/hafah`; when `HAFAH_VERSION` moves, m
 the `hafah` stage of `runtime/Dockerfile` with it (AIDEV rebuilds). `reinstall` leaves HAfAH
 installed.
 
-The install steps copy `db/ backend/ endpoints/ scripts/` and both submodules to a
+The install steps copy `db/ backend/ endpoints/ scripts/` and the three submodules to a
 scratch directory and write the three version files there (`git rev-parse HEAD`, or
 `aidev` when the checkout has no usable git), because a workflow checkout may have no
 `.git`. `install_app.sh` and `uninstall_app.sh` name database `haf_block_log`; the
 staged copies name the run's clone instead. The submodules must be checked out.
+
+**l2_framework.** haf_block_explorer's authority endpoint reads l2_framework's
+`l2.authority_*` tables, and `db/hafbe_app.sql` refuses to install without them, so
+the install puts `submodules/l2_framework` (pinned like the trackers) into schema and
+context `l2` first, and the sync runs its `l2.main('l2', 5000000)` beside the other
+processors (about a minute and a half). The shared HAF has no `l2_framework_owner` or
+`l2_framework_user` role and the consumer cannot create one, so the staged
+l2_framework installer has an empty `db/builtin_roles.sql` and names `hafbe_owner`
+and `hafbe_user` in their place: `hafbe_owner` owns schema `l2`, `hafbe_user` gets its
+`SELECT`, and the sync runs l2_framework's processor as `hafbe_owner`. Adding the two
+roles to the shared HAF (hive/haf `.aidev/shared-haf/app-roles/`) would let the stand-in
+go. `.aidev/shape-apply.sh` installs only l2_framework's tables on the shape (empty:
+the shape was captured without l2_framework).
 
 **The sync.** The processors run the way `scripts/process_blocks.sh` and the
 reputation tracker's run them without `haf_app_driver.py` (the `CALL ...main()` loop),

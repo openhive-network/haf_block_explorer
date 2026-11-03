@@ -4,3 +4,6 @@
 [submodule "submodules/reptracker"]
 	path = submodules/reptracker
 	url = ../reputation_tracker.git
+[submodule "submodules/l2_framework"]
+	path = submodules/l2_framework
+	url = ../l2_framework.git

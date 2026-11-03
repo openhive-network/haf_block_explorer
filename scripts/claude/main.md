@@ -50,6 +50,7 @@ tests/                   Test suites
 submodules/              Integrated sub-applications
 ├── btracker/            Balance tracking
 ├── reptracker/          Reputation tracking
+├── l2_framework/        Block-versioned account authorities (schema l2)
 └── hafah/               HAF Account History (HAfAH)
 ```
 
@@ -64,6 +65,7 @@ HAFBE uses these PostgreSQL schema prefixes:
 | `hafbe_views` | Views for data access |
 | `hafbe_bal` | Balance data (from btracker) |
 | `reptracker_app` | Reputation data (from reptracker) |
+| `l2` | Account authorities (from l2_framework, read only) |
 
 **Role pattern**: Always `SET ROLE hafbe_owner;` at the start of schema files.
 
@@ -164,7 +166,7 @@ HAF is NOT a submodule - it's installed separately on the database server.
 
 ## Submodule Integration
 
-HAFBE integrates three sub-applications that extend its functionality:
+HAFBE integrates four sub-applications that extend its functionality:
 
 ### Balance Tracker (btracker)
 - **Purpose**: Tracks account balances (HIVE, HBD, VESTS, savings, delegations)
@@ -175,6 +177,17 @@ HAFBE integrates three sub-applications that extend its functionality:
 - **Purpose**: Calculates account reputation scores from votes
 - **Schema**: `reptracker_app`
 - **Docs**: `submodules/reptracker/scripts/claude/`
+
+### l2_framework
+- **Purpose**: Block-versioned owner/active/posting/memo authorities
+  (`l2.authority_threshold`, `l2.authority_key`, `l2.authority_account`), which
+  `/accounts/{name}/authority` reads as of hafbe's head block. Replaced HAF's KEYAUTH
+  state provider: `db/hafbe_app.sql` no longer imports it, drops it on upgrade and
+  refuses to install without l2_framework
+- **Schema/context**: `l2`; installed first by `scripts/install_app.sh`, synced by
+  its own processor (`submodules/l2_framework/scripts/process_blocks.sh`)
+- **Read access**: `hafbe_user` is granted `l2_framework_user` (`db/builtin_roles.sql`)
+- **Docs**: `submodules/l2_framework/CLAUDE.md`
 
 ### HAfAH - HAF Account History
 - **Purpose**: Provides account history API

@@ -3,6 +3,14 @@
 -- =============================================================================
 -- Functions for retrieving account authority information including keys,
 -- account auths, and weight thresholds for different key types.
+--
+-- Owner/active/posting authorities and the memo key come from l2_framework's
+-- block-versioned tables (l2.authority_threshold, l2.authority_key,
+-- l2.authority_account), read as of haf_block_explorer's own head block so they
+-- agree with the rest of the explorer's data. l2_framework syncs independently:
+-- when it is behind that block its latest rows are the ones effective, so the
+-- same predicate serves both cases. l2_framework does not track witness signing
+-- keys; those come from hafbe_app.current_witnesses.
 -- =============================================================================
 
 SET ROLE hafbe_owner;
@@ -57,7 +65,8 @@ $$;
  * RETURNS: authority_type with key_auths, account_auths, and weight_threshold
  *
  * NOTE: MEMO and WITNESS_SIGNING keys are excluded as they don't use
- * multi-sig authority structures.
+ * multi-sig authority structures (l2_framework tracks no WITNESS_SIGNING role,
+ * so asking for it fails the role cast).
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_account_authority(
     _account_id INT,
@@ -71,7 +80,8 @@ SET from_collapse_limit = 16
 AS
 $$
 DECLARE
-  __result hafbe_backend.authority_type;
+  __role  l2.authority_role := lower(_key_kind::TEXT)::l2.authority_role;
+  __block INT := hafbe_backend.get_hafbe_head_block();
 BEGIN
   RETURN (
     /*
@@ -79,24 +89,22 @@ BEGIN
      * CTE: get_key_auth
      * =========================================================================
      * PURPOSE: Fetch all public keys authorized for this key type.
-     *
-     * Joins keyauth_a (account-key associations) with keyauth_k (key data)
-     * to get the actual public key strings with their weights.
      */
     WITH get_key_auth AS (
       SELECT
         hafbe_backend.create_authority_object(
-          hive.public_key_to_string(keys.key),
-          active_key_auths.w
+          hive.public_key_to_string(ak.public_key),
+          ak.weight
         ) AS key_auth
-      FROM hafd.hafbe_app_keyauth_a active_key_auths
-      JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
+      FROM l2.authority_key ak
       WHERE
-        active_key_auths.account_id = _account_id AND
-        active_key_auths.key_kind = _key_kind AND
-        -- Exclude single-key types that don't participate in multi-sig
-        active_key_auths.key_kind NOT IN ('MEMO', 'WITNESS_SIGNING')
-      ORDER BY hive.public_key_to_string(keys.key)
+        ak.account_id = _account_id AND
+        ak.role = __role AND
+        -- Exclude the memo key: it doesn't participate in multi-sig
+        ak.role <> 'memo' AND
+        ak.valid_from <= __block AND
+        (ak.valid_to IS NULL OR ak.valid_to > __block)
+      ORDER BY hive.public_key_to_string(ak.public_key)
     ),
 
     /*
@@ -112,13 +120,15 @@ BEGIN
       SELECT
         hafbe_backend.create_authority_object(
           av.name,
-          active_account_auths.w
+          aa.weight
         ) AS key_auth
-      FROM hafd.hafbe_app_accountauth_a active_account_auths
-      JOIN hive.accounts_view av ON active_account_auths.account_auth_id = av.id
+      FROM l2.authority_account aa
+      JOIN hive.accounts_view av ON aa.ref_account_id = av.id
       WHERE
-        active_account_auths.account_id = _account_id AND
-        active_account_auths.key_kind = _key_kind
+        aa.account_id = _account_id AND
+        aa.role = __role AND
+        aa.valid_from <= __block AND
+        (aa.valid_to IS NULL OR aa.valid_to > __block)
       ORDER BY av.name
     ),
 
@@ -133,10 +143,12 @@ BEGIN
      */
     get_weight_threshold AS (
       SELECT wt.weight_threshold
-      FROM hafd.hafbe_app_authority_definition wt
+      FROM l2.authority_threshold wt
       WHERE
         wt.account_id = _account_id AND
-        wt.key_kind = _key_kind
+        wt.role = __role AND
+        wt.valid_from <= __block AND
+        (wt.valid_to IS NULL OR wt.valid_to > __block)
     )
 
     SELECT ROW(
@@ -187,15 +199,18 @@ SET join_collapse_limit = 16
 SET from_collapse_limit = 16
 AS
 $$
+DECLARE
+  __block INT := hafbe_backend.get_hafbe_head_block();
 BEGIN
   RETURN COALESCE(
     (
-      SELECT hive.public_key_to_string(keys.key)
-      FROM hafd.hafbe_app_keyauth_a active_key_auths
-      JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
+      SELECT hive.public_key_to_string(ak.public_key)
+      FROM l2.authority_key ak
       WHERE
-        active_key_auths.account_id = _account_id AND
-        active_key_auths.key_kind = 'MEMO'
+        ak.account_id = _account_id AND
+        ak.role = 'memo' AND
+        ak.valid_from <= __block AND
+        (ak.valid_to IS NULL OR ak.valid_to > __block)
     ),
     ''
   );
@@ -206,7 +221,10 @@ $$;
  * get_account_witness_signing: Retrieves the witness signing key for an account.
  *
  * The witness signing key is used by witness nodes to sign blocks.
- * Only relevant for accounts that are registered as witnesses.
+ * Only relevant for accounts that are registered as witnesses. Read from
+ * hafbe_app.current_witnesses, which process_witness_stats() keeps at the
+ * latest key set by witness_update / witness_set_properties (or the creating
+ * pow/pow2 op).
  *
  * PARAMETERS:
  *   _account_id - Account ID to retrieve witness signing key for
@@ -226,12 +244,9 @@ $$
 BEGIN
   RETURN COALESCE(
     (
-      SELECT hive.public_key_to_string(keys.key)
-      FROM hafd.hafbe_app_keyauth_a active_key_auths
-      JOIN hafd.hafbe_app_keyauth_k keys ON active_key_auths.key_serial_id = keys.key_id
-      WHERE
-        active_key_auths.account_id = _account_id AND
-        active_key_auths.key_kind = 'WITNESS_SIGNING'
+      SELECT cw.signing_key
+      FROM hafbe_app.current_witnesses cw
+      WHERE cw.witness_id = _account_id
     ),
     ''
   );

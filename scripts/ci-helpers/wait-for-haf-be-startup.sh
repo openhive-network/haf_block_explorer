@@ -97,6 +97,12 @@ else
         "SELECT hive.is_app_in_sync('hafbe_app')::INT;" \
         "Waiting for HAF Block Explorer to finish processing blocks..." \
         60
+    # The account authority endpoint reads l2_framework's tables as of hafbe's
+    # head block: l2_framework has to have processed that far.
+    wait_for_condition \
+        "SELECT ((SELECT current_block_num FROM hafd.contexts WHERE name='l2') >= (SELECT current_block_num FROM hafd.contexts WHERE name='hafbe_app'))::INT;" \
+        "Waiting for l2_framework to reach HAF Block Explorer's block..." \
+        60
 fi
 echo "Block processing is finished."
 

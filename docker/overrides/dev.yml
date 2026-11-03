@@ -14,6 +14,7 @@ services:
       # Mount submodules for live development changes
       - ../submodules/btracker:/home/hived/haf_block_explorer/submodules/btracker
       - ../submodules/reptracker:/home/hived/haf_block_explorer/submodules/reptracker
+      - ../submodules/l2_framework:/home/hived/haf_block_explorer/submodules/l2_framework
       # For version generation (dev-only, not needed in CI)
       - ../scripts/generate_version_sql.sh:/home/hived/haf_block_explorer/scripts/generate_version_sql.sh
       - ../.git:/home/hived/haf_block_explorer/.git

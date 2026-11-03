@@ -16,6 +16,7 @@ services:
         host    haf_block_log    pghero           all    trust\n
         host    postgres         pghero           all    trust\n
         host    haf_block_log    hafbe_owner      all    trust\n
+        host    haf_block_log    l2_framework_owner all  trust\n
         "
     volumes:
       - haf_datadir:/home/hived/datadir
@@ -72,6 +73,24 @@ services:
       haf-network:
     depends_on:
       app-setup:
+        condition: service_completed_successfully
+  # l2_framework keeps the authority tables the account authority endpoint reads.
+  backend-l2-block-processing:
+    image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
+    working_dir: /home/hived/haf_block_explorer
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - "./submodules/l2_framework/scripts/process_blocks.sh --stop-at-block=5000000"
+    environment:
+      POSTGRES_HOST: haf
+      POSTGRES_USER: l2_framework_owner
+    volumes:
+      - ../submodules/l2_framework/scripts:/home/hived/haf_block_explorer/submodules/l2_framework/scripts
+    networks:
+      haf-network:
+    depends_on:
+      backend-setup:
         condition: service_completed_successfully
   backend-rep-block-processing:
     image: registry.gitlab.syncad.com/hive/haf_block_explorer:${BACKEND_VERSION:-latest}
