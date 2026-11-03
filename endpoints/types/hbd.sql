@@ -45,19 +45,23 @@ hafbe_backend.hbd_status:
         Gross HBD value share of virtual supply: 100 * (virtual_supply - hive_supply) / virtual_supply.
         Uses the effective median price, including any hard-cap adjustment.
         Equals the protocol debt ratio before HF24; from HF24 the protocol excludes treasury HBD
-        while this gross series includes it. Protocol threshold bands do not apply to this series.
+        while this gross series includes it. From HF24 the print-rate thresholds apply to
+        debt_ratio_protocol_pct instead; the hard cap still follows this gross series until HF25.
         Rounded to three decimal places.
         Null when virtual_supply is zero.
     debt_ratio_protocol_pct:
       type: [number, 'null']
       x-sql-datatype: NUMERIC
       description: >-
-        Protocol HBD debt ratio, the one the chain acts on (print-rate and hard-cap thresholds apply).
-        From HF24 the treasury''s (hive.fund) liquid HBD at the sampled block is left out of the HBD supply
-        and the rest is valued at the same price: with p = (virtual_supply - hive_supply) / hbd_supply and
+        HBD debt ratio as the protocol computes it (hived calculate_HBD_percent), from the state after the
+        sampled block. From HF24 the treasury''s (hive.fund) liquid HBD is left out of the HBD supply and the
+        rest is valued at the same price: with p = (virtual_supply - hive_supply) / hbd_supply and
         h = max(hbd_supply - treasury_hbd, 0), it is 100 * h * p / (h * p + hive_supply), and 0 when h is 0.
         Before HF24 it equals debt_ratio_gross_pct.
-        Rounded to three decimal places; matches the chain''s basis-point value up to its 0.01%% step.
+        The print-rate thresholds apply to this series (from HF14; from HF24 with the treasury left out).
+        The hard cap applies to it from HF25; between HF24 and HF25 the chain capped on the gross share.
+        Rounded to three decimal places. hived computes basis points during block processing, slightly
+        before the end-of-block state used here, so the two can differ by about its 0.01%% step.
         Null when virtual_supply is zero.
     hbd_interest_rate:
       type: integer

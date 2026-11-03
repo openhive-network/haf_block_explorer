@@ -16,13 +16,14 @@ SET ROLE hafbe_owner;
       It uses the effective median price already reflected in virtual supply, including
       any hard-cap adjustment. It equals the protocol debt ratio before HF24; from HF24
       the protocol excludes treasury HBD, while this gross series includes it.
-      Protocol print-rate and hard-cap thresholds must not be applied to this gross series.
 
-      The protocol debt ratio is the one the chain acts on. From HF24 it leaves the
-      treasury''s (hive.fund) liquid HBD at the sampled block out of the HBD supply and
-      revalues the rest at the same price; before HF24 it equals the gross share.
-      The print-rate and hard-cap thresholds apply to this series. It matches the chain''s
-      basis-point value up to its 0.01%% step.
+      The protocol debt ratio is the one hived computes (calculate_HBD_percent), from the
+      state after the sampled block. From HF24 it leaves the treasury''s (hive.fund) liquid
+      HBD out of the HBD supply and revalues the rest at the same price; before HF24 it
+      equals the gross share. The print-rate thresholds apply to the protocol series; the
+      hard cap applies to it from HF25, and between HF24 and HF25 to the gross series.
+      hived computes basis points slightly before the end-of-block state used here, so the
+      two can differ by about its 0.01%% step.
       The interest rate is a witness median and may alternate between adjacent values.
 
       SQL example
@@ -100,7 +101,7 @@ DECLARE
   -- From HF24 the protocol ratio leaves the treasury's liquid HBD out (NULL before HF24).
   _hf24_block    INT := (SELECT ah.block_num FROM hafbe_app.applied_hardforks_view ah WHERE ah.hardfork_num = 24);
   _treasury      INT := (SELECT av.id FROM hive.accounts_view av WHERE av.name = 'hive.fund');
-  _nai_hbd       INT := btracker_backend.nai_hbd();
+  _nai_hbd       SMALLINT := btracker_backend.nai_hbd();
   _period_unit TEXT := CASE _granularity
     WHEN 'daily' THEN 'day'
     WHEN 'weekly' THEN 'week'

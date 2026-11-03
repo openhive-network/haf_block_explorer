@@ -5,9 +5,10 @@
 --    mainnet block values, and its edge cases.
 -- 2. The endpoint on the synced chain, which ends before HF24: the protocol ratio equals the
 --    gross one in every period.
--- 3. The endpoint with an HF24 and a treasury (hive.fund) faked mid-chain: periods sampled
---    before HF24 keep the gross ratio, later ones subtract the treasury's liquid HBD as of
---    their sampled block (its last change at or before it).
+-- 3. The endpoint (daily and weekly) with an HF24 and a treasury (hive.fund) faked mid-chain,
+--    both on sampled blocks: periods sampled before HF24 keep the gross ratio, later ones
+--    subtract the treasury's liquid HBD as of their sampled block (its last change at or
+--    before it), including the periods sampled exactly at the HF24 block and the change.
 -- Everything is rolled back.
 
 \set ON_ERROR_STOP on
@@ -85,18 +86,38 @@ END
 $$;
 
 -- ---------------------------------------------------------------- 3. HF24 and a treasury, faked
--- HF24 at block 4,000,000 and hive.fund with 1,000 HBD from that block, 2,000 HBD from block
--- 4,500,000 (both well below the HBD supply there).
+-- HF24 and hive.fund's first HBD row at the sampled block of a daily period (the first ending
+-- at or after block 4,000,000), and a second balance at the sampled block of a later period
+-- (the first at or after 4,500,000): those two periods test the >= of the HF24 gate and the
+-- <= of the treasury lookup exactly. The balances are a quarter and a half of the HBD supply
+-- there, far above the 0.001 rounding of the ratio.
 CREATE TEMP TABLE t_fake ON COMMIT DROP AS
-SELECT 4000000 AS hf24, 4500000 AS second_change, 1000000::BIGINT AS t1, 2000000::BIGINT AS t2,
-       (SELECT MAX(id) + 1 FROM hafd.accounts) AS fund;
+WITH days AS (
+  SELECT ab.last_block_num
+  FROM hafbe_backend.get_aggregation_blocks('daily', 'asc', NULL, NULL, hafbe_backend.get_hafbe_head_block()) ab
+),
+picked AS (
+  SELECT (SELECT MIN(d.last_block_num) FROM days d WHERE d.last_block_num >= 4000000) AS hf24,
+         (SELECT MIN(d.last_block_num) FROM days d WHERE d.last_block_num >= 4500000) AS second_change
+)
+SELECT p.hf24, p.second_change,
+       (SELECT b.current_hbd_supply::BIGINT / 4 FROM hafbe_app.blocks_view b WHERE b.num = p.hf24) AS t1,
+       (SELECT b.current_hbd_supply::BIGINT / 2 FROM hafbe_app.blocks_view b WHERE b.num = p.second_change) AS t2,
+       (SELECT MAX(id) + 1 FROM hafd.accounts) AS fund
+FROM picked p;
 
 DO $$
+DECLARE
+  f RECORD;
 BEGIN
+  SELECT * INTO f FROM t_fake;
   IF EXISTS (SELECT 1 FROM hafbe_app.applied_hardforks_view WHERE hardfork_num = 24)
-     OR (SELECT hafbe_backend.get_hafbe_head_block()) < 4600000 THEN
-    RAISE EXCEPTION 'hbd_protocol_ratio: step 3 needs a chain synced past block 4,600,000 without HF24';
+     OR f.hf24 IS NULL OR f.second_change IS NULL
+     OR (SELECT MAX(d.last_block_num) FROM hafbe_backend.get_aggregation_blocks('daily', 'asc', NULL, NULL,
+           hafbe_backend.get_hafbe_head_block()) d) <= f.second_change THEN
+    RAISE EXCEPTION 'hbd_protocol_ratio: step 3 needs a chain without HF24 with daily periods past block 4,500,000 (got %)', f;
   END IF;
+  ASSERT f.t1 > 0 AND f.t2 > f.t1, format('no HBD supply to split at blocks %s / %s', f.hf24, f.second_change);
 END
 $$;
 
@@ -113,47 +134,59 @@ DO $$
 DECLARE
   f RECORD;
   _r RECORD;
+  _g hafbe_backend.hbd_granularity;
   _treasury BIGINT;
   _want NUMERIC;
-  _before INT := 0;
-  _first INT := 0;
-  _second INT := 0;
+  _before INT;
+  _first INT;
+  _second INT;
+  _at_hf24 INT;
+  _at_change INT;
 BEGIN
   SELECT * INTO f FROM t_fake;
   ASSERT (SELECT block_num FROM hafbe_app.applied_hardforks_view WHERE hardfork_num = 24) = f.hf24,
     'the faked HF24 is not visible to hafbe_app';
 
-  FOR _r IN
-    SELECT s.*, ab.last_block_num, b.current_hbd_supply, b.current_supply, b.virtual_supply
-    FROM hafbe_endpoints.get_hbd_status('daily', 'asc') s
-    JOIN hafbe_backend.get_aggregation_blocks('daily', 'asc', NULL, NULL, hafbe_backend.get_hafbe_head_block()) ab
-      ON ab.date = s.period
-    JOIN hafbe_app.blocks_view b ON b.num = ab.last_block_num
-  LOOP
-    IF _r.last_block_num < f.hf24 THEN
-      ASSERT _r.debt_ratio_protocol_pct IS NOT DISTINCT FROM _r.debt_ratio_gross_pct,
-        format('%s (block %s, before HF24): protocol %s, gross %s', _r.period, _r.last_block_num,
+  FOREACH _g IN ARRAY ARRAY['daily', 'weekly']::hafbe_backend.hbd_granularity[] LOOP
+    _before := 0; _first := 0; _second := 0; _at_hf24 := 0; _at_change := 0;
+    FOR _r IN
+      SELECT s.period, s.debt_ratio_gross_pct, s.debt_ratio_protocol_pct, ab.last_block_num,
+             b.current_hbd_supply::BIGINT AS blk_hbd, b.current_supply::BIGINT AS blk_hive,
+             b.virtual_supply::BIGINT AS blk_virtual
+      FROM hafbe_endpoints.get_hbd_status(_g, 'asc') s
+      JOIN hafbe_backend.get_aggregation_blocks(_g, 'asc', NULL, NULL, hafbe_backend.get_hafbe_head_block()) ab
+        ON ab.date = s.period
+      JOIN hafbe_app.blocks_view b ON b.num = ab.last_block_num
+    LOOP
+      IF _r.last_block_num < f.hf24 THEN
+        ASSERT _r.debt_ratio_protocol_pct IS NOT DISTINCT FROM _r.debt_ratio_gross_pct,
+          format('%s %s (block %s, before HF24): protocol %s, gross %s', _g, _r.period, _r.last_block_num,
+                 _r.debt_ratio_protocol_pct, _r.debt_ratio_gross_pct);
+        _before := _before + 1;
+        CONTINUE;
+      END IF;
+      _treasury := CASE WHEN _r.last_block_num >= f.second_change THEN f.t2 ELSE f.t1 END;
+      _want := hafbe_backend.hbd_protocol_debt_ratio_pct(_r.blk_hbd, _r.blk_hive, _r.blk_virtual, _treasury, TRUE);
+      ASSERT _r.debt_ratio_protocol_pct = _want,
+        format('%s %s (block %s): protocol %s, want %s with treasury %s', _g, _r.period, _r.last_block_num,
+               _r.debt_ratio_protocol_pct, _want, _treasury);
+      ASSERT _r.debt_ratio_protocol_pct < _r.debt_ratio_gross_pct,
+        format('%s %s (block %s): protocol %s not below gross %s', _g, _r.period, _r.last_block_num,
                _r.debt_ratio_protocol_pct, _r.debt_ratio_gross_pct);
-      _before := _before + 1;
-      CONTINUE;
-    END IF;
-    _treasury := CASE WHEN _r.last_block_num >= f.second_change THEN f.t2 ELSE f.t1 END;
-    _want := hafbe_backend.hbd_protocol_debt_ratio_pct(_r.current_hbd_supply, _r.current_supply,
-                                                       _r.virtual_supply, _treasury, TRUE);
-    ASSERT _r.debt_ratio_protocol_pct = _want,
-      format('%s (block %s): protocol %s, want %s with treasury %s', _r.period, _r.last_block_num,
-             _r.debt_ratio_protocol_pct, _want, _treasury);
-    ASSERT _r.debt_ratio_protocol_pct < _r.debt_ratio_gross_pct,
-      format('%s (block %s): protocol %s not below gross %s', _r.period, _r.last_block_num,
-             _r.debt_ratio_protocol_pct, _r.debt_ratio_gross_pct);
-    IF _treasury = f.t1 THEN _first := _first + 1; ELSE _second := _second + 1; END IF;
-  END LOOP;
+      IF _treasury = f.t1 THEN _first := _first + 1; ELSE _second := _second + 1; END IF;
+      IF _r.last_block_num = f.hf24 THEN _at_hf24 := _at_hf24 + 1; END IF;
+      IF _r.last_block_num = f.second_change THEN _at_change := _at_change + 1; END IF;
+    END LOOP;
 
-  ASSERT _before > 0 AND _first > 0 AND _second > 0,
-    format('periods before HF24 / with the first / with the second treasury balance: %s / %s / %s',
-           _before, _first, _second);
-  RAISE NOTICE 'hbd_protocol_ratio: with HF24 faked at block %: % periods gross before it, % and % with the treasury subtracted',
-    f.hf24, _before, _first, _second;
+    ASSERT _before > 0 AND _first > 0 AND _second > 0,
+      format('%s: periods before HF24 / with the first / with the second treasury balance: %s / %s / %s',
+             _g, _before, _first, _second);
+    -- the daily periods sampled exactly at the HF24 block and at the treasury change
+    ASSERT _g <> 'daily' OR (_at_hf24 = 1 AND _at_change = 1),
+      format('daily: periods sampled at block %s / %s: %s / %s', f.hf24, f.second_change, _at_hf24, _at_change);
+    RAISE NOTICE 'hbd_protocol_ratio: % with HF24 faked at block %: % periods gross before it, % and % with the treasury subtracted',
+      _g, f.hf24, _before, _first, _second;
+  END LOOP;
 END
 $$;
 
