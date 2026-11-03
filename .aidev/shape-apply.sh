@@ -26,7 +26,10 @@
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
 #     its authority tables and indexes (empty, without statistics: the shape was
 #     captured without l2_framework), which the authority helpers read. Its context,
-#     roles and block processing are not installed.
+#     roles and block processing are not installed. The shape's source has no
+#     l2_framework roles (and roles are cluster-wide on the shape server, so the copy
+#     does not create them): the tables keep the applying role as owner and
+#     hafbe_user is granted their SELECT directly, not through l2_framework_user.
 # Everything else (types, views, backend and endpoint functions, grants) installs
 # as install_app.sh installs it.
 set -euo pipefail
