@@ -123,14 +123,12 @@ sql_registered() {
 # The install scripts write their logs and version files next to themselves and read
 # the version from git, which a workflow checkout may not have: stage the sources (the
 # app's and the submodules') in a scratch directory and write the versions there. The
-# shared HAF provides the six app roles and the consumer may neither create nor drop
-# roles, so the staged db/builtin_roles.sql files are empty and the staged uninstall
-# drops the schemas only (DROP OWNED BY would revoke the roles' grants on every other
-# run's clone too: database privileges are cluster-wide). install_app.sh and
-# uninstall_app.sh name database haf_block_log; the staged copies name the clone.
-# The shared HAF has no l2_framework roles, so the staged l2_framework install owns
-# its schema as hafbe_owner and grants its read access to hafbe_user, the roles
-# that l2_framework_owner and l2_framework_user (granted to hafbe_user) stand for.
+# shared HAF provides the app roles (l2_framework_user granted to hafbe_user, as
+# db/builtin_roles.sql grants it in production) and the consumer may neither create
+# nor drop roles, so the staged db/builtin_roles.sql files are empty and the staged
+# uninstall drops the schemas only (DROP OWNED BY would revoke the roles' grants on
+# every other run's clone too: database privileges are cluster-wide). install_app.sh
+# and uninstall_app.sh name database haf_block_log; the staged copies name the clone.
 stage=""
 stage_sources() {
     [ -n "$stage" ] && return 0
@@ -149,10 +147,7 @@ stage_sources() {
         echo "-- the app's roles are provided by the shared HAF" > "$d/db/builtin_roles.sql"
         printf '#!/bin/sh\n# versions are written by .aidev/run-checks.sh\n' > "$d/scripts/generate_version_sql.sh"
     done
-    echo "-- the shared HAF has no l2_framework roles: hafbe_owner and hafbe_user stand in" \
-        > "$stage/submodules/l2_framework/db/builtin_roles.sql"
-    sed -i 's/l2_framework_owner/hafbe_owner/g; s/l2_framework_user/hafbe_user/g' \
-        "$stage/submodules/l2_framework/scripts/install_app.sh"
+    echo "-- the app's roles are provided by the shared HAF" > "$stage/submodules/l2_framework/db/builtin_roles.sql"
     hash="$(git rev-parse HEAD 2>/dev/null || echo aidev)"
     echo "TRUNCATE TABLE hafbe_app.version; INSERT INTO hafbe_app.version(git_hash) VALUES ('$hash');" \
         > "$stage/scripts/set_version_in_sql.pgsql"
@@ -173,6 +168,30 @@ stage_sources() {
     echo "-- hafah_owner and hafah_user are provided by the shared HAF" > "$stage/hafah/db/builtin_roles.sql"
 }
 
+# l2_framework's roles, which the shared HAF has had since hive/haf#420/#421: the
+# consumer installs as l2_framework_owner, and haf_block_explorer reads l2 as
+# hafbe_user through l2_framework_user. Without them the database grant below would
+# fail with a bare "role does not exist".
+check_l2_roles() {
+    local missing
+    missing="$(psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "
+        SELECT string_agg(need, ', ') FROM (VALUES
+            ('l2_framework_owner', 'role l2_framework_owner'),
+            ('l2_framework_user', 'role l2_framework_user')) AS r(name, need)
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r.name)")" || return 1
+    if [ -z "$missing" ]; then
+        missing="$(psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "
+            SELECT string_agg(need, ', ') FROM (VALUES
+                (pg_has_role('haf_shared_consumer', 'l2_framework_owner', 'MEMBER'), 'haf_shared_consumer in l2_framework_owner'),
+                (pg_has_role('hafbe_user', 'l2_framework_user', 'MEMBER'), 'hafbe_user in l2_framework_user')) AS r(ok, need)
+            WHERE NOT ok")" || return 1
+    fi
+    if [ -n "$missing" ]; then
+        echo "the shared HAF lacks l2_framework's roles ($missing): it needs hive/haf#421's .aidev/shared-haf/app-roles/l2_framework.sql (restart the shared HAF to apply it)"
+        return 1
+    fi
+}
+
 # This run's own clone of the shared HAF, named after the suite, the time and a
 # random suffix so concurrent runs never share one.
 open_clone() {
@@ -187,8 +206,9 @@ open_clone() {
     clone_id="$run_id"
     export HAFBE_TEST_DB_URL="$CONSUMER_URL/$clone"
     echo "== shared HAF clone $clone ($CONSUMER_URL)" | tee /dev/fd/3
+    check_l2_roles || return 1
     # The consumer owns the clone; the apps' roles need to create their schemas in it.
-    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "GRANT CREATE, CONNECT ON DATABASE \"$clone\" TO hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user, hafah_owner, hafah_user"
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "GRANT CREATE, CONNECT ON DATABASE \"$clone\" TO hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user, hafah_owner, hafah_user, l2_framework_owner, l2_framework_user"
 }
 
 drop_clone() {
@@ -255,8 +275,7 @@ context_blocks() {
 
 # The block processors as scripts/process_blocks.sh and the reptracker's and
 # l2_framework's run them without haf_app_driver.py (the legacy CALL main() loop), each
-# as its owner role (l2_framework's as hafbe_owner, see stage_sources). The
-# reptracker's and l2_framework's main() return at the target.
+# as its owner role. The reptracker's and l2_framework's main() return at the target.
 # hafbe's main() does not return at its limit (it waits for the next block), so it is
 # stopped with hafbe_app.stopProcessing() once both of its contexts reach the target.
 sync_apps() {
@@ -272,7 +291,7 @@ sync_apps() {
         -c "CALL reptracker_app.main('reptracker_app', $SYNC_TARGET)" > "$out/sync-reptracker.log" 2>&1 &
     rep=$!; sync_pids+=("$rep")
     psql "$HAFBE_TEST_DB_URL?application_name=l2_framework_processing" -v ON_ERROR_STOP=on \
-        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE hafbe_owner" -c "SET SEARCH_PATH TO l2" \
+        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE l2_framework_owner" -c "SET SEARCH_PATH TO l2" \
         -c "CALL l2.main('l2', $SYNC_TARGET)" > "$out/sync-l2.log" 2>&1 &
     l2=$!; sync_pids+=("$l2")
     psql "$HAFBE_TEST_DB_URL?application_name=block_explorer_block_processing" -v ON_ERROR_STOP=on \
@@ -297,6 +316,10 @@ sync_apps() {
     while kill -0 "$l2" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
     wait "$l2" || { echo "l2_framework block processing failed:"; tail -30 "$out/sync-l2.log"; return 1; }
     [ "$(context_blocks "'l2'")" -ge "$SYNC_TARGET" ] || { echo "l2 short of $SYNC_TARGET"; return 1; }
+    # haf_block_explorer reads l2 as production does: through l2_framework_user, not as its owner.
+    [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select count(*) from pg_tables where schemaname = 'l2' and tableowner <> 'l2_framework_owner'")" = 0 ] \
+        && [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select pg_get_userbyid(nspowner) = 'l2_framework_owner' and has_table_privilege('hafbe_user', 'l2.authority_key', 'SELECT') from pg_namespace where nspname = 'l2'")" = t ] \
+        || { echo "l2 is not owned by l2_framework_owner or not readable by hafbe_user"; return 1; }
     echo "synced in $((SECONDS - t0))s"
     # What CI's sync job runs after the processors, then wait-for-haf-be-startup.sh's
     # index steps (hived, which builds registered indexes in production, is not running).

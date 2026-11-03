@@ -60,14 +60,19 @@ staged copies name the run's clone instead. The submodules must be checked out.
 `l2.authority_*` tables, and `db/hafbe_app.sql` refuses to install without them, so
 the install puts `submodules/l2_framework` (pinned like the trackers) into schema and
 context `l2` first, and the sync runs its `l2.main('l2', 5000000)` beside the other
-processors (about a minute and a half). The shared HAF has no `l2_framework_owner` or
-`l2_framework_user` role and the consumer cannot create one, so the staged
-l2_framework installer has an empty `db/builtin_roles.sql` and names `hafbe_owner`
-and `hafbe_user` in their place: `hafbe_owner` owns schema `l2`, `hafbe_user` gets its
-`SELECT`, and the sync runs l2_framework's processor as `hafbe_owner`. Adding the two
-roles to the shared HAF (hive/haf `.aidev/shared-haf/app-roles/`) would let the stand-in
-go. `.aidev/shape-apply.sh` installs only l2_framework's tables on the shape (empty:
-the shape was captured without l2_framework).
+processors (about a minute and a half). l2_framework installs with its real roles:
+the shared HAF creates `l2_framework_owner` and `l2_framework_user` (hive/haf
+`.aidev/shared-haf/app-roles/l2_framework.sql`, hive/haf#421), makes the consumer a
+member of the owner and grants `l2_framework_user` to `hafbe_user`, as
+`db/builtin_roles.sql` does in production. The staged l2_framework installer has only
+its `db/builtin_roles.sql` emptied, like the trackers': `l2_framework_owner` owns
+schema `l2` and its tables, the sync runs l2_framework's processor as
+`l2_framework_owner`, and haf_block_explorer reads `l2` as `hafbe_user` only through
+the `l2_framework_user` grant, which the sync step checks. When the shared HAF lacks
+those roles or memberships, the first step that opens a clone fails naming them and
+hive/haf#421. `.aidev/shape-apply.sh` installs only l2_framework's tables on the shape
+(empty: the shape was captured without l2_framework, and without its roles, so there
+the tables are not owned by `l2_framework_owner` and `hafbe_user` is granted directly).
 
 **The sync.** The processors run the way `scripts/process_blocks.sh` and the
 reputation tracker's run them without `haf_app_driver.py` (the `CALL ...main()` loop),
@@ -132,9 +137,9 @@ password) and, at the first step that needs it:
    `hafbe-<suite>-<UTC time>-<random>`, so concurrent runs never share a clone;
 2. grants `CREATE, CONNECT` on the clone to `hafbe_owner`, `hafbe_user`,
    `btracker_owner`, `btracker_user`, `reptracker_owner`, `reptracker_user`,
-   `hafah_owner` and `hafah_user`. The
+   `hafah_owner`, `hafah_user`, `l2_framework_owner` and `l2_framework_user`. The
    shared HAF creates these roles (hive/haf `.aidev/shared-haf/app-roles/`) and makes
-   the consumer a member of the three owner roles, because the consumer cannot create
+   the consumer a member of the owner roles, because the consumer cannot create
    roles;
 3. installs from the staged copy, whose `db/builtin_roles.sql` files are empty and
    whose uninstall drops the schemas only (`DROP OWNED BY` the app's roles would revoke
