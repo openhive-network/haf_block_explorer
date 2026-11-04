@@ -121,7 +121,7 @@ launched at block ~22.3M).
 Three-step workflow (mirrors `submodules/btracker/tests/mocks`):
 
 ```bash
-# 1. Load fixtures + rewind hafbe_app / hafbe_bal contexts
+# 1. Load fixtures + rewind hafbe_app / hafbe_bal / l2 contexts
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
 
 # 2. Run the regular block processor against the mock range
@@ -196,8 +196,8 @@ and `HAFAH_VERSION` to the digest; Compose joins these values with `:`.
 
 `pattern-test-with-mock-data` additionally requires the mock cache (`sync_with_mock_data` job, sync stage). That job:
 - Checks NFS for a cached `haf_hafbe_mock` image; on miss, falls back to the HAFBE sync cache as base
-- Runs `docker/docker-compose-mocks.yml` (HAF + fixture installer + block processor)
-- Waits for `hive.is_app_in_sync('hafbe_app')` then runs `prepare_mock_cache.sh`
+- Fetches the `l2_framework` submodule and runs `docker/docker-compose-mocks.yml` (HAF + l2_framework install + fixture installer + hafbe and l2_framework block processors)
+- Waits for `hive.is_app_in_sync('hafbe_app')` and for the `l2` context to reach hafbe_app's block (failing at once when `l2` does not exist), then runs `prepare_mock_cache.sh`
 - Saves the resulting pgdata as `haf_hafbe_mock` cache
 
 ### Test Dependencies
