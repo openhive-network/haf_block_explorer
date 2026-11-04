@@ -109,7 +109,7 @@ cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 **Requirements**: Fresh HAFBE+btracker install. Mirrors
 `submodules/btracker/tests/mocks/`. Full docs in `tests/mocks/README.md`.
 
-**CI integration**: `docker/docker-compose-mocks.yml` runs the same three-step flow automatically. The `backend-block-processing` service must NOT use `--stop-at-block` — passing `_limit` to `hive.app_next_iteration` prevents the MASSIVE→LIVE mode transition, causing `hive.is_app_in_sync()` to never return TRUE. The `wait-for-haf-be-startup.sh` script supports `--target-block=N` as a debugging utility (checks `current_block_num >= N` directly), but the CI flow uses the default `is_app_in_sync` check.
+**CI integration**: `docker/docker-compose-mocks.yml` runs the same three-step flow automatically. The `backend-block-processing` service must NOT use `--stop-at-block` — passing `_limit` to `hive.app_next_iteration` prevents the MASSIVE→LIVE mode transition, causing `hive.is_app_in_sync()` to never return TRUE. The `wait-for-haf-be-startup.sh` script supports `--target-block=N` as a debugging utility (checks `current_block_num >= N` directly), but the CI flow uses the default `is_app_in_sync` check. In that default flow the script also requires l2_framework's `l2` context (exiting non-zero at once, naming it, when it is missing) and waits for it to reach hafbe_app's block, so the mock compose also runs `l2-setup` and `backend-l2-block-processing` (which, like hafbe's processor, takes no `--stop-at-block`). On failure its diagnostics print every context's block and the compose services' logs, using `COMPOSE_OPTIONS_STRING` from `docker/`.
 
 ---
 

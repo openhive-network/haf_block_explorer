@@ -26,6 +26,27 @@ services:
       retries: 3
       start_period: 48h
 
+  # The account authority endpoint reads l2_framework's tables, so l2 has to be
+  # installed and advanced through the mock range next to hafbe. The install is a
+  # no-op when the sync cache already holds the l2 context. The image carries no
+  # submodules: l2_framework is mounted from the checkout.
+  l2-setup:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
+    working_dir: /home/hived/haf_block_explorer
+    entrypoint:
+      - /bin/bash
+      - -c
+      - ./submodules/l2_framework/scripts/install_app.sh --host=haf --port=5432
+    environment:
+      POSTGRES_USER: haf_admin
+    volumes:
+      - ../submodules/l2_framework:/home/hived/haf_block_explorer/submodules/l2_framework:ro
+    networks:
+      haf-network:
+    depends_on:
+      haf:
+        condition: service_healthy
+
   fill-db-with-mock-data:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
     working_dir: /home/hived/haf_block_explorer
@@ -42,6 +63,25 @@ services:
     depends_on:
       haf:
         condition: service_healthy
+      l2-setup:
+        condition: service_completed_successfully
+
+  backend-l2-block-processing:
+    image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}
+    working_dir: /home/hived/haf_block_explorer
+    entrypoint:
+      - /bin/bash
+      - -c
+      - ./submodules/l2_framework/scripts/process_blocks.sh --host=haf --port=5432
+    environment:
+      POSTGRES_USER: l2_framework_owner
+    volumes:
+      - ../submodules/l2_framework:/home/hived/haf_block_explorer/submodules/l2_framework:ro
+    networks:
+      haf-network:
+    depends_on:
+      fill-db-with-mock-data:
+        condition: service_completed_successfully
 
   backend-block-processing:
     image: ${BACKEND_REGISTRY:-registry.gitlab.syncad.com/hive/haf_block_explorer}:${BACKEND_VERSION:-latest}

@@ -110,7 +110,8 @@ cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 **install_mock_data.sh** (loads only — never processes):
 1. Loads the four SQL helpers (`types`, `insert_blocks`, `insert_operations`, `update_haf_state`)
 2. Inserts mock blocks + ops from `fixtures/`
-3. Rewinds both `hafbe_app` and `hafbe_bal` contexts to `(start − 1)` and
+3. Rewinds the `hafbe_app` and `hafbe_bal` contexts (and l2_framework's `l2`
+   context, when installed, which the account authority endpoint reads) to `(start − 1)` and
    sets `hive_state.consistent_block` to the mock end so the mock range
    becomes the next processable batch
 
@@ -166,7 +167,7 @@ UPDATE hafd.hive_state SET consistent_block = 5000000;
 UPDATE hafd.contexts
 SET current_block_num  = 5000000,
     irreversible_block = 5000000
-WHERE name IN ('hafbe_app', 'hafbe_bal');
+WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');
 ```
 
 Then `scripts/process_blocks.sh` will resume from the real head.
@@ -203,7 +204,7 @@ UPDATE hafd.hive_state SET consistent_block = 5000000;
 UPDATE hafd.contexts
 SET current_block_num  = 5000000,
     irreversible_block = 5000000
-WHERE name IN ('hafbe_app', 'hafbe_bal');
+WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');
 
 -- 3. Wipe raw mock ops + blocks from HAF
 DELETE FROM hafd.operations
