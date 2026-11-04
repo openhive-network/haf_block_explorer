@@ -19,6 +19,35 @@ OPTIONS:
 EOF
 }
 
+# The compose project lives in docker/ and is defined by the job's
+# COMPOSE_OPTIONS_STRING (as start-ci-test-environment.sh uses it); this script
+# is run from the project root, where compose finds no configuration file.
+function print_diagnostics() {
+    echo "=== DIAGNOSTICS ==="
+    psql "$POSTGRES_ACCESS" -c "SELECT name, current_block_num, irreversible_block, is_attached, last_active_at FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id ORDER BY name;" 2>&1 || true
+    psql "$POSTGRES_ACCESS" -c "SELECT * FROM hafd.contexts WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');" 2>&1 || true
+    psql "$POSTGRES_ACCESS" -c "SELECT pid, state, query, wait_event_type, wait_event, now()-query_start as duration FROM pg_stat_activity WHERE application_name LIKE '%block_explorer%' OR application_name LIKE 'l2_framework%' OR usename IN ('hafbe_owner', 'l2_framework_owner');" 2>&1 || true
+    echo "=== DOCKER COMPOSE LOGS (last 200 lines per service) ==="
+    local compose_options
+    IFS=" " read -ra compose_options <<< "$COMPOSE_OPTIONS_STRING"
+    (cd "$SCRIPTPATH/../../docker" && docker compose "${compose_options[@]}" logs --tail=200) 2>&1 || true
+    echo "=== END DIAGNOSTICS ==="
+}
+
+# Fails at once when a context is missing: a wait comparing against a missing
+# context's block is NULL and would poll until its timeout.
+function require_context() {
+    local context="$1"
+    local reason="$2"
+    local exists
+    exists=$(psql "$POSTGRES_ACCESS" --quiet --tuples-only --no-align --command="SELECT hive.app_context_exists('${context}')::INT;")
+    if [[ "$exists" != 1 ]]; then
+        echo "ERROR: HAF context '${context}' does not exist: ${reason}"
+        print_diagnostics
+        exit 1
+    fi
+}
+
 function wait_for_condition() {
     local command="$1"
     local message="$2"
@@ -34,13 +63,7 @@ function wait_for_condition() {
     while ! psql "$POSTGRES_ACCESS" --quiet --tuples-only --command="$command" | grep -q 1; do
         if [[ $SECONDS -ge $end_time ]]; then
             echo "Timeout waiting for: $message"
-            echo "=== DIAGNOSTICS ==="
-            psql "$POSTGRES_ACCESS" -c "SELECT name, current_block_num, irreversible_block, is_attached, last_active_at FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id = hc.id WHERE name IN ('hafbe_app', 'hafbe_bal');" 2>&1 || true
-            psql "$POSTGRES_ACCESS" -c "SELECT * FROM hafd.contexts WHERE name IN ('hafbe_app', 'hafbe_bal');" 2>&1 || true
-            psql "$POSTGRES_ACCESS" -c "SELECT pid, state, query, wait_event_type, wait_event, now()-query_start as duration FROM pg_stat_activity WHERE application_name LIKE '%block_explorer%' OR usename = 'hafbe_owner';" 2>&1 || true
-            echo "=== DOCKER COMPOSE LOGS (last 200 lines) ==="
-            docker compose logs --tail=200 backend-block-processing 2>&1 || docker-compose logs --tail=200 backend-block-processing 2>&1 || true
-            echo "=== END DIAGNOSTICS ==="
+            print_diagnostics
             exit 1
         fi
         iteration=$((iteration + 1))
@@ -54,6 +77,7 @@ function wait_for_condition() {
     done
 }
 
+SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 TARGET_BLOCK=""
 
 while [ $# -gt 0 ]; do
@@ -79,6 +103,7 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS=${POSTGRES_ACCESS:-postgresql://haf_admin@localhost:5432/haf_block_log}
+COMPOSE_OPTIONS_STRING=${COMPOSE_OPTIONS_STRING:-"--env-file ci.env --file docker-compose.yml --file overrides/dev.yml"}
 
 # Step 1: Wait for block processing to complete
 echo "Step 1: Waiting for block processing..."
@@ -93,12 +118,13 @@ if [[ -n "$TARGET_BLOCK" ]]; then
         "Waiting for hafbe_app to reach block ${TARGET_BLOCK}..." \
         60
 else
+    # The account authority endpoint reads l2_framework's tables as of hafbe's
+    # head block: l2_framework has to have processed that far.
+    require_context l2 "l2_framework is not installed, so it can never reach HAF Block Explorer's block"
     wait_for_condition \
         "SELECT hive.is_app_in_sync('hafbe_app')::INT;" \
         "Waiting for HAF Block Explorer to finish processing blocks..." \
         60
-    # The account authority endpoint reads l2_framework's tables as of hafbe's
-    # head block: l2_framework has to have processed that far.
     wait_for_condition \
         "SELECT ((SELECT current_block_num FROM hafd.contexts WHERE name='l2') >= (SELECT current_block_num FROM hafd.contexts WHERE name='hafbe_app'))::INT;" \
         "Waiting for l2_framework to reach HAF Block Explorer's block..." \
