@@ -140,7 +140,7 @@ When analyzing pipeline failures, the script extracts these patterns:
 | `pattern-test` | FAILED, ERROR, AssertionError, tavern |
 | `pattern-test-with-mock-data` | FAILED, ERROR, AssertionError, tavern |
 | `sync_with_mock_data` | Timeout, Error, FATAL, failed, is_app_in_sync |
-| `python_api_client_test` | FAILED, Error, pytest |
+| `test_python_api_wheel` | Error, Traceback, must not have, placeholder, No API node |
 | `lint_*` | violation, L/W/E codes |
 
 ## Adding New Tools

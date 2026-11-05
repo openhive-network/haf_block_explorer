@@ -111,7 +111,7 @@ the entry when that is settled.
   data (`sync_with_mock_data`: `docker/docker-compose-mocks.yml` fills the database
   with mock blocks and the processors sync over them). The shared HAF has the real
   chain to block 5000000 only, so these tests run in GitLab CI alone.
-- `tests/performance` (JMeter), `scripts/python_api_package` tests and the advisory-lock
+- `tests/performance` (JMeter), the Python API client jobs and the advisory-lock
   skip test in CI's `sync` job stay in GitLab CI.
 
 `patterns-mainnet` runs on the real chain to block 5000000, the data CI's
