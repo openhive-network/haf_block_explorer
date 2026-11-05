@@ -100,10 +100,8 @@ include:
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
 # Python API client: generated from the swagger JSON, built, tested and published.
-# Pinned to a commit because main of wax-spec-generator does not carry the
-# template yet; move to `ref: main` once it does.
 - project: hive/wax-spec-generator
-  ref: b3c02922afcf3f846f5194efc4d7975d7151194f
+  ref: main
   file:
   - '/templates/python_api_package.gitlab-ci.yml'
 
