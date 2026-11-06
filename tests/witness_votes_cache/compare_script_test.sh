@@ -9,8 +9,8 @@
 #     match and exit 0;
 #   - the same, with one witness_votes_cache row altered: DIFFERS and exit 1;
 #   - the state row one block behind the context's current block (a MASSIVE
-#     catch-up, or a fork revert before the next block): every one of three checks
-#     skipped, so nothing was compared, and exit 2.
+#     catch-up), and one block ahead of it (a fork reverted the context): every one
+#     of three checks skipped, so nothing was compared, and exit 2.
 # On exit it recomputes the caches in full and puts the state row back as it was.
 # The connecting role must be a member of hafbe_owner, as for the script.
 #
@@ -105,6 +105,11 @@ expect "state at the current block, a cache row altered" 1 ': DIFFERS witness_vo
 
 set_state -1
 expect "state behind the current block, a cache row altered" 2 ': skipped \(the context is at block [0-9]+, the caches were not refreshed for it\)$
+^matched=0 skipped=3 differs=0 errors=0$
+^no comparison was made: every check skipped$' --count=3 --interval=0
+
+set_state 1
+expect "state ahead of the current block, a cache row altered" 2 ': skipped \(the context is at block [0-9]+, the caches were not refreshed for it\)$
 ^matched=0 skipped=3 differs=0 errors=0$
 ^no comparison was made: every check skipped$' --count=3 --interval=0
 
