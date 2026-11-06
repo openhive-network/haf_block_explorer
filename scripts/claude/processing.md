@@ -53,7 +53,7 @@ yet, i.e. once. On a HAF without request kinds (before haf#360) it skips with a
 NOTICE.
 
 The insert-only and insert-mostly tables (`block_operations`, the `*_history`
-tables, `proposal_payments`, the `*_stats_by_day` tables, `wallet_stats_by_day`,
+tables, the `*_stats_by_day` tables, `wallet_stats_by_day`,
 `account_ops_count`) are created with `autovacuum_vacuum_insert_scale_factor =
 0.005` and `autovacuum_freeze_min_age = 0` (`account_ops_count` also with
 `autovacuum_vacuum_scale_factor = 0.01`), so autovacuum keeps them all-visible
@@ -227,8 +227,7 @@ For implementation details of each processor:
 | `hafbe_app.current_account_proxies` | `process_witness_votes()` | Active proxies |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | Proposal vote change log (includes synthetic `approve=FALSE` rows from remove/decline cascades) |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Currently active proposal approvals |
-| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` |
-| `hafbe_app.proposal_payments` | `process_proposals()` | Append-only per-payment audit ledger from `proposal_pay_operation` |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` (no per-payment ledger: HAF's fork revert of `current_proposals` keeps the total exact) |
 
 ### Cache Tables (LIVE only)
 | Table | Purpose |

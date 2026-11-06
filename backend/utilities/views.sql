@@ -327,7 +327,7 @@ $$;
 
 -- proposal_paid_amounts view removed: paid_amount is now a running total column
 -- on hafbe_app.current_proposals, updated by process_proposal_pay_op. Endpoints
--- read cp.paid_amount directly; proposal_payments stays as an audit ledger.
+-- read cp.paid_amount directly.
 
 /*
  * expired_voter_stats_view: Vest stats for voters not in current voter list.
