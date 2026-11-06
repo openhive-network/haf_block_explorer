@@ -109,7 +109,12 @@ back. A real `remove_proposal` operation is added to a block only when the role 
 write `hafd.operations` (CI's `haf_admin`); AIDEV's `haf_shared_consumer` may not,
 so there that part prints `SKIPPED` and the removal is checked through a block with
 another full-recompute operation. Needs synced, filled caches and the balance
-tracker schema (`--btracker-schema`, default `hafbe_bal`).
+tracker schema (`--btracker-schema`, default `hafbe_bal`). It then runs
+`compare_script_test.sh`, which commits a state row at the context's current block
+and expects `scripts/compare_witness_votes_cache.sh` to report `match`, then
+`DIFFERS` (exit 1) after altering a `witness_votes_cache` row, then `skipped` (exit
+0) with the state row one block behind; on exit it recomputes the caches and restores
+the state row. The role must be a member of `hafbe_owner`.
 
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
