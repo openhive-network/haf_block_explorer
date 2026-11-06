@@ -585,31 +585,6 @@ BEGIN
 END
 $$;
 
--- Installs made before current_proposals.paid_amount was updated directly kept
--- a proposal_payments ledger. Unregistering it drops its shadow table, triggers,
--- revert functions and hive_rowid; its vacuum requests are removed so hived
--- does not try to vacuum tables that no longer exist.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM hafd.registered_tables
-    WHERE origin_table_schema = 'hafbe_app' AND origin_table_name = 'proposal_payments'
-  ) THEN
-    PERFORM hive.app_unregister_table('hafbe_app', 'proposal_payments');
-  END IF;
-
-  DROP TABLE IF EXISTS hafbe_app.proposal_payments;
-
-  IF to_regclass('hafd.vacuum_requests') IS NOT NULL THEN
-    DELETE FROM hafd.vacuum_requests
-    WHERE (schema_name, table_name) IN (
-      ('hafbe_app', 'proposal_payments'),
-      ('hafd', 'shadow_hafbe_app_proposal_payments')
-    );
-  END IF;
-END
-$$;
-
 ------------- WITNESS VOTE CACHE STATE ----------------
 
 /*
@@ -950,56 +925,6 @@ BEGIN
     __end_ts := clock_timestamp();
     RAISE NOTICE 'Hafbe processed block range: <%, %> successfully in % s
     ', _from, _to, (extract(epoch FROM __end_ts - __start_ts));
-  END IF;
-END
-$$;
-
-/**
- * single_processing()
- * -------------------
- * Process a single block during LIVE sync stage.
- * Uses synchronous_commit ON for data safety.
- *
- * Called for each new block after initial sync is complete.
- * Processes all operation types for the given block plus cache updates.
- *
- * @param _block  Block number to process
- * @param _logs   Enable progress logging
- */
-CREATE OR REPLACE PROCEDURE hafbe_app.single_processing(
-    IN _block INT,
-    IN _logs BOOLEAN
-)
-LANGUAGE plpgsql
-AS
-$$
-DECLARE
-  __start_ts TIMESTAMPTZ;
-  __end_ts   TIMESTAMPTZ;
-BEGIN
-  PERFORM set_config('synchronous_commit', 'ON', false);
-
-  IF _logs THEN
-    RAISE NOTICE 'Hafbe processing block: %...', _block;
-    __start_ts := clock_timestamp();
-  END IF;
-
-  PERFORM hafbe_app.process_account_stats(_block, _block);
-  PERFORM hafbe_app.process_account_ops_count(_block, _block);
-  PERFORM hafbe_app.process_block_operations(_block, _block);
-  PERFORM hafbe_app.process_transaction_stats(_block, _block);
-  PERFORM hafbe_app.process_witness_stats(_block, _block);
-  PERFORM hafbe_app.process_witness_votes(_block, _block);
-  PERFORM hafbe_app.process_proposals(_block, _block);
-  PERFORM hafbe_app.process_witness_votes_cache(_block);
-  -- Must run after process_witness_votes_cache so account_vest_stats_cache
-  -- is fresh for the same block before we join against it.
-  PERFORM hafbe_app.process_proposal_vote_stats_cache();
-
-  IF _logs THEN
-    __end_ts := clock_timestamp();
-    RAISE NOTICE 'Hafbe processed block % successfully in % s
-    ', _block, (extract(epoch FROM __end_ts - __start_ts));
   END IF;
 END
 $$;
