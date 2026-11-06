@@ -99,6 +99,11 @@ include:
   - '/templates/test_jobs.gitlab-ci.yml'
 # Skip rules: extends common .haf_app_detect_changes and adds project-specific rule templates
 - local: '/scripts/ci-helpers/skip_rules.yml'
+# Python API client: generated from the swagger JSON, built, tested and published.
+- project: hive/wax-spec-generator
+  ref: main
+  file:
+  - '/templates/python_api_package.gitlab-ci.yml'
 
 # Use common git corruption cleanup hook
 default:
@@ -120,22 +125,6 @@ lint_bash_scripts:
 lint_sql_scripts:
   extends: .haf_app_lint_sql
   stage: lint
-
-verify_poetry_lock_stability_api_package:
-  stage: lint
-  extends: .verify_poetry_lock_stability_template
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-  tags:
-  - public-runner-docker
-
-verify_poetry_lock_stability_api_generation:
-  stage: lint
-  extends: .verify_poetry_lock_stability_template
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
-  tags:
-  - public-runner-docker
 
 find_haf_image:
   extends: .find_haf_image
@@ -302,45 +291,81 @@ generate-wax-spec:
   tags:
   - public-runner-docker
 
-generate_python_api_client:
-  extends: .project_develop_configuration_template
-  stage: build
+.hafbe_python_api_package:
   rules:
   - if: $DOCS_ONLY == "true"
     when: never
   - when: on_success
   variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/api_generation"
-    # Job uses artifacts, doesn't need submodules
+    PYTHON_API_SWAGGER_JSON: "${CI_PROJECT_DIR}/build/swagger-doc.json"
+    PYTHON_API_DISTRIBUTION_NAME: "hiveio-hafbe-api"
+    PYTHON_API_PACKAGE_NAME: "hiveio_hafbe_api"
+    PYTHON_API_NAMESPACE: "hafbe_api_client"
+    # Jobs use artifacts, don't need submodules
     GIT_SUBMODULE_STRATEGY: none
-  needs:
-  - job: extract-swagger-json
-    artifacts: true
-  script:
-  - ${PYPROJECT_DIR}/generate_hafbe_api_client.sh
-  artifacts:
-    paths:
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api"
-    - "${CI_PROJECT_DIR}/scripts/python_api_package/hiveio_hafbe_api/hafbe_api_client"
   tags:
   - public-runner-docker
 
-build_python_api_client_wheel:
-  extends: .build_wheel_template
+generate_python_api_client:
+  extends:
+  - .python_api_package_generate
+  - .hafbe_python_api_package
   stage: build
-  rules:
-  - if: $DOCS_ONLY == "true"
-    when: never
-  - when: on_success
+  needs:
+  - job: extract-swagger-json
+    artifacts: true
+
+build_python_api_client_wheel:
+  extends:
+  - .python_api_package_build
+  - .hafbe_python_api_package
+  stage: build
   needs:
   - job: generate_python_api_client
     artifacts: true
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    # Job uses artifacts, doesn't need submodules
-    GIT_SUBMODULE_STRATEGY: none
-  tags:
-  - public-runner-docker
+
+# Besides the template's import/dependency check, one endpoint is called through
+# the runtime package's transport against a public API node.
+test_python_api_wheel:
+  extends:
+  - .python_api_package_test
+  - .hafbe_python_api_package
+  stage: test
+  needs:
+  - job: build_python_api_client_wheel
+    artifacts: true
+  script:
+  - !reference [.python_api_package_test, script]
+  - |
+    python3 - <<'EOF'
+    import asyncio
+    import sys
+
+    from hiveio_api_client import AsyncRemoteHandle, HttpUrl, RemoteHandleSettings
+    from hiveio_api_client.exceptions import CommunicationError, HttpStatusError
+    from hiveio_hafbe_api.hafbe_api_client.hafbe_api_client import HafbeApi
+
+    ENDPOINTS = ["https://api.syncad.com", "https://api.hive.blog"]
+    ACCOUNT = "gtg"
+
+    async def main() -> int:
+        for endpoint in ENDPOINTS:
+            handle = AsyncRemoteHandle(RemoteHandleSettings(http_endpoint=HttpUrl(endpoint)), api=HafbeApi)
+            try:
+                account = await handle.api.accounts(ACCOUNT)
+            except (CommunicationError, HttpStatusError) as error:
+                print(f"{endpoint}: {error!r}, trying the next endpoint")
+                continue
+            if account.name != ACCOUNT:
+                print(f"{endpoint}: expected account {ACCOUNT}, got {account.name}")
+                return 1
+            print(f"{endpoint}: /accounts/{ACCOUNT} returned {type(account).__name__} of {account.name}")
+            return 0
+        print("No API node answered")
+        return 1
+
+    sys.exit(asyncio.run(main()))
+    EOF
 
 sync:
   extends:
@@ -390,7 +415,7 @@ sync:
     FETCH_SUBMODULES_REF="${COMMON_CI_REF:-develop}"
     curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${FETCH_SUBMODULES_REF}/scripts/fetch-submodules.sh" -o /tmp/fetch-submodules.sh
     chmod +x /tmp/fetch-submodules.sh
-    /tmp/fetch-submodules.sh --parallel submodules/btracker submodules/reptracker
+    /tmp/fetch-submodules.sh --parallel submodules/btracker submodules/reptracker submodules/l2_framework
   # Smart cache lookup (with fallback for cache reuse)
   - !reference [.haf_app_smart_cache_lookup, script]
   script:
@@ -542,6 +567,12 @@ sync_with_mock_data:
     echo -e "\e[0Ksection_start:$(date +%s):git[collapsed=true]\r\e[0KConfiguring Git..."
     git config --global --add safe.directory "$CI_PROJECT_DIR"
     echo -e "\e[0Ksection_end:$(date +%s):git\r\e[0K"
+  # docker-compose-mocks.yml mounts l2_framework from the checkout to install and run it
+  - |
+    FETCH_SUBMODULES_REF="${COMMON_CI_REF:-develop}"
+    curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${FETCH_SUBMODULES_REF}/scripts/fetch-submodules.sh" -o /tmp/fetch-submodules.sh
+    chmod +x /tmp/fetch-submodules.sh
+    /tmp/fetch-submodules.sh submodules/l2_framework
   - |
     EFFECTIVE_HAF_COMMIT="${HAF_UPSTREAM_COMMIT}"
     if [[ "${QUICK_TEST:-false}" == "true" ]]; then
@@ -637,6 +668,8 @@ sync_with_mock_data:
     docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log || true
     docker compose "${COMPOSE_OPTIONS[@]}" logs fill-db-with-mock-data > fill-db-with-mock-data.log || true
     docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log || true
+    docker compose "${COMPOSE_OPTIONS[@]}" logs l2-setup > l2-setup.log || true
+    docker compose "${COMPOSE_OPTIONS[@]}" logs backend-l2-block-processing > backend-l2-block-processing.log || true
     docker compose "${COMPOSE_OPTIONS[@]}" down --timeout 60
     popd
 
@@ -667,6 +700,8 @@ sync_with_mock_data:
       docker compose "${COMPOSE_OPTIONS[@]}" logs haf > haf.log 2>&1 || true
       docker compose "${COMPOSE_OPTIONS[@]}" logs fill-db-with-mock-data > fill-db-with-mock-data.log 2>&1 || true
       docker compose "${COMPOSE_OPTIONS[@]}" logs backend-block-processing > backend-block-processing.log 2>&1 || true
+      docker compose "${COMPOSE_OPTIONS[@]}" logs l2-setup > l2-setup.log 2>&1 || true
+      docker compose "${COMPOSE_OPTIONS[@]}" logs backend-l2-block-processing > backend-l2-block-processing.log 2>&1 || true
       docker compose "${COMPOSE_OPTIONS[@]}" down --timeout 30 2>&1 || true
       popd
       tar -czvf docker/container-logs.tar.gz docker/*.log 2>/dev/null || true
@@ -682,61 +717,6 @@ sync_with_mock_data:
   - public-runner-docker
   - data-cache-storage
   - fast
-
-# The API-client tests take pytest and pytest-asyncio from python-test-tools, at
-# the versions in common-ci-configuration's docker-bake.hcl; the package's
-# runtime dependencies are installed next to them in the image's /python_venv.
-.python_api_package_test_base:
-  extends: .job-defaults
-  image: "${PYTHON_TEST_TOOLS_IMAGE}"
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    # Job uses artifacts, doesn't need submodules
-    GIT_SUBMODULE_STRATEGY: none
-  before_script:
-  - python3 -V
-  - pytest --version
-  - pip list | grep -i -E '^pytest(-asyncio)? '
-  - !reference [.update_deps_for_tests, script]
-
-python_api_client_test:
-  extends: .python_api_package_test_base
-  stage: test
-  rules:
-  - if: $DOCS_ONLY == "true"
-    when: never
-  - when: on_success
-  needs:
-  - job: generate_python_api_client
-    artifacts: true
-  before_script:
-  - !reference [.python_api_package_test_base, before_script]
-  - poetry -C "${PYPROJECT_DIR}" install --only main
-  script:
-  - pytest "${PYPROJECT_DIR}/tests/test_generated_api_client.py"
-  tags:
-  - public-runner-docker
-
-test_python_api_wheel:
-  extends: .python_api_package_test_base
-  stage: test
-  rules:
-  - if: $DOCS_ONLY == "true"
-    when: never
-  - when: on_success
-  needs:
-  - job: build_python_api_client_wheel
-    artifacts: true
-  variables:
-    DIST_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package/dist"
-  before_script:
-  - !reference [.python_api_package_test_base, before_script]
-  - poetry -C "${PYPROJECT_DIR}" install --only main --no-root
-  script:
-  - pip install --no-deps "${DIST_DIR}"/*.whl
-  - pytest "${PYPROJECT_DIR}/tests/test_package_import.py" -v
-  tags:
-  - public-runner-docker
 
 # =============================================================================
 # TEST JOB BASE TEMPLATE (Docker Compose)
@@ -887,6 +867,8 @@ regression-test:
     ./run_test.sh --host=${HAF_HOST}
     cd ../hbd_protocol_ratio
     ./run_test.sh --host=${HAF_HOST}
+    cd ../witness_votes_cache
+    ./run_test.sh --host=${HAF_HOST}
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
   artifacts:
@@ -908,7 +890,7 @@ setup-scripts-test:
     FETCH_SUBMODULES_REF="${COMMON_CI_REF:-develop}"
     curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/${FETCH_SUBMODULES_REF}/scripts/fetch-submodules.sh" -o /tmp/fetch-submodules.sh
     chmod +x /tmp/fetch-submodules.sh
-    /tmp/fetch-submodules.sh --parallel submodules/btracker submodules/reptracker
+    /tmp/fetch-submodules.sh --parallel submodules/btracker submodules/reptracker submodules/l2_framework
     echo -e "\e[0Ksection_end:$(date +%s):submodules\r\e[0K"
 
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning functional tests..."
@@ -917,6 +899,7 @@ setup-scripts-test:
     # Without this, reused workspace checkouts may have stale files with restrictive permissions
     chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker" 2>/dev/null || sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/btracker"
     chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker" 2>/dev/null || sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/reptracker"
+    chmod -R 777 "${CI_PROJECT_DIR}/submodules/l2_framework" 2>/dev/null || sudo chmod -R 777 "${CI_PROJECT_DIR}/submodules/l2_framework"
 
     cd tests/functional
     ./test_scripts.sh --host=${HAF_HOST}
@@ -1011,22 +994,18 @@ publish_images:
     PUBLISH_IMAGES: "haf_block_explorer postgrest-rewriter"
 
 deploy_python_api_packages_to_gitlab:
+  extends:
+  - .python_api_package_publish
+  - .hafbe_python_api_package
   stage: publish
+  rules:
+  - if: $DOCS_ONLY == "true"
+    when: never
+  - !reference [.python_api_package_publish, rules]
   needs:
   - job: build_python_api_client_wheel
     artifacts: true
-  - job: generate_python_api_client
-    artifacts: true
-  - job: python_api_client_test
   - job: test_python_api_wheel
-  extends: .deploy_wheel_to_gitlab_template
-  variables:
-    PYPROJECT_DIR: "${CI_PROJECT_DIR}/scripts/python_api_package"
-    # Job uses artifacts, doesn't need submodules
-    GIT_SUBMODULE_STRATEGY: none
-  when: on_success
-  tags:
-  - public-runner-docker
 
 deploy-wax-spec-dev-package:
   extends: .npm_deploy_package_template

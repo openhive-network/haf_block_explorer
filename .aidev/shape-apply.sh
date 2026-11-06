@@ -2,7 +2,7 @@
 # performance.shape.apply (.aidev/project.yaml): installs this tree's database code
 # (haf_block_explorer, and the balance tracker and reputation tracker submodules it
 # installs into hafbe_bal and reptracker_app) on a copy of the db-shape, the way
-# scripts/install_app.sh installs it.
+# scripts/install_app.sh installs it, with l2_framework's tables only.
 #
 #   AIDEV_DB_SHAPE_PSQL=<psql invocation reading SQL on stdin> .aidev/shape-apply.sh
 #
@@ -19,10 +19,21 @@
 #     hafd.contexts, which a shape restores without rows. The shape already carries
 #     the source's tables with their statistics, which are what the plans need, and
 #     no API statement calls the processing procedures. The copy of db/hafbe_app.sql
-#     keeps the CREATE TABLE of a table added since the shape was captured
-#     (hafbe_app.wallet_stats_by_day), empty and without statistics;
+#     keeps the CREATE TABLE of the tables added since the shape was captured
+#     (hafbe_app.wallet_stats_by_day, hafbe_app.witness_votes_cache_state), empty and
+#     without statistics;
+#   - db/drop_proposal_payments.sql is empty: it unregisters and drops the
+#     proposal_payments ledger of installs made before it was removed, through the HAF
+#     context the shape restores without rows, and no API statement reads the table;
 #   - the version files are written here (a workflow checkout may have no git
-#     metadata for the submodules), as in .aidev/run-checks.sh.
+#     metadata for the submodules), as in .aidev/run-checks.sh;
+#   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
+#     its authority tables and indexes (empty, without statistics: the shape was
+#     captured without l2_framework), which the authority helpers read. Its context,
+#     roles and block processing are not installed. The shape's source has no
+#     l2_framework roles (and roles are cluster-wide on the shape server, so the copy
+#     does not create them): the tables keep the applying role as owner and
+#     hafbe_user is granted their SELECT directly, not through l2_framework_user.
 # Everything else (types, views, backend and endpoint functions, grants) installs
 # as install_app.sh installs it.
 set -euo pipefail
@@ -31,9 +42,9 @@ cd "$(dirname "$0")/.."
 : "${AIDEV_DB_SHAPE_PSQL:?set by aidev db shape: the psql invocation reaching the shape copy}"
 : "${AIDEV_DB_SHAPE_DATABASE:?set by aidev db shape: the shape copy psql reaches}"
 
-for m in btracker reptracker; do
+for m in btracker reptracker l2_framework; do
     if [ ! -f "submodules/$m/scripts/install_app.sh" ]; then
-        echo "submodules/$m is not checked out: the install needs both submodules" >&2
+        echo "submodules/$m is not checked out: the install needs all three submodules" >&2
         exit 1
     fi
 done
@@ -42,7 +53,7 @@ stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/submodules"
 cp -r db backend endpoints scripts "$stage/"
-cp -r submodules/btracker submodules/reptracker "$stage/submodules/"
+cp -r submodules/btracker submodules/reptracker submodules/l2_framework "$stage/submodules/"
 for d in "$stage" "$stage/submodules/btracker" "$stage/submodules/reptracker"; do
     echo "-- the app's roles are restored with the shape" > "$d/db/builtin_roles.sql"
     printf '#!/bin/sh\n# versions are written by .aidev/shape-apply.sh\n' > "$d/scripts/generate_version_sql.sh"
@@ -50,6 +61,8 @@ done
 for f in db/hafbe_app.sql submodules/btracker/db/btracker_app.sql submodules/reptracker/db/reptracker_app.sql; do
     echo "-- the shape carries this app's tables and statistics (.aidev/shape-apply.sh)" > "$stage/$f"
 done
+echo "-- the proposal_payments upgrade drop does not run on the shape (.aidev/shape-apply.sh)" \
+    > "$stage/db/drop_proposal_payments.sql"
 # The balance tracker's backend/shared/nai_types.sql checks its NAI constants against
 # asset_table, which btracker_app.sql seeds and the shape restores empty: keep the
 # seed. (The copy's heaps are restored from the shape after the install, so the rows
@@ -61,18 +74,41 @@ if ! grep -q "INSERT INTO asset_table" "$stage/submodules/btracker/db/btracker_a
     echo "submodules/btracker/db/btracker_app.sql no longer seeds asset_table: update .aidev/shape-apply.sh" >&2
     exit 1
 fi
-# A table hafbe_app.sql adds after the shape was captured is not in the shape: create
-# it (empty, without statistics) so the API functions that read it can run.
+# The tables hafbe_app.sql adds after the shape was captured are not in the shape:
+# create them (empty, without statistics) so the functions that read them can run.
 {
     echo "SET ROLE hafbe_owner;"
     sed -n '/CREATE TABLE hafbe_app.wallet_stats_by_day/,/);/p' db/hafbe_app.sql \
         | sed 's/CREATE TABLE /CREATE TABLE IF NOT EXISTS /'
+    sed -n '/CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state/,/);/p' db/hafbe_app.sql
     echo "RESET ROLE;"
 } >> "$stage/db/hafbe_app.sql"
-if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.wallet_stats_by_day" "$stage/db/hafbe_app.sql"; then
-    echo "db/hafbe_app.sql no longer creates hafbe_app.wallet_stats_by_day: update .aidev/shape-apply.sh" >&2
+for t in wallet_stats_by_day witness_votes_cache_state; do
+    if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.$t" "$stage/db/hafbe_app.sql"; then
+        echo "db/hafbe_app.sql no longer creates hafbe_app.$t: update .aidev/shape-apply.sh" >&2
+        exit 1
+    fi
+done
+# l2_framework's tables, from its db/l2_framework_app.sql (see the header).
+l2_app_sql=submodules/l2_framework/db/l2_framework_app.sql
+{
+    echo "CREATE SCHEMA IF NOT EXISTS l2;"
+    echo "SET search_path TO l2;"
+    sed -n '1,/^\$\$;/p' "$l2_app_sql"
+    sed -n '/CREATE TABLE IF NOT EXISTS authority_/,/);/p' "$l2_app_sql"
+    sed -n '/^CREATE INDEX IF NOT EXISTS idx_authority/,/;/p' "$l2_app_sql"
+    echo "GRANT USAGE ON SCHEMA l2 TO hafbe_user;"
+    echo "GRANT SELECT ON ALL TABLES IN SCHEMA l2 TO hafbe_user;"
+} > "$stage/submodules/l2_framework/shape_tables.sql"
+if [ "$(grep -c "CREATE TABLE IF NOT EXISTS authority_\|CREATE TYPE authority_role" "$stage/submodules/l2_framework/shape_tables.sql")" != 4 ]; then
+    echo "$l2_app_sql no longer creates l2's role type and three authority tables as expected: update .aidev/shape-apply.sh" >&2
     exit 1
 fi
+cat > "$stage/submodules/l2_framework/scripts/install_app.sh" <<'SH'
+#!/bin/sh
+# l2_framework on the shape: its tables only (.aidev/shape-apply.sh)
+psql -f "$(dirname "$0")/../shape_tables.sql"
+SH
 # The same for hafbe_app.account_ops_count, whose DO block also fills and registers
 # it in the HAF context the shape restores without rows: the copy keeps only its
 # CREATE TABLE.

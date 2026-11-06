@@ -93,6 +93,38 @@ insert-mostly tables, and that `hafbe_app.request_tables_freeze()` queues a
 except the `current_*` ones, inside a transaction it rolls back. It skips (exit 0)
 on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
 
+### Witness Vote Cache Test
+`tests/witness_votes_cache/run_test.sh` (CI job `regression-test`, as `haf_admin`;
+AIDEV's `regression` step as its `witness_votes_cache` case) drives
+`hafbe_app.process_witness_votes_cache(_block)` through an ordinary block (asserting
+it took the incremental path and moved a witness rank through a proxy's proxied
+vests), a fork, a restart gap, a new witness, a voter's only proposal vote being
+removed, a moved daily-change window (a stale `first_block_num` in the state row must
+force the full recompute) and a block whose routed `fill_vesting_withdraw` is the only
+operation naming a tracked account whose vests it moves, directly or as the proxy
+ancestor of another account the block names (the incremental path must pick it up),
+and after each compares all four witness caches and
+`proposal_vote_stats_cache` row for row against a full recompute. For the fallback
+cases it also checks that the incremental path alone would have left a difference.
+When `witness_votes_change_cache` is empty (the synced 2016 chain has no vote event
+in today's window, which is just the head block), it adds a vote event of a proxy to
+the window first, and prints which it did.
+The blocks are the synced chain's own (their operations decide which accounts each
+names); the blocks' effects on balances and hafbe tables are simulated by writing
+those tables, and a fork by reverting such a write, inside a transaction it rolls
+back. A real `remove_proposal` operation is added to a block only when the role may
+write `hafd.operations` (CI's `haf_admin`); AIDEV's `haf_shared_consumer` may not,
+so there that part prints `SKIPPED` and the removal is checked through a block with
+another full-recompute operation. Needs synced, filled caches and the balance
+tracker schema (`--btracker-schema`, default `hafbe_bal`). It then runs
+`compare_script_test.sh`, which commits a state row at the context's current block
+and expects `scripts/compare_witness_votes_cache.sh` to report `match` (exit 0), then
+`DIFFERS` (exit 1) after altering a `witness_votes_cache` row, then three `skipped`
+checks with the state row one block behind and again one block ahead (a fork
+reverted the context), which compare nothing (exit 2), checking
+the `matched=… skipped=… differs=… errors=…` summary of each run; on exit it
+recomputes the caches and restores the state row. The role must be a member of `hafbe_owner`.
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 
@@ -121,7 +153,7 @@ launched at block ~22.3M).
 Three-step workflow (mirrors `submodules/btracker/tests/mocks`):
 
 ```bash
-# 1. Load fixtures + rewind hafbe_app / hafbe_bal contexts
+# 1. Load fixtures + rewind hafbe_app / hafbe_bal / l2 contexts
 ./tests/mocks/install_mock_data.sh --host=localhost --user=haf_admin
 
 # 2. Run the regular block processor against the mock range
@@ -145,7 +177,7 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 
 Mock behavior is asserted through the public REST interface by the Tavern
 mock suite below — there is no separate SQL verifier. DB-internal invariants
-(physical table layout, cache membership, ledger row counts) belong in a
+(physical table layout, cache membership, row counts) belong in a
 dedicated DB integration-test suite if ever needed, not alongside the API tests.
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
@@ -178,7 +210,7 @@ detect → lint → build → sync → test → publish
 | `performance-test` | Performance | HTML report, JUnit XML |
 | `setup-scripts-test` | Functional | - |
 
-The generated Python API client (`scripts/python_api_package`) is tested by `python_api_client_test` (async test against a public API node) and `test_python_api_wheel` (built wheel imports, version is set). Both run in `${PYTHON_TEST_TOOLS_IMAGE}` and take pytest and pytest-asyncio from it, at the versions in common-ci-configuration's `docker-bake.hcl`; `poetry install --only main` adds only the package's runtime dependencies to the image's `/python_venv`. Do not add pytest or pytest-asyncio to the package's `pyproject.toml`.
+The Python API client (`hiveio-hafbe-api`, import package `hiveio_hafbe_api`) has no project in this repository: the jobs `generate_python_api_client`, `build_python_api_client_wheel`, `test_python_api_wheel` and `deploy_python_api_packages_to_gitlab` extend the `.python_api_package_*` jobs of hive/wax-spec-generator's `templates/python_api_package.gitlab-ci.yml` (included at `ref: main`), which pins the generator and its runtime package (import package `hiveio_api_client`) and generates the pyproject (versioned by this repository's tags). `test_python_api_wheel` runs the template's check (all modules import, the version is neither the placeholder nor `dirty`, the wheel pulls no wallet library or hived API package) and then calls `/accounts/gtg` through the runtime's `AsyncRemoteHandle` against a public API node. Do not add a pyproject or lockfile for the client here: the client depends only on the template's runtime package, so Renovate opens no MRs here for wallet or hived API releases.
 
 `pattern-test` runs against the 5M-block mainnet sync cache. `pattern-test-with-mock-data` runs against the `haf_hafbe_mock` cache prepared by `sync_with_mock_data` — it covers endpoints whose data only exists in the synthetic 91M block range (proposals, DHF votes).
 
@@ -196,8 +228,8 @@ and `HAFAH_VERSION` to the digest; Compose joins these values with `:`.
 
 `pattern-test-with-mock-data` additionally requires the mock cache (`sync_with_mock_data` job, sync stage). That job:
 - Checks NFS for a cached `haf_hafbe_mock` image; on miss, falls back to the HAFBE sync cache as base
-- Runs `docker/docker-compose-mocks.yml` (HAF + fixture installer + block processor)
-- Waits for `hive.is_app_in_sync('hafbe_app')` then runs `prepare_mock_cache.sh`
+- Fetches the `l2_framework` submodule and runs `docker/docker-compose-mocks.yml` (HAF + l2_framework install + fixture installer + hafbe and l2_framework block processors)
+- Waits for `hive.is_app_in_sync('hafbe_app')` and for the `l2` context to reach hafbe_app's block (failing at once when `l2` does not exist), then runs `prepare_mock_cache.sh`
 - Saves the resulting pgdata as `haf_hafbe_mock` cache
 
 ### Test Dependencies

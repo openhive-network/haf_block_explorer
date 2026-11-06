@@ -10,7 +10,7 @@
 #   - regression-test: Account/witness dump tests
 #   - performance-test: JMeter performance tests via PostgREST
 #   - pattern-test: Tavern API pattern tests
-#   - python_api_client_test: Python client tests
+#   - test_python_api_wheel: Python client wheel test (wax-spec-generator template)
 
 set -eo pipefail
 
@@ -59,7 +59,7 @@ echo "$JOBS" | jq -r '
   .[] | select(.name == "prepare_haf_data" or .name == "find_haf_image" or
                .name == "docker-setup-docker-image-build" or .name == "sync" or
                .name == "regression-test" or .name == "performance-test" or
-               .name == "pattern-test" or .name == "python_api_client_test" or
+               .name == "pattern-test" or .name == "test_python_api_wheel" or
                .name == "setup-scripts-test") |
   "\(.status | if . == "success" then "OK" elif . == "failed" then "FAIL" elif . == "running" then "RUN" else . end) \(.name)"
 '
@@ -96,9 +96,9 @@ if [[ -n "$FAILED" && "$FAILED" != "null" ]]; then
                 # Pytest/Tavern API test failures
                 echo "$LOG" | grep -E -A3 -B2 "FAILED|ERROR|AssertionError|passed.*failed|tavern" | head -50
                 ;;
-            python_api_client_test)
+            test_python_api_wheel)
                 # Python client test failures
-                echo "$LOG" | grep -E -A3 -B2 "FAILED|Error|AssertionError|pytest" | head -50
+                echo "$LOG" | grep -E -A3 -B2 "Error|Traceback|must not have|placeholder|No API node" | head -50
                 ;;
             lint_*)
                 # Linting errors
@@ -146,8 +146,8 @@ if [[ -n "$REGRESSION" && "$REGRESSION" != "null" ]]; then
     echo "performance-test: $PERF_STATUS (JMeter via tests/performance/)"
     PATTERN_STATUS=$(echo "$JOBS" | jq -r '.[] | select(.name == "pattern-test") | .status // "pending"')
     echo "pattern-test: $PATTERN_STATUS (tests/tavern pytest)"
-    PYTHON_STATUS=$(echo "$JOBS" | jq -r '.[] | select(.name == "python_api_client_test") | .status // "pending"')
-    echo "python_api_client_test: $PYTHON_STATUS (scripts/python_api_package tests)"
+    PYTHON_STATUS=$(echo "$JOBS" | jq -r '.[] | select(.name == "test_python_api_wheel") | .status // "pending"')
+    echo "test_python_api_wheel: $PYTHON_STATUS (Python client wheel, wax-spec-generator template)"
 fi
 
 # If pipeline succeeded

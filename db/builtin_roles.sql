@@ -25,6 +25,8 @@
  *     - reptracker_user (Reputation Tracker read access)
  *     - btracker_user (Balance Tracker read access)
  *     - hafah_user (Account Authority History read access) — granted conditionally
+ *     - l2_framework_user (read access to l2_framework's l2.authority_* tables,
+ *       which the authority endpoint reads) — granted when l2_framework is installed
  * - Has 10-second query timeout to prevent runaway queries
  * - Can only SELECT from tables, cannot modify data
  *
@@ -34,7 +36,8 @@
  *       └── hafbe_owner (schema owner, block processor)
  *               ├── reptracker_owner, btracker_owner, (hafah_owner if installed)
  *               └── hafbe_user (API read-only access)
- *                       └── reptracker_user, btracker_user, (hafah_user if installed)
+ *                       └── reptracker_user, btracker_user, (hafah_user if installed),
+ *                           l2_framework_user
  *
  * Security Model:
  * ---------------
@@ -46,6 +49,8 @@
  *
  * Note: btracker_* and reptracker_* roles must be created before this script runs.
  * hafah_* roles are granted conditionally — hafah can be installed before or after hafbe.
+ * l2_framework_user is granted when it exists; db/hafbe_app.sql refuses to install
+ * without l2_framework.
  */
 
 -- Create schema owner role (used for migrations and block processing)
@@ -66,7 +71,8 @@ EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING E
 END
 $$;
 
--- Grant hafah roles if available (hafah may be installed before or after hafbe)
+-- Grant hafah roles if available (hafah may be installed before or after hafbe),
+-- and l2_framework's read role (l2_framework is installed before hafbe)
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'hafah_owner') THEN
@@ -74,6 +80,9 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'hafah_user') THEN
     GRANT hafah_user TO hafbe_user;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'l2_framework_user') THEN
+    GRANT l2_framework_user TO hafbe_user;
   END IF;
 END
 $$;

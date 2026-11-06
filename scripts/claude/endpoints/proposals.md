@@ -274,7 +274,6 @@ Its cache-miss fallback stays restricted to voters on the selected page.
 | `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror; `paid_amount` is a running total |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Active approvals (one row per currently-approving voter) |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | All vote events including synthetic `approve=FALSE` rows |
-| `hafbe_app.proposal_payments` | `process_proposals()` | Append-only per-payment audit ledger |
 | `hafbe_app.proposal_vote_stats_cache` | `process_proposal_vote_stats_cache()` | Stake-weighted totals + voter count per proposal (LIVE cache) |
 
 See `scripts/claude/processing.md` for the processor detail.

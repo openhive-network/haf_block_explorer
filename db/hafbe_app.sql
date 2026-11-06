@@ -34,7 +34,6 @@
  *    - proposal_votes_history: Complete proposal vote change history
  *    - current_proposal_votes: Current active proposal votes
  *    - current_proposals: Proposal metadata (create/update/remove state)
- *    - proposal_payments: Append-only payment ledger from proposal_pay_operation
  *
  * 5. TRANSACTION STATISTICS
  *    - transaction_stats_by_month: Monthly aggregated transaction stats
@@ -69,11 +68,31 @@
  * 3. process_blocks() dispatches to massive or single processing
  * 4. Individual process_* functions handle specific data types
  *
+ * Account authorities (owner/active/posting/memo) are read from the l2_framework
+ * app's l2.authority_* tables (backend/endpoint_helpers/authority.sql), so
+ * l2_framework must be installed first.
+ *
  * @see builtin_roles.sql for database role definitions
  * @see db/process_*.sql files for individual processing logic
  */
 
 SET ROLE hafbe_owner;
+
+-- ============================================================================
+-- REQUIRED APPLICATIONS
+-- ============================================================================
+-- Checked from the catalogs, which need no privilege on the l2 schema, so the
+-- failure names the missing application rather than a relation.
+DO $$
+BEGIN
+  IF NOT hive.app_context_exists('l2') OR (
+    SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'l2' AND c.relname IN ('authority_threshold', 'authority_key', 'authority_account')
+  ) <> 3 THEN
+    RAISE EXCEPTION 'haf_block_explorer requires the l2_framework application (context and schema l2 with its authority tables): install l2_framework first';
+  END IF;
+END
+$$;
 
 -- ============================================================================
 -- SCHEMA AND TABLE CREATION
@@ -103,7 +122,6 @@ BEGIN
 
   -- Register state providers for hafbe_app
   PERFORM hive.app_state_provider_import('METADATA', 'hafbe_app');
-  PERFORM hive.app_state_provider_import('KEYAUTH',  'hafbe_app');
 
   ------------- CONTROL TABLES ----------------
 
@@ -325,22 +343,6 @@ BEGIN
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
 
-  /*
-   * proposal_payments: append-only DHF payment ledger
-   * -------------------------------------------------
-   * One row per proposal_pay_operation. Also accumulated into
-   * current_proposals.paid_amount during processing. amount is raw precision-3
-   * HBD (milli-HBD).
-   */
-  CREATE TABLE IF NOT EXISTS hafbe_app.proposal_payments (
-    proposal_id INT    NOT NULL,
-    amount      BIGINT NOT NULL,
-    source_op   BIGINT NOT NULL,
-
-    CONSTRAINT pk_proposal_payments PRIMARY KEY (source_op)
-  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
-  PERFORM hive.app_register_table( 'hafbe_app', 'proposal_payments', 'hafbe_app' );
-
   ------------- TRANSACTION STATISTICS ----------------
 
   /*
@@ -467,8 +469,11 @@ BEGIN
    * They provide fast access to computed values that would otherwise
    * require expensive joins across multiple tables.
    *
-   * Updated by process_witness_votes_cache() at each block during live sync.
-   * Truncated/rebuilt at each block to ensure consistency.
+   * Updated by process_witness_votes_cache(_block) at each block during live sync:
+   * incrementally from the block's impacted accounts, or recomputed in full when
+   * the block can change what they track (see db/process_witness_votes.sql).
+   * Not registered with HAF; witness_votes_cache_state carries what the refresh
+   * needs to notice a fork.
    */
 
   /*
@@ -564,6 +569,48 @@ BEGIN
 
 END
 $$;
+
+-- Installs made before authorities moved to l2_framework imported the KEYAUTH
+-- state provider; dropping it removes its hafd.hafbe_app_keyauth_*,
+-- hafd.hafbe_app_accountauth_a and hafd.hafbe_app_authority_definition tables.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM hafd.state_providers_registered sp
+    JOIN hafd.contexts c ON c.id = sp.context_id
+    WHERE c.name = 'hafbe_app' AND sp.state_provider = 'KEYAUTH'
+  ) THEN
+    PERFORM hive.app_state_provider_drop('KEYAUTH', 'hafbe_app');
+  END IF;
+END
+$$;
+
+------------- WITNESS VOTE CACHE STATE ----------------
+
+/*
+ * witness_votes_cache_state: The block the witness vote caches were last refreshed for
+ * ------------------------------------------------------------------------------------
+ * One row, written by process_witness_votes_cache(_block) in the block's transaction:
+ * the block number and the daily-change window (_first_block_num) it used. The next
+ * block updates the caches incrementally only when it is block_num + 1 and its window
+ * is the same; any other block takes the full recompute.
+ *
+ * Deliberately NOT registered with HAF, like the caches it describes: a fork reverts
+ * the registered tables the caches are computed from but neither the caches nor this
+ * row, and the block HAF hands over next (at or below block_num) is what tells the
+ * refresh the caches hold reverted values.
+ *
+ * Created outside the context-creation block so that a deployment whose context
+ * already exists gets it on reinstall.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state (
+  singleton       BOOLEAN NOT NULL DEFAULT TRUE,  -- Always TRUE: at most one row (PK)
+  block_num       INT     NOT NULL,               -- Block the caches were last refreshed for
+  first_block_num INT     NULL,                   -- Daily-change window that refresh used
+
+  CONSTRAINT pk_witness_votes_cache_state PRIMARY KEY (singleton),
+  CONSTRAINT witness_votes_cache_state_singleton CHECK (singleton)
+);
 
 ------------- WALLET STATISTICS ----------------
 
@@ -883,56 +930,6 @@ END
 $$;
 
 /**
- * single_processing()
- * -------------------
- * Process a single block during LIVE sync stage.
- * Uses synchronous_commit ON for data safety.
- *
- * Called for each new block after initial sync is complete.
- * Processes all operation types for the given block plus cache updates.
- *
- * @param _block  Block number to process
- * @param _logs   Enable progress logging
- */
-CREATE OR REPLACE PROCEDURE hafbe_app.single_processing(
-    IN _block INT,
-    IN _logs BOOLEAN
-)
-LANGUAGE plpgsql
-AS
-$$
-DECLARE
-  __start_ts TIMESTAMPTZ;
-  __end_ts   TIMESTAMPTZ;
-BEGIN
-  PERFORM set_config('synchronous_commit', 'ON', false);
-
-  IF _logs THEN
-    RAISE NOTICE 'Hafbe processing block: %...', _block;
-    __start_ts := clock_timestamp();
-  END IF;
-
-  PERFORM hafbe_app.process_account_stats(_block, _block);
-  PERFORM hafbe_app.process_account_ops_count(_block, _block);
-  PERFORM hafbe_app.process_block_operations(_block, _block);
-  PERFORM hafbe_app.process_transaction_stats(_block, _block);
-  PERFORM hafbe_app.process_witness_stats(_block, _block);
-  PERFORM hafbe_app.process_witness_votes(_block, _block);
-  PERFORM hafbe_app.process_proposals(_block, _block);
-  PERFORM hafbe_app.process_witness_votes_cache();
-  -- Must run after process_witness_votes_cache so account_vest_stats_cache
-  -- is fresh for the same block before we join against it.
-  PERFORM hafbe_app.process_proposal_vote_stats_cache();
-
-  IF _logs THEN
-    __end_ts := clock_timestamp();
-    RAISE NOTICE 'Hafbe processed block % successfully in % s
-    ', _block, (extract(epoch FROM __end_ts - __start_ts));
-  END IF;
-END
-$$;
-
-/**
  * request_tables_freeze()
  * -----------------------
  * Ask HAF for one VACUUM (FREEZE, ANALYZE) of every table the massive sync
@@ -981,7 +978,6 @@ BEGIN
     'witness_votes_history',
     'account_proxies_history',
     'proposal_votes_history',
-    'proposal_payments',
     'transaction_stats_by_day',
     'transaction_stats_by_month',
     'operation_type_stats_by_day',

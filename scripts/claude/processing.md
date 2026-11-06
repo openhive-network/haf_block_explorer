@@ -53,7 +53,7 @@ yet, i.e. once. On a HAF without request kinds (before haf#360) it skips with a
 NOTICE.
 
 The insert-only and insert-mostly tables (`block_operations`, the `*_history`
-tables, `proposal_payments`, the `*_stats_by_day` tables, `wallet_stats_by_day`,
+tables, the `*_stats_by_day` tables, `wallet_stats_by_day`,
 `account_ops_count`) are created with `autovacuum_vacuum_insert_scale_factor =
 0.005` and `autovacuum_freeze_min_age = 0` (`account_ops_count` also with
 `autovacuum_vacuum_scale_factor = 0.01`), so autovacuum keeps them all-visible
@@ -109,14 +109,15 @@ All processing functions are in `db/process_*.sql` files.
 |----------|------|---------|
 | `process_blocks()` | `hafbe_app.sql` | Dispatcher - routes to massive or single processing |
 | `massive_processing()` | `hafbe_app.sql` | Processes block ranges during bulk sync |
-| `single_processing()` | `hafbe_app.sql` | Processes individual blocks in live mode |
+| `single_processing()` | `single_processing.sql` | Processes individual blocks in live mode (installed after the `process_*.sql` files it calls) |
 | `process_account_stats()` | `process_account_stats.sql` | Account creation, recovery, voting rights |
 | `process_account_ops_count()` | `process_account_ops_count.sql` | Operation count per account (forking context only; `finalize_account_ops_count()` fills it at the end of massive sync) |
 | `process_block_operations()` | `process_block_operations.sql` | Op counts per block + daily/monthly per-op-type rollups (single scan, three sinks) |
 | `process_transaction_stats()` | `process_transaction_stats.sql` | Daily/monthly transaction aggregations |
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
-| `process_witness_votes_cache()` | `process_witness_votes.sql` | Cache refresh (LIVE only) |
+| `process_witness_votes_cache(_block)` | `process_witness_votes.sql` | Witness vote cache refresh per LIVE block: incremental, or the full recompute when the block can change what the caches track or is not the successor of the last refreshed block |
+| `process_witness_votes_cache()` | `process_witness_votes.sql` | Full recompute of the witness vote caches (first LIVE entry, CI, mock setup) |
 | `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. `process_proposal_vote_op` only records votes for proposals that currently exist and are not removed — mirroring hived's `update_proposal_votes_evaluator`, which `continue`s past missing/removed proposal_ids. Pre-HF28 the chain accepted (and silently dropped) votes for nonexistent proposals; replaying them without this guard tripped the `current_proposal_votes -> current_proposals` FK and crashed block processing. |
 | `process_proposal_vote_stats_cache()` | `process_proposal_vote_stats_cache.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
@@ -132,7 +133,7 @@ Each block range calls processors in this order:
 6. `process_proposals()` - All proposal ops in one row-by-row processor: create/update/remove/pay + update_proposal_votes + decline/expired cleanup
 
 In LIVE mode, two cache refreshes run after the processors (in this order):
-- `process_witness_votes_cache()` - recomputes `account_vest_stats_cache` + witness vote caches, applied with `MERGE` so only changed rows are written
+- `process_witness_votes_cache(_block)` - updates `account_vest_stats_cache` + witness vote caches from the block's impacted accounts, or recomputes them in full (see [witness_votes.md](processing/witness_votes.md#cache-processing-live-only))
 - `process_proposal_vote_stats_cache()` - same for `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
 
 ### Why process_proposals uses a FOR LOOP instead of CTE+CASE
@@ -227,8 +228,7 @@ For implementation details of each processor:
 | `hafbe_app.current_account_proxies` | `process_witness_votes()` | Active proxies |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | Proposal vote change log (includes synthetic `approve=FALSE` rows from remove/decline cascades) |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Currently active proposal approvals |
-| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` |
-| `hafbe_app.proposal_payments` | `process_proposals()` | Append-only per-payment audit ledger from `proposal_pay_operation` |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` (no per-payment ledger: HAF's fork revert of `current_proposals` keeps the total exact) |
 
 ### Cache Tables (LIVE only)
 | Table | Purpose |
@@ -244,10 +244,17 @@ For implementation details of each processor:
 When adding a new processor:
 
 1. Create the SQL file in `db/process_<name>.sql`
-2. Add call to `massive_processing()` and `single_processing()` in `hafbe_app.sql`
+2. Add call to `massive_processing()` in `hafbe_app.sql` and to `single_processing()` in `single_processing.sql`
+   (install_app.sh installs `single_processing.sql` after every `process_*.sql`, so an
+   interrupted install never leaves it calling a function that does not exist yet)
 3. Create documentation at `scripts/claude/processing/<name>.md`
 4. Update this index with link and one-line description
 5. Add any new tables to the Key Tables section
+
+When a change retires a table that the previously installed processing code still
+writes, drop it in a `db/` file that install_app.sh applies after the processing
+functions (as `drop_proposal_payments.sql` does), not in `hafbe_app.sql`, and keep the
+drop idempotent.
 
 When modifying existing processors:
 

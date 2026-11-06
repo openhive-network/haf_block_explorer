@@ -66,7 +66,7 @@ two cache refreshes:
 
 - `current_proposals`: 4 rows; **9001 removed=TRUE**, 9002/9003/9004 removed=FALSE
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
-- `proposal_payments`: 1 row — `(9002, 50000)`
+- `current_proposals.paid_amount`: 50000 for 9002 (its one `proposal_pay_operation`), 0 for the others
 - `proposal_votes_history`: **9 rows** — 5 TRUE inserts, 2 FALSE rows from steem's declined voting rights, 2 FALSE rows from removing proposal 9001
 - `current_account_proxies`: the mock range **adds** `(dan → blocktrades)`. Unlike the proposal tables above — which are mock-only totals, since no DHF data exists before block ~22.3M — this table also carries the witness proxies inherited from the 5M base sync, so the total is base + 1, not 1.
 - `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by `prepare_mock_cache.sh`)
@@ -110,7 +110,8 @@ cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 **install_mock_data.sh** (loads only — never processes):
 1. Loads the four SQL helpers (`types`, `insert_blocks`, `insert_operations`, `update_haf_state`)
 2. Inserts mock blocks + ops from `fixtures/`
-3. Rewinds both `hafbe_app` and `hafbe_bal` contexts to `(start − 1)` and
+3. Rewinds the `hafbe_app` and `hafbe_bal` contexts (and l2_framework's `l2`
+   context, when installed, which the account authority endpoint reads) to `(start − 1)` and
    sets `hive_state.consistent_block` to the mock end so the mock range
    becomes the next processable batch
 
@@ -136,7 +137,7 @@ sync — including btracker processing and state-provider updates.
 
 Assertions then run through the REST API via the Tavern pattern suite
 (`tests/tavern/patterns-mock`). If you need to guard physical table layout,
-cache membership, or ledger row counts, add a purpose-built DB
+cache membership, or row counts, add a purpose-built DB
 integration-test suite rather than mixing SQL assertions in with the API tests.
 
 ### Account-naming rule for fixtures
@@ -166,7 +167,7 @@ UPDATE hafd.hive_state SET consistent_block = 5000000;
 UPDATE hafd.contexts
 SET current_block_num  = 5000000,
     irreversible_block = 5000000
-WHERE name IN ('hafbe_app', 'hafbe_bal');
+WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');
 ```
 
 Then `scripts/process_blocks.sh` will resume from the real head.
@@ -203,7 +204,7 @@ UPDATE hafd.hive_state SET consistent_block = 5000000;
 UPDATE hafd.contexts
 SET current_block_num  = 5000000,
     irreversible_block = 5000000
-WHERE name IN ('hafbe_app', 'hafbe_bal');
+WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');
 
 -- 3. Wipe raw mock ops + blocks from HAF
 DELETE FROM hafd.operations

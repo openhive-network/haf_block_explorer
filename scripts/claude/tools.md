@@ -109,7 +109,31 @@ cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 **Requirements**: Fresh HAFBE+btracker install. Mirrors
 `submodules/btracker/tests/mocks/`. Full docs in `tests/mocks/README.md`.
 
-**CI integration**: `docker/docker-compose-mocks.yml` runs the same three-step flow automatically. The `backend-block-processing` service must NOT use `--stop-at-block` — passing `_limit` to `hive.app_next_iteration` prevents the MASSIVE→LIVE mode transition, causing `hive.is_app_in_sync()` to never return TRUE. The `wait-for-haf-be-startup.sh` script supports `--target-block=N` as a debugging utility (checks `current_block_num >= N` directly), but the CI flow uses the default `is_app_in_sync` check.
+**CI integration**: `docker/docker-compose-mocks.yml` runs the same three-step flow automatically. The `backend-block-processing` service must NOT use `--stop-at-block` — passing `_limit` to `hive.app_next_iteration` prevents the MASSIVE→LIVE mode transition, causing `hive.is_app_in_sync()` to never return TRUE. The `wait-for-haf-be-startup.sh` script supports `--target-block=N` as a debugging utility (checks `current_block_num >= N` directly), but the CI flow uses the default `is_app_in_sync` check. In that default flow the script also requires l2_framework's `l2` context (exiting non-zero at once, naming it, when it is missing) and waits for it to reach hafbe_app's block, so the mock compose also runs `l2-setup` and `backend-l2-block-processing` (which, like hafbe's processor, takes no `--stop-at-block`). On failure its diagnostics print every context's block and the compose services' logs, using `COMPOSE_OPTIONS_STRING` from `docker/`.
+
+### Witness Vote Cache Shadow Comparison
+
+**Location**: `scripts/compare_witness_votes_cache.sh`
+
+```bash
+./scripts/compare_witness_votes_cache.sh --host=localhost --user=haf_admin --interval=300 --count=0
+```
+
+On a LIVE node, checks every `--interval` seconds that the incrementally refreshed
+witness vote caches and `proposal_vote_stats_cache` equal a full recompute: one
+REPEATABLE READ transaction copies them, runs the full recompute, compares and rolls
+back, printing `block <n>: match`, `DIFFERS <cache>: <rows>, ...` or `skipped (...)`.
+It compares only when `witness_votes_cache_state.block_num` equals
+`hive.app_get_current_block_num('hafbe_app')`: MASSIVE catch-up moves the registered
+tables but no cache, and a fork revert commits before the next LIVE block refreshes
+the caches, so either would differ legitimately. It also skips when the window moved
+at midnight or on a conflict with a block commit. A matching check writes nothing.
+When the checks end it prints `matched=M skipped=S differs=D errors=E`. Exits 1 if
+any check differed or failed with an error, otherwise 2 (`no comparison was made:
+every check skipped`) if no check matched, so a run whose caches never caught up with
+the context does not read as a match; otherwise 0.
+`tests/witness_votes_cache/compare_script_test.sh` exercises its match, DIFFERS and
+skip results.
 
 ---
 
@@ -124,6 +148,7 @@ cd tests/tavern/patterns-mock && pytest get_proposal_votes_history/
 | "Run sync to 1M blocks" | `run_sync_test.sh 1000000` |
 | "Test proposal endpoints without waiting for sync" | `tests/mocks/install_mock_data.sh` → `process_blocks.sh --stop-at-block=91000006` → `prepare_mock_cache.sh` → `pytest tests/tavern/patterns-mock/get_proposal_votes_history/` |
 | "Prepare mock cache" | `prepare_mock_cache.sh` |
+| "Check the live witness vote caches against a full recompute" | `compare_witness_votes_cache.sh --count=0` |
 | "Reproduce CI mock pipeline locally" | `docker compose -f docker/docker-compose-mocks.yml up` (no `--stop-at-block`; wait for `hive.is_app_in_sync`) |
 | "Test sync performance" | `run_sync_test.sh` |
 | "Benchmark block processing" | `run_sync_test.sh` |
@@ -140,7 +165,7 @@ When analyzing pipeline failures, the script extracts these patterns:
 | `pattern-test` | FAILED, ERROR, AssertionError, tavern |
 | `pattern-test-with-mock-data` | FAILED, ERROR, AssertionError, tavern |
 | `sync_with_mock_data` | Timeout, Error, FATAL, failed, is_app_in_sync |
-| `python_api_client_test` | FAILED, Error, pytest |
+| `test_python_api_wheel` | Error, Traceback, must not have, placeholder, No API node |
 | `lint_*` | violation, L/W/E codes |
 
 ## Adding New Tools

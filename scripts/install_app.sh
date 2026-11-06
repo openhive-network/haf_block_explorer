@@ -34,8 +34,9 @@ cat <<EOF
     --is_forking=TRUE/FALSE           Allows to specify if app should be forking or not (defaults to true)
     --log-file=PATH                   Log file location (defaults to install_app.log, set to 'STDOUT' for no log file)
     --blocksearch-indexes=TRUE/FALSE  Create block search indexes (defaults to false)
-    --only-apps                       Set up only Balance Tracker and Reputation Tracker, without HAF Block Explorer
-    --only-hafbe                      Don't set up HAfAH and Balance Tracker and Reputation Tracker, just HAF Block Explorer
+    --only-apps                       Set up only l2_framework, Balance Tracker and Reputation Tracker, without HAF Block Explorer
+    --only-hafbe                      Don't set up l2_framework, Balance Tracker and Reputation Tracker, just HAF Block Explorer
+                                      (l2_framework must already be installed: HAF Block Explorer reads its authority tables)
 
 EOF
 }
@@ -143,6 +144,10 @@ setup_apps() {
   "$HAFBE_DIR/scripts/generate_version_sql.sh" "$HAFBE_DIR"
 
   # Stage 2: Install apps (HAfAH is installed separately via its own Docker service)
+  # l2_framework's install creates its own roles and schema/context l2.
+  echo "Installing l2_framework..."
+  "$HAFBE_DIR/submodules/l2_framework/scripts/install_app.sh" --postgres-url="$POSTGRES_ACCESS"
+
   echo "Installing Balance Tracker..."
   "$HAFBE_DIR/submodules/btracker/scripts/install_app.sh"   --postgres-url="$POSTGRES_ACCESS" --schema="$BTRACKER_SCHEMA"
 
@@ -172,6 +177,10 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_votes.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_proposals.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_proposal_vote_stats_cache.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/single_processing.sql"
+
+  echo "Removing objects the replaced processing functions no longer use..."
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/drop_proposal_payments.sql"
 
   echo "Installing OpenAPI types..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/types/enums.sql"

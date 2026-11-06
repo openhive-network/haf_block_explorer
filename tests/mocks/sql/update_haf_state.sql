@@ -58,10 +58,14 @@ BEGIN
   -- a partially-processed prior run leaves the contexts in divergent
   -- states this UPDATE cannot fix; the README's "Reset" section
   -- covers that path.
+  --
+  -- l2_framework's context (l2) is rewound with them: the account
+  -- authority endpoint reads l2's tables as of hafbe's head block, so
+  -- l2 has to process the mock range too.
   UPDATE hafd.contexts
   SET current_block_num  = _start - 1,
       irreversible_block = _start - 1
-  WHERE name IN ('hafbe_app', 'hafbe_bal');
+  WHERE name IN ('hafbe_app', 'hafbe_bal', 'l2');
 
   RETURN QUERY SELECT _start, _end;
 END

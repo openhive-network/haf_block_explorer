@@ -219,7 +219,8 @@ GROUP BY rapv.proxy_id;
  * WHY IT IS WINDOW-BOUNDED. Bounding the branch to the same window Cache 4
  * aggregates keeps growth proportional to daily churn instead of to all of
  * history. This whole result is re-materialised into account_vest_stats_cache
- * on EVERY LIVE block (~3 s), so unbounded growth would be paid forever.
+ * on every full refresh of the caches, and the incremental refresh's change set
+ * is drawn from it, so unbounded growth would be paid forever.
  *
  * WHY A FUNCTION AND NOT A VIEW. Cache 1 and Cache 4 must aggregate over the
  * same window or the INNER JOIN stops being total; a view cannot take that
@@ -325,9 +326,99 @@ $$
     LEFT JOIN hafbe_backend.voters_proxied_vests_sum_view vpvv ON vpvv.proxy_id = ov.account_id
 $$;
 
+/*
+ * account_vest_stats_of: account_vest_stats() for the given accounts only.
+ *
+ * Same columns and arithmetic as hafbe_backend.account_vest_stats(), so for any
+ * account both return the same row: own vests as there, proxied vests as
+ * hafbe_backend.voters_proxied_vests_sum_view sums them. The proxy chains are walked
+ * down from the given accounts through current_account_proxies_proxy_id instead of
+ * reading recursive_account_proxies_view, whose CTEs are materialized and so would
+ * unroll every chain in the table before filtering. Keep the two in step.
+ *
+ * Returns one row per distinct account in _accounts.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.account_vest_stats_of(_accounts INT[])
+RETURNS TABLE (
+    account_id    INT,
+    vests         BIGINT,
+    account_vests BIGINT,
+    proxied_vests BIGINT
+)
+LANGUAGE sql STABLE
+AS
+$$
+    WITH accounts AS MATERIALIZED (
+      SELECT DISTINCT a.account_id
+      FROM unnest(_accounts) AS a (account_id)
+    ),
+    own_vests AS (
+      SELECT
+        a.account_id,
+        COALESCE((
+          SELECT cab.balance::BIGINT
+          FROM current_account_balances cab
+          WHERE cab.account = a.account_id AND cab.nai = btracker_backend.nai_vests()
+        ), 0)
+        - COALESCE((
+          SELECT dv.delayed_vests::BIGINT
+          FROM account_withdraws dv
+          WHERE dv.account = a.account_id
+        ), 0) AS account_vests
+      FROM accounts a
+    ),
+    proxies1 AS MATERIALIZED (
+      SELECT a.account_id AS top_proxy_id, prox1.account_id, 1 AS proxy_level
+      FROM accounts a
+      JOIN hafbe_app.current_account_proxies prox1 ON prox1.proxy_id = a.account_id
+    ),
+    proxies2 AS MATERIALIZED (
+      SELECT prox1.top_proxy_id, prox2.account_id, 2 AS proxy_level
+      FROM proxies1 prox1
+      JOIN hafbe_app.current_account_proxies prox2 ON prox2.proxy_id = prox1.account_id
+    ),
+    proxies3 AS MATERIALIZED (
+      SELECT prox2.top_proxy_id, prox3.account_id, 3 AS proxy_level
+      FROM proxies2 prox2
+      JOIN hafbe_app.current_account_proxies prox3 ON prox3.proxy_id = prox2.account_id
+    ),
+    proxies4 AS (
+      SELECT prox3.top_proxy_id, prox4.account_id, 4 AS proxy_level
+      FROM proxies3 prox3
+      JOIN hafbe_app.current_account_proxies prox4 ON prox4.proxy_id = prox3.account_id
+    ),
+    chains AS (
+      SELECT top_proxy_id, account_id, proxy_level FROM proxies1
+      UNION
+      SELECT top_proxy_id, account_id, proxy_level FROM proxies2
+      UNION
+      SELECT top_proxy_id, account_id, proxy_level FROM proxies3
+      UNION
+      SELECT top_proxy_id, account_id, proxy_level FROM proxies4
+    ),
+    proxied AS (
+      SELECT
+        ch.top_proxy_id AS proxy_id,
+        SUM(cab.balance - COALESCE(dv.delayed_vests, 0))::BIGINT AS proxied_vests
+      FROM chains ch
+      JOIN current_account_balances cab
+        ON cab.account = ch.account_id
+        AND cab.nai = btracker_backend.nai_vests()
+      LEFT JOIN account_withdraws dv ON dv.account = ch.account_id
+      GROUP BY ch.top_proxy_id
+    )
+    SELECT
+      ov.account_id,
+      ov.account_vests + COALESCE(p.proxied_vests, 0) AS vests,
+      ov.account_vests,
+      COALESCE(p.proxied_vests, 0) AS proxied_vests
+    FROM own_vests ov
+    LEFT JOIN proxied p ON p.proxy_id = ov.account_id
+$$;
+
 -- proposal_paid_amounts view removed: paid_amount is now a running total column
 -- on hafbe_app.current_proposals, updated by process_proposal_pay_op. Endpoints
--- read cp.paid_amount directly; proposal_payments stays as an audit ledger.
+-- read cp.paid_amount directly.
 
 /*
  * expired_voter_stats_view: Vest stats for voters not in current voter list.
