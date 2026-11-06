@@ -24,7 +24,7 @@ SET ROLE hafbe_owner;
  *                                      and remove handled here)
  *   - hafbe_app.proposal_votes_history (append-only)
  *   - hafbe_app.current_proposal_votes (active approvals)
- *   - hafbe_app.proposal_payments      (per-payment ledger)
+ *   - hafbe_app.current_proposals.paid_amount (running payment total)
  */
 
 
@@ -119,7 +119,12 @@ $$;
  *   { "proposal_id": int, "receiver": ..., "payer": ...,
  *     "payment": { "amount": "...", "precision": 3, "nai": "@@..." } }
  *
- * DHF only pays in HBD precision-3, so amount stored as raw milli-HBD BIGINT.
+ * DHF only pays in HBD precision-3, so amount is added as raw milli-HBD BIGINT.
+ *
+ * No replay guard: this runs in the same transaction as the context's
+ * app_next_iteration, and on a fork HAF reverts current_proposals (a registered
+ * table) to the fork point, so each payment is counted exactly once. A payment
+ * naming a proposal without a current_proposals row is a no-op.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_pay_op(
     _body JSONB,
@@ -132,17 +137,9 @@ DECLARE
   __proposal_id INT    := (_body ->> 'proposal_id')::INT;
   __amount      BIGINT := (_body -> 'payment' ->> 'amount')::BIGINT;
 BEGIN
-  -- Append-only ledger row (for auditing / historical queries).
-  WITH inserted_payment AS (
-    INSERT INTO hafbe_app.proposal_payments (proposal_id, amount, source_op)
-    VALUES (__proposal_id, __amount, _id)
-    ON CONFLICT ON CONSTRAINT pk_proposal_payments DO NOTHING
-    RETURNING proposal_id, amount
-  )
   UPDATE hafbe_app.current_proposals cp
-  SET paid_amount = cp.paid_amount + ip.amount
-  FROM inserted_payment ip
-  WHERE cp.proposal_id = ip.proposal_id;
+  SET paid_amount = cp.paid_amount + __amount
+  WHERE cp.proposal_id = __proposal_id;
 END
 $$;
 

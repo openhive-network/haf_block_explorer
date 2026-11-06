@@ -34,7 +34,6 @@
  *    - proposal_votes_history: Complete proposal vote change history
  *    - current_proposal_votes: Current active proposal votes
  *    - current_proposals: Proposal metadata (create/update/remove state)
- *    - proposal_payments: Append-only payment ledger from proposal_pay_operation
  *
  * 5. TRANSACTION STATISTICS
  *    - transaction_stats_by_month: Monthly aggregated transaction stats
@@ -344,22 +343,6 @@ BEGIN
   );
   PERFORM hive.app_register_table( 'hafbe_app', 'current_proposal_votes', 'hafbe_app' );
 
-  /*
-   * proposal_payments: append-only DHF payment ledger
-   * -------------------------------------------------
-   * One row per proposal_pay_operation. Also accumulated into
-   * current_proposals.paid_amount during processing. amount is raw precision-3
-   * HBD (milli-HBD).
-   */
-  CREATE TABLE IF NOT EXISTS hafbe_app.proposal_payments (
-    proposal_id INT    NOT NULL,
-    amount      BIGINT NOT NULL,
-    source_op   BIGINT NOT NULL,
-
-    CONSTRAINT pk_proposal_payments PRIMARY KEY (source_op)
-  ) WITH (autovacuum_vacuum_insert_scale_factor = 0.005, autovacuum_freeze_min_age = 0);
-  PERFORM hive.app_register_table( 'hafbe_app', 'proposal_payments', 'hafbe_app' );
-
   ------------- TRANSACTION STATISTICS ----------------
 
   /*
@@ -595,6 +578,31 @@ BEGIN
     WHERE c.name = 'hafbe_app' AND sp.state_provider = 'KEYAUTH'
   ) THEN
     PERFORM hive.app_state_provider_drop('KEYAUTH', 'hafbe_app');
+  END IF;
+END
+$$;
+
+-- Installs made before current_proposals.paid_amount was updated directly kept
+-- a proposal_payments ledger. Unregistering it drops its shadow table, triggers,
+-- revert functions and hive_rowid; its vacuum requests are removed so hived
+-- does not try to vacuum tables that no longer exist.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM hafd.registered_tables
+    WHERE origin_table_schema = 'hafbe_app' AND origin_table_name = 'proposal_payments'
+  ) THEN
+    PERFORM hive.app_unregister_table('hafbe_app', 'proposal_payments');
+  END IF;
+
+  DROP TABLE IF EXISTS hafbe_app.proposal_payments;
+
+  IF to_regclass('hafd.vacuum_requests') IS NOT NULL THEN
+    DELETE FROM hafd.vacuum_requests
+    WHERE (schema_name, table_name) IN (
+      ('hafbe_app', 'proposal_payments'),
+      ('hafd', 'shadow_hafbe_app_proposal_payments')
+    );
   END IF;
 END
 $$;
@@ -1015,7 +1023,6 @@ BEGIN
     'witness_votes_history',
     'account_proxies_history',
     'proposal_votes_history',
-    'proposal_payments',
     'transaction_stats_by_day',
     'transaction_stats_by_month',
     'operation_type_stats_by_day',

@@ -66,7 +66,7 @@ two cache refreshes:
 
 - `current_proposals`: 4 rows; **9001 removed=TRUE**, 9002/9003/9004 removed=FALSE
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
-- `proposal_payments`: 1 row — `(9002, 50000)`
+- `current_proposals.paid_amount`: 50000 for 9002 (its one `proposal_pay_operation`), 0 for the others
 - `proposal_votes_history`: **9 rows** — 5 TRUE inserts, 2 FALSE rows from steem's declined voting rights, 2 FALSE rows from removing proposal 9001
 - `current_account_proxies`: the mock range **adds** `(dan → blocktrades)`. Unlike the proposal tables above — which are mock-only totals, since no DHF data exists before block ~22.3M — this table also carries the witness proxies inherited from the 5M base sync, so the total is base + 1, not 1.
 - `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by `prepare_mock_cache.sh`)

@@ -16,7 +16,7 @@ DECLARE
 BEGIN
   FOREACH __table IN ARRAY ARRAY[
     'block_operations', 'witness_votes_history', 'account_proxies_history', 'proposal_votes_history',
-    'proposal_payments', 'transaction_stats_by_day', 'operation_type_stats_by_day',
+    'transaction_stats_by_day', 'operation_type_stats_by_day',
     'wallet_stats_by_day', 'account_ops_count'
   ] LOOP
     SELECT reloptions INTO __options FROM pg_class WHERE oid = format('hafbe_app.%I', __table)::regclass;
