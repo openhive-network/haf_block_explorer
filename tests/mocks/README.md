@@ -137,7 +137,7 @@ sync — including btracker processing and state-provider updates.
 
 Assertions then run through the REST API via the Tavern pattern suite
 (`tests/tavern/patterns-mock`). If you need to guard physical table layout,
-cache membership, or ledger row counts, add a purpose-built DB
+cache membership, or row counts, add a purpose-built DB
 integration-test suite rather than mixing SQL assertions in with the API tests.
 
 ### Account-naming rule for fixtures
