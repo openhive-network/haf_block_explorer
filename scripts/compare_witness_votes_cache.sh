@@ -13,15 +13,19 @@
 #   <UTC time> block <n>: skipped (<why>)
 #
 # Each check is one REPEATABLE READ transaction, so the caches and the tables they are
-# computed from are read at one snapshot, between two block commits: it copies the
-# caches, runs process_witness_votes_cache() and process_proposal_vote_stats_cache()
-# (the full recompute) and compares, then ROLLS BACK. The full recompute writes only
-# the rows that differ, so a check that matches writes nothing and takes no row lock
-# the block processor could wait on; one that differs holds its locks until its
-# rollback, and lock_timeout bounds how long it waits for the processor's.
-# A check is skipped when the daily-change window has moved since the last refreshed
-# block (the first check after midnight, before the next block) or when it conflicts
-# with a block commit.
+# computed from are read at one snapshot: it copies the caches, runs
+# process_witness_votes_cache() and process_proposal_vote_stats_cache() (the full
+# recompute) and compares, then ROLLS BACK. The full recompute writes only the rows
+# that differ, so a check that matches writes nothing and takes no row lock the block
+# processor could wait on; one that differs holds its locks until its rollback, and
+# lock_timeout bounds how long it waits for the processor's.
+# That snapshot is not always one where the caches should equal the recompute: MASSIVE
+# blocks (catch-up after a restart) move the HAF-registered tables but no cache, and a
+# fork revert commits on its own, before the next LIVE block refreshes the caches. So
+# the check compares only when the caches' state row names the context's current
+# block, and is skipped when it does not, when the daily-change window has moved since
+# that block (the first check after midnight, before the next block) or when it
+# conflicts with a block commit.
 #
 # Usage:
 #   ./compare_witness_votes_cache.sh [OPTIONS]
@@ -93,11 +97,17 @@ DO $$
 DECLARE
   _block INT;
   _first INT;
+  _current INT;
   _diff  TEXT;
 BEGIN
   SELECT s.block_num, s.first_block_num INTO _block, _first FROM hafbe_app.witness_votes_cache_state s;
   IF _block IS NULL THEN
     RAISE NOTICE 'RESULT block -: skipped (no LIVE block refreshed the caches yet)';
+    RETURN;
+  END IF;
+  _current := hive.app_get_current_block_num('hafbe_app');
+  IF _block IS DISTINCT FROM _current THEN
+    RAISE NOTICE 'RESULT block %: skipped (the context is at block %, the caches were not refreshed for it)', _block, _current;
     RETURN;
   END IF;
   IF _first IS DISTINCT FROM hafbe_app.witness_votes_cache_window_start() THEN
