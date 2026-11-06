@@ -117,10 +117,11 @@ so there that part prints `SKIPPED` and the removal is checked through a block w
 another full-recompute operation. Needs synced, filled caches and the balance
 tracker schema (`--btracker-schema`, default `hafbe_bal`). It then runs
 `compare_script_test.sh`, which commits a state row at the context's current block
-and expects `scripts/compare_witness_votes_cache.sh` to report `match`, then
-`DIFFERS` (exit 1) after altering a `witness_votes_cache` row, then `skipped` (exit
-0) with the state row one block behind; on exit it recomputes the caches and restores
-the state row. The role must be a member of `hafbe_owner`.
+and expects `scripts/compare_witness_votes_cache.sh` to report `match` (exit 0), then
+`DIFFERS` (exit 1) after altering a `witness_votes_cache` row, then three `skipped`
+checks with the state row one block behind, which compare nothing (exit 2), checking
+the `matched=… skipped=… differs=… errors=…` summary of each run; on exit it
+recomputes the caches and restores the state row. The role must be a member of `hafbe_owner`.
 
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
