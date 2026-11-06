@@ -184,7 +184,8 @@ BEGIN
 END
 $$;
 
--- Append an operation to _block, after its last one.
+-- Append an operation to _block, after its last one. The position comes from
+-- the ids, not op_pos: op_pos need not match the position an id encodes.
 CREATE FUNCTION pg_temp.add_op(_block INT, _op_name TEXT, _body JSONB)
 RETURNS BIGINT
 LANGUAGE sql
@@ -197,7 +198,7 @@ AS $$
     (SELECT ot.id FROM hafd.operation_types ot WHERE ot.name = _op_name),
     _body
   FROM (
-    SELECT COALESCE(max(o.op_pos), 0) + 1 AS pos
+    SELECT (COALESCE(max(o.id) - hafd.operation_id(_block, 0), -1) + 1)::INT AS pos
     FROM hafd.operations o
     WHERE o.id >= hafd.operation_id(_block, 0) AND o.id < hafd.operation_id(_block + 1, 0)
   ) p
