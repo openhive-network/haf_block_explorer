@@ -3,7 +3,8 @@
 **Source**: `db/process_witness_votes.sql`
 **Functions**:
 - `hafbe_app.process_witness_votes(_from INT, _to INT)`
-- `hafbe_app.process_witness_votes_cache()` (LIVE mode only)
+- `hafbe_app.process_witness_votes_cache(_block INT)` (LIVE mode only: incremental or full)
+- `hafbe_app.process_witness_votes_cache()` (full recompute)
 
 ## Purpose
 
@@ -127,17 +128,58 @@ INSERT INTO witness_votes_history (approve=FALSE)
 
 ## Cache Processing (LIVE only)
 
-`process_witness_votes_cache()` runs after all other processors in LIVE mode.
+`single_processing()` calls `process_witness_votes_cache(_block)` after all other
+processors. `process_witness_votes_cache()` (no argument) is the full recompute;
+the first LIVE entry, CI's sync, `.aidev/run-checks.sh` and
+`scripts/prepare_mock_cache.sh` call it.
 
-Every cache is fully **recomputed** each block but **applied with `MERGE`**
-(`WHEN MATCHED AND <values differ> THEN UPDATE`, `WHEN NOT MATCHED THEN INSERT`,
-`WHEN NOT MATCHED BY SOURCE THEN DELETE`; PostgreSQL 17+), so only rows whose
-values changed are written, typically ~150 of ~25,500. The former
-`DELETE` + `INSERT` of every row cost ~4.9 MB of WAL per block and left ~25k dead
-tuples per block; under any long-held snapshot those could not be vacuumed, the
+### Incremental refresh and its fallbacks
+
+Most blocks change only balances (`producer_reward` alone moves a tracked account's
+VESTS on ~95 % of blocks), not the set of tracked accounts, votes, proxies or
+witnesses. For those, `process_witness_votes_cache(_block)` runs
+`refresh_witness_votes_cache_delta()`:
+
+- **Change set**: the block's impacted accounts (`hive.get_impacted_accounts` over
+  its operations) that are Cache 1 keys, plus their Cache 1 proxy ancestors up to 4
+  levels (`current_account_proxies` PK walk), whose `proxied_vests` include them.
+- **Cache 1**: those rows recomputed by `hafbe_backend.account_vest_stats_of(INT[])`
+  (same arithmetic as `account_vest_stats()`; walks proxy chains down through
+  `current_account_proxies_proxy_id`). Keep the two in step.
+- **Cache 2**: `votes` moved by the per-witness sum of the voters' `vests` deltas.
+- **Cache 3**: skipped when no Cache 2 row changed. Otherwise only the witnesses with
+  a Cache 2 row are re-ranked (they hold ranks 1..N while every `votes` is >= 0;
+  the zero-voter remainder keeps N+1..). A negative `votes`, before or after, ranks
+  everything (`refresh_witness_rank_cache()`).
+- **Cache 4**: recomputed on every block (`refresh_witness_votes_change_cache()`).
+
+It takes the full recompute (`refresh_witness_votes_cache_full()`) when:
+
+| Trigger | Why |
+|---------|-----|
+| `_block` is not `witness_votes_cache_state.block_num + 1` | The caches are not HAF-registered: a fork reverts the source tables but not them (next block is at or below the last). Also the first LIVE block and any restart / MASSIVE catch-up gap |
+| the daily-change window (`witness_votes_cache_window_start()`) differs from the stored one | Midnight: Cache 1's account set and Cache 4 must share the window (#142) |
+| the block has `account_witness_vote`, `account_witness_proxy`, `proxy_cleared`, `declined_voting_rights`, `expired_account_notification`, `update_proposal_votes` or `remove_proposal` | They change votes, proxies, proposal voters or today's vote history, i.e. the tracked set |
+| an impacted account has a `current_witnesses` row but no `witness_rank_cache` row | A new witness takes a rank and shifts the zero-voter remainder |
+
+`witness_votes_cache_state` (one row, not registered with HAF) holds the last
+refreshed block and its window, written in the block's transaction. The no-argument
+full recompute leaves it alone.
+
+`witness_votes_cache_window_start()` finds the last block at or before midnight through
+`hive_blocks_created_at_idx` (`ORDER BY created_at DESC`) in one descent; ordered by
+`num` it walked `pk_hive_blocks` back over the whole day.
+
+Every cache is written only where values change (`MERGE ... WHEN MATCHED AND
+<values differ>`, PostgreSQL 17+ for `WHEN NOT MATCHED BY SOURCE`, or `UPDATE`s of
+the changed rows). Rewriting every row cost ~4.9 MB of WAL per block and left ~25k
+dead tuples per block; under any long-held snapshot those could not be vacuumed, the
 tables bloated, and the refresh slowed until block processing fell behind.
-Statement order still matters: caches 2-4 read cache 1 (and 3 reads 2) as
-refreshed earlier in the same transaction.
+Statement order matters: caches 2-4 read cache 1 (and 3 reads 2) as refreshed
+earlier in the same transaction.
+
+`tests/witness_votes_cache/` checks every path against the full recompute; and
+`scripts/compare_witness_votes_cache.sh` does the same on a live node.
 
 ### Cache 1: Account Vest Stats
 ```sql
@@ -229,6 +271,8 @@ The cascade logic is in `process_proxy_ops()`. Changes here affect:
 Cache functions use these `hafbe_backend` objects:
 - `account_vest_stats(_first_block_num)` - Vest calculations; the argument bounds
   which historical witness voters are included (issue #142)
+- `account_vest_stats_of(_accounts INT[])` - The same for a given set of accounts
+  (the incremental refresh's Cache 1); must stay arithmetically identical
 - `current_witness_votes_view` - Active votes
 - `witness_votes_history_view` - Vote history
 - `expired_voter_stats_view` - Same arithmetic over *all* accounts; used by the
