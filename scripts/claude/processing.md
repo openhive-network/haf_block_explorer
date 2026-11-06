@@ -109,7 +109,7 @@ All processing functions are in `db/process_*.sql` files.
 |----------|------|---------|
 | `process_blocks()` | `hafbe_app.sql` | Dispatcher - routes to massive or single processing |
 | `massive_processing()` | `hafbe_app.sql` | Processes block ranges during bulk sync |
-| `single_processing()` | `hafbe_app.sql` | Processes individual blocks in live mode |
+| `single_processing()` | `single_processing.sql` | Processes individual blocks in live mode (installed after the `process_*.sql` files it calls) |
 | `process_account_stats()` | `process_account_stats.sql` | Account creation, recovery, voting rights |
 | `process_account_ops_count()` | `process_account_ops_count.sql` | Operation count per account (forking context only; `finalize_account_ops_count()` fills it at the end of massive sync) |
 | `process_block_operations()` | `process_block_operations.sql` | Op counts per block + daily/monthly per-op-type rollups (single scan, three sinks) |
@@ -244,10 +244,17 @@ For implementation details of each processor:
 When adding a new processor:
 
 1. Create the SQL file in `db/process_<name>.sql`
-2. Add call to `massive_processing()` and `single_processing()` in `hafbe_app.sql`
+2. Add call to `massive_processing()` in `hafbe_app.sql` and to `single_processing()` in `single_processing.sql`
+   (install_app.sh installs `single_processing.sql` after every `process_*.sql`, so an
+   interrupted install never leaves it calling a function that does not exist yet)
 3. Create documentation at `scripts/claude/processing/<name>.md`
 4. Update this index with link and one-line description
 5. Add any new tables to the Key Tables section
+
+When a change retires a table that the previously installed processing code still
+writes, drop it in a `db/` file that install_app.sh applies after the processing
+functions (as `drop_proposal_payments.sql` does), not in `hafbe_app.sql`, and keep the
+drop idempotent.
 
 When modifying existing processors:
 

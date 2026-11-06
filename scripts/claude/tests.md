@@ -168,7 +168,7 @@ apps then reinstall — see `tests/mocks/README.md` for the reset procedure.
 
 Mock behavior is asserted through the public REST interface by the Tavern
 mock suite below — there is no separate SQL verifier. DB-internal invariants
-(physical table layout, cache membership, ledger row counts) belong in a
+(physical table layout, cache membership, row counts) belong in a
 dedicated DB integration-test suite if ever needed, not alongside the API tests.
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
