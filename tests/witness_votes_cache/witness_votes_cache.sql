@@ -14,9 +14,18 @@
 --   - a restart gap: balances moved in blocks no refresh saw;
 --   - a voter's only proposal vote deleted, as remove_proposal does, in a block with
 --     an operation that forces the full recompute;
---   - a new witness registered for an account the block names.
--- For the last four it also checks that the incremental path alone would have left
--- the caches wrong, so a fallback that stopped firing fails the test.
+--   - a new witness registered for an account the block names;
+--   - the daily-change window moved since the last refresh: the state row carries a
+--     stale window and a cache row only the full recompute repairs is altered;
+--   - a block whose routed fill_vesting_withdraw is the only operation naming a
+--     tracked account whose vests it moves. Must take the incremental path.
+-- For the fallback cases it also checks that the incremental path alone would have
+-- left the caches wrong, so a fallback that stopped firing fails the test.
+--
+-- The daily-change cache (witness_votes_change_cache) is filled from today's vote
+-- events, which a synced chain whose blocks all predate today does not have: when it
+-- is empty, a vote event of the proxy above is added to the window so that cache is
+-- compared non-empty. The output says which.
 --
 -- The blocks are real (the synced chain's own operations decide which accounts each
 -- block names); their effects on balances and hafbe's tables are simulated by writing
@@ -133,15 +142,45 @@ BEGIN
 END
 $$;
 
+-- Record _block as the last block the caches were refreshed for, with _first_block_num
+-- as the window they were refreshed with.
+CREATE FUNCTION pg_temp.set_state(_block INT, _first_block_num INT)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+  INSERT INTO hafbe_app.witness_votes_cache_state (singleton, block_num, first_block_num)
+  VALUES (TRUE, _block, _first_block_num)
+  ON CONFLICT (singleton) DO UPDATE SET
+    block_num = EXCLUDED.block_num, first_block_num = EXCLUDED.first_block_num;
+$$;
+
 -- Record _block as the last block the caches were refreshed for, as its refresh would.
 CREATE FUNCTION pg_temp.set_last(_block INT)
 RETURNS VOID
 LANGUAGE sql
 AS $$
-  INSERT INTO hafbe_app.witness_votes_cache_state (singleton, block_num, first_block_num)
-  VALUES (TRUE, _block, hafbe_app.witness_votes_cache_window_start())
-  ON CONFLICT (singleton) DO UPDATE SET
-    block_num = EXCLUDED.block_num, first_block_num = EXCLUDED.first_block_num;
+  SELECT pg_temp.set_state(_block, hafbe_app.witness_votes_cache_window_start());
+$$;
+
+-- Refresh _block and say whether that recomputed the caches in full: only the full
+-- recompute repairs a cache row of _canary, a tracked account _block cannot change,
+-- altered first. The row is restored when the refresh left it altered.
+CREATE FUNCTION pg_temp.refresh_took_full(_block INT, _canary INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _vests BIGINT;
+BEGIN
+  UPDATE hafbe_app.account_vest_stats_cache SET vests = vests + 1 WHERE account_id = _canary
+  RETURNING vests INTO _vests;
+  PERFORM pg_temp.refresh(_block);
+  IF (SELECT vests FROM hafbe_app.account_vest_stats_cache WHERE account_id = _canary) = _vests THEN
+    UPDATE hafbe_app.account_vest_stats_cache SET vests = vests - 1 WHERE account_id = _canary;
+    RETURN FALSE;
+  END IF;
+  RETURN TRUE;
+END
 $$;
 
 -- Append an operation to _block, after its last one.
@@ -190,6 +229,19 @@ AS $$
   );
 $$;
 
+-- How many of _block's operations impact the account _name.
+CREATE FUNCTION pg_temp.times_named(_block INT, _name TEXT)
+RETURNS BIGINT
+LANGUAGE sql
+AS $$
+  SELECT count(*)
+  FROM hafbe_app.operations_view ov
+  CROSS JOIN hive.get_impacted_accounts(ov.body::hafd.operation) AS ia (name)
+  WHERE ov.block_num = _block
+    AND ov.id >= hafd.operation_id(_block, 0) AND ov.id < hafd.operation_id(_block + 1, 0)
+    AND ia.name = _name;
+$$;
+
 -- An account and the (up to 4) proxies above it.
 CREATE FUNCTION pg_temp.with_proxies(_account INT)
 RETURNS INT[]
@@ -215,6 +267,7 @@ $$;
 DO $$
 DECLARE
   _head       INT := (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app');
+  _window     INT := hafbe_app.witness_votes_cache_window_start();
   _bump       BIGINT := (SELECT max(votes) FROM hafbe_app.witness_votes_cache);
   _block      INT;    -- names _setter, no operation forcing the full recompute
   _named      INT[];  -- the accounts _block names
@@ -227,7 +280,12 @@ DECLARE
   _witness    INT;    -- named by _other but not by _block, not a witness
   _voter      INT;    -- no vote, proxy or proposal vote, not a witness, not named by _block
   _canary     INT;
-  _canary_v   BIGINT;
+  _changes    BIGINT; -- witness_votes_change_cache rows
+  _wd_block   INT;    -- a routed fill_vesting_withdraw is the only operation naming _wd_to
+  _wd_from    INT;
+  _wd_to      INT;    -- tracked, receives the withdrawal as vests
+  _wd_vests   BIGINT; -- the vests _wd_to receives
+  _to_v       BIGINT;
   _candidate  RECORD;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM hafbe_app.witness_rank_cache) THEN
@@ -266,6 +324,26 @@ BEGIN
   END IF;
   _named := pg_temp.named(_block);
   _chain := pg_temp.with_proxies(_setter);
+
+  _changes := (SELECT count(*) FROM hafbe_app.witness_votes_change_cache);
+  IF _changes = 0 THEN
+    -- A vote of _proxy's own today: the ordinary block's balance change, which moves
+    -- _proxy's vests, then moves this cache too.
+    INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op)
+    SELECT cwv.witness_id, cwv.voter_id, TRUE, hafd.operation_id(_window, 0)
+    FROM hafbe_app.current_witness_votes cwv
+    WHERE cwv.voter_id = _proxy
+    ORDER BY cwv.witness_id
+    LIMIT 1;
+    PERFORM hafbe_app.process_witness_votes_cache();
+    RAISE NOTICE 'witness_votes_change_cache: the synced data has no vote event in the window from block %; added one of proxy %, now % rows',
+      _window, _proxy, (SELECT count(*) FROM hafbe_app.witness_votes_change_cache);
+  ELSE
+    RAISE NOTICE 'witness_votes_change_cache: % rows from the synced data (window from block %)', _changes, _window;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_change_cache) THEN
+    RAISE EXCEPTION 'witness_votes_change_cache is empty, so its comparison tests nothing';
+  END IF;
 
   SELECT b.num INTO _other
   FROM generate_series(_block - 1, GREATEST(_block - 500, 2), -1) AS b (num)
@@ -311,12 +389,40 @@ BEGIN
   ORDER BY cap.account_id
   LIMIT 1;
 
-  IF _other IS NULL OR _full_block IS NULL OR _witness IS NULL OR _voter IS NULL OR _canary IS NULL THEN
-    RAISE EXCEPTION 'the synced data lacks a case: other block %, full-recompute block %, new witness %, proposal voter %, canary %',
-      _other, _full_block, _witness, _voter, _canary;
+  -- The newest routed fill_vesting_withdraw depositing vests into a tracked account no
+  -- other operation of its block names, in a block the incremental path takes.
+  FOR _candidate IN
+    SELECT ov.block_num, fa.id AS from_id, ta.id AS to_id, ta.name AS to_name,
+           (ov.body_value->'deposited'->>'amount')::BIGINT AS deposited
+    FROM hafbe_app.operations_view ov
+    JOIN hafbe_app.accounts_view fa ON fa.name = ov.body_value->>'from_account'
+    JOIN hafbe_app.accounts_view ta ON ta.name = ov.body_value->>'to_account'
+    WHERE ov.op_type_id = (SELECT ot.id FROM hafd.operation_types ot WHERE ot.name = 'hive::protocol::fill_vesting_withdraw_operation')
+      AND ov.block_num <= _head
+      AND ov.body_value->>'from_account' <> ov.body_value->>'to_account'
+      AND ov.body_value->'deposited'->>'nai' = '@@000000037'
+      AND EXISTS (SELECT 1 FROM hafbe_app.account_vest_stats_cache avs WHERE avs.account_id = ta.id)
+      AND EXISTS (SELECT 1 FROM current_account_balances cab WHERE cab.account = ta.id AND cab.nai = btracker_backend.nai_vests())
+    ORDER BY ov.block_num DESC
+    LIMIT 200
+  LOOP
+    IF NOT pg_temp.has_full_op(_candidate.block_num)
+       AND NOT _canary = ANY(pg_temp.named(_candidate.block_num))
+       AND pg_temp.times_named(_candidate.block_num, _candidate.to_name) = 1 THEN
+      _wd_block      := _candidate.block_num;
+      _wd_from       := _candidate.from_id;
+      _wd_to         := _candidate.to_id;
+      _wd_vests      := _candidate.deposited;
+      EXIT;
+    END IF;
+  END LOOP;
+
+  IF _other IS NULL OR _full_block IS NULL OR _witness IS NULL OR _voter IS NULL OR _canary IS NULL OR _wd_block IS NULL THEN
+    RAISE EXCEPTION 'the synced data lacks a case: other block %, full-recompute block %, new witness %, proposal voter %, canary %, routed withdrawal block %',
+      _other, _full_block, _witness, _voter, _canary, _wd_block;
   END IF;
-  RAISE NOTICE 'block % names proxy setter % (chain %); other block %; full-recompute block %; new witness %; proposal voter %; canary %',
-    _block, _setter, _chain, _other, _full_block, _witness, _voter, _canary;
+  RAISE NOTICE 'block % names proxy setter % (chain %); other block %; full-recompute block %; new witness %; proposal voter %; canary %; block % routes % vests from % to tracked account %',
+    _block, _setter, _chain, _other, _full_block, _witness, _voter, _canary, _wd_block, _wd_vests, _wd_from, _wd_to;
 
   PERFORM pg_temp.expect_match('initial caches');
 
@@ -326,14 +432,9 @@ BEGIN
   PERFORM pg_temp.set_last(_block - 1);
   PERFORM pg_temp.add_vests(_setter, _bump);
 
-  -- Only the full recompute repairs a cache row of an account the block cannot change.
-  UPDATE hafbe_app.account_vest_stats_cache SET vests = vests + 1 WHERE account_id = _canary
-  RETURNING vests INTO _canary_v;
-  PERFORM pg_temp.refresh(_block);
-  IF (SELECT vests FROM hafbe_app.account_vest_stats_cache WHERE account_id = _canary) <> _canary_v THEN
+  IF pg_temp.refresh_took_full(_block, _canary) THEN
     RAISE EXCEPTION 'ordinary block: the refresh recomputed the caches in full instead of updating them';
   END IF;
-  UPDATE hafbe_app.account_vest_stats_cache SET vests = vests - 1 WHERE account_id = _canary;
   -- before_wr holds the ranks of the full recompute before the block.
   IF NOT EXISTS (
     SELECT 1 FROM hafbe_app.witness_rank_cache r JOIN before_wr b USING (witness_id) WHERE r.rank <> b.rank
@@ -405,6 +506,31 @@ BEGIN
   PERFORM pg_temp.set_last(_full_block - 1);
   PERFORM pg_temp.refresh(_full_block);
   PERFORM pg_temp.expect_match('full-recompute operation');
+
+  ------------------------------------------------------------------------------
+  -- A window move: the caches were last refreshed with another daily-change window
+  -- than the successor block's.
+  ------------------------------------------------------------------------------
+  PERFORM pg_temp.set_state(_block - 1, _window - 1);
+  IF NOT pg_temp.refresh_took_full(_block, _canary) THEN
+    RAISE EXCEPTION 'window move: the refresh updated the caches instead of recomputing them in full';
+  END IF;
+  PERFORM pg_temp.expect_match('window move');
+
+  ------------------------------------------------------------------------------
+  -- A routed withdrawal: _wd_block names _wd_to only through the fill_vesting_withdraw
+  -- that moves its vests. Only the receiving side is simulated.
+  ------------------------------------------------------------------------------
+  PERFORM pg_temp.set_last(_wd_block - 1);
+  PERFORM pg_temp.add_vests(_wd_to, _wd_vests);
+  _to_v := (SELECT vests FROM hafbe_app.account_vest_stats_cache WHERE account_id = _wd_to);
+  IF pg_temp.refresh_took_full(_wd_block, _canary) THEN
+    RAISE EXCEPTION 'routed withdrawal: the refresh recomputed the caches in full instead of updating them';
+  END IF;
+  IF (SELECT vests FROM hafbe_app.account_vest_stats_cache WHERE account_id = _wd_to) = _to_v THEN
+    RAISE EXCEPTION 'routed withdrawal: the refresh left the vests of account % as they were', _wd_to;
+  END IF;
+  PERFORM pg_temp.expect_match('routed withdrawal');
 END
 $$;
 
