@@ -101,8 +101,9 @@ it took the incremental path and moved a witness rank through a proxy's proxied
 vests), a fork, a restart gap, a new witness, a voter's only proposal vote being
 removed, a moved daily-change window (a stale `first_block_num` in the state row must
 force the full recompute) and a block whose routed `fill_vesting_withdraw` is the only
-operation naming a tracked account whose vests it moves (the incremental path must
-pick it up), and after each compares all four witness caches and
+operation naming a tracked account whose vests it moves, directly or as the proxy
+ancestor of another account the block names (the incremental path must pick it up),
+and after each compares all four witness caches and
 `proposal_vote_stats_cache` row for row against a full recompute. For the fallback
 cases it also checks that the incremental path alone would have left a difference.
 When `witness_votes_change_cache` is empty (the synced 2016 chain has no vote event
@@ -119,7 +120,8 @@ tracker schema (`--btracker-schema`, default `hafbe_bal`). It then runs
 `compare_script_test.sh`, which commits a state row at the context's current block
 and expects `scripts/compare_witness_votes_cache.sh` to report `match` (exit 0), then
 `DIFFERS` (exit 1) after altering a `witness_votes_cache` row, then three `skipped`
-checks with the state row one block behind, which compare nothing (exit 2), checking
+checks with the state row one block behind and again one block ahead (a fork
+reverted the context), which compare nothing (exit 2), checking
 the `matched=… skipped=… differs=… errors=…` summary of each run; on exit it
 recomputes the caches and restores the state row. The role must be a member of `hafbe_owner`.
 

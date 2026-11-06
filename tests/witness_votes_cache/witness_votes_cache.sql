@@ -18,7 +18,8 @@
 --   - the daily-change window moved since the last refresh: the state row carries a
 --     stale window and a cache row only the full recompute repairs is altered;
 --   - a block whose routed fill_vesting_withdraw is the only operation naming a
---     tracked account whose vests it moves. Must take the incremental path.
+--     tracked account whose vests it moves, and that names no account proxying to
+--     it. Must take the incremental path.
 -- For the fallback cases it also checks that the incremental path alone would have
 -- left the caches wrong, so a fallback that stopped firing fails the test.
 --
@@ -390,7 +391,8 @@ BEGIN
   LIMIT 1;
 
   -- The newest routed fill_vesting_withdraw depositing vests into a tracked account no
-  -- other operation of its block names, in a block the incremental path takes.
+  -- other operation of its block names, directly or through a proxy chain, in a block
+  -- the incremental path takes.
   FOR _candidate IN
     SELECT ov.block_num, fa.id AS from_id, ta.id AS to_id, ta.name AS to_name,
            (ov.body_value->'deposited'->>'amount')::BIGINT AS deposited
@@ -408,7 +410,14 @@ BEGIN
   LOOP
     IF NOT pg_temp.has_full_op(_candidate.block_num)
        AND NOT _canary = ANY(pg_temp.named(_candidate.block_num))
-       AND pg_temp.times_named(_candidate.block_num, _candidate.to_name) = 1 THEN
+       AND pg_temp.times_named(_candidate.block_num, _candidate.to_name) = 1
+       -- Nor as the proxy ancestor of another account the block names, which the
+       -- refresh would add without the withdrawal.
+       AND NOT EXISTS (
+         SELECT 1 FROM unnest(pg_temp.named(_candidate.block_num)) AS n (account_id)
+         WHERE n.account_id <> _candidate.to_id
+           AND _candidate.to_id = ANY(pg_temp.with_proxies(n.account_id))
+       ) THEN
       _wd_block      := _candidate.block_num;
       _wd_from       := _candidate.from_id;
       _wd_to         := _candidate.to_id;
