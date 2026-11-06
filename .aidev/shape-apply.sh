@@ -22,6 +22,9 @@
 #     keeps the CREATE TABLE of the tables added since the shape was captured
 #     (hafbe_app.wallet_stats_by_day, hafbe_app.witness_votes_cache_state), empty and
 #     without statistics;
+#   - db/drop_proposal_payments.sql is empty: it unregisters and drops the
+#     proposal_payments ledger of installs made before it was removed, through the HAF
+#     context the shape restores without rows, and no API statement reads the table;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh;
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
@@ -58,6 +61,8 @@ done
 for f in db/hafbe_app.sql submodules/btracker/db/btracker_app.sql submodules/reptracker/db/reptracker_app.sql; do
     echo "-- the shape carries this app's tables and statistics (.aidev/shape-apply.sh)" > "$stage/$f"
 done
+echo "-- the proposal_payments upgrade drop does not run on the shape (.aidev/shape-apply.sh)" \
+    > "$stage/db/drop_proposal_payments.sql"
 # The balance tracker's backend/shared/nai_types.sql checks its NAI constants against
 # asset_table, which btracker_app.sql seeds and the shape restores empty: keep the
 # seed. (The copy's heaps are restored from the shape after the install, so the rows
