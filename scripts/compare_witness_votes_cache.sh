@@ -39,7 +39,9 @@
 #   --count=N          Number of checks, 0 for no limit (default: 1)
 #   --help, -h         This help
 #
-# Exit status: 0 when every check matched or was skipped, 1 when any differed.
+# When the checks end it prints matched=M skipped=S differs=D errors=E.
+# Exit status: 1 when any check differed or failed with an error; otherwise 2 when
+# no check matched (every one was skipped, so nothing was compared); otherwise 0.
 # =============================================================================
 
 set -euo pipefail
@@ -160,23 +162,38 @@ ROLLBACK;
 SQL
 }
 
-status=0
 n=0
+matched=0
+skipped=0
+differs=0
+errors=0
 while :; do
   n=$((n + 1))
   output="$(check 2>&1)" || true
   result="$(sed -n 's/^.*NOTICE:  RESULT //p' <<< "$output")"
   if [ -z "$result" ]; then
     result="error: $(tail -3 <<< "$output" | tr '\n' ' ')"
-    status=1
   fi
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $result"
   case "$result" in
-    *DIFFERS*) status=1 ;;
+    error:*)        errors=$((errors + 1)) ;;
+    *': match')     matched=$((matched + 1)) ;;
+    *': DIFFERS '*) differs=$((differs + 1)) ;;
+    *': skipped '*) skipped=$((skipped + 1)) ;;
+    *)              errors=$((errors + 1)) ;;
   esac
   if [ "$COUNT" -ne 0 ] && [ "$n" -ge "$COUNT" ]; then
     break
   fi
   sleep "$INTERVAL"
 done
-exit "$status"
+
+echo "matched=$matched skipped=$skipped differs=$differs errors=$errors"
+if [ "$differs" -ne 0 ] || [ "$errors" -ne 0 ]; then
+  exit 1
+fi
+if [ "$matched" -eq 0 ]; then
+  echo "no comparison was made: every check skipped"
+  exit 2
+fi
+exit 0

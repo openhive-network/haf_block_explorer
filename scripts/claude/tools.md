@@ -128,8 +128,12 @@ It compares only when `witness_votes_cache_state.block_num` equals
 tables but no cache, and a fork revert commits before the next LIVE block refreshes
 the caches, so either would differ legitimately. It also skips when the window moved
 at midnight or on a conflict with a block commit. A matching check writes nothing.
-Exits 1 if any check differed. `tests/witness_votes_cache/compare_script_test.sh`
-exercises its match, DIFFERS and skip results.
+When the checks end it prints `matched=M skipped=S differs=D errors=E`. Exits 1 if
+any check differed or failed with an error, otherwise 2 (`no comparison was made:
+every check skipped`) if no check matched, so a run whose caches never caught up with
+the context does not read as a match; otherwise 0.
+`tests/witness_votes_cache/compare_script_test.sh` exercises its match, DIFFERS and
+skip results.
 
 ---
 

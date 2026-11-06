@@ -9,7 +9,8 @@
 #     match and exit 0;
 #   - the same, with one witness_votes_cache row altered: DIFFERS and exit 1;
 #   - the state row one block behind the context's current block (a MASSIVE
-#     catch-up, or a fork revert before the next block): skipped and exit 0.
+#     catch-up, or a fork revert before the next block): every one of three checks
+#     skipped, so nothing was compared, and exit 2.
 # On exit it recomputes the caches in full and puts the state row back as it was.
 # The connecting role must be a member of hafbe_owner, as for the script.
 #
@@ -68,14 +69,21 @@ set_state() {
 }
 
 failed=0
-# expect CASE EXIT_STATUS PATTERN
+# expect CASE EXIT_STATUS PATTERNS [SCRIPT_ARGS...]: SCRIPT_ARGS default to --count=1;
+# PATTERNS holds one grep -E pattern per line, each of which the output must contain.
 expect() {
-    local rc=0 output
-    output="$(BTRACKER_SCHEMA="$BTRACKER_SCHEMA" "$COMPARE" --url="$POSTGRES_URL" --count=1 2>&1)" || rc=$?
-    if [ "$rc" -eq "$2" ] && grep -q -- "$3" <<< "$output"; then
-        echo "PASS $1: exit $rc, $output"
+    local rc=0 output pattern ok=1 case="$1" status="$2" patterns="$3"
+    shift 3
+    [ $# -gt 0 ] || set -- --count=1
+    output="$(BTRACKER_SCHEMA="$BTRACKER_SCHEMA" "$COMPARE" --url="$POSTGRES_URL" "$@" 2>&1)" || rc=$?
+    [ "$rc" -eq "$status" ] || ok=0
+    while IFS= read -r pattern; do
+        grep -q -E -- "$pattern" <<< "$output" || ok=0
+    done <<< "$patterns"
+    if [ "$ok" -eq 1 ]; then
+        echo "PASS $case: exit $rc, $output"
     else
-        echo "FAIL $1: expected exit $2 and '$3', got exit $rc: $output"
+        echo "FAIL $case: expected exit $status and '$patterns', got exit $rc: $output"
         failed=1
     fi
 }
@@ -86,14 +94,18 @@ sql "SET ROLE hafbe_owner;
      SELECT hafbe_app.process_proposal_vote_stats_cache();" > /dev/null
 
 set_state 0
-expect "state at the current block" 0 ': match$'
+expect "state at the current block" 0 ': match$
+^matched=1 skipped=0 differs=0 errors=0$'
 
 sql "SET ROLE hafbe_owner;
      UPDATE hafbe_app.witness_votes_cache SET votes = votes + 1
      WHERE witness_id = (SELECT min(witness_id) FROM hafbe_app.witness_votes_cache);" > /dev/null
-expect "state at the current block, a cache row altered" 1 ': DIFFERS witness_votes_cache: 2 rows$'
+expect "state at the current block, a cache row altered" 1 ': DIFFERS witness_votes_cache: 2 rows$
+^matched=0 skipped=0 differs=1 errors=0$'
 
 set_state -1
-expect "state behind the current block, a cache row altered" 0 ': skipped (the context is at block '
+expect "state behind the current block, a cache row altered" 2 ': skipped \(the context is at block [0-9]+, the caches were not refreshed for it\)$
+^matched=0 skipped=3 differs=0 errors=0$
+^no comparison was made: every check skipped$' --count=3 --interval=0
 
 [ "$failed" -eq 0 ]
