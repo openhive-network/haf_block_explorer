@@ -116,7 +116,8 @@ All processing functions are in `db/process_*.sql` files.
 | `process_transaction_stats()` | `process_transaction_stats.sql` | Daily/monthly transaction aggregations |
 | `process_witness_stats()` | `process_witness_stats.sql` | Witness properties and metadata |
 | `process_witness_votes()` | `process_witness_votes.sql` | Witness votes and proxy assignments |
-| `process_witness_votes_cache()` | `process_witness_votes.sql` | Cache refresh (LIVE only) |
+| `process_witness_votes_cache(_block)` | `process_witness_votes.sql` | Witness vote cache refresh per LIVE block: incremental, or the full recompute when the block can change what the caches track or is not the successor of the last refreshed block |
+| `process_witness_votes_cache()` | `process_witness_votes.sql` | Full recompute of the witness vote caches (first LIVE entry, CI, mock setup) |
 | `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. `process_proposal_vote_op` only records votes for proposals that currently exist and are not removed — mirroring hived's `update_proposal_votes_evaluator`, which `continue`s past missing/removed proposal_ids. Pre-HF28 the chain accepted (and silently dropped) votes for nonexistent proposals; replaying them without this guard tripped the `current_proposal_votes -> current_proposals` FK and crashed block processing. |
 | `process_proposal_vote_stats_cache()` | `process_proposal_vote_stats_cache.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
@@ -132,7 +133,7 @@ Each block range calls processors in this order:
 6. `process_proposals()` - All proposal ops in one row-by-row processor: create/update/remove/pay + update_proposal_votes + decline/expired cleanup
 
 In LIVE mode, two cache refreshes run after the processors (in this order):
-- `process_witness_votes_cache()` - recomputes `account_vest_stats_cache` + witness vote caches, applied with `MERGE` so only changed rows are written
+- `process_witness_votes_cache(_block)` - updates `account_vest_stats_cache` + witness vote caches from the block's impacted accounts, or recomputes them in full (see [witness_votes.md](processing/witness_votes.md#cache-processing-live-only))
 - `process_proposal_vote_stats_cache()` - same for `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
 
 ### Why process_proposals uses a FOR LOOP instead of CTE+CASE

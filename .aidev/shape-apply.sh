@@ -19,8 +19,9 @@
 #     hafd.contexts, which a shape restores without rows. The shape already carries
 #     the source's tables with their statistics, which are what the plans need, and
 #     no API statement calls the processing procedures. The copy of db/hafbe_app.sql
-#     keeps the CREATE TABLE of a table added since the shape was captured
-#     (hafbe_app.wallet_stats_by_day), empty and without statistics;
+#     keeps the CREATE TABLE of the tables added since the shape was captured
+#     (hafbe_app.wallet_stats_by_day, hafbe_app.witness_votes_cache_state), empty and
+#     without statistics;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh;
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
@@ -68,18 +69,21 @@ if ! grep -q "INSERT INTO asset_table" "$stage/submodules/btracker/db/btracker_a
     echo "submodules/btracker/db/btracker_app.sql no longer seeds asset_table: update .aidev/shape-apply.sh" >&2
     exit 1
 fi
-# A table hafbe_app.sql adds after the shape was captured is not in the shape: create
-# it (empty, without statistics) so the API functions that read it can run.
+# The tables hafbe_app.sql adds after the shape was captured are not in the shape:
+# create them (empty, without statistics) so the functions that read them can run.
 {
     echo "SET ROLE hafbe_owner;"
     sed -n '/CREATE TABLE hafbe_app.wallet_stats_by_day/,/);/p' db/hafbe_app.sql \
         | sed 's/CREATE TABLE /CREATE TABLE IF NOT EXISTS /'
+    sed -n '/CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state/,/);/p' db/hafbe_app.sql
     echo "RESET ROLE;"
 } >> "$stage/db/hafbe_app.sql"
-if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.wallet_stats_by_day" "$stage/db/hafbe_app.sql"; then
-    echo "db/hafbe_app.sql no longer creates hafbe_app.wallet_stats_by_day: update .aidev/shape-apply.sh" >&2
-    exit 1
-fi
+for t in wallet_stats_by_day witness_votes_cache_state; do
+    if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.$t" "$stage/db/hafbe_app.sql"; then
+        echo "db/hafbe_app.sql no longer creates hafbe_app.$t: update .aidev/shape-apply.sh" >&2
+        exit 1
+    fi
+done
 # l2_framework's tables, from its db/l2_framework_app.sql (see the header).
 l2_app_sql=submodules/l2_framework/db/l2_framework_app.sql
 {

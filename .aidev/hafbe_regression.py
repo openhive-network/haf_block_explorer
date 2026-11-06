@@ -11,7 +11,8 @@ load_expected_witness_props, run hafbe_test.compare_accounts() (search path
 hafbe_app), hafbe_test.compare_witnesses() (search path hafbe_bal) and
 hafbe_test.compare_wallet_stats() and hafbe_test.compare_account_ops_count(), and
 fail when hafbe_test.differing_accounts, differing_witnesses, differing_wallet_days
-or differing_ops_counts has rows.
+or differing_ops_counts has rows. Then tests/witness_votes_cache/run_test.sh, which
+CI's regression-test also runs.
 
 The one difference is the loading: load_expected_data.py calls the load
 function once per record, one round trip each (92,462 accounts), which takes
@@ -113,6 +114,13 @@ def run_ops_count(conn) -> tuple[bool, str]:
         return False, "account_ops_count is empty"
     return True, f"all {accounts} account_ops_count rows match account_operations"
 
+def run_witness_votes_cache(url: str) -> tuple[bool, str]:
+    script = os.path.join(HERE, "..", "tests", "witness_votes_cache", "run_test.sh")
+    result = subprocess.run(["bash", script, f"--url={url}"], capture_output=True, text=True)
+    output = (result.stdout + result.stderr).strip()
+    return result.returncode == 0, output
+
+
 def main(out: str) -> int:
     url = os.environ["HAFBE_TEST_DB_URL"]
     subprocess.run(["bash", os.path.join(REGRESSION, "install_test_schema.sh"), f"--url={url}"], check=True)
@@ -131,6 +139,10 @@ def main(out: str) -> int:
         ok, message = run_ops_count(conn)
         print(("PASS " if ok else "FAIL ") + message)
         cases.append(("ops_count", ok, message, time.monotonic() - t0))
+    t0 = time.monotonic()
+    ok, message = run_witness_votes_cache(url)
+    print(("PASS " if ok else "FAIL ") + message)
+    cases.append(("witness_votes_cache", ok, message, time.monotonic() - t0))
     with open(os.path.join(out, "regression.xml"), "w", encoding="utf-8") as handle:
         failures = sum(1 for c in cases if not c[1])
         handle.write('<?xml version="1.0" encoding="UTF-8"?>\n')

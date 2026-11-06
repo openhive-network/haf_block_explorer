@@ -469,8 +469,11 @@ BEGIN
    * They provide fast access to computed values that would otherwise
    * require expensive joins across multiple tables.
    *
-   * Updated by process_witness_votes_cache() at each block during live sync.
-   * Truncated/rebuilt at each block to ensure consistency.
+   * Updated by process_witness_votes_cache(_block) at each block during live sync:
+   * incrementally from the block's impacted accounts, or recomputed in full when
+   * the block can change what they track (see db/process_witness_votes.sql).
+   * Not registered with HAF; witness_votes_cache_state carries what the refresh
+   * needs to notice a fork.
    */
 
   /*
@@ -606,6 +609,33 @@ BEGIN
   END IF;
 END
 $$;
+
+------------- WITNESS VOTE CACHE STATE ----------------
+
+/*
+ * witness_votes_cache_state: The block the witness vote caches were last refreshed for
+ * ------------------------------------------------------------------------------------
+ * One row, written by process_witness_votes_cache(_block) in the block's transaction:
+ * the block number and the daily-change window (_first_block_num) it used. The next
+ * block updates the caches incrementally only when it is block_num + 1 and its window
+ * is the same; any other block takes the full recompute.
+ *
+ * Deliberately NOT registered with HAF, like the caches it describes: a fork reverts
+ * the registered tables the caches are computed from but neither the caches nor this
+ * row, and the block HAF hands over next (at or below block_num) is what tells the
+ * refresh the caches hold reverted values.
+ *
+ * Created outside the context-creation block so that a deployment whose context
+ * already exists gets it on reinstall.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state (
+  singleton       BOOLEAN NOT NULL DEFAULT TRUE,  -- Always TRUE: at most one row (PK)
+  block_num       INT     NOT NULL,               -- Block the caches were last refreshed for
+  first_block_num INT     NULL,                   -- Daily-change window that refresh used
+
+  CONSTRAINT pk_witness_votes_cache_state PRIMARY KEY (singleton),
+  CONSTRAINT witness_votes_cache_state_singleton CHECK (singleton)
+);
 
 ------------- WALLET STATISTICS ----------------
 
@@ -961,7 +991,7 @@ BEGIN
   PERFORM hafbe_app.process_witness_stats(_block, _block);
   PERFORM hafbe_app.process_witness_votes(_block, _block);
   PERFORM hafbe_app.process_proposals(_block, _block);
-  PERFORM hafbe_app.process_witness_votes_cache();
+  PERFORM hafbe_app.process_witness_votes_cache(_block);
   -- Must run after process_witness_votes_cache so account_vest_stats_cache
   -- is fresh for the same block before we join against it.
   PERFORM hafbe_app.process_proposal_vote_stats_cache();

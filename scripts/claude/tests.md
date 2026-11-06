@@ -93,6 +93,24 @@ insert-mostly tables, and that `hafbe_app.request_tables_freeze()` queues a
 except the `current_*` ones, inside a transaction it rolls back. It skips (exit 0)
 on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
 
+### Witness Vote Cache Test
+`tests/witness_votes_cache/run_test.sh` (CI job `regression-test`, as `haf_admin`;
+AIDEV's `regression` step as its `witness_votes_cache` case) drives
+`hafbe_app.process_witness_votes_cache(_block)` through an ordinary block (asserting
+it took the incremental path and moved a witness rank through a proxy's proxied
+vests), a fork, a restart gap, a new witness, and a voter's only proposal vote being
+removed, and after each compares all four witness caches and
+`proposal_vote_stats_cache` row for row against a full recompute. For the fallback
+cases it also checks that the incremental path alone would have left a difference.
+The blocks are the synced chain's own (their operations decide which accounts each
+names); the blocks' effects on balances and hafbe tables are simulated by writing
+those tables, and a fork by reverting such a write, inside a transaction it rolls
+back. A real `remove_proposal` operation is added to a block only when the role may
+write `hafd.operations` (CI's `haf_admin`); AIDEV's `haf_shared_consumer` may not,
+so there that part prints `SKIPPED` and the removal is checked through a block with
+another full-recompute operation. Needs synced, filled caches and the balance
+tracker schema (`--btracker-schema`, default `hafbe_bal`).
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 
