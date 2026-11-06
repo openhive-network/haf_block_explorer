@@ -7,7 +7,9 @@
 # vote caches filled, as a role that may write hafd.operations and the balance
 # tracker's tables (haf_admin): the incremental refresh of an ordinary block, a fork,
 # a restart gap, remove_proposal and a new witness, each compared against a full
-# recompute. Everything it changes is rolled back.
+# recompute. Everything it changes is rolled back. Then compare_script_test.sh runs
+# scripts/compare_witness_votes_cache.sh in the states it must skip, match and differ
+# in, and undoes them.
 #
 # EXIT CODES:
 #   0 - Passed
@@ -85,4 +87,9 @@ if ! output="$(PGOPTIONS="-c search_path=${BTRACKER_SCHEMA},public" \
     exit 1
 fi
 echo "$output"
+
+if ! "$SCRIPT_DIR/compare_script_test.sh" --url="$POSTGRES_ACCESS" --btracker-schema="$BTRACKER_SCHEMA"; then
+    echo "FAILED"
+    exit 1
+fi
 echo "PASSED"
