@@ -11,13 +11,13 @@ BEGIN;
 
 CREATE TEMPORARY TABLE early_group ON COMMIT DROP AS
 SELECT contexts::hive.contexts_group AS contexts FROM hafd.applications
-WHERE name = 'hafbe_app';
+WHERE name = 'haf_block_explorer';
 
 DO $$
 DECLARE
   __contexts hive.contexts_group := (SELECT contexts FROM early_group);
 BEGIN
-  ASSERT __contexts IS NOT NULL, 'hafbe_app is not registered as an application';
+  ASSERT __contexts IS NOT NULL, 'haf_block_explorer is not registered as an application';
   ASSERT NOT hive.app_is_forking('hafbe_app'), 'needs a hafbe_app that is still in its massive sync (not forking)';
   ASSERT (SELECT bool_and(early_block_processing) AND COUNT(*) = cardinality(__contexts)
           FROM hafd.contexts WHERE name = ANY(__contexts)),

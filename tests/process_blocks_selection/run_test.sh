@@ -4,14 +4,20 @@
 # =============================================================================
 #
 # haf_app_driver.py is on PATH in the app image, so process_blocks.sh asks the
-# HAF application registry whether the driver can run hafbe_app: the driver
+# HAF application registry whether the driver can run haf_block_explorer (the
+# application, registered under the name it locks, whose group holds the
+# hafbe_app context and the embedded balance tracker's): the driver
 # exits before its first range when it cannot, and under a restart policy that
 # is a container that never processes a block.
 #
 # Needs a database with haf_block_explorer installed. Puts stubs for
 # haf_app_driver.py and run_with_reconnect.sh first on PATH and checks the
 # choice in each registry state, then starts the real legacy main() loop
-# through process_blocks.sh. When --user may (haf_admin), it also hides HAF's
+# through process_blocks.sh. It re-runs scripts/install_app.sh --only-hafbe
+# over a row left under the old application name hafbe_app (which must fail)
+# and over its own registration (which must keep it paused), and checks that a
+# HAF with haf#403 refuses the haf_block_explorer lock when the entry procedure
+# is gone. When --user may (haf_admin), it also hides HAF's
 # lock helper and the registry table to cover a HAF older than both,
 # re-running scripts/install_app.sh --only-hafbe there; a role that may
 # not reports those cases as SKIP. Everything it changes in the registry is
@@ -81,14 +87,17 @@ sql() { psql "$ADMIN_URL" -X -Atq -v ON_ERROR_STOP=on -c "$1"; }
 
 registered="$(sql "SELECT to_regclass('hafd.applications') IS NOT NULL")"
 [ "$registered" = t ] || { echo "FAILED: this HAF has no application registry; the test needs one"; exit 1; }
-read -r saved_contexts saved_procedure < <(sql "SELECT contexts::text, process_procedure FROM hafd.applications WHERE name = 'hafbe_app'" | tr '|' ' ') || true
+read -r saved_contexts saved_procedure saved_paused < <(sql "SELECT contexts::text, process_procedure, paused FROM hafd.applications WHERE name = 'haf_block_explorer'" | tr '|' ' ') || true
 if [ "${saved_procedure:-}" != hafbe_app.process_blocks ]; then
-    echo "FAILED: hafbe_app is not registered with its entry procedure: install haf_block_explorer first"
+    echo "FAILED: haf_block_explorer is not registered with its entry procedure: install haf_block_explorer first"
     exit 1
 fi
 # The embedded balance tracker context is driven by hafbe's loop, so it is in hafbe's group
-[ "$(sql "SELECT contexts @> ARRAY['hafbe_app', '$BTRACKER_SCHEMA'] FROM hafd.applications WHERE name = 'hafbe_app'")" = t ] \
-    || { echo "FAILED: hafbe_app's registered contexts $saved_contexts lack $BTRACKER_SCHEMA"; exit 1; }
+[ "$(sql "SELECT contexts @> ARRAY['hafbe_app', '$BTRACKER_SCHEMA'] FROM hafd.applications WHERE name = 'haf_block_explorer'")" = t ] \
+    || { echo "FAILED: haf_block_explorer's registered contexts $saved_contexts lack $BTRACKER_SCHEMA"; exit 1; }
+# The install registers under the lock name only: no row is left under the old name
+[ "$(sql "SELECT count(*) FROM hafd.applications WHERE name = 'hafbe_app'")" = 0 ] \
+    || { echo "FAILED: an application row named hafbe_app is registered next to haf_block_explorer"; exit 1; }
 
 # Undo whatever this test changed, whatever way it ends
 restore_haf() {
@@ -104,8 +113,9 @@ restore_haf() {
            END IF;
          END \$\$" \
         && sql "UPDATE hafd.applications
-                SET name = 'hafbe_app', contexts = '$saved_contexts', process_procedure = '$saved_procedure'
-                WHERE name IN ('hafbe_app', 'other_app_by_test')"
+                SET name = 'haf_block_explorer', contexts = '$saved_contexts', process_procedure = '$saved_procedure',
+                    paused = '$saved_paused'
+                WHERE name IN ('haf_block_explorer', 'hafbe_app', 'other_app_by_test')"
 }
 
 work_dir="$(mktemp -d)"
@@ -147,9 +157,9 @@ expect() {
     out="$(run_process_blocks "$@")" || status=$?
     chosen="$(grep -oE 'STUB-(DRIVER|LEGACY)' <<<"$out" | head -1)" || true
     chosen="${chosen#STUB-}"
-    # The driver runs hafbe_app's group under haf_block_explorer's install lock
-    if [ "$chosen" = DRIVER ] && ! grep -q -- "--app=hafbe_app --postgres-url=.* --lock=haf_block_explorer" <<<"$out"; then
-        chosen="DRIVER without --app=hafbe_app or --lock=haf_block_explorer"
+    # The driver runs the application registered under the name it locks
+    if [ "$chosen" = DRIVER ] && ! grep -q -- "--app=haf_block_explorer --postgres-url=.* --lock=haf_block_explorer" <<<"$out"; then
+        chosen="DRIVER without --app=haf_block_explorer or --lock=haf_block_explorer"
     fi
     if [ "$chosen" = LEGACY ] && ! grep -q -- "CALL hafbe_app.main('hafbe_app', '$BTRACKER_SCHEMA'," <<<"$out"; then
         chosen="LEGACY without hafbe_app.main('hafbe_app', '$BTRACKER_SCHEMA', ...)"
@@ -194,6 +204,18 @@ run_legacy() {
 # can_alter <owner of the object>: whether --user may rename it
 can_alter() { [ "$(sql "SELECT pg_has_role(current_user, $1, 'USAGE')")" = t ]; }
 
+# install_hafbe: re-runs scripts/install_app.sh --only-hafbe; sets install_out and install_status
+install_hafbe() {
+    if [ ! -f "$SCRIPTS/set_version_in_sql.pgsql" ]; then
+        "$SCRIPTS/generate_version_sql.sh" "$SCRIPTS/.."
+    fi
+    install_status=0
+    install_out="$("$SCRIPTS/install_app.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --user="$POSTGRES_USER" \
+        --btracker-schema="$BTRACKER_SCHEMA" --only-hafbe --log-file=STDOUT 2>&1)" || install_status=$?
+}
+
+registry_row() { sql "SELECT name, contexts::text, process_procedure FROM hafd.applications WHERE contexts @> ARRAY['hafbe_app']"; }
+
 expect "registered with its entry procedure" DRIVER
 expect "--stop-at-block reaches the driver" DRIVER "--stop-at-block=5" -- --stop-at-block=5
 PATH_FIRST="$work_dir/flaky" expect "database down at the first attempt" DRIVER \
@@ -216,7 +238,7 @@ else
 fi
 
 # The driver cannot run an app without its entry procedure: reinstall
-sql "UPDATE hafd.applications SET process_procedure = NULL WHERE name = 'hafbe_app'"
+sql "UPDATE hafd.applications SET process_procedure = NULL WHERE name = 'haf_block_explorer'"
 expect "registered without an entry procedure" NONE "Reinstall haf_block_explorer"
 restore_haf
 sql "ALTER PROCEDURE hafbe_app.process_blocks(hive.blocks_range) RENAME TO process_blocks_hidden_by_test"
@@ -225,10 +247,55 @@ restore_haf
 expect "entry procedure restored" DRIVER
 
 # Another application owns the context and drives it: no second loop
-sql "UPDATE hafd.applications SET name = 'other_app_by_test' WHERE name = 'hafbe_app'"
+# HAF's lock helpers (haf#403) refuse the block processor a lock whose application's
+# entry procedure is gone; they find the row by the lock name, haf_block_explorer
+if [ "$(sql "SELECT to_regprocedure('hive._missing_app_process_procedure(text)') IS NOT NULL")" = t ]; then
+    sql "ALTER PROCEDURE hafbe_app.process_blocks(hive.blocks_range) RENAME TO process_blocks_hidden_by_test"
+    out="$(sql "SELECT hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer'])" 2>&1)" && status=0 || status=$?
+    restore_haf
+    if [ "$status" -ne 0 ] && grep -q "lock on haf_block_explorer: .*reinstall the application" <<<"$out"; then
+        echo "PASS  entry procedure gone: the haf_block_explorer lock is refused"
+    else
+        fail "entry procedure gone: expected the haf_block_explorer lock refused (exit $status)" "$out"
+    fi
+else
+    echo "SKIP  entry procedure gone, lock refused: this HAF has no hive._missing_app_process_procedure (haf#403)"
+fi
+
+# A row left under the old application name by an install older than the rename: the
+# processor and the install both refuse it, naming the way out, and the row stays
+sql "UPDATE hafd.applications SET name = 'hafbe_app' WHERE name = 'haf_block_explorer'"
+expect "registered under the old name hafbe_app" NONE "SELECT hive.app_unregister\('hafbe_app'\); and reinstall"
+before="$(registry_row)"
+install_hafbe
+after="$(registry_row)"
+if [ "$install_status" -ne 0 ] \
+    && grep -q "as application hafbe_app, not haf_block_explorer. Replay haf_block_explorer from scratch, or run SELECT hive.app_unregister('hafbe_app'); and reinstall" <<<"$install_out" \
+    && [ "$before" = "$after" ] && [ "$(sql "SELECT count(*) FROM hafd.applications WHERE name = 'haf_block_explorer'")" = 0 ]; then
+    echo "PASS  install over the old name hafbe_app fails and leaves the row"
+else
+    fail "install over the old name hafbe_app: exit $install_status, row before '$before', after '$after'" \
+        "$(grep -E 'ERROR|WARNING' <<<"$install_out" | head -20 || true)"
+fi
+restore_haf
+
+# Reinstalling over its own registration keeps it, paused included
+sql "UPDATE hafd.applications SET paused = TRUE WHERE name = 'haf_block_explorer'"
+install_hafbe
+row="$(sql "SELECT name, process_procedure, paused, contexts @> ARRAY['hafbe_app', '$BTRACKER_SCHEMA'] FROM hafd.applications WHERE contexts && ARRAY['hafbe_app', '$BTRACKER_SCHEMA']")"
+if [ "$install_status" -eq 0 ] && [ "$row" = "haf_block_explorer|hafbe_app.process_blocks|t|t" ]; then
+    echo "PASS  reinstall over haf_block_explorer keeps the registration paused"
+else
+    fail "reinstall over haf_block_explorer: exit $install_status, registry rows '$row'" \
+        "$(grep -E 'ERROR|WARNING' <<<"$install_out" | head -20 || true)"
+fi
+restore_haf
+expect "registered after the reinstall" DRIVER
+
+sql "UPDATE hafd.applications SET name = 'other_app_by_test' WHERE name = 'haf_block_explorer'"
 expect "context owned by another application" NONE "belongs to another application"
 
-# A row under another name, for other contexts, does not count for hafbe_app
+# A row under another name, for other contexts, does not count for haf_block_explorer
 sql "UPDATE hafd.applications SET contexts = ARRAY['other_context_by_test'] WHERE name = 'other_app_by_test'"
 expect "not in the registry" LEGACY "running the legacy CALL main\(\) loop"
 expect "--stop-at-block reaches the legacy loop" LEGACY "main\('hafbe_app', '$BTRACKER_SCHEMA', 5\)" -- --stop-at-block=5
@@ -250,16 +317,11 @@ expect "registry restored" DRIVER
 # itself is not started on it
 if can_alter "$registry_owner"; then
     sql "ALTER TABLE hafd.applications RENAME TO applications_hidden_by_test"
-    if [ ! -f "$SCRIPTS/set_version_in_sql.pgsql" ]; then
-        "$SCRIPTS/generate_version_sql.sh" "$SCRIPTS/.."
-    fi
-    status=0
-    out="$("$SCRIPTS/install_app.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --user="$POSTGRES_USER" \
-        --btracker-schema="$BTRACKER_SCHEMA" --only-hafbe --log-file=STDOUT 2>&1)" || status=$?
-    if [ "$status" -eq 0 ] && grep -q "This HAF has no application registry" <<<"$out"; then
+    install_hafbe
+    if [ "$install_status" -eq 0 ] && grep -q "This HAF has no application registry" <<<"$install_out"; then
         echo "PASS  install on a HAF without the registry"
     else
-        fail "install on a HAF without the registry: exit $status" "$(grep -E 'ERROR|WARNING' <<<"$out" | head -20 || true)"
+        fail "install on a HAF without the registry: exit $install_status" "$(grep -E 'ERROR|WARNING' <<<"$install_out" | head -20 || true)"
     fi
     expect "HAF without the registry" LEGACY "running the legacy CALL main\(\) loop"
     restore_haf

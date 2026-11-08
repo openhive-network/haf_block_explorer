@@ -68,7 +68,7 @@ BEGIN
   -- A HAF older than haf#379 delivers blocks only once every core index exists.
   IF to_regprocedure('hive.wait_for_core_indexes(hive.contexts_group, text, text, interval, interval)') IS NOT NULL THEN
     PERFORM hive.wait_for_core_indexes(
-      (SELECT a.contexts FROM hafd.applications a WHERE a.name = 'hafbe_app')::hive.contexts_group,
+      (SELECT a.contexts FROM hafd.applications a WHERE a.name = 'haf_block_explorer')::hive.contexts_group,
       'hafd.account_operations', NULL, '6 hours'
     );
   END IF;
