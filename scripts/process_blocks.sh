@@ -76,10 +76,13 @@ case "$REGISTRY_PROBE_ATTEMPTS" in
     ''|*[!0-9]*|0) echo "ERROR: REGISTRY_PROBE_ATTEMPTS must be a positive number"; exit 1 ;;
 esac
 
-# Asks the HAF application registry who should process hafbe_app's blocks. Prints one of:
-#   driver    registered under its own name with an entry procedure that exists
-#   broken    registered under its own name, but with no entry procedure or one that is
+# Asks the HAF application registry who should process the hafbe_app context's blocks.
+# The application is registered as haf_block_explorer, the name it locks. Prints one of:
+#   driver    registered as haf_block_explorer with an entry procedure that exists
+#   broken    registered as haf_block_explorer, but with no entry procedure or one that is
 #             gone (e.g. after a failed uninstall)
+#   stale     the context is registered under the application's old name, hafbe_app, by an
+#             install older than the rename; db/hafbe_app.sql refuses to install over it
 #   embedded  another application owns the hafbe_app context and drives it
 #   legacy    not in the registry, mostly on a HAF older than the registry (haf#341,
 #             1.28.6 and older), where db/hafbe_app.sql skips registration
@@ -94,7 +97,8 @@ esac
 # a password on stdin, which holds the SQL.
 registry_probe() {
     PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-5}" \
-    psql "$POSTGRES_ACCESS" -X -w -Atq -v ON_ERROR_STOP=on -v app=hafbe_app <<'EOF'
+    psql "$POSTGRES_ACCESS" -X -w -Atq -v ON_ERROR_STOP=on \
+        -v app=haf_block_explorer -v old_app=hafbe_app -v context=hafbe_app <<'EOF'
 SELECT to_regclass('hafd.applications') IS NOT NULL AS has_registry \gset
 \if :has_registry
 SELECT CASE
@@ -108,7 +112,11 @@ SELECT CASE
   THEN 'broken'
   WHEN EXISTS (
     SELECT 1 FROM hafd.applications
-    WHERE name <> :'app' AND contexts @> ARRAY[ :'app' ]::TEXT[])
+    WHERE name = :'old_app' AND contexts @> ARRAY[ :'context' ]::TEXT[])
+  THEN 'stale'
+  WHEN EXISTS (
+    SELECT 1 FROM hafd.applications
+    WHERE name <> :'app' AND contexts @> ARRAY[ :'context' ]::TEXT[])
   THEN 'embedded'
   ELSE 'legacy'
 END;
@@ -163,7 +171,7 @@ run_driver() {
     [ "$n_blocks" != "null" ] && limit_arg=(--stop-at-block="$n_blocks")
     date -uIseconds > /tmp/block_processing_startup_time.txt
     # the driver appends to the log file itself (STDOUT = none)
-    exec haf_app_driver.py --app=hafbe_app --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}"
+    exec haf_app_driver.py --app=haf_block_explorer --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}"
 }
 
 # Execs the driver, exits, or returns when the legacy CALL main() loop is the one to run.
@@ -174,15 +182,22 @@ select_loop() {
     case "$LOOP" in
         driver)
             if command -v haf_app_driver.py >/dev/null 2>&1; then
-                echo "hafbe_app is registered in the HAF application registry; running haf_app_driver.py"
+                echo "haf_block_explorer is registered in the HAF application registry; running haf_app_driver.py"
                 run_driver "$@"
             fi
             echo "WARNING: haf_app_driver.py not found, falling back to the legacy CALL main() loop"
             ;;
         broken)
-            echo "ERROR: hafbe_app is in the HAF application registry, but its entry procedure"
+            echo "ERROR: haf_block_explorer is in the HAF application registry, but its entry procedure"
             echo "       (hafbe_app.process_blocks) is missing. Reinstall haf_block_explorer"
             echo "       (scripts/install_app.sh)."
+            exit 1
+            ;;
+        stale)
+            echo "ERROR: the hafbe_app context is registered in the HAF application registry as"
+            echo "       application hafbe_app, not haf_block_explorer. Replay haf_block_explorer from"
+            echo "       scratch, or run SELECT hive.app_unregister('hafbe_app'); and reinstall"
+            echo "       haf_block_explorer (scripts/install_app.sh)."
             exit 1
             ;;
         embedded)
@@ -200,7 +215,7 @@ select_loop() {
             exit 1
             ;;
         legacy)
-            echo "WARNING: the HAF application registry does not list hafbe_app (a HAF older than the"
+            echo "WARNING: the HAF application registry does not list haf_block_explorer (a HAF older than the"
             echo "         registry, 1.28.6 and older, has none); running the legacy CALL main() loop"
             ;;
         *)

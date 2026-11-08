@@ -98,9 +98,14 @@ on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
 as `haf_admin`; AIDEV's `selection` step, run after `tavern`) needs hafbe installed
 and registered. With stubs for `haf_app_driver.py` and `run_with_reconnect.sh` first on
 PATH it checks which loop `scripts/process_blocks.sh` picks in each registry state
-(registered, entry procedure NULL or renamed away, context owned by another app, not
-registered, database down once, unreachable, query error), then runs the real legacy
-`main()` through the script and stops it with SIGTERM. When `--user` may rename HAF's
+(registered as `haf_block_explorer`, entry procedure NULL or renamed away, left under the
+old name `hafbe_app`, context owned by another app, not registered, database down once,
+unreachable, query error), then runs the real legacy `main()` through the script and stops
+it with SIGTERM. It re-runs `install_app.sh --only-hafbe` over an old-name `hafbe_app` row
+(must fail naming the remedy and leave the row) and over a paused `haf_block_explorer` row
+(must succeed and keep `paused`), and on a HAF with haf#403 checks that
+`hive.acquire_app_block_processor_locks` refuses `haf_block_explorer` with "reinstall the
+application" when the entry procedure is gone (SKIP on an older HAF). When `--user` may rename HAF's
 objects it hides `hive.acquire_app_block_processor_locks` (legacy `main()` must still
 start) and `hafd.applications` (`install_app.sh --only-hafbe` must warn and complete; the
 script must pick the legacy loop); otherwise those cases print SKIP (AIDEV's shared-HAF

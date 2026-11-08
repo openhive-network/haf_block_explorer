@@ -262,7 +262,11 @@ app_install() {
     (cd "$stage" && bash scripts/install_app.sh --host="$AIDEV_EXTERNAL_HAF_HOST" \
         --port="${AIDEV_EXTERNAL_HAF_PORT:-5432}" --user=haf_shared_consumer --log-file=STDOUT \
         --blocksearch-indexes=true) || return 1
-    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "select git_hash from hafbe_app.version"
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "select git_hash from hafbe_app.version" || return 1
+    # Registered under its lock name, with the embedded balance tracker's context in its group
+    [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select string_agg(name || ':' || (contexts @> array['hafbe_app', 'hafbe_bal'])::text, ',')
+                                          from hafd.applications where contexts && array['hafbe_app', 'hafbe_bal']")" = "haf_block_explorer:true" ] \
+        || { echo "hafd.applications does not hold exactly one row, haf_block_explorer, for hafbe_app and hafbe_bal"; return 1; }
 }
 
 install() {
