@@ -93,6 +93,19 @@ insert-mostly tables, and that `hafbe_app.request_tables_freeze()` queues a
 except the `current_*` ones, inside a transaction it rolls back. It skips (exit 0)
 on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
 
+### Process-Blocks Loop Selection Test
+`tests/process_blocks_selection/run_test.sh` (CI job `process-blocks-selection-test`,
+as `haf_admin`; AIDEV's `selection` step, run after `tavern`) needs hafbe installed
+and registered. With stubs for `haf_app_driver.py` and `run_with_reconnect.sh` first on
+PATH it checks which loop `scripts/process_blocks.sh` picks in each registry state
+(registered, entry procedure NULL or renamed away, context owned by another app, not
+registered, database down once, unreachable, query error), then runs the real legacy
+`main()` through the script and stops it with SIGTERM. When `--user` may rename HAF's
+objects it hides `hive.acquire_app_block_processor_locks` (legacy `main()` must still
+start) and `hafd.applications` (`install_app.sh --only-hafbe` must warn and complete; the
+script must pick the legacy loop); otherwise those cases print SKIP (AIDEV's shared-HAF
+consumer). It restores the registry on exit.
+
 ### Witness Vote Cache Test
 `tests/witness_votes_cache/run_test.sh` (CI job `regression-test`, as `haf_admin`;
 AIDEV's `regression` step as its `witness_votes_cache` case) drives

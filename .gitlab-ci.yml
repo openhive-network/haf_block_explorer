@@ -904,6 +904,17 @@ setup-scripts-test:
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
 
+# Which loop scripts/process_blocks.sh starts in each state of the HAF application
+# registry, with the driver and the legacy loop stubbed, then the real legacy main();
+# as haf_admin it also covers a HAF without the registry and the lock helpers.
+process-blocks-selection-test:
+  extends: .hafbe_test_base
+  script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning process_blocks.sh loop selection tests..."
+    ./tests/process_blocks_selection/run_test.sh --host=${HAF_HOST}
+    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+
 performance-test:
   extends: .hafbe_test_base
   script:
