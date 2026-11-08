@@ -7,12 +7,27 @@ This document covers how HAFBE processes blockchain data from HAF.
 HAFBE processes blocks from HAF (Hive Application Framework) via a main loop that runs continuously. The entry point is `hafbe_app.main()` called by `scripts/process_blocks.sh`.
 
 **Processing pipeline:**
-1. `scripts/process_blocks.sh` starts the application
+1. `scripts/process_blocks.sh` starts the application (see "Which loop runs" below)
 2. `hafbe_app.main()` enters an infinite loop calling `hive.app_next_iteration()`
 3. For each block range, `log_and_process_blocks()` orchestrates:
    - Balance Tracker processing (btracker)
    - HAFBE core processing (5 processors)
    - HAF state provider updates
+
+## Which loop runs
+
+`scripts/process_blocks.sh` asks the HAF application registry (`hafd.applications`, haf#341) about `hafbe_app` before it starts anything; `haf_app_driver.py` being on PATH (the psql base image ships it) is not enough, since the driver exits before its first range when the registry cannot run the app:
+
+| Registry state | process_blocks.sh |
+|---|---|
+| `hafbe_app` registered, `process_procedure` (`hafbe_app.process_blocks`) exists | `exec haf_app_driver.py --app=hafbe_app --lock=haf_block_explorer` (the legacy loop when the binary is missing) |
+| `hafbe_app` registered, procedure NULL or gone | exit 1, "Reinstall haf_block_explorer" |
+| another application's `contexts` hold `hafbe_app` | exit 1, no second loop |
+| `hafbe_app` not registered (no registry: HAF 1.28.6 and older) | legacy `CALL hafbe_app.main(...)` loop |
+| cannot connect | retried `REGISTRY_PROBE_ATTEMPTS` (12) times, `REGISTRY_PROBE_RETRY_SECONDS` (5 s) apart, then exit 1 for the restart policy |
+| registry query fails on a live connection | exit 1 |
+
+The driver runs the whole group (`hafbe_app` + the embedded balance tracker context). On a HAF without the registry `db/hafbe_app.sql` skips `hive.app_register` with a WARNING, and `main()` runs without `hive.acquire_app_block_processor_locks` (WARNING) when HAF has no lock helpers. Tested by `tests/process_blocks_selection/run_test.sh` (see tests.md).
 
 ## Processing Stages
 

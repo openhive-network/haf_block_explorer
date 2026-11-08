@@ -25,12 +25,13 @@ the failure body. `regression` also writes one case per comparison
 | `sync` | haf_block_explorer's block processing (with the balance tracker), the reputation tracker's and l2_framework's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
 | `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000, and `hafbe_app.wallet_stats_by_day` with the aggregate over `account_parameters` it caches | `regression-test` |
 | `tavern` | `.aidev/hafbe_tavern.py`: `tests/tavern/patterns-mainnet` against PostgREST over the synced clone (`postgrest.py`, as `docker/docker-compose-test.yml` starts it), 4 xdist workers, run from a copy in `test-results/<suite>/tavern/` (the comparator writes each answer, `.out.json`, beside its test) | `pattern-test` |
+| `selection` | `tests/process_blocks_selection/run_test.sh` on the synced clone: which loop `scripts/process_blocks.sh` starts in each state of the HAF application registry (stubbed loops), then the real legacy `main()` through it. The consumer may not rename HAF's objects, so the cases of a HAF without the registry or the lock helpers report SKIP here. Runs last, after `tavern`, in every suite that runs `tavern` (the slots do not name it): it changes (and restores) the registry | `process-blocks-selection-test` |
 
 | Slot | Steps | Shared HAF |
 |---|---|---|
 | quick, coverage | shellcheck, sqlfluff, sql-registered | no |
-| full, canary | those plus install, reinstall, sync, regression, tavern | yes |
-| baseline | install, reinstall, sync, regression, tavern | yes |
+| full, canary | those plus install, reinstall, sync, regression, tavern (and selection after it) | yes |
+| baseline | install, reinstall, sync, regression, tavern (and selection after it) | yes |
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
 

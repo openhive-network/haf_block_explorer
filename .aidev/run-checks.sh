@@ -32,8 +32,15 @@
 #   - regression      tests/regression against the synced clone (.aidev/hafbe_regression.py)
 #   - tavern          tests/tavern/patterns-mainnet against PostgREST over the synced clone
 #                     (.aidev/hafbe_tavern.py); one junit case per test
+#   - selection       tests/process_blocks_selection: which loop scripts/process_blocks.sh
+#                     starts in each state of the HAF application registry, then the real
+#                     legacy main() through it. The consumer may not rename HAF's objects,
+#                     so the cases of a HAF without the registry or the lock helpers are
+#                     skipped here (CI's process-blocks-selection-test runs them as
+#                     haf_admin). It changes the registry, so it runs last, and a suite
+#                     that runs tavern runs it after all its steps without naming it
 #
-# install, reinstall, sync, regression and tavern need the shared HAF (sandbox.external
+# install, reinstall, sync, regression, tavern and selection need the shared HAF (sandbox.external
 # haf, provider haf/haf); the clone is dropped when the script exits, pass or fail.
 # Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml
 # and tavern.xml.
@@ -159,6 +166,8 @@ stage_sources() {
     stage="$(mktemp -d)"
     mkdir -p "$stage/submodules"
     cp -r db backend endpoints scripts "$stage/"
+    mkdir -p "$stage/tests"
+    cp -r tests/process_blocks_selection "$stage/tests/"
     cp -r submodules/btracker submodules/reptracker submodules/l2_framework "$stage/submodules/"
     for d in "$stage" "$stage/submodules/btracker" "$stage/submodules/reptracker"; do
         echo "-- the app's roles are provided by the shared HAF" > "$d/db/builtin_roles.sql"
@@ -173,7 +182,8 @@ stage_sources() {
         echo "TRUNCATE TABLE version; INSERT INTO version(git_hash) VALUES ('$hash');" \
             > "$stage/submodules/$m/scripts/set_version_in_sql.pgsql"
     done
-    sed -i "s#/haf_block_log?#/$clone?#" "$stage/scripts/install_app.sh" "$stage/scripts/uninstall_app.sh"
+    sed -i "s#/haf_block_log?#/$clone?#" "$stage/scripts/install_app.sh" "$stage/scripts/uninstall_app.sh" \
+        "$stage/scripts/process_blocks.sh"
     sed -i '/DROP OWNED\|DROP ROLE/d' "$stage/scripts/uninstall_app.sh"
     # HAfAH, which CI's compose installs from its image before haf_block_explorer
     # (hafbe's SQL calls hafah_backend): the runtime image carries that image's sources.
@@ -350,6 +360,14 @@ sync_apps() {
     echo "sync complete in $((SECONDS - t0))s"
 }
 
+# process_blocks.sh logs in as the consumer and runs as hafbe_owner (PGOPTIONS role)
+process_blocks_selection() {
+    stage_sources || return 1
+    bash "$stage/tests/process_blocks_selection/run_test.sh" --host="$AIDEV_EXTERNAL_HAF_HOST" \
+        --port="${AIDEV_EXTERNAL_HAF_PORT:-5432}" --user=haf_shared_consumer --database="$clone" \
+        --processor-user=haf_shared_consumer
+}
+
 for s in "$@"; do
     case "$s" in
         shellcheck) step shellcheck run_shellcheck ;;
@@ -360,8 +378,12 @@ for s in "$@"; do
         sync) step sync on_clone sync_apps ;;
         regression) step regression on_clone python3 .aidev/hafbe_regression.py "$out" ;;
         tavern) step tavern on_clone python3 .aidev/hafbe_tavern.py "$out" ;;
+        selection) step selection on_clone process_blocks_selection ;;
         *) echo "unknown step: $s" >&2; exit 2 ;;
     esac
 done
+if [[ " $* " == *" tavern "* && " $* " != *" selection "* ]]; then
+    step selection on_clone process_blocks_selection
+fi
 python3 .aidev/junit_cases.py "$out/junit.xml" "$suite" "$cases"
 exit "$status"

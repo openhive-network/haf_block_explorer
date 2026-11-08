@@ -1128,8 +1128,14 @@ DECLARE
 BEGIN
   -- Block until any active haf_block_explorer installer releases its
   -- exclusive lock; held by this session until main() returns. Covers the
-  -- hafbe_app and embedded hafbe_bal contexts driven by this loop.
-  PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']);
+  -- hafbe_app and embedded hafbe_bal contexts driven by this loop. A HAF older
+  -- than the lock helpers has none: run without the lock, as install_app.sh
+  -- does when its lock wrapper is absent.
+  IF to_regprocedure('hive.acquire_app_block_processor_locks(text[])') IS NOT NULL THEN
+    PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']);
+  ELSE
+    RAISE WARNING 'This HAF has no hive.acquire_app_block_processor_locks; processing blocks without the haf_block_explorer application lock';
+  END IF;
 
   IF _maxBlockLimit IS NOT NULL THEN
     RAISE NOTICE 'Max block limit is specified as: %', _maxBlockLimit;
@@ -1437,6 +1443,16 @@ BEGIN
       END
       $pb$
     $BODY$, __btracker_schema, __btracker_schema);
+
+  -- A HAF older than the application registry (haf#341; 1.28.6 and older) has
+  -- none: install anyway and leave block processing to the legacy main() loop.
+  -- scripts/process_blocks.sh asks the registry before it starts the driver, so
+  -- the two agree. PL/pgSQL plans the queries below only when they run, so this
+  -- check is enough.
+  IF to_regclass('hafd.applications') IS NULL THEN
+    RAISE WARNING 'This HAF has no application registry (older than haf#341); not registering hafbe_app. Block processing will use the legacy main() loop';
+    RETURN;
+  END IF;
 
   -- The embedded balance tracker registered itself as a standalone application
   -- during its own install; its context is driven by this loop instead.
