@@ -276,8 +276,6 @@ process_blocks() {
 } &
 BLOCK_PROCESSING_JOB_PID=$!
 
-jobs -l
-
 echo "waiting for job finish: $BLOCK_PROCESSING_JOB_PID."
 local status=0
 wait $BLOCK_PROCESSING_JOB_PID || status=$?
