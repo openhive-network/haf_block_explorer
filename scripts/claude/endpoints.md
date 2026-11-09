@@ -211,8 +211,21 @@ endpoints/
 │   ├── operations.sql
 │   ├── proposals.sql
 │   └── enums.sql
-└── rewrite_rules.conf       # Nginx URL rewrites for REST paths
+├── rewrite_rules.conf       # Nginx URL rewrites for REST paths
+└── rpc_arguments.lua        # Parameters each function declares (rewriter's hive.rpc_form)
 ```
+
+`rewrite_rules.conf` and `rpc_arguments.lua` are both written by `scripts/openapi_rewrite.sh`
+(common-ci-configuration's `process_openapi.py`, at the `COMMON_CI_REF` it pins) into
+`endpoints_openapi/`; copy both into `endpoints/` whenever an endpoint's path or parameters
+change. The postgrest-rewriter (`Dockerfile.rewriter`, `docker/haf_block_explorer_nginx.conf.template`)
+forwards a REST GET or HEAD of a function as a form POST of exactly the parameters the map lists
+for it, so a value starting with a PostgREST operator (`not.`, `eq.`, ...) reaches the function
+as an argument; every other query parameter (a column filter, `select`, `order`, `limit`,
+`offset`) stays in the URL. A parameter missing from the map stays in the URL too and is read as a
+filter when its value looks like one (`tests/rewriter/test_postgrest_parameters.py` fails on a
+stale map). PostgREST runs a POST READ WRITE when the function is VOLATILE, so every
+`hafbe_endpoints` function must stay STABLE or IMMUTABLE (the install refuses otherwise).
 
 ## Common Patterns
 
@@ -413,6 +426,9 @@ For RESTful paths, add to `endpoints/rewrite_rules.conf`:
 rewrite ^/hafbe-api/your-path$ /hafbe-api/rpc/your_function break;
 ```
 
+Regenerate `endpoints/rpc_arguments.lua` too (`scripts/openapi_rewrite.sh`, see the layout
+above), or the new function's arguments are forwarded as PostgREST query parameters.
+
 ### Step 6: Install and test
 
 ```bash
@@ -431,6 +447,7 @@ curl "http://localhost:3000/rpc/your_function?param-name=value"
 | New endpoint category | Create directory, add SQL files, create new .md, update this index |
 | New return type | Add to appropriate `endpoints/types/*.sql` |
 | URL route change | Update `endpoints/rewrite_rules.conf` |
+| Endpoint parameter change | Regenerate `endpoints/rpc_arguments.lua` (`scripts/openapi_rewrite.sh`) |
 
 When modifying endpoints:
 1. Update the SQL file with OpenAPI annotations

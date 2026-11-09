@@ -46,6 +46,12 @@ http {
                 return "{}"
             end
         end
+
+        -- Forwards a GET or HEAD of a function as a form POST of the arguments it
+        -- declares (common-ci-configuration's nginx image): values starting with
+        -- `not.`, `eq.`, ... reach the function instead of being read as filters.
+        rpc_form = require "hive.rpc_form"
+        rpc_arguments = dofile(ngx.config.prefix() .. "conf/rpc_arguments.lua")
     }
 
     server {
@@ -71,6 +77,15 @@ http {
             # Set REWRITE_LOG=on in the environment to enable rewrite logging,
             # otherwise it will remain disabled
             ${REWRITE_LOG}
+
+            # After the rewrite rules, so the path segments they turn into arguments,
+            # and the encoded path-filter, go into the form body with the rest.
+            rewrite_by_lua_block {
+                rpc_form.forward(rpc_arguments)
+            }
+            header_filter_by_lua_block {
+                rpc_form.restore_head()
+            }
 
             proxy_pass http://block-explorer-postgrest:3000;
 

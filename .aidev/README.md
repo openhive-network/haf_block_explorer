@@ -13,7 +13,7 @@ fork from that branch.
 `.aidev/run-checks.sh <suite> <step>...` runs the named steps and writes
 `test-results/<suite>/junit.xml`, one test case per step, with the step's log tail as
 the failure body. `regression` also writes one case per comparison
-(`regression.xml`), `tavern` one per test (`tavern.xml`).
+(`regression.xml`), `tavern` and `rewriter` one per test (`tavern.xml`, `rewriter.xml`).
 
 | Step | What | CI job it stands for |
 |---|---|---|
@@ -25,13 +25,14 @@ the failure body. `regression` also writes one case per comparison
 | `sync` | haf_block_explorer's block processing (with the balance tracker), the reputation tracker's and l2_framework's, to block 5000000 in the clone; then the witness votes cache, `hafbe_app.create_hafbe_indexes()` and `hive.app_restore_indexes('hafbe_app')` | `sync` + `wait-for-haf-be-startup.sh` |
 | `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000, and `hafbe_app.wallet_stats_by_day` with the aggregate over `account_parameters` it caches | `regression-test` |
 | `tavern` | `.aidev/hafbe_tavern.py`: `tests/tavern/patterns-mainnet` against PostgREST over the synced clone (`postgrest.py`, as `docker/docker-compose-test.yml` starts it), 4 xdist workers, run from a copy in `test-results/<suite>/tavern/` (the comparator writes each answer, `.out.json`, beside its test) | `pattern-test` |
+| `rewriter` | `.aidev/hafbe_rewriter.py`: `tests/rewriter` through the postgrest-rewriter in front of PostgREST over the synced clone. No docker: the runtime image carries the OpenResty of `Dockerfile.rewriter`'s base image (with `hive.rpc_form`), which runs `docker/haf_block_explorer_nginx.conf.template` rendered as `docker/rewriter_entrypoint.sh` does, with `endpoints/rewrite_rules.conf` and `endpoints/rpc_arguments.lua`; only the listen ports and the upstream are changed. Operator-prefixed values (`not.`, `eq.`, ...) reaching every TEXT argument, column filters and PostgREST's own parameters, HEAD then GET on one connection, and the argument map against the endpoint signatures. Runs after `tavern` in every suite that runs `tavern` (the slots do not name it) | `rewriter-test` |
 | `selection` | `tests/process_blocks_selection/run_test.sh` on the synced clone: which loop `scripts/process_blocks.sh` starts in each state of the HAF application registry (stubbed loops), then the real legacy `main()` through it. The consumer may not rename HAF's objects, so the cases of a HAF without the registry or the lock helpers report SKIP here. Runs last, after `tavern`, in every suite that runs `tavern` (the slots do not name it): it changes (and restores) the registry | `process-blocks-selection-test` |
 
 | Slot | Steps | Shared HAF |
 |---|---|---|
 | quick, coverage | shellcheck, sqlfluff, sql-registered | no |
-| full, canary | those plus install, reinstall, sync, regression, tavern (and selection after it) | yes |
-| baseline | install, reinstall, sync, regression, tavern (and selection after it) | yes |
+| full, canary | those plus install, reinstall, sync, regression, tavern (and rewriter and selection after it) | yes |
+| baseline | install, reinstall, sync, regression, tavern (and rewriter and selection after it) | yes |
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
 
@@ -178,7 +179,7 @@ changes; nothing here is re-pinned by hand (aidev `docs/operations/project-test-
 `postgrest`, `pytest`, `pytest-xdist` and `tavern`; the Dockerfile adds what it lacks,
 with no version pins: `psycopg2-binary`, hive/tests_api (`validate_response`, the tavern
 tests' comparator) from its default branch as CI's `pattern-test` clones it, and
-HAfAH's SQL sources from CI's HAfAH image at `/opt/hafah`. Checks run with your uid and
+HAfAH's SQL sources from CI's HAfAH image at `/opt/hafah`, and the OpenResty of `Dockerfile.rewriter`'s base image at `/usr/local/openresty` with the Alpine loader and the two libraries it links outside that tree (`/etc/ld-musl-x86_64.path` points the loader at them); its digest moves with `Dockerfile.rewriter`'s `FROM`. Checks run with your uid and
 nothing is installed at run time. `environment.image` is only the seed pin read before
 a slot resolves (the base's digest at adoption) and does not need to move.
 
