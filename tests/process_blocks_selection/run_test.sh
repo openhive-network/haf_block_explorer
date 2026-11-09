@@ -16,8 +16,8 @@
 # through process_blocks.sh. It re-runs scripts/install_app.sh --only-hafbe
 # over a row left under the old application name hafbe_app (which must fail)
 # and over its own registration (which must keep it paused), and checks that a
-# HAF with haf#403 refuses the haf_block_explorer lock when the entry procedure
-# is gone. When --user may (haf_admin), it also hides HAF's
+# HAF with haf#403 or haf#454 refuses the haf_block_explorer lock when the entry
+# procedure is gone. When --user may (haf_admin), it also hides HAF's
 # lock helper and the registry table to cover a HAF older than both,
 # re-running scripts/install_app.sh --only-hafbe there; a role that may
 # not reports those cases as SKIP. Everything it changes in the registry is
@@ -177,6 +177,15 @@ expect() {
     fi
 }
 
+# error_lines <output>: its error lines, less the cancel that stops the loop. Only lines
+# that start with ERROR: (psql may prefix its source) count: the output holds psql's own
+# command line, ON_ERROR_STOP included. Read whole, so that no SIGPIPE decides it.
+error_lines() {
+    local errors
+    errors="$(grep -E '^(psql:[^ ]+: )?ERROR:' <<<"$1")" || true
+    grep -v "canceling statement due to user request" <<<"$errors" || true
+}
+
 # run_legacy <case> [pattern...]: process_blocks.sh's real legacy loop, CALL main(). It
 # runs until stopped: SIGTERM after a while, to the script alone as docker stop sends it
 # to PID 1 (--foreground: not to timeout's whole process group, psql included), must
@@ -192,7 +201,7 @@ run_legacy() {
     out="$(cat "$work_dir/legacy.out")"
     sql "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
          WHERE application_name = 'block_explorer_block_processing' AND pid <> pg_backend_pid()" >/dev/null
-    if grep -v "canceling statement due to user request" <<<"$out" | grep -q "ERROR"; then
+    if [ -n "$(error_lines "$out")" ]; then
         fail "$name: exit $status" "$out"; return
     fi
     for pattern in "the legacy CALL main\(\) loop" "Entering application main loop" "Exiting application main loop" "$@"; do
@@ -246,20 +255,32 @@ expect "entry procedure gone" NONE "Reinstall haf_block_explorer"
 restore_haf
 expect "entry procedure restored" DRIVER
 
+# The legacy loop's output holds psql's ON_ERROR_STOP: only real error lines fail it
+if [ -z "$(error_lines $'jobs -l\n[1]+ 42 Running psql -v "ON_ERROR_STOP=on" -c "CALL hafbe_app.main()"\nERROR:  canceling statement due to user request')" ] \
+    && [ "$(error_lines $'NOTICE:  x\nERROR:  boom')" = "ERROR:  boom" ] \
+    && [ "$(error_lines $'psql:<stdin>:3: ERROR:  boom')" = "psql:<stdin>:3: ERROR:  boom" ]; then
+    echo "PASS  error lines: ON_ERROR_STOP and the cancel ignored, ERROR: lines caught"
+else
+    fail "error lines: the matcher misreads ON_ERROR_STOP, the cancel or an ERROR: line"
+fi
+
 # Another application owns the context and drives it: no second loop
-# HAF's lock helpers (haf#403) refuse the block processor a lock whose application's
-# entry procedure is gone; they find the row by the lock name, haf_block_explorer
-if [ "$(sql "SELECT to_regprocedure('hive._missing_app_process_procedure(text)') IS NOT NULL")" = t ]; then
+# HAF's lock helpers refuse the block processor a lock whose application's entry
+# procedure is gone (hive._app_broken_reason since haf#454,
+# hive._missing_app_process_procedure since haf#403); they find the row by the lock
+# name, haf_block_explorer
+if [ "$(sql "SELECT to_regprocedure('hive._app_broken_reason(text)') IS NOT NULL
+                 OR to_regprocedure('hive._missing_app_process_procedure(text)') IS NOT NULL")" = t ]; then
     sql "ALTER PROCEDURE hafbe_app.process_blocks(hive.blocks_range) RENAME TO process_blocks_hidden_by_test"
     out="$(sql "SELECT hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer'])" 2>&1)" && status=0 || status=$?
     restore_haf
-    if [ "$status" -ne 0 ] && grep -q "lock on haf_block_explorer: .*reinstall the application" <<<"$out"; then
+    if [ "$status" -ne 0 ] && grep -qF "lock on haf_block_explorer: its process procedure hafbe_app.process_blocks( hive.blocks_range ) does not exist; reinstall the application" <<<"$out"; then
         echo "PASS  entry procedure gone: the haf_block_explorer lock is refused"
     else
         fail "entry procedure gone: expected the haf_block_explorer lock refused (exit $status)" "$out"
     fi
 else
-    echo "SKIP  entry procedure gone, lock refused: this HAF has no hive._missing_app_process_procedure (haf#403)"
+    echo "SKIP  entry procedure gone, lock refused: this HAF has neither hive._app_broken_reason (haf#454) nor hive._missing_app_process_procedure (haf#403)"
 fi
 
 # A row left under the old application name by an install older than the rename: the

@@ -118,11 +118,14 @@ PATH it checks which loop `scripts/process_blocks.sh` picks in each registry sta
 (registered as `haf_block_explorer`, entry procedure NULL or renamed away, left under the
 old name `hafbe_app`, context owned by another app, not registered, database down once,
 unreachable, query error), then runs the real legacy `main()` through the script and stops
-it with SIGTERM. It re-runs `install_app.sh --only-hafbe` over an old-name `hafbe_app` row
+it with SIGTERM; only lines starting `ERROR:` (optionally `psql:<src>: `), less the
+cancel that stops it, fail that case. It re-runs `install_app.sh --only-hafbe` over an old-name `hafbe_app` row
 (must fail naming the remedy and leave the row) and over a paused `haf_block_explorer` row
-(must succeed and keep `paused`), and on a HAF with haf#403 checks that
-`hive.acquire_app_block_processor_locks` refuses `haf_block_explorer` with "reinstall the
-application" when the entry procedure is gone (SKIP on an older HAF). When `--user` may rename HAF's
+(must succeed and keep `paused`), and on a HAF with `hive._app_broken_reason` (haf#454) or
+`hive._missing_app_process_procedure` (haf#403) checks that
+`hive.acquire_app_block_processor_locks` refuses `haf_block_explorer`, naming the missing
+`hafbe_app.process_blocks( hive.blocks_range )` and "reinstall the application", when the
+entry procedure is gone (SKIP, naming both, on a HAF with neither). When `--user` may rename HAF's
 objects it hides `hive.acquire_app_block_processor_locks` (legacy `main()` must still
 start) and `hafd.applications` (`install_app.sh --only-hafbe` must warn and complete; the
 script must pick the legacy loop); otherwise those cases print SKIP (AIDEV's shared-HAF
