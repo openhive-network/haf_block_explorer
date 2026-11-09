@@ -104,6 +104,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_total_wallet_addresses(
 RETURNS SETOF hafbe_backend.wallet_stats 
 -- openapi-generated-code-end
 LANGUAGE plpgsql
+STABLE
 SET jit = OFF
 AS
 $$

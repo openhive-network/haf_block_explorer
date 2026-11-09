@@ -22,7 +22,9 @@
 #                     /opt/hafah (what CI's compose installs from its HAfAH image), then
 #                     scripts/install_app.sh: l2_framework (schema l2), balance tracker
 #                     (schema hafbe_bal) and reputation tracker from submodules/, then
-#                     haf_block_explorer
+#                     haf_block_explorer; after each install of it,
+#                     .aidev/endpoint_volatility_check.sql fails on any VOLATILE function
+#                     in hafbe_endpoints
 #   - reinstall       what CI's setup-scripts-test does: install_app.sh over the installed
 #                     apps, scripts/uninstall_app.sh, then install_app.sh again
 #   - sync            the block processors of haf_block_explorer (with balance tracker),
@@ -267,6 +269,7 @@ app_install() {
     [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select string_agg(name || ':' || (contexts @> array['hafbe_app', 'hafbe_bal'])::text, ',')
                                           from hafd.applications where contexts && array['hafbe_app', 'hafbe_bal']")" = "haf_block_explorer:true" ] \
         || { echo "hafd.applications does not hold exactly one row, haf_block_explorer, for hafbe_app and hafbe_bal"; return 1; }
+    psql "$HAFBE_TEST_DB_URL" -X -f .aidev/endpoint_volatility_check.sql || return 1
 }
 
 install() {

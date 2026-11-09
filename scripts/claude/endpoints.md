@@ -385,6 +385,8 @@ $$;
 RESET ROLE;
 ```
 
+Every function in `hafbe_endpoints` must be `STABLE` (or `IMMUTABLE`), placed after the `openapi-generated-code-end` marker so regeneration keeps it: PostgREST runs a VOLATILE function READ WRITE when it is POSTed. `.aidev/endpoint_volatility_check.sql` fails the harness's install step otherwise.
+
 ### Step 4: Add return type (if new)
 
 If your endpoint returns a new type, define it in `endpoints/types/<category>.sql`:
