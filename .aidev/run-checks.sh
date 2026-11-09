@@ -34,6 +34,11 @@
 #   - regression      tests/regression against the synced clone (.aidev/hafbe_regression.py)
 #   - tavern          tests/tavern/patterns-mainnet against PostgREST over the synced clone
 #                     (.aidev/hafbe_tavern.py); one junit case per test
+#   - rewriter        tests/rewriter through the postgrest-rewriter (Dockerfile.rewriter's
+#                     base image's OpenResty with this tree's template, rewrite rules and
+#                     argument map) in front of PostgREST over the synced clone
+#                     (.aidev/hafbe_rewriter.py); one junit case per test. A suite that
+#                     runs tavern runs it after its steps without naming it
 #   - selection       tests/process_blocks_selection: which loop scripts/process_blocks.sh
 #                     starts in each state of the HAF application registry, then the real
 #                     legacy main() through it. The consumer may not rename HAF's objects,
@@ -42,10 +47,10 @@
 #                     haf_admin). It changes the registry, so it runs last, and a suite
 #                     that runs tavern runs it after all its steps without naming it
 #
-# install, reinstall, sync, regression, tavern and selection need the shared HAF (sandbox.external
+# install, reinstall, sync, regression, tavern, rewriter and selection need the shared HAF (sandbox.external
 # haf, provider haf/haf); the clone is dropped when the script exits, pass or fail.
-# Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml
-# and tavern.xml.
+# Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml,
+# tavern.xml and rewriter.xml.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -385,10 +390,14 @@ for s in "$@"; do
         sync) step sync on_clone sync_apps ;;
         regression) step regression on_clone python3 .aidev/hafbe_regression.py "$out" ;;
         tavern) step tavern on_clone python3 .aidev/hafbe_tavern.py "$out" ;;
+        rewriter) step rewriter on_clone python3 .aidev/hafbe_rewriter.py "$out" ;;
         selection) step selection on_clone process_blocks_selection ;;
         *) echo "unknown step: $s" >&2; exit 2 ;;
     esac
 done
+if [[ " $* " == *" tavern "* && " $* " != *" rewriter "* ]]; then
+    step rewriter on_clone python3 .aidev/hafbe_rewriter.py "$out"
+fi
 if [[ " $* " == *" tavern "* && " $* " != *" selection "* ]]; then
     step selection on_clone process_blocks_selection
 fi
