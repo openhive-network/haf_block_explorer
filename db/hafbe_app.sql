@@ -1128,8 +1128,14 @@ DECLARE
 BEGIN
   -- Block until any active haf_block_explorer installer releases its
   -- exclusive lock; held by this session until main() returns. Covers the
-  -- hafbe_app and embedded hafbe_bal contexts driven by this loop.
-  PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']);
+  -- hafbe_app and embedded hafbe_bal contexts driven by this loop. A HAF older
+  -- than the lock helpers has none: run without the lock, as install_app.sh
+  -- does when its lock wrapper is absent.
+  IF to_regprocedure('hive.acquire_app_block_processor_locks(text[])') IS NOT NULL THEN
+    PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']);
+  ELSE
+    RAISE WARNING 'This HAF has no hive.acquire_app_block_processor_locks; processing blocks without the haf_block_explorer application lock';
+  END IF;
 
   IF _maxBlockLimit IS NOT NULL THEN
     RAISE NOTICE 'Max block limit is specified as: %', _maxBlockLimit;
@@ -1412,6 +1418,8 @@ $$;
 DO $$
 DECLARE
   __btracker_schema VARCHAR;
+  __stale_app TEXT;
+  __btracker_app TEXT;
 BEGIN
   -- this file is loaded with search_path set to the embedded balance tracker schema
   SHOW SEARCH_PATH INTO __btracker_schema;
@@ -1438,12 +1446,39 @@ BEGIN
       $pb$
     $BODY$, __btracker_schema, __btracker_schema);
 
-  -- The embedded balance tracker registered itself as a standalone application
-  -- during its own install; its context is driven by this loop instead.
-  IF EXISTS ( SELECT 1 FROM hafd.applications WHERE name = __btracker_schema ) THEN
-    PERFORM hive.app_unregister( __btracker_schema );
+  -- A HAF older than the application registry (haf#341; 1.28.6 and older) has
+  -- none: install anyway and leave block processing to the legacy main() loop.
+  -- scripts/process_blocks.sh asks the registry before it starts the driver, so
+  -- the two agree. PL/pgSQL plans the queries below only when they run, so this
+  -- check is enough.
+  IF to_regclass('hafd.applications') IS NULL THEN
+    RAISE WARNING 'This HAF has no application registry (older than haf#341); not registering haf_block_explorer. Block processing will use the legacy main() loop';
+    RETURN;
   END IF;
-  PERFORM hive.app_register( 'hafbe_app', ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group, 'hafbe_app.process_blocks' );
+
+  -- The application registers under the name it locks (--lock=haf_block_explorer in
+  -- scripts/process_blocks.sh): HAF's lock helpers find its row by that name. A row
+  -- holding the hafbe_app context under another name is left from an install that
+  -- registered as hafbe_app; hive.app_register would leave it in place with a NOTICE
+  -- and no block processor would start, so refuse rather than migrate it.
+  SELECT a.name INTO __stale_app
+  FROM hafd.applications a
+  WHERE a.name <> 'haf_block_explorer' AND a.contexts @> ARRAY[ 'hafbe_app' ]::TEXT[]
+  LIMIT 1;
+  IF __stale_app IS NOT NULL THEN
+    RAISE EXCEPTION 'The hafbe_app context is registered in the HAF application registry as application %, not haf_block_explorer. Replay haf_block_explorer from scratch, or run SELECT hive.app_unregister(%); and reinstall', __stale_app, quote_literal( __stale_app );
+  END IF;
+
+  -- The embedded balance tracker registered its context as an application of its
+  -- own during its install (under whichever name it uses); this loop drives it
+  -- instead.
+  FOR __btracker_app IN
+    SELECT a.name FROM hafd.applications a
+    WHERE a.name <> 'haf_block_explorer' AND a.contexts @> ARRAY[ __btracker_schema ]::TEXT[]
+  LOOP
+    PERFORM hive.app_unregister( __btracker_app );
+  END LOOP;
+  PERFORM hive.app_register( 'haf_block_explorer', ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group, 'hafbe_app.process_blocks' );
 
   -- Let the group process irreversible blocks while hived still replays
   -- (psql-massive-index-policy = keep-monotonic). A group starts early only when
@@ -1455,7 +1490,7 @@ BEGIN
   IF to_regprocedure('hive.app_context_set_early_block_processing(hive.contexts_group, boolean)') IS NOT NULL THEN
     PERFORM hive.app_context_set_early_block_processing( ARRAY[ 'hafbe_app', __btracker_schema ]::hive.contexts_group );
   ELSE
-    RAISE NOTICE 'HAF has no hive.app_context_set_early_block_processing: hafbe_app starts after HAF''s index restore';
+    RAISE NOTICE 'HAF has no hive.app_context_set_early_block_processing: haf_block_explorer starts after HAF''s index restore';
   END IF;
 END
 $$;

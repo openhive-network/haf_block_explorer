@@ -22,7 +22,9 @@
 #                     /opt/hafah (what CI's compose installs from its HAfAH image), then
 #                     scripts/install_app.sh: l2_framework (schema l2), balance tracker
 #                     (schema hafbe_bal) and reputation tracker from submodules/, then
-#                     haf_block_explorer
+#                     haf_block_explorer; after each install of it,
+#                     .aidev/endpoint_volatility_check.sql fails on any VOLATILE function
+#                     in hafbe_endpoints
 #   - reinstall       what CI's setup-scripts-test does: install_app.sh over the installed
 #                     apps, scripts/uninstall_app.sh, then install_app.sh again
 #   - sync            the block processors of haf_block_explorer (with balance tracker),
@@ -32,11 +34,23 @@
 #   - regression      tests/regression against the synced clone (.aidev/hafbe_regression.py)
 #   - tavern          tests/tavern/patterns-mainnet against PostgREST over the synced clone
 #                     (.aidev/hafbe_tavern.py); one junit case per test
+#   - rewriter        tests/rewriter through the postgrest-rewriter (Dockerfile.rewriter's
+#                     base image's OpenResty with this tree's template, rewrite rules and
+#                     argument map) in front of PostgREST over the synced clone
+#                     (.aidev/hafbe_rewriter.py); one junit case per test. A suite that
+#                     runs tavern runs it after its steps without naming it
+#   - selection       tests/process_blocks_selection: which loop scripts/process_blocks.sh
+#                     starts in each state of the HAF application registry, then the real
+#                     legacy main() through it. The consumer may not rename HAF's objects,
+#                     so the cases of a HAF without the registry or the lock helpers are
+#                     skipped here (CI's process-blocks-selection-test runs them as
+#                     haf_admin). It changes the registry, so it runs last, and a suite
+#                     that runs tavern runs it after all its steps without naming it
 #
-# install, reinstall, sync, regression and tavern need the shared HAF (sandbox.external
+# install, reinstall, sync, regression, tavern, rewriter and selection need the shared HAF (sandbox.external
 # haf, provider haf/haf); the clone is dropped when the script exits, pass or fail.
-# Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml
-# and tavern.xml.
+# Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml,
+# tavern.xml and rewriter.xml.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -159,6 +173,8 @@ stage_sources() {
     stage="$(mktemp -d)"
     mkdir -p "$stage/submodules"
     cp -r db backend endpoints scripts "$stage/"
+    mkdir -p "$stage/tests"
+    cp -r tests/process_blocks_selection "$stage/tests/"
     cp -r submodules/btracker submodules/reptracker submodules/l2_framework "$stage/submodules/"
     for d in "$stage" "$stage/submodules/btracker" "$stage/submodules/reptracker"; do
         echo "-- the app's roles are provided by the shared HAF" > "$d/db/builtin_roles.sql"
@@ -173,7 +189,8 @@ stage_sources() {
         echo "TRUNCATE TABLE version; INSERT INTO version(git_hash) VALUES ('$hash');" \
             > "$stage/submodules/$m/scripts/set_version_in_sql.pgsql"
     done
-    sed -i "s#/haf_block_log?#/$clone?#" "$stage/scripts/install_app.sh" "$stage/scripts/uninstall_app.sh"
+    sed -i "s#/haf_block_log?#/$clone?#" "$stage/scripts/install_app.sh" "$stage/scripts/uninstall_app.sh" \
+        "$stage/scripts/process_blocks.sh"
     sed -i '/DROP OWNED\|DROP ROLE/d' "$stage/scripts/uninstall_app.sh"
     # HAfAH, which CI's compose installs from its image before haf_block_explorer
     # (hafbe's SQL calls hafah_backend): the runtime image carries that image's sources.
@@ -252,7 +269,12 @@ app_install() {
     (cd "$stage" && bash scripts/install_app.sh --host="$AIDEV_EXTERNAL_HAF_HOST" \
         --port="${AIDEV_EXTERNAL_HAF_PORT:-5432}" --user=haf_shared_consumer --log-file=STDOUT \
         --blocksearch-indexes=true) || return 1
-    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "select git_hash from hafbe_app.version"
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "select git_hash from hafbe_app.version" || return 1
+    # Registered under its lock name, with the embedded balance tracker's context in its group
+    [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select string_agg(name || ':' || (contexts @> array['hafbe_app', 'hafbe_bal'])::text, ',')
+                                          from hafd.applications where contexts && array['hafbe_app', 'hafbe_bal']")" = "haf_block_explorer:true" ] \
+        || { echo "hafd.applications does not hold exactly one row, haf_block_explorer, for hafbe_app and hafbe_bal"; return 1; }
+    psql "$HAFBE_TEST_DB_URL" -X -f .aidev/endpoint_volatility_check.sql || return 1
 }
 
 install() {
@@ -350,6 +372,14 @@ sync_apps() {
     echo "sync complete in $((SECONDS - t0))s"
 }
 
+# process_blocks.sh logs in as the consumer and runs as hafbe_owner (PGOPTIONS role)
+process_blocks_selection() {
+    stage_sources || return 1
+    bash "$stage/tests/process_blocks_selection/run_test.sh" --host="$AIDEV_EXTERNAL_HAF_HOST" \
+        --port="${AIDEV_EXTERNAL_HAF_PORT:-5432}" --user=haf_shared_consumer --database="$clone" \
+        --processor-user=haf_shared_consumer
+}
+
 for s in "$@"; do
     case "$s" in
         shellcheck) step shellcheck run_shellcheck ;;
@@ -360,8 +390,16 @@ for s in "$@"; do
         sync) step sync on_clone sync_apps ;;
         regression) step regression on_clone python3 .aidev/hafbe_regression.py "$out" ;;
         tavern) step tavern on_clone python3 .aidev/hafbe_tavern.py "$out" ;;
+        rewriter) step rewriter on_clone python3 .aidev/hafbe_rewriter.py "$out" ;;
+        selection) step selection on_clone process_blocks_selection ;;
         *) echo "unknown step: $s" >&2; exit 2 ;;
     esac
 done
+if [[ " $* " == *" tavern "* && " $* " != *" rewriter "* ]]; then
+    step rewriter on_clone python3 .aidev/hafbe_rewriter.py "$out"
+fi
+if [[ " $* " == *" tavern "* && " $* " != *" selection "* ]]; then
+    step selection on_clone process_blocks_selection
+fi
 python3 .aidev/junit_cases.py "$out/junit.xml" "$suite" "$cases"
 exit "$status"

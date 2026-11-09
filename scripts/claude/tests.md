@@ -76,6 +76,23 @@ block before HF1, the HF1 activation block, HF7/HF8 an hour apart, the head bloc
 the 400 paths (0, negative, null, head + 1) and `Cache-Control`. Their patterns were
 written from a synced node's `hafbe_app.applied_hardforks_view`, not saved from CI.
 
+### Rewriter Tests
+`tests/rewriter/` (pytest, CI job `rewriter-test`; AIDEV's `rewriter` step, run after
+`tavern`) calls the public REST paths through the postgrest-rewriter and compares each
+answer with a direct JSON POST to the function (`common.py`). It needs a synced
+hafbe behind PostgREST and the rewriter in front of it: `REWRITER_URL`/`POSTGREST_URL`
+(or `HAFBE_ADDRESS` with `REWRITER_PORT`/`HAFBE_PORT`).
+
+- `test_operator_prefixed_values.py` - values starting with `not.`, `eq.`, `in.`, `like.`,
+  `is.`, `fts.` in every TEXT argument, as path segment and query parameter; the
+  block-search path-filter; `/accounts/not.blocktrades` gets hafbe's own "does not exist"
+  error, `/accounts/blocktrades` its answer from before the rewriter's form POST
+- `test_postgrest_parameters.py` - column filters (`/hardforks?hardfork_num=eq.2`, and beside
+  function arguments), `select`, `order`, `limit`, `offset`; `endpoints/rpc_arguments.lua`
+  against every `hafbe_endpoints` signature
+- `test_head.py` - HEAD answers with the GET's status and no body, and a GET after it on
+  the same keep-alive connection is read whole
+
 ### Early Block Processing Test
 `tests/early_block_processing/run_test.sh` (CI job `regression-test`, as
 `haf_admin`) sets `hafd.indexes_constraints` the way a keep-monotonic massive sync
@@ -92,6 +109,27 @@ insert-mostly tables, and that `hafbe_app.request_tables_freeze()` queues a
 `'freeze'` vacuum request for every table registered in the `hafbe_app` context
 except the `current_*` ones, inside a transaction it rolls back. It skips (exit 0)
 on a HAF without `hafd.vacuum_requests.kind` (before haf#360).
+
+### Process-Blocks Loop Selection Test
+`tests/process_blocks_selection/run_test.sh` (CI job `process-blocks-selection-test`,
+as `haf_admin`; AIDEV's `selection` step, run after `tavern`) needs hafbe installed
+and registered. With stubs for `haf_app_driver.py` and `run_with_reconnect.sh` first on
+PATH it checks which loop `scripts/process_blocks.sh` picks in each registry state
+(registered as `haf_block_explorer`, entry procedure NULL or renamed away, left under the
+old name `hafbe_app`, context owned by another app, not registered, database down once,
+unreachable, query error), then runs the real legacy `main()` through the script and stops
+it with SIGTERM; only lines starting `ERROR:` (optionally `psql:<src>: `), less the
+cancel that stops it, fail that case. It re-runs `install_app.sh --only-hafbe` over an old-name `hafbe_app` row
+(must fail naming the remedy and leave the row) and over a paused `haf_block_explorer` row
+(must succeed and keep `paused`), and on a HAF with `hive._app_broken_reason` (haf#454) or
+`hive._missing_app_process_procedure` (haf#403) checks that
+`hive.acquire_app_block_processor_locks` refuses `haf_block_explorer`, naming the missing
+`hafbe_app.process_blocks( hive.blocks_range )` and "reinstall the application", when the
+entry procedure is gone (SKIP, naming both, on a HAF with neither). When `--user` may rename HAF's
+objects it hides `hive.acquire_app_block_processor_locks` (legacy `main()` must still
+start) and `hafd.applications` (`install_app.sh --only-hafbe` must warn and complete; the
+script must pick the legacy loop); otherwise those cases print SKIP (AIDEV's shared-HAF
+consumer). It restores the registry on exit.
 
 ### Witness Vote Cache Test
 `tests/witness_votes_cache/run_test.sh` (CI job `regression-test`, as `haf_admin`;
@@ -207,6 +245,7 @@ detect → lint → build → sync → test → publish
 | `regression-test` | Regression | `regression_test.log` |
 | `pattern-test` | Tavern (mainnet patterns) | JUnit XML report |
 | `pattern-test-with-mock-data` | Tavern (mock patterns) | JUnit XML report |
+| `rewriter-test` | Rewriter (`tests/rewriter`, through the pipeline's postgrest-rewriter image) | JUnit XML report |
 | `performance-test` | Performance | HTML report, JUnit XML |
 | `setup-scripts-test` | Functional | - |
 

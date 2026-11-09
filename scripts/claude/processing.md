@@ -7,12 +7,30 @@ This document covers how HAFBE processes blockchain data from HAF.
 HAFBE processes blocks from HAF (Hive Application Framework) via a main loop that runs continuously. The entry point is `hafbe_app.main()` called by `scripts/process_blocks.sh`.
 
 **Processing pipeline:**
-1. `scripts/process_blocks.sh` starts the application
+1. `scripts/process_blocks.sh` starts the application (see "Which loop runs" below)
 2. `hafbe_app.main()` enters an infinite loop calling `hive.app_next_iteration()`
 3. For each block range, `log_and_process_blocks()` orchestrates:
    - Balance Tracker processing (btracker)
    - HAFBE core processing (5 processors)
    - HAF state provider updates
+
+## Which loop runs
+
+haf_block_explorer registers in the HAF application registry (`hafd.applications`, haf#341) as `haf_block_explorer`, the name it locks (`--lock=haf_block_explorer`): HAF's lock helpers (`hive._app_broken_reason`, haf#454; `hive._missing_app_process_procedure` before it, haf#403) find the row by the lock name. Its group holds the context `hafbe_app` (the context name is unchanged) and the embedded balance tracker's. `db/hafbe_app.sql` unregisters whatever other row holds the balance tracker's context (found by context, not by name) before it registers, and refuses (install exits non-zero) a row holding `hafbe_app` under another name, e.g. one left as `hafbe_app` by an install older than the rename: replay from scratch, or `SELECT hive.app_unregister('hafbe_app');` and reinstall. Re-registering over `haf_block_explorer` keeps its `paused` flag.
+
+`scripts/process_blocks.sh` asks the registry before it starts anything; `haf_app_driver.py` being on PATH (the psql base image ships it) is not enough, since the driver exits before its first range when the registry cannot run the app:
+
+| Registry state | process_blocks.sh |
+|---|---|
+| `haf_block_explorer` registered, `process_procedure` (`hafbe_app.process_blocks`) exists | `exec haf_app_driver.py --app=haf_block_explorer --lock=haf_block_explorer` (the legacy loop when the binary is missing) |
+| `haf_block_explorer` registered, procedure NULL or gone | exit 1, "Reinstall haf_block_explorer" |
+| a row named `hafbe_app` holds the `hafbe_app` context | exit 1, replay or unregister `hafbe_app` and reinstall |
+| another application's `contexts` hold `hafbe_app` | exit 1, no second loop |
+| nothing registered for `hafbe_app` (no registry: HAF 1.28.6 and older) | legacy `CALL hafbe_app.main(...)` loop |
+| cannot connect | retried `REGISTRY_PROBE_ATTEMPTS` (12) times, `REGISTRY_PROBE_RETRY_SECONDS` (5 s) apart, then exit 1 for the restart policy |
+| registry query fails on a live connection | exit 1 |
+
+The driver runs the whole group (`hafbe_app` + the embedded balance tracker context). On a HAF without the registry `db/hafbe_app.sql` skips `hive.app_register` with a WARNING, and `main()` runs without `hive.acquire_app_block_processor_locks` (WARNING) when HAF has no lock helpers. Tested by `tests/process_blocks_selection/run_test.sh` (see tests.md).
 
 ## Processing Stages
 

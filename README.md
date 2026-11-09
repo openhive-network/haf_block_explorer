@@ -183,6 +183,15 @@ curl "http://localhost:3000/rpc/get_block?_block_num=1000000"
 curl "http://localhost:3000/rpc/get_witness?_witness_name=blocktrades"
 ```
 
+**Values that start with a PostgREST operator prefix** (`not.`, `eq.`, `in.`, `like.`, `is.`,
+`fts.`, ...): a GET straight to PostgREST reads such an argument as a filter, not as an argument
+(`400 PGRST100`, or the argument is dropped and `404 PGRST202`). Direct PostgREST callers with
+such values must POST them, as JSON or form-encoded. The public REST paths are not affected: the
+postgrest-rewriter forwards a GET of a function as a form-encoded POST of the parameters the
+function declares (`endpoints/rpc_arguments.lua`, read by common-ci-configuration's
+`hive.rpc_form` module) and keeps every other parameter in the URL, so column filters,
+`select`, `order`, `limit` and `offset` keep their PostgREST meaning.
+
 ### Docker Deployment
 
 ```bash
