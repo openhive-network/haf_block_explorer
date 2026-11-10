@@ -22,7 +22,7 @@ ARG BASE_IMAGE
 
 # common-ci-configuration/nginx:1d952fd19118762d0e66f91953e194ff08e69bb0, Dockerfile.rewriter's
 # FROM; move both together.
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/nginx@sha256:ca1b31e7818d68fe66e7d63b077668495cebe1c67e9b3d9776397f586262405b AS rewriter
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/nginx@sha256:e173b651aff04b3735f870068549281c417801ea64b192cf7c8cc4bce5a91815 AS rewriter
 
 # HAFAH_VERSION in .gitlab-ci.yml; move both together.
 FROM registry.gitlab.syncad.com/hive/hafah@sha256:71cf4c7c2ca9f43e89047ee98a87659adeb0b4db52c00a88a34a540f9c40a9f2 AS hafah
