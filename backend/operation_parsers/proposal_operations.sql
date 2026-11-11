@@ -25,7 +25,83 @@ SET ROLE hafbe_owner;
  *   - hafbe_app.proposal_votes_history (append-only)
  *   - hafbe_app.current_proposal_votes (active approvals)
  *   - hafbe_app.current_proposals.paid_amount (running payment total)
+ *   - hafbe_app.current_proposals.total_budget (full-term payout, see below)
  */
+
+
+/*
+ * total_budget: the most a proposal can be paid over its whole term, at the
+ * daily pay in force on each day (milli-HBD). STEP A of process_proposals sets
+ * it at create; process_proposal_update_op adjusts it at each update's block
+ * time. db/backfill_proposal_total_budget.sql replays the same two functions
+ * over the chain's ops for rows an older install left NULL, so a fresh sync
+ * and an upgrade compute the same value.
+ *
+ * Durations are fractional days. Each change is rounded to whole milli-HBD
+ * once, so an update adds at most 1 milli-HBD of drift. NUMERIC, not BIGINT:
+ * mainnet proposals 116 and 117 ask 999999999999999 HBD a day for 17 years,
+ * about 6.4e21 milli-HBD, past BIGINT's 9.2e18.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.proposal_term_pay(
+    _daily_pay BIGINT,
+    _from      TIMESTAMP,
+    _to        TIMESTAMP
+)
+RETURNS NUMERIC
+-- STRICT: NULL in, NULL out. Without it GREATEST(NULL, 0) would turn an unknown
+-- date into 0 days and an update with an unknown block time would be ignored.
+LANGUAGE sql IMMUTABLE STRICT
+AS $$
+  SELECT _daily_pay * GREATEST(EXTRACT(EPOCH FROM (_to - _from)), 0) / 86400;
+$$;
+
+/*
+ * Budget after an update at block time _at that moves the pay from _old_pay to
+ * _new_pay and the end from _old_end to _new_end. From s = _at clamped to
+ * [_start_date, _old_end], the rest of the old term at the old pay is replaced
+ * by the rest of the new term at the new pay. An update before the start
+ * replaces the whole budget (s = start); one after the end changes nothing
+ * (s = old end, and hived does not lengthen a term). A NULL budget stays NULL,
+ * and so does an unknown _at: GREATEST skips NULLs, so without the CASE an
+ * unknown block time would silently count as an update before the start, and
+ * proposal_term_pay is STRICT so the NULL s reaches the result.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.proposal_budget_after_update(
+    _budget     NUMERIC,
+    _start_date TIMESTAMP,
+    _old_pay    BIGINT,
+    _old_end    TIMESTAMP,
+    _new_pay    BIGINT,
+    _new_end    TIMESTAMP,
+    _at         TIMESTAMP
+)
+RETURNS NUMERIC
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT ROUND(
+    _budget
+    - hafbe_backend.proposal_term_pay(_old_pay, s.at_, _old_end)
+    + hafbe_backend.proposal_term_pay(_new_pay, s.at_, _new_end)
+  )
+  FROM (
+    SELECT CASE WHEN _at IS NOT NULL THEN LEAST(GREATEST(_at, _start_date), _old_end) END AS at_
+  ) s;
+$$;
+
+/*
+ * The end date an update_proposal_operation sets, or NULL when it keeps the
+ * current one. It comes through `extensions`:
+ *   [ { "type": "update_proposal_end_date", "value": { "end_date": ... } } ]
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.proposal_update_end_date(_body JSONB)
+RETURNS TIMESTAMP
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT (ext -> 'value' ->> 'end_date')::TIMESTAMP
+  FROM jsonb_array_elements(COALESCE(_body -> 'extensions', '[]'::jsonb)) AS ext
+  WHERE ext ->> 'type' = 'update_proposal_end_date'
+  LIMIT 1;
+$$;
 
 
 /*
@@ -35,8 +111,10 @@ SET ROLE hafbe_owner;
  *   { "proposal_id": int, "creator": ..., "daily_pay": {"amount": ...},
  *     "subject": ..., "permlink": ..., "extensions": [...] }
  *
- * Optional end_date comes through `extensions`:
- *   [ { "type": "update_proposal_end_date", "value": { "end_date": ... } } ]
+ * The optional new end_date is read by proposal_update_end_date(). total_budget
+ * is adjusted at the op's block time, looked up from _id, so the signature (and
+ * the dispatcher in process_proposals) stays as it was. The SET expressions see
+ * the row's old daily_pay and end_date.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.process_proposal_update_op(
     _body JSONB,
@@ -50,19 +128,23 @@ DECLARE
   __daily_pay    BIGINT    := (_body -> 'daily_pay' ->> 'amount')::BIGINT;
   __subject      TEXT      := _body ->> 'subject';
   __permlink     TEXT      := _body ->> 'permlink';
-  __new_end_date TIMESTAMP := (
-    SELECT (ext -> 'value' ->> 'end_date')::TIMESTAMP
-    FROM jsonb_array_elements(COALESCE(_body -> 'extensions', '[]'::jsonb)) AS ext
-    WHERE ext ->> 'type' = 'update_proposal_end_date'
-    LIMIT 1
+  __new_end_date TIMESTAMP := hafbe_backend.proposal_update_end_date(_body);
+  __block_time   TIMESTAMP := (
+    SELECT bv.created_at FROM hafbe_app.blocks_view bv
+    WHERE bv.num = hafd.operation_id_to_block_num(_id)
   );
 BEGIN
   UPDATE hafbe_app.current_proposals cp
-  SET daily_pay = __daily_pay,
-      subject   = __subject,
-      permlink  = __permlink,
-      end_date  = COALESCE(__new_end_date, cp.end_date),
-      source_op = _id
+  SET daily_pay    = __daily_pay,
+      subject      = __subject,
+      permlink     = __permlink,
+      end_date     = COALESCE(__new_end_date, cp.end_date),
+      total_budget = hafbe_backend.proposal_budget_after_update(
+                       cp.total_budget, cp.start_date,
+                       cp.daily_pay, cp.end_date,
+                       __daily_pay, COALESCE(__new_end_date, cp.end_date),
+                       __block_time),
+      source_op    = _id
   WHERE cp.proposal_id = __proposal_id;
 END
 $$;

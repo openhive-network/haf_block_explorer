@@ -24,7 +24,7 @@
         "op_type_id": 46
       },
       {
-        "op_count": 1,
+        "op_count": 2,
         "op_type_id": 47
       },
       {
@@ -40,7 +40,7 @@
         "op_type_id": 92
       }
     ],
-    "total_operations": 18,
+    "total_operations": 19,
     "total_transactions": 0
   },
   {

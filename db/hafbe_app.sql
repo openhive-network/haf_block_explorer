@@ -311,6 +311,11 @@ BEGIN
     permlink    TEXT      NOT NULL,
     removed     BOOLEAN   NOT NULL DEFAULT FALSE,
     paid_amount BIGINT    NOT NULL DEFAULT 0,  -- running total of DHF payments (milli-HBD)
+    -- Full-term payout at the daily pay in force on each day (whole milli-HBD;
+    -- NUMERIC because proposals 116/117 overflow BIGINT), see
+    -- proposal_budget_after_update. NULL until computed: an install upgraded by
+    -- db/add_proposal_total_budget.sql leaves it to db/backfill_proposal_total_budget.sql.
+    total_budget NUMERIC  NULL,
     source_op   BIGINT    NOT NULL,  -- op id of the latest create/update affecting this row
 
     CONSTRAINT pk_current_proposals PRIMARY KEY (proposal_id)

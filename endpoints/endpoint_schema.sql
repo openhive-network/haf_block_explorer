@@ -1147,6 +1147,14 @@ declare
             "type": "string",
             "description": "cumulative HBD paid to this proposal so far in precision-3 units (milli-HBD)"
           },
+          "total_budget": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-sql-datatype": "TEXT",
+            "description": "most HBD this proposal can be paid over its whole term, at the daily pay\nin force on each day (an update_proposal changes it from its block time on),\nin precision-3 units (milli-HBD); null when it has not been computed (never 0\nas a placeholder)\n"
+          },
           "status": {
             "type": "string",
             "enum": [

@@ -53,10 +53,11 @@ that motivated the unified row-by-row processor design:
 | `91000005`  | `account_witness_proxy`            | **dan** sets a governance proxy to **blocktrades** (so dan's proposal-vote history rows report `voter_vests=0` / `proxy=blocktrades`, with `direct_vests` preserved) |
 | `91000006`  | `create_proposal` + `proposal_fee` | proposal **9004** (blocktrades→gtg, 30k, expired at block time) |
 | `91000006`  | `account_witness_vote`             | **cvk** removes its ONLY witness vote on **gtg** → leaves the current-voter set entirely. Load-bearing: every CI dataset is past-dated, so the daily-change window collapses onto the HEAD block, and this op must stay in the HIGHEST block for `get_witness/daily_change_lost_vote` to see it (issue #142) |
+| `91000006`  | `update_proposal_operation`        | 9003 mid-term: daily_pay 80k → 40k, end date 2099-06-30 → 2060-06-30 (`update_proposal_end_date` extension); sets its `total_budget` (issue #202) |
 
 Status at block time 2025-06-01T00:00:15 (block 91000006):
 - 9002: start=2025-07-01 > now → **inactive**
-- 9003: start=2025-01-01 ≤ now ≤ end=2099-06-30 → **active**
+- 9003: start=2025-01-01 ≤ now ≤ end=2060-06-30 (shortened at 91000006) → **active**
 - 9004: end=2020-06-01 < now → **expired**
 
 ## Expected final state
@@ -67,6 +68,7 @@ two cache refreshes:
 - `current_proposals`: 4 rows; **9001 removed=TRUE**, 9002/9003/9004 removed=FALSE
 - `current_proposal_votes`: **1 row** — `(initminer, 9002)` is the only survivor
 - `current_proposals.paid_amount`: 50000 for 9002 (its one `proposal_pay_operation`), 0 for the others
+- `current_proposals.total_budget`: 9002 = 1360550000, its updated pay (50k) over the whole term, because the update at 91000003 (2025-06-01) comes before its start (2025-07-01); 9003 = 524600007, 80k x 27208 days (2176640000) at create, then the update at 2025-06-01T00:00:15 replaces the rest of the old term at 80k with the rest of the new one at 40k (40k x the new term would be 518560000); 9004 = 30k x 152 days = 4560000; 9001 = 240k x 27211 days = 6530640000 (removed, not returned)
 - `proposal_votes_history`: **9 rows** — 5 TRUE inserts, 2 FALSE rows from steem's declined voting rights, 2 FALSE rows from removing proposal 9001
 - `current_account_proxies`: the mock range **adds** `(dan → blocktrades)`. Unlike the proposal tables above — which are mock-only totals, since no DHF data exists before block ~22.3M — this table also carries the witness proxies inherited from the 5M base sync, so the total is base + 1, not 1.
 - `proposal_vote_stats_cache`: 1 row for 9002, `voters_num=1`, `total_votes=5000000` (seeded by `prepare_mock_cache.sh`)

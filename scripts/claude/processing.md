@@ -246,7 +246,7 @@ For implementation details of each processor:
 | `hafbe_app.current_account_proxies` | `process_witness_votes()` | Active proxies |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | Proposal vote change log (includes synthetic `approve=FALSE` rows from remove/decline cascades) |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Currently active proposal approvals |
-| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` (no per-payment ledger: HAF's fork revert of `current_proposals` keeps the total exact) |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror (create/update/remove); `paid_amount` column is a running total incremented by each `proposal_pay_operation` (no per-payment ledger: HAF's fork revert of `current_proposals` keeps the total exact); `total_budget` is set at create and adjusted by each update at its block time (`proposal_budget_after_update`) |
 
 ### Cache Tables (LIVE only)
 | Table | Purpose |

@@ -46,6 +46,14 @@ hafbe_backend.proposal:
     paid_amount:
       type: string
       description: cumulative HBD paid to this proposal so far in precision-3 units (milli-HBD)
+    total_budget:
+      type: [string, 'null']
+      x-sql-datatype: TEXT
+      description: |
+        most HBD this proposal can be paid over its whole term, at the daily pay
+        in force on each day (an update_proposal changes it from its block time on),
+        in precision-3 units (milli-HBD); null when it has not been computed (never 0
+        as a placeholder)
     status:
       type: string
       enum: [active, inactive, expired]
@@ -70,6 +78,7 @@ CREATE TYPE hafbe_backend.proposal AS (
     "total_votes" TEXT,
     "voters_num" INT,
     "paid_amount" TEXT,
+    "total_budget" TEXT,
     "status" TEXT
 );
 -- openapi-generated-code-end

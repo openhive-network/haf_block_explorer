@@ -159,6 +159,7 @@ setup_api() {
   echo "Setting up database roles..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/builtin_roles.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA}; SET custom.is_forking = '$IS_FORKING';" -f "$HAFBE_DIR/db/hafbe_app.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/add_proposal_total_budget.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET custom.swagger_url = '$SWAGGER_URL';" -f "$HAFBE_DIR/endpoints/endpoint_schema.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};"   -f "$HAFBE_DIR/backend/utilities/views.sql"
 
@@ -181,6 +182,9 @@ setup_api() {
 
   echo "Removing objects the replaced processing functions no longer use..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/drop_proposal_payments.sql"
+
+  echo "Filling proposal total_budget values an upgrade left empty..."
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/backfill_proposal_total_budget.sql"
 
   echo "Installing OpenAPI types..."
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/endpoints/types/enums.sql"

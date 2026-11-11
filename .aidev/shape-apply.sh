@@ -25,6 +25,10 @@
 #   - db/drop_proposal_payments.sql is empty: it unregisters and drops the
 #     proposal_payments ledger of installs made before it was removed, through the HAF
 #     context the shape restores without rows, and no API statement reads the table;
+#   - db/backfill_proposal_total_budget.sql is empty: it fills
+#     current_proposals.total_budget from the chain's operations, which only matters
+#     for the values, not for the plans. db/add_proposal_total_budget.sql does run, so
+#     a shape captured before that column existed gets it (NULL) for the API plans;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh;
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
@@ -63,6 +67,8 @@ for f in db/hafbe_app.sql submodules/btracker/db/btracker_app.sql submodules/rep
 done
 echo "-- the proposal_payments upgrade drop does not run on the shape (.aidev/shape-apply.sh)" \
     > "$stage/db/drop_proposal_payments.sql"
+echo "-- the total_budget backfill does not run on the shape (.aidev/shape-apply.sh)" \
+    > "$stage/db/backfill_proposal_total_budget.sql"
 # The balance tracker's backend/shared/nai_types.sql checks its NAI constants against
 # asset_table, which btracker_app.sql seeds and the shape restores empty: keep the
 # seed. (The copy's heaps are restored from the shape after the install, so the rows
