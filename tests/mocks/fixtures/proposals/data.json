@@ -142,6 +142,16 @@
       "body": {"type": "account_witness_vote_operation", "value": {
         "account": "cvk", "witness": "gtg", "approve": false
       }}
+    },
+    {
+      "_comment": "issue #202: a mid-term update of the active proposal 9003 (80k from 2025-01-01) at this block time, 2025-06-01T00:00:15: pay down to 40k and the end date shortened from 2099-06-30 to 2060-06-30. total_budget keeps the days to 00:00:15 at 80k: 524600007, where 40k x the new term would be 518560000.",
+      "block_num": 91000006, "op_name": "hive::protocol::update_proposal_operation", "op_pos": 3, "trx_in_block": 2,
+      "body": {"type": "update_proposal_operation", "value": {
+        "proposal_id": 9003, "creator": "gtg",
+        "daily_pay": {"nai": "@@000000013", "amount": "40000", "precision": 3},
+        "subject": "Mock proposal C (active, no votes)", "permlink": "mock-c",
+        "extensions": [{"type": "update_proposal_end_date", "value": {"end_date": "2060-06-30T00:00:00"}}]
+      }}
     }
   ]
 }

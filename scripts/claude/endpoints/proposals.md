@@ -59,6 +59,7 @@ Returns `hafbe_backend.proposals_return`:
       "total_votes": "1234567890",
       "voters_num": 12,
       "paid_amount": "36500000",
+      "total_budget": "36500000",
       "status": "active"
     }
   ]
@@ -69,6 +70,7 @@ Returns `hafbe_backend.proposals_return`:
 
 - `total_votes` is stake-weighted by governance vesting power of direct voters only (proxied voters are excluded — this matches condenser_api behaviour but differs from the raw voter count)
 - `paid_amount` is a running total incremented by each `proposal_pay_operation` processed by the block processor; it starts at 0 for new proposals
+- `total_budget` is the most the proposal can be paid over its whole term, at the daily pay in force on each day: `daily_pay` x term at create, then each `update_proposal_operation` replaces the rest of the term from its block time (clamped to the term) at the new pay and end date. So a proposal whose pay was lowered mid-term keeps the days already paid at the higher rate, and `paid_amount` never exceeds it. `null` means not computed (never `0` as a placeholder); `db/backfill_proposal_total_budget.sql` fills it on an upgraded install
 - The `creator`, `proposal-ids`, `voter`, and `search` filters are optional and composable; account names are resolved to IDs via `hafah_backend.get_account_id` before querying
 
 ---
@@ -119,6 +121,7 @@ Returns `hafbe_backend.proposal_votes_return`:
         "total_votes": "1234567890",
         "voters_num": 12,
         "paid_amount": "36500000",
+        "total_budget": "36500000",
         "status": "active"
       },
       "voter_vests": "5000000000000",
@@ -271,7 +274,7 @@ Its cache-miss fallback stays restricted to voters on the selected page.
 
 | Table | Populated by | Description |
 |-------|-------------|-------------|
-| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror; `paid_amount` is a running total |
+| `hafbe_app.current_proposals` | `process_proposals()` | Proposal metadata mirror; `paid_amount` is a running total, `total_budget` the full-term payout at the pay in force on each day |
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Active approvals (one row per currently-approving voter) |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | All vote events including synthetic `approve=FALSE` rows |
 | `hafbe_app.proposal_vote_stats_cache` | `process_proposal_vote_stats_cache()` | Stake-weighted totals + voter count per proposal (LIVE cache) |

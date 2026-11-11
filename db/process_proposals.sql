@@ -136,10 +136,15 @@ BEGIN
      AND f.creator_name = c.creator_name
      AND f.rk           = c.rk
   )
+  -- total_budget starts as the full term at the created pay; updates in STEP B
+  -- adjust it (see proposal_budget_after_update).
   INSERT INTO hafbe_app.current_proposals
-    (proposal_id, creator_id, receiver_id, start_date, end_date, daily_pay, subject, permlink, removed, source_op)
+    (proposal_id, creator_id, receiver_id, start_date, end_date, daily_pay, subject, permlink, removed,
+     total_budget, source_op)
   SELECT p.proposal_id, p.creator_id, p.receiver_id, p.start_date, p.end_date,
-         p.daily_pay, p.subject, p.permlink, FALSE, p.source_op
+         p.daily_pay, p.subject, p.permlink, FALSE,
+         ROUND(hafbe_backend.proposal_term_pay(p.daily_pay, p.start_date, p.end_date)),
+         p.source_op
   FROM paired p
   ON CONFLICT ON CONSTRAINT pk_current_proposals DO NOTHING;
 

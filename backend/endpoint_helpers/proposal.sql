@@ -21,6 +21,7 @@ CREATE TYPE hafbe_backend.proposal_listing_page_row AS (
   subject TEXT,
   permlink TEXT,
   paid_amount BIGINT,
+  total_budget NUMERIC,
   total_votes BIGINT,
   voters_num INT
 );
@@ -38,6 +39,7 @@ CREATE TYPE hafbe_backend.proposal_vote_page_row AS (
   subject TEXT,
   permlink TEXT,
   paid_amount BIGINT,
+  total_budget NUMERIC,
   proxy_account_id INT,
   proxy_id INT
 );
@@ -275,7 +277,8 @@ END $$;
  * planner then hashes every account.
  *
  * The page carries proposal metadata and cached totals into the final SELECT.
- * paid_amount comes from current_proposals; payments need no per-request sum.
+ * paid_amount and total_budget come from current_proposals; payments need no
+ * per-request sum. A total_budget not computed yet (NULL) is returned as null.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.get_proposals(
     _status       hafbe_backend.proposal_status,
@@ -309,7 +312,7 @@ BEGIN
       SELECT
         cp.proposal_id, cp.creator_id, cp.receiver_id,
         cp.start_date, cp.end_date, cp.daily_pay,
-        cp.subject, cp.permlink, cp.paid_amount
+        cp.subject, cp.permlink, cp.paid_amount, cp.total_budget
       FROM hafbe_app.current_proposals cp
       WHERE hafbe_backend.proposal_status_matches(_status, cp.start_date, cp.end_date, cp.removed, _now)
         AND (_creator_id   IS NULL OR cp.creator_id = _creator_id)
@@ -338,7 +341,7 @@ BEGIN
     SELECT ROW(
       sp.proposal_id, sp.creator_id, sp.receiver_id,
       sp.start_date, sp.end_date, sp.daily_pay,
-      sp.subject, sp.permlink, sp.paid_amount,
+      sp.subject, sp.permlink, sp.paid_amount, sp.total_budget,
       sp.total_votes, sp.voters_num
     )::hafbe_backend.proposal_listing_page_row
     FROM sortable_proposals sp
@@ -384,6 +387,7 @@ BEGIN
       p.total_votes::TEXT,
       p.voters_num,
       p.paid_amount::TEXT,
+      p.total_budget::TEXT,
       (CASE
         WHEN _now > p.end_date   THEN 'expired'
         WHEN _now < p.start_date THEN 'inactive'
@@ -489,7 +493,7 @@ BEGIN
     SELECT ROW(
       selected.voter_id, selected.proposal_id, selected.source_op,
       cp.creator_id, cp.receiver_id, cp.start_date, cp.end_date,
-      cp.daily_pay, cp.subject, cp.permlink, cp.paid_amount,
+      cp.daily_pay, cp.subject, cp.permlink, cp.paid_amount, cp.total_budget,
       cap.account_id, cap.proxy_id
     )::hafbe_backend.proposal_vote_page_row
     FROM unnest(__selected_votes) WITH ORDINALITY selected
@@ -536,6 +540,7 @@ BEGIN
       COALESCE(vsc.total_votes, 0)::TEXT,
       COALESCE(vsc.voters_num, 0),
       pv.paid_amount::TEXT,
+      pv.total_budget::TEXT,
       (CASE
         WHEN _now > pv.end_date   THEN 'expired'
         WHEN _now < pv.start_date THEN 'inactive'

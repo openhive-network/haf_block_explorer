@@ -8,13 +8,14 @@
       "creator": "gtg",
       "receiver": "blocktrades",
       "start_date": "2025-01-01T00:00:00",
-      "end_date": "2099-06-30T00:00:00",
-      "daily_pay": "80000",
+      "end_date": "2060-06-30T00:00:00",
+      "daily_pay": "40000",
       "subject": "Mock proposal C (active, no votes)",
       "permlink": "mock-c",
       "total_votes": "0",
       "voters_num": 0,
       "paid_amount": "0",
+      "total_budget": "524600007",
       "status": "active"
     },
     {
@@ -30,6 +31,7 @@
       "total_votes": "0",
       "voters_num": 0,
       "paid_amount": "0",
+      "total_budget": "4560000",
       "status": "expired"
     },
     {
@@ -45,6 +47,7 @@
       "total_votes": "5000000",
       "voters_num": 1,
       "paid_amount": "50000",
+      "total_budget": "1360550000",
       "status": "inactive"
     }
   ]

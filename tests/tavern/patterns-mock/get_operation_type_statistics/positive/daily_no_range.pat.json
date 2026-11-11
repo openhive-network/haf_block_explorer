@@ -13,10 +13,14 @@
       },
       {
         "op_count": 1,
+        "op_type_id": 47
+      },
+      {
+        "op_count": 1,
         "op_type_id": 87
       }
     ],
-    "total_operations": 3,
+    "total_operations": 4,
     "total_transactions": 0
   },
   {
