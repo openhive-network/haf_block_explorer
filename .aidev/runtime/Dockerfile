@@ -25,7 +25,7 @@ ARG BASE_IMAGE
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/nginx@sha256:ca1b31e7818d68fe66e7d63b077668495cebe1c67e9b3d9776397f586262405b AS rewriter
 
 # HAFAH_VERSION in .gitlab-ci.yml; move both together.
-FROM registry.gitlab.syncad.com/hive/hafah@sha256:71cf4c7c2ca9f43e89047ee98a87659adeb0b4db52c00a88a34a540f9c40a9f2 AS hafah
+FROM registry.gitlab.syncad.com/hive/hafah@sha256:597a41c77fa6d68361f9dabed3f11e36b5fddb2b5f4d91791e9f42413dedd851 AS hafah
 
 FROM ${BASE_IMAGE}
 
