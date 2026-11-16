@@ -63,8 +63,10 @@
 --     rank_start ranks the votes at the window start of the refresh's block and
 --     does not follow the witness vote cache after it, and X's 7-day breakdown is
 --     what hafbe_backend.witness_votes_change_breakdown() returns;
+--   - the today window is votes_daily_change's, in UTC and America/New_York;
 --   - a refresh that fails, by a statement timeout or an error, leaves the previous
---     breakdown in place and does not fail process_witness_votes_change_by_cause().
+--     breakdown in place and does not fail process_witness_votes_change_by_cause(),
+--     which does not attempt it again until 100 blocks later.
 --
 -- Needs a synced hafbe, the balance tracker's schema first on the search path and a
 -- member of hafbe_owner. Everything is rolled back.
@@ -704,7 +706,7 @@ BEGIN
   SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
   IF _state.as_of_block IS DISTINCT FROM _head
      OR _state.week_first_block IS DISTINCT FROM _week_start
-     OR _state.today_first_block IS DISTINCT FROM hafbe_app.witness_votes_change_today_start() THEN
+     OR _state.today_first_block IS DISTINCT FROM hafbe_app.witness_votes_change_today_start(_head) THEN
     RAISE EXCEPTION 'refresh: the state % does not hold block % and its windows', _state, _head;
   END IF;
   -- Each window starts at its first block after the boundary, not the one before it.
@@ -723,16 +725,12 @@ BEGIN
     FROM hafbe_app.witness_votes_change_by_cause c
     WHERE c.time_window = '7d' AND c.cause = 'total';
   PERFORM pg_temp.reconcile('reconciliation of the stored 7d window', _state.week_first_block, _exact);
-  IF _state.today_first_block IS NOT NULL THEN
-    DROP TABLE recon_totals;
-    CREATE TEMP TABLE recon_totals AS
-      SELECT c.witness_id, c.vests
-      FROM hafbe_app.witness_votes_change_by_cause c
-      WHERE c.time_window = 'today' AND c.cause = 'total';
-    PERFORM pg_temp.reconcile('reconciliation of the stored today window', _state.today_first_block, ARRAY[]::INT[]);
-  ELSE
-    RAISE NOTICE 'reconciliation of the stored today window: no block since 00:00 UTC, the window is empty';
-  END IF;
+  DROP TABLE recon_totals;
+  CREATE TEMP TABLE recon_totals AS
+    SELECT c.witness_id, c.vests
+    FROM hafbe_app.witness_votes_change_by_cause c
+    WHERE c.time_window = 'today' AND c.cause = 'total';
+  PERFORM pg_temp.reconcile('reconciliation of the stored today window', _state.today_first_block, ARRAY[]::INT[]);
 
   -- rank_start ranks the votes at the window's start of the refresh's own block:
   -- the cache's votes then minus the total.
@@ -804,6 +802,35 @@ BEGIN
 END
 $$;
 
+-- The today window is votes_daily_change's, also for a block shortly after 00:00 UTC
+-- in a session TimeZone whose date is still the previous one: it starts at the first
+-- block of the block's UTC day.
+DO $$
+DECLARE
+  _head  INT := (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app');
+  _day   TIMESTAMP := (SELECT date_trunc('day', b.created_at) FROM hive.blocks_view b WHERE b.num = _head);
+  _first INT;
+  _late  INT;
+  _utc   INT;
+  _ny    INT;
+BEGIN
+  SELECT b.num INTO _first FROM hive.blocks_view b WHERE b.created_at >= _day ORDER BY b.created_at LIMIT 1;
+  _late := LEAST(_first + 10, _head);
+  SET LOCAL TIME ZONE 'UTC';
+  _utc := hafbe_app.witness_votes_change_today_start(_late);
+  SET LOCAL TIME ZONE 'America/New_York';
+  _ny := hafbe_app.witness_votes_change_today_start(_late);
+  RESET TIME ZONE;
+  IF _utc IS DISTINCT FROM _first OR _ny IS DISTINCT FROM _first
+     OR hafbe_app.witness_votes_cache_window_start(_late) IS DISTINCT FROM _first THEN
+    RAISE EXCEPTION 'today window: block % starts it at block % in UTC and % in America/New_York, votes_daily_change at %, not at its day''s first block %',
+      _late, _utc, _ny, hafbe_app.witness_votes_cache_window_start(_late), _first;
+  END IF;
+  RAISE NOTICE 'today window: block % starts it at block % (00:00 UTC %) in UTC and America/New_York, as votes_daily_change',
+    _late, _first, _day;
+END
+$$;
+
 -- A refresh that fails. process_witness_votes_change_by_cause() refreshes for a block
 -- at or below the last refreshed one (a fork); the 7-day window's start is replaced
 -- by a function that fails, which the rollback below restores.
@@ -834,5 +861,45 @@ $$;
 RESET ROLE;
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
 SELECT pg_temp.expect_breakdown_kept('a refresh that raises');
+
+-- A failed refresh is attempted again 100 blocks after the failure, not on each block
+-- in between. With no state row every block asks for a refresh; the failing 7-day
+-- window start counts the attempts.
+CREATE TEMP SEQUENCE refresh_attempts;
+
+CREATE FUNCTION pg_temp.expect_attempts(_case TEXT, _expected INT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _attempts INT := (SELECT CASE WHEN a.is_called THEN a.last_value ELSE 0 END FROM refresh_attempts a);
+BEGIN
+  IF _attempts <> _expected THEN
+    RAISE EXCEPTION '%: % refresh attempts, expected %', _case, _attempts, _expected;
+  END IF;
+  RAISE NOTICE '%: % refresh attempts', _case, _attempts;
+END
+$$;
+
+SET ROLE hafbe_owner;
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
+RETURNS INT
+LANGUAGE plpgsql VOLATILE
+AS $$
+BEGIN
+  PERFORM nextval('refresh_attempts');
+  RAISE EXCEPTION 'a failure of the refresh';
+END
+$$;
+DELETE FROM hafbe_app.witness_votes_change_by_cause_state;
+RESET ROLE;
+
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 1);
+SELECT hafbe_app.process_witness_votes_change_by_cause(b) FROM generate_series(:as_of_block + 2, :as_of_block + 99) b;
+SELECT pg_temp.expect_attempts('the 99 blocks after a failed refresh', 0);
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
+SELECT pg_temp.expect_attempts('100 blocks after the failed refresh', 1);
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 101);
+SELECT pg_temp.expect_attempts('the block after that failed again', 1);
 
 ROLLBACK;

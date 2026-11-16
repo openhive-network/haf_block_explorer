@@ -1,10 +1,9 @@
 ---
 # Witness daily vote change counts LOST votes (issue #142), asserted through the endpoint.
 #
-# patterns-mainnet cannot reach this: the daily-change window resolves to the HEAD block on
-# any past-dated dataset, so the cache is empty there and get_witness COALESCEs it to 0 --
-# a working feature and a deleted one are byte-identical. The mock dataset controls its own
-# head block (91000006), which is what makes the window reachable.
+# The daily-change window starts at the first block of the head's UTC day. The mock dataset
+# dates only its head block (91000006) 2025-06-01 and the blocks before it 2025-05-31, so the
+# window is that block alone, which is what puts the approve outside it and the un-vote in.
 #
 # Fixture: cvk approves gtg at 91000001 (outside the window) and un-votes at 91000006
 # (inside it). cvk holds no proxy and no proposal vote, so it leaves the current-voter set

@@ -23,6 +23,12 @@
 -- For the fallback cases it also checks that the incremental path alone would have
 -- left the caches wrong, so a fallback that stopped firing fails the test.
 --
+-- The blocks it refreshes are older than the head, each refreshed as if it were the
+-- live one, and the full recompute it compares with is the head's. So, after checking
+-- witness_votes_cache_window_start() itself (the first block of the block's UTC day,
+-- in any session TimeZone), it pins the window to the head's for the rest of the test;
+-- the window move case is a state row carrying another window.
+--
 -- The daily-change cache (witness_votes_change_cache) is filled from today's vote
 -- events, which a synced chain whose blocks all predate today does not have: when it
 -- is empty, a vote event of the proxy above is added to the window so that cache is
@@ -160,7 +166,7 @@ CREATE FUNCTION pg_temp.set_last(_block INT)
 RETURNS VOID
 LANGUAGE sql
 AS $$
-  SELECT pg_temp.set_state(_block, hafbe_app.witness_votes_cache_window_start());
+  SELECT pg_temp.set_state(_block, hafbe_app.witness_votes_cache_window_start(_block));
 $$;
 
 -- Refresh _block and say whether that recomputed the caches in full: only the full
@@ -266,10 +272,58 @@ AS $$
   WHERE account = _account AND nai = btracker_backend.nai_vests();
 $$;
 
+-- The window of a block shortly after 00:00 UTC starts at the first block of that UTC
+-- day, in UTC and in a session TimeZone whose date is still the previous one; the
+-- day's last block before it is in the previous day's window.
+DO $$
+DECLARE
+  _head    INT := (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app');
+  _day     TIMESTAMP := (SELECT date_trunc('day', b.created_at) FROM hive.blocks_view b WHERE b.num = _head);
+  _first   INT;  -- the first block of _head's UTC day
+  _prev    INT;  -- the first block of the day before
+  _late    INT;  -- a block of _head's day, at most 10 after _first
+  _utc     INT;
+  _ny      INT;
+BEGIN
+  SELECT b.num INTO _first FROM hive.blocks_view b WHERE b.created_at >= _day ORDER BY b.created_at LIMIT 1;
+  SELECT b.num INTO _prev FROM hive.blocks_view b WHERE b.created_at >= _day - INTERVAL '1 day' ORDER BY b.created_at LIMIT 1;
+  _late := LEAST(_first + 10, _head);
+  IF _first IS NULL OR _prev IS NULL OR _prev >= _first THEN
+    RAISE EXCEPTION 'window: the synced data has no two consecutive days before block %', _head;
+  END IF;
+
+  SET LOCAL TIME ZONE 'UTC';
+  _utc := hafbe_app.witness_votes_cache_window_start(_late);
+  SET LOCAL TIME ZONE 'America/New_York';
+  _ny := hafbe_app.witness_votes_cache_window_start(_late);
+  RESET TIME ZONE;
+  IF _utc IS DISTINCT FROM _first OR _ny IS DISTINCT FROM _first THEN
+    RAISE EXCEPTION 'window: block % (%) starts its window at block % in UTC and % in America/New_York, not at its day''s first block %',
+      _late, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _late), _utc, _ny, _first;
+  END IF;
+  IF hafbe_app.witness_votes_cache_window_start(_first - 1) IS DISTINCT FROM _prev THEN
+    RAISE EXCEPTION 'window: block %, the last before 00:00 UTC, starts its window at block %, not at the previous day''s first block %',
+      _first - 1, hafbe_app.witness_votes_cache_window_start(_first - 1), _prev;
+  END IF;
+  RAISE NOTICE 'window: block % starts at block % (00:00 UTC %) in UTC and America/New_York; block % at block %',
+    _late, _first, _day, _first - 1, _prev;
+END
+$$;
+
+-- Pinned for the rest of the test (see the header).
+SET ROLE hafbe_owner;
+SELECT format(
+  'CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_cache_window_start(_block INT) RETURNS INT LANGUAGE sql STABLE AS %L',
+  format('SELECT %s', hafbe_app.witness_votes_cache_window_start(c.current_block_num))
+)
+FROM hafd.contexts c
+WHERE c.name = 'hafbe_app' \gexec
+RESET ROLE;
+
 DO $$
 DECLARE
   _head       INT := (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app');
-  _window     INT := hafbe_app.witness_votes_cache_window_start();
+  _window     INT := hafbe_app.witness_votes_cache_window_start(_head);
   _bump       BIGINT := (SELECT max(votes) FROM hafbe_app.witness_votes_cache);
   _block      INT;    -- names _setter, no operation forcing the full recompute
   _named      INT[];  -- the accounts _block names
@@ -386,7 +440,7 @@ BEGIN
     AND NOT EXISTS (
       SELECT 1 FROM hafbe_app.witness_votes_history wvh
       WHERE wvh.voter_id = cap.account_id
-        AND wvh.source_op >= hafd.operation_id(hafbe_app.witness_votes_cache_window_start(), 0)
+        AND wvh.source_op >= hafd.operation_id(_window, 0)
     )
   ORDER BY cap.account_id
   LIMIT 1;

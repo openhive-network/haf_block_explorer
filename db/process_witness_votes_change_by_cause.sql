@@ -60,22 +60,16 @@ SET ROLE hafbe_owner;
  */
 
 /*
- * witness_votes_change_today_start: first block of the today window, the first
- * block at or after 00:00 UTC. NULL when no block was produced since.
- *
- * Not witness_votes_cache_window_start(), which keeps votes_daily_change's last
- * block before midnight. CURRENT_DATE, not 'today'::DATE, for the reason given
- * there.
+ * witness_votes_change_today_start(_block): first block of the today window ending
+ * at _block, the first block at or after 00:00 UTC of _block's day. The same window
+ * as votes_daily_change's (witness_votes_cache_window_start(_block)).
  */
-CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_today_start()
+DROP FUNCTION IF EXISTS hafbe_app.witness_votes_change_today_start();
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_today_start(_block INT)
 RETURNS INT
 LANGUAGE sql STABLE
 AS $$
-  SELECT b.num
-  FROM hive.blocks_view b
-  WHERE b.created_at >= CURRENT_DATE
-  ORDER BY b.created_at
-  LIMIT 1
+  SELECT hafbe_app.witness_votes_cache_window_start(_block)
 $$;
 
 
@@ -620,7 +614,7 @@ RETURNS VOID
 LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
-  _today_first_block INT := hafbe_app.witness_votes_change_today_start();
+  _today_first_block INT := hafbe_app.witness_votes_change_today_start(_block);
   _week_first_block  INT := hafbe_app.witness_votes_change_week_start(_block);
 BEGIN
   IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
@@ -693,16 +687,24 @@ $$;
  *
  * The breakdown is a display cache: a refresh that fails, a statement timeout
  * included, is rolled back with a WARNING naming the block and leaves the previous
- * breakdown in place, so that the block is still processed.
+ * breakdown in place, so that the block is still processed. The failed block is
+ * kept for the session, and no refresh is attempted again until 100 blocks after
+ * it (or a fork takes the chain back to it): a refresh that keeps failing would
+ * otherwise be retried, and paid for, on every block while as_of_block stays NULL
+ * or ahead.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_change_by_cause(_block INT)
 RETURNS VOID
 LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
-  _as_of_block INT := (SELECT s.as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s);
+  _as_of_block  INT := (SELECT s.as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s);
+  _failed_block INT := NULLIF(current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE), '')::INT;
 BEGIN
   IF _block % 100 = 0 OR _as_of_block IS NULL OR _as_of_block >= _block THEN
+    IF _failed_block < _block AND _block - _failed_block < 100 THEN
+      RETURN;
+    END IF;
     IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
       IF current_setting('hafbe_app.witness_votes_change_by_cause_skip_noticed', TRUE) IS DISTINCT FROM 'on' THEN
         RAISE NOTICE 'witness_votes_change_by_cause: not refreshed from block % on until the balance tracker''s indexes are built', _block;
@@ -712,10 +714,12 @@ BEGIN
     END IF;
     BEGIN
       PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_block);
+      PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
     -- OTHERS does not cover query_canceled, which a statement timeout raises.
     EXCEPTION WHEN OTHERS OR query_canceled THEN
-      RAISE WARNING 'witness_votes_change_by_cause: refresh at block % failed, the previous breakdown (block %) stays: % (SQLSTATE %)',
-        _block, _as_of_block, SQLERRM, SQLSTATE;
+      RAISE WARNING 'witness_votes_change_by_cause: refresh at block % failed, the previous breakdown (block %) stays, next attempt at block %: % (SQLSTATE %)',
+        _block, _as_of_block, _block + 100, SQLERRM, SQLSTATE;
+      PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', _block::TEXT, FALSE);
     END;
   END IF;
 END

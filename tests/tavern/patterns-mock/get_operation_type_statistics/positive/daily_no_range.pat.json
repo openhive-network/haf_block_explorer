@@ -4,7 +4,27 @@
     "last_block_num": 91000006,
     "operations": [
       {
-        "op_count": 2,
+        "op_count": 1,
+        "op_type_id": 12
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 44
+      },
+      {
+        "op_count": 1,
+        "op_type_id": 87
+      }
+    ],
+    "total_operations": 3,
+    "total_transactions": 0
+  },
+  {
+    "date": "2025-06-01T00:00:00",
+    "last_block_num": 91000005,
+    "operations": [
+      {
+        "op_count": 1,
         "op_type_id": 12
       },
       {
@@ -12,7 +32,7 @@
         "op_type_id": 13
       },
       {
-        "op_count": 4,
+        "op_count": 3,
         "op_type_id": 44
       },
       {
@@ -32,7 +52,7 @@
         "op_type_id": 66
       },
       {
-        "op_count": 4,
+        "op_count": 3,
         "op_type_id": 87
       },
       {
@@ -40,14 +60,7 @@
         "op_type_id": 92
       }
     ],
-    "total_operations": 18,
-    "total_transactions": 0
-  },
-  {
-    "date": "2025-06-01T00:00:00",
-    "last_block_num": 91000001,
-    "operations": [],
-    "total_operations": 0,
+    "total_operations": 15,
     "total_transactions": 0
   },
   {

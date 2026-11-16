@@ -6,7 +6,7 @@
 - `hafbe_app.process_witness_votes_change_by_cause()` (refresh at the context's block: CI's sync, `.aidev/run-checks.sh`; the first LIVE block refreshes through `(_block)`, having no state row)
 - `hafbe_app.refresh_witness_votes_change_by_cause(_block INT)`
 - `hafbe_app.witness_votes_change_by_cause_of(_first_block INT)` (one window, one set-based pass)
-- `hafbe_app.witness_votes_change_today_start()`, `hafbe_app.witness_votes_change_week_start(_block INT)`
+- `hafbe_app.witness_votes_change_today_start(_block INT)`, `hafbe_app.witness_votes_change_week_start(_block INT)`
 - `hafbe_app.witness_votes_change_by_cause_indexes_ready()`
 
 **Tables**: `hafbe_app.witness_votes_change_by_cause (witness_id, time_window, cause, vests, voters)`,
@@ -19,10 +19,11 @@ None is registered with HAF (like the witness vote caches).
 `votes_daily_change` counts only today's votes, at the voters' current weight. A witness's
 `vests` also moves every block (producer rewards, claimed rewards) and with power-downs and
 matured power-ups. This breaks each witness's change down by cause, over **today** (from the
-first block at or after 00:00 UTC, `witness_votes_change_today_start()`; empty when there is
-none yet) and **7d** (from the first block at or after `as_of_block`'s time minus 7 days), for
-`votes_change_breakdown` on `/witnesses`. Unlike `votes_daily_change`
-(`witness_votes_cache_window_start()`), neither window counts the block before its boundary.
+first block at or after 00:00 UTC of `as_of_block`'s day, `witness_votes_change_today_start(_block)`:
+the same window as `votes_daily_change`'s, `witness_votes_cache_window_start(_block)`, and like it
+independent of the session's TimeZone) and **7d** (from the first block at or after `as_of_block`'s
+time minus 7 days), for `votes_change_breakdown` on `/witnesses`. Neither window counts the block
+before its boundary.
 
 ## Schedule
 
@@ -103,8 +104,12 @@ witness.
 The breakdown is a display cache. `process_witness_votes_change_by_cause(_block)` runs the
 refresh in a subtransaction: any error, a statement timeout (`query_canceled`) included, is
 logged as a WARNING naming the block, the refresh is rolled back and the previous breakdown
-stays; the block is processed. With no state row yet the next block tries again, otherwise
-the next 100th. The NOTICE for missing balance tracker indexes is raised once per session.
+stays; the block is processed. The failed block is kept in the session setting
+`hafbe_app.witness_votes_change_by_cause_failed_block`, and no refresh is attempted until 100
+blocks after it (or a fork takes the chain back to it), also when there is no state row yet or
+it is ahead: a refresh that keeps failing (a timeout) is not paid for on every block. A restart
+forgets it, so the first due block after one tries again. The NOTICE for missing balance
+tracker indexes is raised once per session.
 
 ## Endpoint
 

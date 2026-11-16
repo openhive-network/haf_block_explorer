@@ -9,7 +9,7 @@
       "direct_vests": "5000000",
       "proxied_vests": "0",
       "proxy": "",
-      "timestamp": "2025-06-01T00:00:09"
+      "timestamp": "2025-05-31T23:59:54"
     },
     {
       "voter_name": "steem",
@@ -18,7 +18,7 @@
       "direct_vests": "15636871956265",
       "proxied_vests": "0",
       "proxy": "",
-      "timestamp": "2025-06-01T00:00:06"
+      "timestamp": "2025-05-31T23:59:51"
     },
     {
       "voter_name": "steem",
@@ -27,7 +27,7 @@
       "direct_vests": "15636871956265",
       "proxied_vests": "0",
       "proxy": "",
-      "timestamp": "2025-06-01T00:00:03"
+      "timestamp": "2025-05-31T23:59:48"
     }
   ]
 }

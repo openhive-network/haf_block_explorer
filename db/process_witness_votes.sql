@@ -165,29 +165,30 @@ $$;
  */
 
 /*
- * witness_votes_cache_window_start: lower bound of the "daily change" window.
+ * witness_votes_cache_window_start(_block): lower bound of the "daily change" window
+ * for block _block, inclusive: the first block at or after 00:00 UTC of the day of
+ * _block's created_at. NULL when _block is not in hive.blocks_view.
  *
- * Strictly this is the LAST block at or before today's midnight -- i.e. usually the
- * final block of yesterday -- and the window is inclusive of it, so one pre-midnight
- * block counts as today. That off-by-one is pre-existing behaviour, preserved
- * deliberately; correcting it moves published numbers and belongs in its own change.
+ * Derived from the block's own time, not the clock: created_at is UTC (timestamp
+ * without time zone), so the window does not follow the session's TimeZone, and a
+ * block processed late still counts in its own day. The window moves at the first
+ * block of a new UTC day.
  *
  * Ordered by created_at, not num: block timestamps rise strictly with the block
  * number, so both pick the same block, but only created_at lets
- * hive_blocks_created_at_idx find it with one descent. Ordered by num, the scan walks
- * pk_hive_blocks backwards over every block produced since midnight.
- *
- * CURRENT_DATE, not 'today'::DATE: the latter is a literal cast, folded to a constant
- * at PLAN time, so a cached plan would freeze the window at the day it was built.
+ * hive_blocks_created_at_idx find it with one descent.
  */
-CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_cache_window_start()
+DROP FUNCTION IF EXISTS hafbe_app.witness_votes_cache_window_start();
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_cache_window_start(_block INT)
 RETURNS INT
 LANGUAGE sql STABLE
 AS $$
-  SELECT num
-  FROM hive.blocks_view
-  WHERE created_at <= CURRENT_DATE
-  ORDER BY created_at DESC
+  SELECT b.num
+  FROM hive.blocks_view b
+  WHERE b.created_at >= (
+    SELECT date_trunc('day', d.created_at) FROM hive.blocks_view d WHERE d.num = _block
+  )
+  ORDER BY b.created_at
   LIMIT 1
 $$;
 
@@ -289,7 +290,7 @@ $$;
 /*
  * refresh_witness_votes_cache_full: all four caches recomputed in full.
  *
- * _first_block_num is the daily-change window (witness_votes_cache_window_start()).
+ * _first_block_num is the daily-change window (witness_votes_cache_window_start(_block)).
  */
 CREATE OR REPLACE FUNCTION hafbe_app.refresh_witness_votes_cache_full(_first_block_num INT)
 RETURNS VOID
@@ -549,8 +550,8 @@ $$;
 
 
 /*
- * process_witness_votes_cache(): all four caches recomputed in full, with today's
- * window. Leaves witness_votes_cache_state alone: the caches it writes are what any
+ * process_witness_votes_cache(): all four caches recomputed in full, with the window
+ * of the context's current block. Leaves witness_votes_cache_state alone: the caches it writes are what any
  * later block's refresh would start from anyway.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_cache()
@@ -558,7 +559,9 @@ RETURNS VOID
 LANGUAGE plpgsql VOLATILE
 AS $$
 BEGIN
-  PERFORM hafbe_app.refresh_witness_votes_cache_full(hafbe_app.witness_votes_cache_window_start());
+  PERFORM hafbe_app.refresh_witness_votes_cache_full(
+    hafbe_app.witness_votes_cache_window_start(hive.app_get_current_block_num('hafbe_app'))
+  );
 END
 $$;
 
@@ -574,7 +577,7 @@ $$;
  *     HAF hands over is then at or below the last refreshed one. The same test
  *     covers the first LIVE block (no state yet) and blocks after a restart or a
  *     MASSIVE catch-up, whose blocks refreshed no cache;
- *   - moves the daily-change window (midnight). Cache 1's account set and Cache 4
+ *   - moves the daily-change window (the first block of a UTC day). Cache 1's account set and Cache 4
  *     must share one window (issue #142);
  *   - carries an operation that can change votes, proxies, the proposal voters or
  *     today's vote history (witness_votes_cache_full_op_types());
@@ -597,7 +600,7 @@ SET join_collapse_limit = 16
 SET jit = OFF
 AS $$
 DECLARE
-  _first_block_num INT := hafbe_app.witness_votes_cache_window_start();
+  _first_block_num INT := hafbe_app.witness_votes_cache_window_start(_block);
   _last_block      INT;
   _last_first      INT;
   _full_ops        INT[] := hafbe_app.witness_votes_cache_full_op_types();

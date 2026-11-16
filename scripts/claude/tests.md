@@ -144,9 +144,12 @@ ancestor of another account the block names (the incremental path must pick it u
 and after each compares all four witness caches and
 `proposal_vote_stats_cache` row for row against a full recompute. For the fallback
 cases it also checks that the incremental path alone would have left a difference.
-When `witness_votes_change_cache` is empty (the synced 2016 chain has no vote event
-in today's window, which is just the head block), it adds a vote event of a proxy to
-the window first, and prints which it did.
+When `witness_votes_change_cache` is empty (no vote event in the head's UTC day), it
+adds a vote event of a proxy to the window first, and prints which it did. It first
+checks `witness_votes_cache_window_start()` itself: a block shortly after 00:00 UTC
+gets the first block of its UTC day in UTC and in `America/New_York`, the block
+before it the previous day's. Then it pins the window to the head's for the rest of
+the run, since the blocks it refreshes are older than the head.
 The blocks are the synced chain's own (their operations decide which accounts each
 names); the blocks' effects on balances and hafbe tables are simulated by writing
 those tables, and a fork by reverting such a write, inside a transaction it rolls
@@ -189,14 +192,17 @@ reached it (a proxy change of an account with proxiers or under a changed proxy,
 delayed VESTS, a VESTS change by an operation the breakdown does not read, which the 2016 chain is
 full of), and the output counts and names them. It does so for the scenario's window, then after
 `process_witness_votes_cache()` and a refresh over the whole chain for the stored 7d (and today,
-when a block was produced since 00:00 UTC) windows. It requires every `total` row to be the sum of
+the head's UTC day) windows. It requires every `total` row to be the sum of
 its causes, the 7-day window to start at the first block of the last 7 days, the stored start
 votes and `rank_start` to rank `witness_votes_cache.votes - total` of the refresh's block and to
 stay put when the cache moves after it, and checks one witness's `votes_change_breakdown` JSON.
 Last, it makes `process_witness_votes_change_by_cause()` refresh with a 7-day window start that
 sleeps past a 2 s statement timeout, then one that raises: both print a WARNING and leave the
-breakdown, its start votes and its state as they were. Everything is rolled back; the role must
-be a member of `hafbe_owner` (it replaces that function inside the transaction).
+breakdown, its start votes and its state as they were. With no state row, it then counts the
+attempts: none on the 99 blocks after the failed one, one 100 blocks after it. It also checks
+that `witness_votes_change_today_start()` equals `witness_votes_cache_window_start()` in UTC and
+`America/New_York`. Everything is rolled back; the role must be a member of `hafbe_owner` (it
+replaces that function inside the transaction).
 
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
@@ -258,7 +264,7 @@ dedicated DB integration-test suite if ever needed, not alongside the API tests.
 - `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
 - `get_proposal_votes/` — 11 positive + 5 negative
 - `get_proposal_votes_history/` — 12 positive + 3 negative (`filter_voter_*` pin the cache-hit and expired-view fallback stake branches; `tie_break_*` pin the same-block vote/un-vote ordering at the `page-size=1` pagination boundary; `proxied_voter` pins proxy zeroing)
-- `get_witness/` — 1 positive (`daily_change_lost_vote` pins the witness daily-change fix of issue #142; it lives here because the window collapses onto the HEAD block on every past-dated dataset, so patterns-mainnet cannot reach it — the cache is empty there and `get_witness` COALESCEs it to 0, making a working feature and a deleted one byte-identical)
+- `get_witness/` — 1 positive (`daily_change_lost_vote` pins the witness daily-change fix of issue #142; it lives here because the mock dataset puts its blocks before the head on the previous UTC day, so the window is the head block alone and the approve and the un-vote fall on either side of it)
 - `get_operation_type_statistics/` — 1 positive (`daily_no_range` pins the 1-year default window of issue #139; it lives here because it is the ONLY suite that can reach it — patterns-mainnet is pinned to block_log_5m, ~176 days, shorter than the window, so no fixture there can tell the clamp firing from it not firing)
 
 All patterns use `compare_rest_response_with_pattern` against `.pat.json` files. Add tests here whenever a behaviour is unreachable from the mainnet dataset — mock data, not only proposals.
