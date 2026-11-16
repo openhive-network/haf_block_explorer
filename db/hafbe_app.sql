@@ -55,6 +55,7 @@
  *    - witness_rank_cache: Cached witness rankings
  *    - witness_votes_change_cache: Cached daily vote changes
  *    - proposal_vote_stats_cache: Cached stake-weighted proposal vote totals
+ *    - witness_votes_change_by_cause: Witness vote change by cause, today and 7 days
  *
  * HAF Synchronization Stages:
  * ---------------------------
@@ -521,13 +522,13 @@ BEGIN
   /*
    * witness_votes_change_cache: Cached daily vote changes
    * -----------------------------------------------------
-   * Pre-computed 24-hour changes in votes and voter counts.
+   * Pre-computed changes in votes and voter counts since 00:00 UTC.
    * Used by get_witnesses() for showing vote trends.
    */
   CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_cache (
     witness_id              INT    NOT NULL,  -- Witness account ID (PK)
-    votes_daily_change      BIGINT NOT NULL,  -- Change in votes over last 24h
-    voters_num_daily_change INT    NOT NULL,  -- Change in voter count over last 24h
+    votes_daily_change      BIGINT NOT NULL,  -- Change in votes since 00:00 UTC
+    voters_num_daily_change INT    NOT NULL,  -- Change in voter count since 00:00 UTC
 
     CONSTRAINT pk_witness_votes_change_cache PRIMARY KEY (witness_id)
   );
@@ -610,6 +611,51 @@ CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state (
 
   CONSTRAINT pk_witness_votes_cache_state PRIMARY KEY (singleton),
   CONSTRAINT witness_votes_cache_state_singleton CHECK (singleton)
+);
+
+------------- WITNESS VOTE CHANGE BY CAUSE ----------------
+
+/*
+ * witness_votes_change_by_cause: Each witness's vote change by cause, per window
+ * ------------------------------------------------------------------------------
+ * Refreshed every 100 LIVE blocks by process_witness_votes_change_by_cause(_block)
+ * (db/process_witness_votes_change_by_cause.sql). One row per witness, window and
+ * cause that moved it, plus a 'total' row per witness and window whose vests is the
+ * sum of that witness's cause rows. A few thousand rows.
+ *
+ * Not registered with HAF, like the witness vote caches; witness_votes_change_by_cause_state
+ * carries the block it was refreshed for. Created outside the context-creation block
+ * so that a deployment whose context already exists gets it on reinstall.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause (
+  witness_id  INT    NOT NULL,  -- Witness account ID
+  time_window TEXT   NOT NULL,  -- 'today' (since 00:00 UTC) or '7d'
+  cause       TEXT   NOT NULL,  -- What moved the votes, or 'total'
+  vests       BIGINT NOT NULL,  -- Change in the witness's votes, in VESTS
+  voters      INT    NOT NULL,  -- Distinct voters of the witness whose events moved it
+
+  CONSTRAINT pk_witness_votes_change_by_cause PRIMARY KEY (witness_id, time_window, cause),
+  CONSTRAINT witness_votes_change_by_cause_time_window CHECK (time_window IN ('today', '7d')),
+  CONSTRAINT witness_votes_change_by_cause_cause CHECK (cause IN (
+    'total', 'votes_cast', 'votes_removed', 'power_down', 'power_up', 'producer_reward',
+    'claimed_reward', 'proxy', 'expired', 'declined'
+  ))
+);
+
+/*
+ * witness_votes_change_by_cause_state: The block witness_votes_change_by_cause holds
+ * --------------------------------------------------------------------------------
+ * One row: the last processed block when it was refreshed (as_of_block) and the
+ * first block of each window it used.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_state (
+  singleton         BOOLEAN NOT NULL DEFAULT TRUE,  -- Always TRUE: at most one row (PK)
+  as_of_block       INT     NOT NULL,               -- Block the breakdown was refreshed for
+  today_first_block INT     NULL,                   -- First block of the today window
+  week_first_block  INT     NOT NULL,               -- First block of the 7-day window
+
+  CONSTRAINT pk_witness_votes_change_by_cause_state PRIMARY KEY (singleton),
+  CONSTRAINT witness_votes_change_by_cause_state_singleton CHECK (singleton)
 );
 
 ------------- WALLET STATISTICS ----------------
@@ -870,6 +916,7 @@ BEGIN
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'proposal_vote_stats_cache',  interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause', interval '10 minutes');
 END
 $$;
 

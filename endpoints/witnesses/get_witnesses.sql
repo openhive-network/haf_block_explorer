@@ -52,11 +52,11 @@ SET ROLE hafbe_owner;
 
            * `votes` - total number of votes
 
-           * `votes_daily_change` - change in `votes` in the last 24 hours
+           * `votes_daily_change` - change in `votes` since 00:00 UTC
 
            * `voters_num` - total number of voters approving the witness
 
-           * `voters_num_daily_change` - change in `voters_num` in the last 24 hours
+           * `voters_num_daily_change` - change in `voters_num` since 00:00 UTC
 
            * `price_feed` - their current published value for the HIVE/HBD price feed
 
@@ -194,7 +194,8 @@ BEGIN
       ba.missed_blocks,
       ba.hbd_interest_rate,
       ba.last_confirmed_block_num,
-      ba.account_creation_fee
+      ba.account_creation_fee,
+      ba.votes_change_breakdown
     FROM hafbe_backend.get_witnesses(
       _page,
       _page_size,

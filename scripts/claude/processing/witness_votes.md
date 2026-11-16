@@ -63,7 +63,7 @@ Op 400: Vote for witness B
 | `hafbe_app.account_vest_stats_cache` | Vesting power per account (incl. voters with an event in the daily-change window) |
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
-| `hafbe_app.witness_votes_change_cache` | 24h vote changes |
+| `hafbe_app.witness_votes_change_cache` | Vote changes since 00:00 UTC |
 
 ## Handler Functions
 

@@ -20,8 +20,9 @@
 #     the source's tables with their statistics, which are what the plans need, and
 #     no API statement calls the processing procedures. The copy of db/hafbe_app.sql
 #     keeps the CREATE TABLE of the tables added since the shape was captured
-#     (hafbe_app.wallet_stats_by_day, hafbe_app.witness_votes_cache_state), empty and
-#     without statistics;
+#     (hafbe_app.wallet_stats_by_day, hafbe_app.witness_votes_cache_state,
+#     hafbe_app.witness_votes_change_by_cause and its _state), empty and without
+#     statistics;
 #   - db/drop_proposal_payments.sql is empty: it unregisters and drops the
 #     proposal_payments ledger of installs made before it was removed, through the HAF
 #     context the shape restores without rows, and no API statement reads the table;
@@ -81,9 +82,11 @@ fi
     sed -n '/CREATE TABLE hafbe_app.wallet_stats_by_day/,/);/p' db/hafbe_app.sql \
         | sed 's/CREATE TABLE /CREATE TABLE IF NOT EXISTS /'
     sed -n '/CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state/,/);/p' db/hafbe_app.sql
+    sed -n '/CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause (/,/);/p' db/hafbe_app.sql
+    sed -n '/CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_state/,/);/p' db/hafbe_app.sql
     echo "RESET ROLE;"
 } >> "$stage/db/hafbe_app.sql"
-for t in wallet_stats_by_day witness_votes_cache_state; do
+for t in wallet_stats_by_day witness_votes_cache_state witness_votes_change_by_cause witness_votes_change_by_cause_state; do
     if ! grep -q "CREATE TABLE IF NOT EXISTS hafbe_app.$t" "$stage/db/hafbe_app.sql"; then
         echo "db/hafbe_app.sql no longer creates hafbe_app.$t: update .aidev/shape-apply.sh" >&2
         exit 1

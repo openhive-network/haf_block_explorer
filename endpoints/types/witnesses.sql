@@ -5,6 +5,73 @@ SET ROLE hafbe_owner;
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_backend.witness_votes_change_window:
+  type: object
+  x-sql-datatype: JSON
+  properties:
+    total:
+      type: string
+      description: >-
+        the change in the witness''s votes over the window, in VESTS: the sum
+        of the cause fields below
+    voters:
+      type: integer
+      description: the number of the witness''s voters whose events moved its votes
+    rank_start:
+      type: integer
+      description: >-
+        the witness''s rank at the window start, ranking every witness by its
+        votes minus this total
+    votes_cast:
+      type: string
+      description: votes cast, each at the voter''s weight when it voted, in VESTS
+    votes_removed:
+      type: string
+      description: votes removed, each at the voter''s weight then, in VESTS
+    power_down:
+      type: string
+      description: power-down withdrawals of the voters and their proxies, in VESTS
+    power_up:
+      type: string
+      description: power-ups finishing their 30-day voting delay, in VESTS
+    producer_reward:
+      type: string
+      description: block producer rewards paid in VESTS
+    claimed_reward:
+      type: string
+      description: author and curation rewards claimed in VESTS
+    proxy:
+      type: string
+      description: >-
+        weight moved by proxies being set, changed or cleared, and votes
+        removed by setting a proxy, in VESTS
+    expired:
+      type: string
+      description: >-
+        votes and proxies removed after a year without governance activity,
+        in VESTS
+    declined:
+      type: string
+      description: votes and proxies removed by declining voting rights, in VESTS
+*/
+
+/** openapi:components:schemas
+hafbe_backend.witness_votes_change_breakdown:
+  type: object
+  x-sql-datatype: JSON
+  properties:
+    as_of_block:
+      type: integer
+      description: the last block processed when the breakdown was refreshed (every 100 blocks)
+    today:
+      $ref: '#/components/schemas/hafbe_backend.witness_votes_change_window'
+      description: the change since 00:00 UTC
+    7d:
+      $ref: '#/components/schemas/hafbe_backend.witness_votes_change_window'
+      description: the change over the 7 days up to as_of_block
+*/
+
+/** openapi:components:schemas
 hafbe_backend.witness:
   type: object
   properties:
@@ -28,8 +95,9 @@ hafbe_backend.witness:
     votes_daily_change:
       type: string
       description: >-
-        the increase or decrease in votes for this witness over the last 24
-        hours, expressed in vests
+        the increase or decrease in votes for this witness since 00:00 UTC
+        from votes cast and removed today, each valued at the voter''s
+        current weight, expressed in vests
     voters_num:
       type: integer
       description: the number of voters for this witness
@@ -37,7 +105,7 @@ hafbe_backend.witness:
       type: integer
       description: >-
         the increase or decrease in the number of voters voting for this
-        witness over the last 24 hours
+        witness since 00:00 UTC
     price_feed:
       type: number
       description: the current price feed provided by the witness in HIVE/HBD
@@ -82,6 +150,12 @@ hafbe_backend.witness:
     account_creation_fee:
       type: integer
       description: the cost of creating an account.
+    votes_change_breakdown:
+      $ref: '#/components/schemas/hafbe_backend.witness_votes_change_breakdown'
+      x-sql-datatype: JSON
+      description: >-
+        the change in the witness''s votes broken down by cause, today and
+        over 7 days; null until the first refresh
 */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.witness CASCADE;
@@ -102,7 +176,8 @@ CREATE TYPE hafbe_backend.witness AS (
     "missed_blocks" INT,
     "hbd_interest_rate" INT,
     "last_confirmed_block_num" INT,
-    "account_creation_fee" INT
+    "account_creation_fee" INT,
+    "votes_change_breakdown" JSON
 );
 -- openapi-generated-code-end
 

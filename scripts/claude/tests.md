@@ -163,6 +163,21 @@ reverted the context), which compare nothing (exit 2), checking
 the `matched=… skipped=… differs=… errors=…` summary of each run; on exit it
 recomputes the caches and restores the state row. The role must be a member of `hafbe_owner`.
 
+### Witness Vote Change by Cause Test
+`tests/witness_votes_change_by_cause/run_test.sh` (CI job `regression-test`, as `haf_admin`;
+AIDEV's `regression` step as its `witness_votes_change_by_cause` case) picks 13 accounts no
+vote, proxy or recent VESTS change of the synced chain touches, writes a prior state and a
+window of synthetic events (hafbe's vote and proxy tables, the balance tracker's
+`account_balance_history` / `current_account_balances` / `account_withdraws`) and checks
+`hafbe_app.witness_votes_change_by_cause_of()` against hand-derived values: votes cast and
+removed, a power-down after a vote in the same window (the ordering rule: counted once),
+producer and claimed rewards, a claim reaching the witness through a two-level proxy chain,
+a proxy set and cleared, and, when the role may write `hafd.operations` (CI's `haf_admin`),
+a matured power-up (`delayed_voting`), a proxy cascade, two expiries and a decline; otherwise
+those print `SKIPPED` and the expected totals leave them out. Then it refreshes the table
+over the whole chain, requires every `total` row to be the sum of its causes in both windows,
+and checks one witness's `votes_change_breakdown` JSON. Everything is rolled back.
+
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.
 

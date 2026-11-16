@@ -331,6 +331,111 @@ $$;
 -- =============================================================================
 
 /*
+ * witness_votes_change_breakdown: votes_change_breakdown of the given witnesses.
+ *
+ * One row per distinct witness in _witness_ids, none before the first refresh of
+ * hafbe_app.witness_votes_change_by_cause. Per window ('today', '7d'): total and
+ * voters from the 'total' row, a VESTS string per cause (0 for a cause without a
+ * row), and rank_start.
+ *
+ * rank_start is the witness's rank by votes minus the window's total, ties sharing
+ * a rank. Only witnesses with votes or a change can rank above zero votes, so
+ * those alone are ranked; any other witness had zero votes at the window start
+ * and shares the rank after every witness that had more.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.witness_votes_change_breakdown(_witness_ids INT[])
+RETURNS TABLE (
+    witness_id             INT,
+    votes_change_breakdown JSON
+)
+LANGUAGE sql STABLE
+AS
+$$
+  WITH windows AS (
+    SELECT w.time_window FROM (VALUES ('today'), ('7d')) AS w (time_window)
+  ),
+  starts AS MATERIALIZED (
+    SELECT
+      x.time_window,
+      x.witness_id,
+      x.start_votes,
+      (RANK() OVER (PARTITION BY x.time_window ORDER BY x.start_votes DESC))::INT AS rank_start
+    FROM (
+      SELECT w.time_window, wv.witness_id, wv.votes - COALESCE(t.vests, 0) AS start_votes
+      FROM windows w
+      CROSS JOIN hafbe_app.witness_votes_cache wv
+      LEFT JOIN hafbe_app.witness_votes_change_by_cause t
+        ON t.witness_id = wv.witness_id
+        AND t.time_window = w.time_window
+        AND t.cause = 'total'
+      UNION ALL
+      SELECT t.time_window, t.witness_id, -t.vests
+      FROM hafbe_app.witness_votes_change_by_cause t
+      WHERE t.cause = 'total'
+        AND NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_cache wv WHERE wv.witness_id = t.witness_id)
+    ) x
+  ),
+  -- One row per witness: joined on the witness alone, so the join key is selective.
+  ranks AS (
+    SELECT
+      s.witness_id,
+      MAX(s.rank_start) FILTER (WHERE s.time_window = 'today') AS today,
+      MAX(s.rank_start) FILTER (WHERE s.time_window = '7d')    AS week
+    FROM starts s
+    GROUP BY s.witness_id
+  ),
+  zero_ranks AS (
+    SELECT
+      (1 + COUNT(*) FILTER (WHERE s.time_window = 'today' AND s.start_votes > 0))::INT AS today,
+      (1 + COUNT(*) FILTER (WHERE s.time_window = '7d' AND s.start_votes > 0))::INT    AS week
+    FROM starts s
+  ),
+  ids AS (
+    SELECT DISTINCT u.witness_id FROM unnest(_witness_ids) AS u (witness_id)
+  ),
+  objects AS (
+    SELECT
+      i.witness_id,
+      w.time_window,
+      json_build_object(
+        'total',           COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'total'), 0)::TEXT,
+        'voters',          COALESCE(SUM(c.voters) FILTER (WHERE c.cause = 'total'), 0)::INT,
+        'rank_start',      MAX(CASE w.time_window
+                             WHEN 'today' THEN COALESCE(r.today, z.today)
+                             ELSE COALESCE(r.week, z.week)
+                           END),
+        'votes_cast',      COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_cast'), 0)::TEXT,
+        'votes_removed',   COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_removed'), 0)::TEXT,
+        'power_down',      COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'power_down'), 0)::TEXT,
+        'power_up',        COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'power_up'), 0)::TEXT,
+        'producer_reward', COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'producer_reward'), 0)::TEXT,
+        'claimed_reward',  COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'claimed_reward'), 0)::TEXT,
+        'proxy',           COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'proxy'), 0)::TEXT,
+        'expired',         COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'expired'), 0)::TEXT,
+        'declined',        COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'declined'), 0)::TEXT
+      ) AS window_object
+    FROM ids i
+    CROSS JOIN windows w
+    CROSS JOIN zero_ranks z
+    LEFT JOIN ranks r ON r.witness_id = i.witness_id
+    LEFT JOIN hafbe_app.witness_votes_change_by_cause c
+      ON c.witness_id = i.witness_id
+      AND c.time_window = w.time_window
+    GROUP BY i.witness_id, w.time_window
+  )
+  SELECT
+    o.witness_id,
+    json_build_object(
+      'as_of_block', st.as_of_block,
+      'today', (array_agg(o.window_object) FILTER (WHERE o.time_window = 'today'))[1],
+      '7d',    (array_agg(o.window_object) FILTER (WHERE o.time_window = '7d'))[1]
+    )
+  FROM objects o
+  CROSS JOIN hafbe_app.witness_votes_change_by_cause_state st
+  GROUP BY o.witness_id, st.as_of_block
+$$;
+
+/*
  * get_witnesses: Gets paginated list of all witnesses with statistics.
  *
  * Returns comprehensive witness data including votes, daily changes,
@@ -349,6 +454,7 @@ $$;
  *   - witness_rank_cache: Pre-calculated rank
  *   - witness_votes_cache: Total votes and voter count
  *   - witness_votes_change_cache: Daily vote changes
+ *   - witness_votes_change_by_cause: Vote change by cause (witness_votes_change_breakdown)
  */
 DROP FUNCTION IF EXISTS hafbe_backend.get_witnesses;
 CREATE OR REPLACE FUNCTION hafbe_backend.get_witnesses(
@@ -461,6 +567,12 @@ BEGIN
         (CASE WHEN "direction" = 'asc'                                         THEN cw.witness_id                                                  ELSE NULL END) ASC
       OFFSET (CASE WHEN "sort" = 'witness' THEN 0 ELSE __offset END)
       LIMIT "page-size"
+    ),
+    -- The page's position of each row, read back in the order limited_set stored
+    -- them: the join below need not keep it.
+    numbered_set AS (
+      SELECT ls.*, ROW_NUMBER() OVER () AS position
+      FROM limited_set ls
     )
     SELECT
       wav.name::TEXT,
@@ -479,14 +591,18 @@ BEGIN
       ls.missed_blocks,
       ls.hbd_interest_rate,
       ls.last_created_block_num,
-      ls.account_creation_fee
-    FROM limited_set ls
+      ls.account_creation_fee,
+      vcb.votes_change_breakdown
+    FROM numbered_set ls
     CROSS JOIN LATERAL (
       SELECT av.name
       FROM hive.accounts_view av
       WHERE av.id = ls.witness_id
       LIMIT 1
     ) wav
+    LEFT JOIN hafbe_backend.witness_votes_change_breakdown(ARRAY(SELECT l.witness_id FROM limited_set l)) vcb
+      ON vcb.witness_id = ls.witness_id
+    ORDER BY ls.position
   );
 END
 $$;
@@ -546,7 +662,8 @@ BEGIN
       ls.missed_blocks,
       ls.hbd_interest_rate,
       ls.last_created_block_num,
-      ls.account_creation_fee
+      ls.account_creation_fee,
+      (SELECT vcb.votes_change_breakdown FROM hafbe_backend.witness_votes_change_breakdown(ARRAY[ls.witness_id]) vcb)
     )
     FROM limited_set ls
     JOIN hafbe_app.witness_rank_cache a                 ON a.witness_id = ls.witness_id

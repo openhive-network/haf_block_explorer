@@ -45,6 +45,8 @@ BEGIN
   -- Must run after process_witness_votes_cache so account_vest_stats_cache
   -- is fresh for the same block before we join against it.
   PERFORM hafbe_app.process_proposal_vote_stats_cache();
+  -- Every 100 blocks, off the witness vote caches' per-block path.
+  PERFORM hafbe_app.process_witness_votes_change_by_cause(_block);
 
   IF _logs THEN
     __end_ts := clock_timestamp();

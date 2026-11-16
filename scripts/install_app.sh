@@ -177,6 +177,7 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_votes.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_proposals.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_proposal_vote_stats_cache.sql"
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/process_witness_votes_change_by_cause.sql"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -f "$HAFBE_DIR/db/single_processing.sql"
 
   echo "Removing objects the replaced processing functions no longer use..."
