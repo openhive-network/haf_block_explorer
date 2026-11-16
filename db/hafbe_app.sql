@@ -56,6 +56,7 @@
  *    - witness_votes_change_cache: Cached daily vote changes
  *    - proposal_vote_stats_cache: Cached stake-weighted proposal vote totals
  *    - witness_votes_change_by_cause: Witness vote change by cause, today and 7 days
+ *    - witness_votes_change_by_cause_start: Witness votes and rank at each window's start
  *
  * HAF Synchronization Stages:
  * ---------------------------
@@ -658,6 +659,24 @@ CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_state (
   CONSTRAINT witness_votes_change_by_cause_state_singleton CHECK (singleton)
 );
 
+/*
+ * witness_votes_change_by_cause_start: Each witness's votes at each window's start
+ * --------------------------------------------------------------------------------
+ * Written with witness_votes_change_by_cause, for the same as_of_block: votes is
+ * witness_votes_cache.votes (refreshed for that block just before) minus the
+ * window's total, rank_start its rank among these rows (ties share a rank). One row
+ * per witness with votes or a total row; any other witness had zero votes.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_start (
+  witness_id  INT    NOT NULL,  -- Witness account ID
+  time_window TEXT   NOT NULL,  -- 'today' or '7d'
+  votes       BIGINT NOT NULL,  -- The witness's votes at the window's start, in VESTS
+  rank_start  INT    NOT NULL,  -- Its rank by votes then
+
+  CONSTRAINT pk_witness_votes_change_by_cause_start PRIMARY KEY (witness_id, time_window),
+  CONSTRAINT witness_votes_change_by_cause_start_time_window CHECK (time_window IN ('today', '7d'))
+);
+
 ------------- WALLET STATISTICS ----------------
 
 /*
@@ -793,7 +812,7 @@ BEGIN
   RETURN EXISTS(
       SELECT true FROM pg_index WHERE indexrelid =
       (
-        SELECT oid FROM pg_class WHERE relname = 'witness_votes_history_source_op_brin'
+        SELECT oid FROM pg_class WHERE relname = 'account_proxies_history_source_op'
       )
     );
 END
@@ -917,6 +936,7 @@ BEGIN
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'proposal_vote_stats_cache',  interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause', interval '10 minutes');
+  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause_start', interval '10 minutes');
 END
 $$;
 
@@ -1366,6 +1386,8 @@ $$;
  *
  * Account Proxies:
  *   - account_proxies_history_account_id_source_op: Time-ordered history (also serves account filtering)
+ *   - account_proxies_history_source_op: Block-range scans with no account filter
+ *     (the witness vote change by cause)
  *   - current_account_proxies_proxy_id: Filter by proxy
  *
  * Block Operations:
@@ -1399,6 +1421,9 @@ BEGIN
   CREATE INDEX IF NOT EXISTS witness_votes_history_source_op_brin ON hafbe_app.witness_votes_history USING brin (source_op) WITH (autosummarize = on);
 
   CREATE INDEX IF NOT EXISTS account_proxies_history_account_id_source_op ON hafbe_app.account_proxies_history USING btree (account_id, source_op);
+  -- The witness vote change by cause reads the proxy changes of a window, a
+  -- source_op range with no account filter.
+  CREATE INDEX IF NOT EXISTS account_proxies_history_source_op ON hafbe_app.account_proxies_history USING btree (source_op);
   CREATE INDEX IF NOT EXISTS current_account_proxies_proxy_id ON hafbe_app.current_account_proxies USING btree (proxy_id);
   CREATE INDEX IF NOT EXISTS block_operations_block_num ON hafbe_app.block_operations USING btree (block_num);
   CREATE UNIQUE INDEX IF NOT EXISTS block_operations_op_type_id_block_num ON hafbe_app.block_operations USING btree (op_type_id, block_num);

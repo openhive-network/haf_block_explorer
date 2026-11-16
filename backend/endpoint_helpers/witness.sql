@@ -338,10 +338,10 @@ $$;
  * voters from the 'total' row, a VESTS string per cause (0 for a cause without a
  * row), and rank_start.
  *
- * rank_start is the witness's rank by votes minus the window's total, ties sharing
- * a rank. Only witnesses with votes or a change can rank above zero votes, so
- * those alone are ranked; any other witness had zero votes at the window start
- * and shares the rank after every witness that had more.
+ * rank_start is the witness's rank by votes at the window's start, as the refresh
+ * stored it for as_of_block (hafbe_app.witness_votes_change_by_cause_start). A
+ * witness without a row there had zero votes then and shares the rank after every
+ * witness that had more.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.witness_votes_change_breakdown(_witness_ids INT[])
 RETURNS TABLE (
@@ -354,26 +354,11 @@ $$
   WITH windows AS (
     SELECT w.time_window FROM (VALUES ('today'), ('7d')) AS w (time_window)
   ),
-  starts AS MATERIALIZED (
+  zero_ranks AS (
     SELECT
-      x.time_window,
-      x.witness_id,
-      x.start_votes,
-      (RANK() OVER (PARTITION BY x.time_window ORDER BY x.start_votes DESC))::INT AS rank_start
-    FROM (
-      SELECT w.time_window, wv.witness_id, wv.votes - COALESCE(t.vests, 0) AS start_votes
-      FROM windows w
-      CROSS JOIN hafbe_app.witness_votes_cache wv
-      LEFT JOIN hafbe_app.witness_votes_change_by_cause t
-        ON t.witness_id = wv.witness_id
-        AND t.time_window = w.time_window
-        AND t.cause = 'total'
-      UNION ALL
-      SELECT t.time_window, t.witness_id, -t.vests
-      FROM hafbe_app.witness_votes_change_by_cause t
-      WHERE t.cause = 'total'
-        AND NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_cache wv WHERE wv.witness_id = t.witness_id)
-    ) x
+      (1 + COUNT(*) FILTER (WHERE s.time_window = 'today' AND s.votes > 0))::INT AS today,
+      (1 + COUNT(*) FILTER (WHERE s.time_window = '7d' AND s.votes > 0))::INT    AS week
+    FROM hafbe_app.witness_votes_change_by_cause_start s
   ),
   -- One row per witness: joined on the witness alone, so the join key is selective.
   ranks AS (
@@ -381,14 +366,9 @@ $$
       s.witness_id,
       MAX(s.rank_start) FILTER (WHERE s.time_window = 'today') AS today,
       MAX(s.rank_start) FILTER (WHERE s.time_window = '7d')    AS week
-    FROM starts s
+    FROM hafbe_app.witness_votes_change_by_cause_start s
+    WHERE s.witness_id = ANY(_witness_ids)
     GROUP BY s.witness_id
-  ),
-  zero_ranks AS (
-    SELECT
-      (1 + COUNT(*) FILTER (WHERE s.time_window = 'today' AND s.start_votes > 0))::INT AS today,
-      (1 + COUNT(*) FILTER (WHERE s.time_window = '7d' AND s.start_votes > 0))::INT    AS week
-    FROM starts s
   ),
   ids AS (
     SELECT DISTINCT u.witness_id FROM unnest(_witness_ids) AS u (witness_id)

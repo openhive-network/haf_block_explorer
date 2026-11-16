@@ -4,11 +4,14 @@
 # =============================================================================
 #
 # Runs witness_votes_change_by_cause.sql against a database with hafbe synced: a
-# window of synthetic events (every cause, a two-level proxy chain, a vote followed
-# by a power-down) checked against hand-derived values, then a refresh over the
-# whole chain whose totals must be the sums of their causes. The power-up, proxy
-# cascade, expiry and decline events need a role that may write hafd.operations
-# (haf_admin); otherwise the output says they were skipped. Everything it changes
+# window of synthetic events applied through hafbe's vote and proxy parsers (every
+# cause, proxy switches, two- and four-level chains, a vote followed by a
+# power-down) checked against hand-derived values; every witness's total reconciled
+# with the change of its votes recomputed from the history; a refresh over the whole
+# chain (totals the sums of their causes, rank_start of the refresh's block); and a
+# failing refresh contained. The power-up, proxy cascade, expiry and decline events
+# need a role that may write hafd.operations (haf_admin); otherwise the output says
+# they were skipped. The role must be a member of hafbe_owner. Everything it changes
 # is rolled back.
 #
 # EXIT CODES:

@@ -1,14 +1,20 @@
 -- Witness vote change by cause on synthetic events.
 --
 -- Picks accounts no vote, proxy or recent VESTS change of the synced chain touches,
--- gives them a state and a window of events by writing hafbe's and the balance
--- tracker's tables, and checks hafbe_app.witness_votes_change_by_cause_of() against
--- values derived by hand from the scenario below. Two witnesses, X and Y:
+-- gives them a state and a window of events, and checks
+-- hafbe_app.witness_votes_change_by_cause_of() against values derived by hand from
+-- the scenario below. Votes, proxies, expiries and declines go through hafbe's own
+-- parsers (process_vote_op, process_proxy_ops, process_expired_accounts) in the
+-- order hived emits their operations; VESTS changes are written to the balance
+-- tracker's tables. Four witnesses, X, Y, Z and W:
 --
---   before the window   A, C and H vote for X; I and L vote for Y. D -> E -> A and
---                       G -> E, K -> A proxy. Base VESTS: A 980 (15 of them still
---                       delayed), B 600, C 250, D 45, E 200, F 30, G 70, H 80,
---                       I 400, K 60, L 90.
+--   before the window   A, C and H vote for X; I and L vote for Y; P for Z; Q for W.
+--                       D -> E -> A, G -> E, K -> A, S -> P, M -> P, N -> Q and
+--                       R0 -> R1 -> R2 -> R3 -> R4 -> Q proxy. U proxies to P, then
+--                       switches to Q. Base VESTS: A 980 (15 of them still delayed),
+--                       B 600, C 250, D 45, E 200, F 30, G 70, H 80, I 400, K 60,
+--                       L 90, P 500, Q 700, S 300, U 200, M 120, N 130, R0 40,
+--                       R1 60, R2 35, R3 45, R4 55, T 15.
 --   t1   C claims 40 VESTS                            X claimed_reward  +40
 --   t2   B votes for X, at 600 VESTS                  X votes_cast     +600
 --   t3   B powers down 100 VESTS                      X power_down     -100
@@ -24,55 +30,93 @@
 --   t12  I's votes expire                             Y expired        -400
 --   t13  K's proxy expires (was A)                    X expired         -60
 --   t14  L declines its voting rights                 Y declined        -90
+--   t15  S switches its proxy from P to Q: hived      Z proxy          -300
+--        pushes proxy_cleared for P after the switch  W proxy          +300
+--   t16  S claims 10 VESTS, through Q                 W claimed_reward  +10
+--   t17  U clears its proxy (Q, since its switch)     W proxy          -200
+--   t18  M's account expires, clearing its proxy      Z expired        -120
+--   t19  N declines its voting rights, clearing its   W declined       -130
+--        proxy
+--   t20  R1 claims 25 VESTS: four levels up to Q      W claimed_reward  +25
+--   t21  R0 claims 7 VESTS: five levels, reaches no   -
+--        voter
+--   t22  T sets its proxy to R2: four levels to Q     W proxy           +15
 --
--- X totals +190 (from A 1340 + C 250 + H 80 to A 1360 + B 500), Y -490. B's vote and
--- power-down in one window are counted once: its vote at the weight it had then.
+-- X totals +190 (from A 1340 + C 250 + H 80 to A 1360 + B 500), Y -490, Z -420
+-- (from P 920 to 500), W +20 (from Q 1225 to 1245). B's vote and power-down in one
+-- window are counted once: its vote at the weight it had then.
 --
--- t7, t11, t12, t13 and t14 need operations of their type in hafd.operations; when
--- the role may not write it (only haf_admin may), they are left out, the scenario
--- loses them (X +235: A 1295 + C 250 to A 1280 + B 500) and the output says which.
+-- t7, t11, t12, t13, t14, t18 and t19 need operations of their type in
+-- hafd.operations (the cause of a removal is read from them); when the role may not
+-- write it (only haf_admin may), they are left out, the scenario loses them (X +235:
+-- A 1355 + C 250 + H 80 to A 1340 + H 80 + B 500; Y 0; Z -300; W +150) and the
+-- output says which.
 --
--- Then refresh_witness_votes_change_by_cause() over the whole chain: every
--- witness's total row is the sum of its cause rows, in both windows, and X's 7-day
--- breakdown as hafbe_backend.witness_votes_change_breakdown() returns it.
+-- Then:
+--   - every witness's total over the scenario's window against the change of its
+--     votes computed independently from the same history (votes before the
+--     window's first block and after the last processed one); the scenario's
+--     witnesses must match exactly, any other witness may differ only where an
+--     approximation of the file header applies, and the output names each;
+--   - refresh_witness_votes_change_by_cause() over the whole chain: every total is
+--     the sum of its causes, the stored windows reconcile like the scenario's,
+--     rank_start ranks the votes at the window start of the refresh's block and
+--     does not follow the witness vote cache after it, and X's 7-day breakdown is
+--     what hafbe_backend.witness_votes_change_breakdown() returns;
+--   - a refresh that fails, by a statement timeout or an error, leaves the previous
+--     breakdown in place and does not fail process_witness_votes_change_by_cause().
 --
--- Needs a synced hafbe and the balance tracker's schema first on the search path.
--- Everything is rolled back.
+-- Needs a synced hafbe, the balance tracker's schema first on the search path and a
+-- member of hafbe_owner. Everything is rolled back.
 
 BEGIN;
 
 CREATE TEMP TABLE scenario_accounts (part TEXT PRIMARY KEY, id INT NOT NULL, account_name TEXT NOT NULL);
+CREATE TEMP TABLE scenario_ops (id BIGINT PRIMARY KEY);
+CREATE TEMP TABLE scenario_settings (write_ops BOOLEAN NOT NULL, head INT NOT NULL);
 
--- The id of a new operation appended to _block, after its last one. Written to
--- hafd.operations when _write.
-CREATE FUNCTION pg_temp.op_at(_block INT, _write BOOLEAN, _op_name TEXT, _body JSONB)
+CREATE FUNCTION pg_temp.account(_part TEXT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT s.id FROM scenario_accounts s WHERE s.part = _part;
+$$;
+
+CREATE FUNCTION pg_temp.account_name(_part TEXT)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT s.account_name FROM scenario_accounts s WHERE s.part = _part;
+$$;
+
+-- The id of a new operation of _block, after the block's last one and the
+-- scenario's. Written to hafd.operations when the role may and _op_name is given.
+CREATE FUNCTION pg_temp.next_op(_block INT, _op_name TEXT DEFAULT NULL, _body JSONB DEFAULT NULL)
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  _id BIGINT := (
-    SELECT hafd.operation_id(_block, (COALESCE(max(o.id) - hafd.operation_id(_block, 0), -1) + 1)::INT)
-    FROM hafd.operations o
-    WHERE o.id >= hafd.operation_id(_block, 0) AND o.id < hafd.operation_id(_block + 1, 0)
-  );
+  _first BIGINT := hafd.operation_id(_block, 0);
+  _next  BIGINT := hafd.operation_id(_block + 1, 0);
+  _id    BIGINT;
 BEGIN
-  IF _write THEN
+  _id := hafd.operation_id(_block, (GREATEST(
+    COALESCE((SELECT max(o.id) FROM hafd.operations o WHERE o.id >= _first AND o.id < _next), _first - 1),
+    COALESCE((SELECT max(s.id) FROM scenario_ops s WHERE s.id >= _first AND s.id < _next), _first - 1)
+  ) + 1 - _first)::INT);
+  INSERT INTO scenario_ops (id) VALUES (_id);
+  IF _op_name IS NOT NULL AND (SELECT s.write_ops FROM scenario_settings s) THEN
     INSERT INTO hafd.operations (id, trx_in_block, op_pos, op_type_id, body_value)
     VALUES (
-      _id, 0, (_id - hafd.operation_id(_block, 0))::INT,
-      (SELECT ot.id FROM hafd.operation_types ot WHERE ot.name = _op_name),
+      _id, 0, (_id - _first)::INT,
+      (SELECT ot.id FROM hafd.operation_types ot WHERE ot.name = 'hive::protocol::' || _op_name),
       _body
     );
   END IF;
   RETURN _id;
 END
-$$;
-
-CREATE FUNCTION pg_temp.account(_part TEXT)
-RETURNS INT
-LANGUAGE sql
-AS $$
-  SELECT s.id FROM scenario_accounts s WHERE s.part = _part;
 $$;
 
 -- A VESTS balance row of _part after the account's last one.
@@ -98,20 +142,51 @@ AS $$
     source_op = EXCLUDED.source_op;
 $$;
 
-CREATE FUNCTION pg_temp.vote(_voter TEXT, _witness TEXT, _approve BOOLEAN, _source_op BIGINT)
+-- The operations hived emits, each applied by hafbe's parser as process_witness_votes() does.
+CREATE FUNCTION pg_temp.op_vote(_block INT, _voter TEXT, _witness TEXT, _approve BOOLEAN)
 RETURNS VOID
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-  INSERT INTO hafbe_app.witness_votes_history (witness_id, voter_id, approve, source_op)
-  VALUES (pg_temp.account(_witness), pg_temp.account(_voter), _approve, _source_op);
+DECLARE
+  _body JSONB := jsonb_build_object('account', pg_temp.account_name(_voter), 'witness', pg_temp.account_name(_witness), 'approve', _approve);
+BEGIN
+  PERFORM hafbe_backend.process_vote_op(_body, pg_temp.next_op(_block, 'account_witness_vote_operation', _body));
+END
 $$;
 
-CREATE FUNCTION pg_temp.proxy(_account TEXT, _proxy TEXT, _set BOOLEAN, _source_op BIGINT)
+-- account_witness_proxy; _proxy NULL clears the proxy (an empty proxy name).
+CREATE FUNCTION pg_temp.op_proxy(_block INT, _account TEXT, _proxy TEXT)
 RETURNS VOID
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
-  INSERT INTO hafbe_app.account_proxies_history (account_id, proxy_id, proxy, source_op)
-  VALUES (pg_temp.account(_account), pg_temp.account(_proxy), _set, _source_op);
+DECLARE
+  _body JSONB := jsonb_build_object('account', pg_temp.account_name(_account), 'proxy', COALESCE(pg_temp.account_name(_proxy), ''));
+BEGIN
+  PERFORM hafbe_backend.process_proxy_ops(_body, pg_temp.next_op(_block, 'account_witness_proxy_operation', _body), TRUE);
+END
+$$;
+
+CREATE FUNCTION pg_temp.op_proxy_cleared(_block INT, _account TEXT, _proxy TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _body JSONB := jsonb_build_object('account', pg_temp.account_name(_account), 'proxy', pg_temp.account_name(_proxy));
+BEGIN
+  PERFORM hafbe_backend.process_proxy_ops(_body, pg_temp.next_op(_block, 'proxy_cleared_operation', _body), FALSE);
+END
+$$;
+
+-- expired_account_notification_operation or declined_voting_rights_operation.
+CREATE FUNCTION pg_temp.op_voting_rights_lost(_block INT, _account TEXT, _op_name TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _body JSONB := jsonb_build_object('account', pg_temp.account_name(_account));
+BEGIN
+  PERFORM hafbe_backend.process_expired_accounts(_body, pg_temp.next_op(_block, _op_name, _body));
+END
 $$;
 
 -- The function's rows for one witness against the expected (cause, vests, voters).
@@ -146,6 +221,314 @@ BEGIN
 END
 $$;
 
+-- ---------------------------------------------------------------------------------
+-- The reconciliation: votes recomputed from the history tables at an operation id,
+-- with none of witness_votes_change_by_cause_of()'s code.
+-- ---------------------------------------------------------------------------------
+
+-- Each account's proxy before operation _op, replaying its rows one by one: a set
+-- names the proxy, a clear removes it when it names the proxy in force.
+CREATE FUNCTION pg_temp.proxies_at(_op BIGINT)
+RETURNS TABLE (account_id INT, proxy_id INT)
+LANGUAGE sql
+AS $$
+  WITH RECURSIVE numbered AS MATERIALIZED (
+    SELECT
+      p.account_id,
+      p.proxy_id,
+      p.proxy,
+      ROW_NUMBER() OVER (PARTITION BY p.account_id ORDER BY p.source_op) AS n
+    FROM hafbe_app.account_proxies_history p
+    WHERE p.source_op < _op
+  ),
+  replay AS (
+    SELECT n.account_id, n.n, CASE WHEN n.proxy THEN n.proxy_id END AS state
+    FROM numbered n
+    WHERE n.n = 1
+    UNION ALL
+    SELECT
+      n.account_id,
+      n.n,
+      CASE
+        WHEN n.proxy THEN n.proxy_id
+        WHEN n.proxy_id = r.state THEN NULL
+        ELSE r.state
+      END
+    FROM replay r
+    JOIN numbered n ON n.account_id = r.account_id AND n.n = r.n + 1
+  )
+  SELECT l.account_id, l.state
+  FROM (
+    SELECT DISTINCT ON (r.account_id) r.account_id, r.state
+    FROM replay r
+    ORDER BY r.account_id, r.n DESC
+  ) l
+  WHERE l.state IS NOT NULL;
+$$;
+
+-- Each proxying account and the account its weight reaches before _op: the first
+-- one along its chain without a proxy, at most 4 hops up (none beyond).
+CREATE FUNCTION pg_temp.tops_at(_op BIGINT)
+RETURNS TABLE (account_id INT, voter_id INT)
+LANGUAGE sql
+AS $$
+  WITH RECURSIVE proxies AS MATERIALIZED (
+    SELECT p.account_id, p.proxy_id FROM pg_temp.proxies_at(_op) p
+  ),
+  walk AS (
+    SELECT p.account_id, p.proxy_id AS at_id, 1 AS hops FROM proxies p
+    UNION ALL
+    SELECT w.account_id, p.proxy_id, w.hops + 1
+    FROM walk w
+    JOIN proxies p ON p.account_id = w.at_id
+    WHERE w.hops < 4
+  )
+  SELECT w.account_id, w.at_id
+  FROM walk w
+  WHERE NOT EXISTS (SELECT 1 FROM proxies p WHERE p.account_id = w.at_id);
+$$;
+
+-- Each witness's voters before _op, and every account whose weight reaches one.
+CREATE FUNCTION pg_temp.members_at(_op BIGINT)
+RETURNS TABLE (witness_id INT, account_id INT)
+LANGUAGE sql
+AS $$
+  WITH voters AS MATERIALIZED (
+    SELECT v.voter_id, v.witness_id
+    FROM (
+      SELECT DISTINCT ON (h.voter_id, h.witness_id) h.voter_id, h.witness_id, h.approve
+      FROM hafbe_app.witness_votes_history h
+      WHERE h.source_op < _op
+      ORDER BY h.voter_id, h.witness_id, h.source_op DESC
+    ) v
+    WHERE v.approve
+  )
+  SELECT v.witness_id, v.voter_id FROM voters v
+  UNION
+  SELECT v.witness_id, t.account_id
+  FROM voters v
+  JOIN pg_temp.tops_at(_op) t ON t.voter_id = v.voter_id;
+$$;
+
+-- An account's delayed VESTS before _op: those of now plus the delayed_voting
+-- since. Power-ups adding delayed VESTS since are not undone: the CI chain predates
+-- delayed voting.
+CREATE FUNCTION pg_temp.delayed_at(_account INT, _op BIGINT)
+RETURNS BIGINT
+LANGUAGE sql
+AS $$
+  SELECT
+    COALESCE((SELECT w.delayed_vests::BIGINT FROM account_withdraws w WHERE w.account = _account), 0)
+    + COALESCE((
+      SELECT SUM((o.body_value ->> 'votes')::BIGINT)
+      FROM hafbe_app.operations_view o
+      WHERE o.op_type_id = btracker_backend.op_delayed_voting()
+        AND o.block_num >= hafd.operation_id_to_block_num(_op)
+        AND o.id >= _op
+        AND o.body_value ->> 'voter' = (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = _account)
+    ), 0)::BIGINT;
+$$;
+
+-- An account's governance weight of its own before _op: its last VESTS balance
+-- before it minus its delayed VESTS then.
+CREATE FUNCTION pg_temp.own_at(_account INT, _op BIGINT)
+RETURNS BIGINT
+LANGUAGE sql
+AS $$
+  SELECT
+    COALESCE((
+      SELECT h.balance::BIGINT
+      FROM account_balance_history h
+      WHERE h.account = _account
+        AND h.nai = btracker_backend.nai_vests()
+        AND h.source_op < _op
+      ORDER BY h.balance_seq_no DESC
+      LIMIT 1
+    ), 0)
+    - pg_temp.delayed_at(_account, _op);
+$$;
+
+-- Each witness's total for a window starting at _first_block (in recon_totals)
+-- against its votes after the last processed block minus its votes before
+-- _first_block. A witness that differs must be explained by an approximation the
+-- file header documents, found among the accounts whose weight reached it at either
+-- end:
+--   proxy chain    an account changed its proxy in the window and has accounts
+--                  proxying to it, or proxies to an account that changed its own
+--                  (chains above an account are the current ones; the weight a
+--                  change moves leaves out later changes of its proxiers)
+--   delayed VESTS  a power-down by an account with delayed VESTS
+--   other VESTS    a VESTS change by an operation the breakdown does not read
+--                  (immediate power-ups and VESTS rewards before HF24 / HF19)
+-- The scenario's witnesses (_exact) must match exactly. Raises naming every witness
+-- that differs otherwise.
+CREATE FUNCTION pg_temp.reconcile(_label TEXT, _first_block INT, _exact INT[])
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _start_op BIGINT := hafd.operation_id(_first_block, 0);
+  _end_op   BIGINT := hafd.operation_id((SELECT s.head FROM scenario_settings s) + 1, 0);
+  _fill     INT    := btracker_backend.op_fill_vesting_withdraw();
+  _read_ops INT[]  := ARRAY[btracker_backend.op_fill_vesting_withdraw(), hafbe_backend.op_producer_reward(), btracker_backend.op_claim_reward_balance()];
+  _compared INT;
+  _exact_n  INT;
+  _summary  TEXT;
+  _failures TEXT;
+BEGIN
+  IF to_regclass('pg_temp.recon_members') IS NOT NULL THEN
+    DROP TABLE recon_members, recon_own, recon_proxies, recon_diffs, recon_flags;
+  END IF;
+  CREATE TEMP TABLE recon_members AS
+    SELECT 'start'::TEXT AS at, m.witness_id, m.account_id FROM pg_temp.members_at(_start_op) m
+    UNION ALL
+    SELECT 'end', m.witness_id, m.account_id FROM pg_temp.members_at(_end_op) m;
+  CREATE TEMP TABLE recon_own AS
+    SELECT a.at, a.account_id, pg_temp.own_at(a.account_id, CASE a.at WHEN 'start' THEN _start_op ELSE _end_op END) AS own
+    FROM (SELECT DISTINCT m.at, m.account_id FROM recon_members m) a;
+  CREATE TEMP TABLE recon_diffs AS
+    SELECT
+      COALESCE(t.witness_id, c.witness_id) AS witness_id,
+      COALESCE(t.vests, 0) AS total,
+      COALESCE(c.change, 0) AS change
+    FROM recon_totals t
+    FULL JOIN (
+      SELECT m.witness_id, SUM(CASE m.at WHEN 'end' THEN o.own ELSE -o.own END)::BIGINT AS change
+      FROM recon_members m
+      JOIN recon_own o ON o.at = m.at AND o.account_id = m.account_id
+      GROUP BY m.witness_id
+    ) c ON c.witness_id = t.witness_id;
+
+  SELECT count(*), count(*) FILTER (WHERE d.total = d.change) INTO _compared, _exact_n FROM recon_diffs d;
+
+  CREATE TEMP TABLE recon_proxies AS
+    SELECT 'start'::TEXT AS at, p.account_id, p.proxy_id FROM pg_temp.proxies_at(_start_op) p
+    UNION ALL
+    SELECT 'end', p.account_id, p.proxy_id FROM pg_temp.proxies_at(_end_op) p;
+  -- The approximations that apply to each account of a witness that differs.
+  CREATE TEMP TABLE recon_flags AS
+    SELECT
+      a.account_id,
+      EXISTS (
+        SELECT 1 FROM hafbe_app.account_proxies_history p
+        WHERE p.account_id = a.account_id AND p.source_op >= _start_op AND p.source_op < _end_op
+      ) AND (
+        EXISTS (SELECT 1 FROM recon_proxies r WHERE r.proxy_id = a.account_id)
+        OR EXISTS (
+          SELECT 1
+          FROM recon_proxies r
+          JOIN hafbe_app.account_proxies_history p
+            ON p.account_id = r.proxy_id AND p.source_op >= _start_op AND p.source_op < _end_op
+          WHERE r.account_id = a.account_id
+        )
+      ) AS proxy_chain,
+      EXISTS (
+        SELECT 1 FROM account_balance_history h
+        WHERE h.account = a.account_id AND h.nai = btracker_backend.nai_vests()
+          AND h.source_op >= _start_op AND h.source_op < _end_op AND h.op_type_id = _fill
+      ) AND (
+        pg_temp.delayed_at(a.account_id, _start_op) > 0 OR pg_temp.delayed_at(a.account_id, _end_op) > 0
+      ) AS delayed_vests,
+      EXISTS (
+        SELECT 1
+        FROM (
+          SELECT h.op_type_id, h.balance, LAG(h.balance) OVER (ORDER BY h.balance_seq_no) AS previous_balance, h.source_op
+          FROM account_balance_history h
+          WHERE h.account = a.account_id AND h.nai = btracker_backend.nai_vests()
+            AND h.source_op >= _start_op AND h.source_op < _end_op
+        ) x
+        WHERE x.op_type_id <> ALL (_read_ops)
+          OR (x.op_type_id = _fill AND x.balance > x.previous_balance)
+      ) AS other_vests
+    FROM (
+      SELECT DISTINCT m.account_id
+      FROM recon_members m
+      JOIN recon_diffs d ON d.witness_id = m.witness_id
+      WHERE d.total <> d.change
+    ) a;
+
+  SELECT string_agg(format('%s: %s', e.reason, e.witnesses), '; ' ORDER BY e.reason)
+  INTO _summary
+  FROM (
+    SELECT r.reason, format('%s (%s)', count(*), string_agg(r.name, ', ' ORDER BY r.name) FILTER (WHERE r.n <= 5)) AS witnesses
+    FROM (
+      SELECT x.reason, av.name, ROW_NUMBER() OVER (PARTITION BY x.reason ORDER BY av.name) AS n
+      FROM (
+        SELECT
+          d.witness_id,
+          CASE
+            WHEN bool_or(f.proxy_chain) THEN 'proxy chain'
+            WHEN bool_or(f.delayed_vests) THEN 'delayed VESTS'
+            WHEN bool_or(f.other_vests) THEN 'other VESTS'
+          END AS reason
+        FROM recon_diffs d
+        LEFT JOIN recon_members m ON m.witness_id = d.witness_id
+        LEFT JOIN recon_flags f ON f.account_id = m.account_id
+        WHERE d.total <> d.change
+          AND d.witness_id <> ALL (_exact)
+        GROUP BY d.witness_id
+      ) x
+      JOIN hafbe_app.accounts_view av ON av.id = x.witness_id
+      WHERE x.reason IS NOT NULL
+    ) r
+    GROUP BY r.reason
+  ) e;
+
+  SELECT string_agg(format('%s total %s, votes changed by %s', COALESCE(av.name, d.witness_id::TEXT), d.total, d.change), '; ')
+  INTO _failures
+  FROM recon_diffs d
+  LEFT JOIN hafbe_app.accounts_view av ON av.id = d.witness_id
+  WHERE d.total <> d.change
+    AND (
+      d.witness_id = ANY (_exact)
+      OR NOT EXISTS (
+        SELECT 1
+        FROM recon_members m
+        JOIN recon_flags f ON f.account_id = m.account_id
+        WHERE m.witness_id = d.witness_id
+          AND (f.proxy_chain OR f.delayed_vests OR f.other_vests)
+      )
+    );
+
+  IF _failures IS NOT NULL THEN
+    RAISE EXCEPTION '%: witnesses whose total differs from the change of their votes outside the documented approximations: %', _label, _failures;
+  END IF;
+  IF (SELECT count(*) FROM recon_diffs d WHERE d.witness_id = ANY (_exact) AND d.total <> 0) <> cardinality(_exact) THEN
+    RAISE EXCEPTION '%: the scenario''s witnesses are not all in the comparison', _label;
+  END IF;
+  RAISE NOTICE '%: % witnesses compared, % match exactly (the scenario''s % among them); differing by an approximation: %',
+    _label, _compared, _exact_n, cardinality(_exact), COALESCE(_summary, 'none');
+END
+$$;
+
+-- The stored breakdown, its start votes and state, as they were before a failing refresh.
+CREATE TEMP TABLE saved_breakdown AS SELECT * FROM hafbe_app.witness_votes_change_by_cause WITH NO DATA;
+CREATE TEMP TABLE saved_start AS SELECT * FROM hafbe_app.witness_votes_change_by_cause_start WITH NO DATA;
+CREATE TEMP TABLE saved_state AS SELECT * FROM hafbe_app.witness_votes_change_by_cause_state WITH NO DATA;
+
+CREATE FUNCTION pg_temp.expect_breakdown_kept(_case TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF EXISTS (
+       (SELECT * FROM saved_breakdown EXCEPT ALL SELECT * FROM hafbe_app.witness_votes_change_by_cause)
+       UNION ALL
+       (SELECT * FROM hafbe_app.witness_votes_change_by_cause EXCEPT ALL SELECT * FROM saved_breakdown)
+     )
+     OR EXISTS (
+       (SELECT * FROM saved_start EXCEPT ALL SELECT * FROM hafbe_app.witness_votes_change_by_cause_start)
+       UNION ALL
+       (SELECT * FROM hafbe_app.witness_votes_change_by_cause_start EXCEPT ALL SELECT * FROM saved_start)
+     )
+     OR (SELECT row(s.*)::TEXT FROM hafbe_app.witness_votes_change_by_cause_state s)
+        IS DISTINCT FROM (SELECT row(s.*)::TEXT FROM saved_state s) THEN
+    RAISE EXCEPTION '%: the previous breakdown was not kept', _case;
+  END IF;
+  RAISE NOTICE '%: contained, the previous breakdown (% rows) is in place', _case, (SELECT count(*) FROM saved_breakdown);
+END
+$$;
+
 DO $$
 DECLARE
   _head        INT  := (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app');
@@ -157,15 +540,20 @@ DECLARE
   _producer    INT  := hafbe_backend.op_producer_reward();
   _claim       INT  := btracker_backend.op_claim_reward_balance();
   _other       INT  := btracker_backend.op_transfer_to_vesting();
-  _op          BIGINT;
-  _parts       TEXT[] := ARRAY['X', 'Y', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L'];
+  _parts       TEXT[] := ARRAY['X', 'Y', 'Z', 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
+                               'P', 'Q', 'S', 'U', 'M', 'N', 'R0', 'R1', 'R2', 'R3', 'R4', 'T'];
+  _exact       INT[];
   _picked      INT;
   _mismatches  INT;
+  _state       hafbe_app.witness_votes_change_by_cause_state;
   _breakdown   JSON;
+  _rank        INT;
+  _moved       INT;
 BEGIN
   IF _head IS NULL THEN
     RAISE EXCEPTION 'hafbe_app has processed no block: sync it first';
   END IF;
+  INSERT INTO scenario_settings (write_ops, head) VALUES (_write_ops, _head);
   _week_start := hafbe_app.witness_votes_change_week_start(_head);
   _before := _week_start - 10;
   _window := _head - 100;
@@ -193,7 +581,7 @@ BEGIN
             AND hafd.operation_id_to_block_num(b.source_op) >= _before
         )
       ORDER BY av.id DESC
-      LIMIT 13
+      LIMIT 27
     ) av
   ) c ON c.n = r.n;
   GET DIAGNOSTICS _picked = ROW_COUNT;
@@ -201,94 +589,106 @@ BEGIN
     RAISE EXCEPTION 'found % untouched accounts, the scenario needs %', _picked, cardinality(_parts);
   END IF;
   DELETE FROM account_withdraws w WHERE w.account IN (SELECT s.id FROM scenario_accounts s);
+  _exact := ARRAY[pg_temp.account('X'), pg_temp.account('Z'), pg_temp.account('W')];
+  IF _write_ops THEN
+    _exact := _exact || pg_temp.account('Y');
+  END IF;
 
   -- The prior state.
-  _op := pg_temp.op_at(_before, FALSE, NULL, NULL);
-  PERFORM pg_temp.set_vests('A', 980, _other, _op);
-  PERFORM pg_temp.set_vests('B', 600, _other, _op);
-  PERFORM pg_temp.set_vests('C', 250, _other, _op);
-  PERFORM pg_temp.set_vests('D', 45, _other, _op);
-  PERFORM pg_temp.set_vests('E', 200, _other, _op);
-  PERFORM pg_temp.set_vests('F', 30, _other, _op);
-  PERFORM pg_temp.set_vests('G', 70, _other, _op);
-  PERFORM pg_temp.set_vests('H', 80, _other, _op);
-  PERFORM pg_temp.set_vests('I', 400, _other, _op);
-  PERFORM pg_temp.set_vests('K', 60, _other, _op);
-  PERFORM pg_temp.set_vests('L', 90, _other, _op);
-  PERFORM pg_temp.proxy('G', 'E', TRUE, _op);
-  PERFORM pg_temp.proxy('K', 'A', TRUE, _op);
-  -- What process_witness_votes() leaves after the window (current tables).
-  INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, source_op)
-  VALUES (pg_temp.account('X'), pg_temp.account('A'), _op);
-  INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, source_op)
-  VALUES (pg_temp.account('D'), pg_temp.account('E'), _op),
-         (pg_temp.account('E'), pg_temp.account('A'), _op);
-  IF NOT _write_ops THEN
-    -- Without t11-t13, H still votes for X, I for Y, and K still proxies to A.
-    INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, source_op)
-    VALUES (pg_temp.account('X'), pg_temp.account('H'), _op),
-           (pg_temp.account('Y'), pg_temp.account('I'), _op),
-           (pg_temp.account('Y'), pg_temp.account('L'), _op);
-    INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, source_op)
-    VALUES (pg_temp.account('K'), pg_temp.account('A'), _op);
-  END IF;
+  PERFORM pg_temp.set_vests(p.part, p.vests, _other, pg_temp.next_op(_before))
+  FROM (VALUES ('A', 980), ('B', 600), ('C', 250), ('D', 45), ('E', 200), ('F', 30), ('G', 70),
+               ('H', 80), ('I', 400), ('K', 60), ('L', 90), ('P', 500), ('Q', 700), ('S', 300),
+               ('U', 200), ('M', 120), ('N', 130), ('R0', 40), ('R1', 60), ('R2', 35), ('R3', 45),
+               ('R4', 55), ('T', 15)) AS p (part, vests);
+  PERFORM pg_temp.op_vote(_before, v.voter, v.witness, TRUE)
+  FROM (VALUES ('A', 'X'), ('C', 'X'), ('H', 'X'), ('I', 'Y'), ('L', 'Y'), ('P', 'Z'), ('Q', 'W')) AS v (voter, witness);
+  PERFORM pg_temp.op_proxy(_before, p.account, p.proxy)
+  FROM (VALUES ('D', 'E'), ('E', 'A'), ('G', 'E'), ('K', 'A'), ('S', 'P'), ('M', 'P'), ('N', 'Q'),
+               ('U', 'P'), ('R0', 'R1'), ('R1', 'R2'), ('R2', 'R3'), ('R3', 'R4'), ('R4', 'Q')) AS p (account, proxy);
+  -- U switches from P to Q.
+  PERFORM pg_temp.op_proxy(_before + 1, 'U', 'Q');
+  PERFORM pg_temp.op_proxy_cleared(_before + 1, 'U', 'P');
 
   -- The window, one event per block. A's 15 delayed VESTS are delayed until t7.
   IF _write_ops THEN
     INSERT INTO account_withdraws (account, delayed_vests) VALUES (pg_temp.account('A'), 15);
   END IF;
-  PERFORM pg_temp.set_vests('C', 290, _claim, pg_temp.op_at(_window + 1, FALSE, NULL, NULL));
-  _op := pg_temp.op_at(_window + 2, FALSE, NULL, NULL);
-  PERFORM pg_temp.vote('B', 'X', TRUE, _op);
-  INSERT INTO hafbe_app.current_witness_votes (witness_id, voter_id, source_op)
-  VALUES (pg_temp.account('X'), pg_temp.account('B'), _op);
-  PERFORM pg_temp.set_vests('B', 500, _fill, pg_temp.op_at(_window + 3, FALSE, NULL, NULL));
+  PERFORM pg_temp.set_vests('C', 290, _claim, pg_temp.next_op(_window + 1));
+  PERFORM pg_temp.op_vote(_window + 2, 'B', 'X', TRUE);
+  PERFORM pg_temp.set_vests('B', 500, _fill, pg_temp.next_op(_window + 3));
   -- An approval made before the window, removed in it.
-  PERFORM pg_temp.vote('C', 'X', FALSE, pg_temp.op_at(_window + 4, FALSE, NULL, NULL));
-  PERFORM pg_temp.set_vests('C', 300, _claim, pg_temp.op_at(_window + 5, FALSE, NULL, NULL));
-  PERFORM pg_temp.set_vests('A', 1000, _producer, pg_temp.op_at(_window + 6, FALSE, NULL, NULL));
+  PERFORM pg_temp.op_vote(_window + 4, 'C', 'X', FALSE);
+  PERFORM pg_temp.set_vests('C', 300, _claim, pg_temp.next_op(_window + 5));
+  PERFORM pg_temp.set_vests('A', 1000, _producer, pg_temp.next_op(_window + 6));
   IF _write_ops THEN
-    PERFORM pg_temp.op_at(_window + 7, TRUE, 'hive::protocol::delayed_voting_operation',
-      jsonb_build_object('voter', (SELECT s.account_name FROM scenario_accounts s WHERE s.part = 'A'), 'votes', 15));
+    PERFORM pg_temp.next_op(_window + 7, 'delayed_voting_operation',
+      jsonb_build_object('voter', pg_temp.account_name('A'), 'votes', 15));
     UPDATE account_withdraws SET delayed_vests = 0 WHERE account = pg_temp.account('A');
   END IF;
-  PERFORM pg_temp.set_vests('D', 50, _claim, pg_temp.op_at(_window + 8, FALSE, NULL, NULL));
-  _op := pg_temp.op_at(_window + 9, FALSE, NULL, NULL);
-  PERFORM pg_temp.proxy('F', 'E', TRUE, _op);
-  INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, source_op)
-  VALUES (pg_temp.account('F'), pg_temp.account('E'), _op);
-  PERFORM pg_temp.proxy('G', 'E', FALSE, pg_temp.op_at(_window + 10, FALSE, NULL, NULL));
+  PERFORM pg_temp.set_vests('D', 50, _claim, pg_temp.next_op(_window + 8));
+  PERFORM pg_temp.op_proxy(_window + 9, 'F', 'E');
+  PERFORM pg_temp.op_proxy(_window + 10, 'G', NULL);
+  PERFORM pg_temp.op_proxy_cleared(_window + 10, 'G', 'E');
   IF _write_ops THEN
-    _op := pg_temp.op_at(_window + 11, TRUE, 'hive::protocol::account_witness_proxy_operation', '{}');
-    PERFORM pg_temp.proxy('H', 'A', TRUE, _op);
-    PERFORM pg_temp.vote('H', 'X', FALSE, _op);
-    INSERT INTO hafbe_app.current_account_proxies (account_id, proxy_id, source_op)
-    VALUES (pg_temp.account('H'), pg_temp.account('A'), _op);
-    PERFORM pg_temp.vote('I', 'Y', FALSE,
-      pg_temp.op_at(_window + 12, TRUE, 'hive::protocol::expired_account_notification_operation', '{}'));
-    PERFORM pg_temp.proxy('K', 'A', FALSE,
-      pg_temp.op_at(_window + 13, TRUE, 'hive::protocol::expired_account_notification_operation', '{}'));
-    PERFORM pg_temp.vote('L', 'Y', FALSE,
-      pg_temp.op_at(_window + 14, TRUE, 'hive::protocol::declined_voting_rights_operation', '{}'));
+    PERFORM pg_temp.op_proxy(_window + 11, 'H', 'A');
+    PERFORM pg_temp.op_voting_rights_lost(_window + 12, 'I', 'expired_account_notification_operation');
+    PERFORM pg_temp.op_proxy_cleared(_window + 13, 'K', 'A');
+    PERFORM pg_temp.op_voting_rights_lost(_window + 13, 'K', 'expired_account_notification_operation');
+    PERFORM pg_temp.op_voting_rights_lost(_window + 14, 'L', 'declined_voting_rights_operation');
+  END IF;
+  PERFORM pg_temp.op_proxy(_window + 15, 'S', 'Q');
+  PERFORM pg_temp.op_proxy_cleared(_window + 15, 'S', 'P');
+  PERFORM pg_temp.set_vests('S', 310, _claim, pg_temp.next_op(_window + 16));
+  PERFORM pg_temp.op_proxy(_window + 17, 'U', NULL);
+  PERFORM pg_temp.op_proxy_cleared(_window + 17, 'U', 'Q');
+  IF _write_ops THEN
+    PERFORM pg_temp.op_proxy_cleared(_window + 18, 'M', 'P');
+    PERFORM pg_temp.op_voting_rights_lost(_window + 18, 'M', 'expired_account_notification_operation');
+    PERFORM pg_temp.op_proxy_cleared(_window + 19, 'N', 'Q');
+    PERFORM pg_temp.op_voting_rights_lost(_window + 19, 'N', 'declined_voting_rights_operation');
+  END IF;
+  PERFORM pg_temp.set_vests('R1', 85, _claim, pg_temp.next_op(_window + 20));
+  PERFORM pg_temp.set_vests('R0', 47, _claim, pg_temp.next_op(_window + 21));
+  PERFORM pg_temp.op_proxy(_window + 22, 'T', 'R2');
+
+  IF _write_ops THEN
     PERFORM pg_temp.expect('the window', _window, 'X', '{
       "votes_cast": [600, 1], "power_down": [-100, 1], "votes_removed": [-290, 1],
       "claimed_reward": [45, 2], "producer_reward": [20, 1], "power_up": [15, 1],
       "proxy": [-40, 2], "expired": [-60, 1], "total": [190, 4]}');
     PERFORM pg_temp.expect('the window', _window, 'Y', '{
       "expired": [-400, 1], "declined": [-90, 1], "total": [-490, 2]}');
+    PERFORM pg_temp.expect('the window', _window, 'Z', '{
+      "proxy": [-300, 1], "expired": [-120, 1], "total": [-420, 1]}');
+    PERFORM pg_temp.expect('the window', _window, 'W', '{
+      "proxy": [115, 1], "claimed_reward": [35, 1], "declined": [-130, 1], "total": [20, 1]}');
   ELSE
-    RAISE NOTICE 'SKIPPED power_up (t7), the proxy cascade (t11), expired (t12, t13) and declined (t14): % may not write hafd.operations', current_user;
+    RAISE NOTICE 'SKIPPED power_up (t7), the proxy cascade (t11), expired (t12, t13, t18) and declined (t14, t19): % may not write hafd.operations', current_user;
     PERFORM pg_temp.expect('the window', _window, 'X', '{
       "votes_cast": [600, 1], "power_down": [-100, 1], "votes_removed": [-290, 1],
       "claimed_reward": [45, 2], "producer_reward": [20, 1],
       "proxy": [-40, 1], "total": [235, 3]}');
     PERFORM pg_temp.expect('the window', _window, 'Y', '{}');
+    PERFORM pg_temp.expect('the window', _window, 'Z', '{
+      "proxy": [-300, 1], "total": [-300, 1]}');
+    PERFORM pg_temp.expect('the window', _window, 'W', '{
+      "proxy": [115, 1], "claimed_reward": [35, 1], "total": [150, 1]}');
   END IF;
 
   -- A window starting after the events sees none of them.
-  PERFORM pg_temp.expect('a window after the events', _window + 20, 'X', '{}');
+  PERFORM pg_temp.expect('a window after the events', _window + 30, 'X', '{}');
+  PERFORM pg_temp.expect('a window after the events', _window + 30, 'W', '{}');
 
-  -- The refresh over the synced chain and the scenario: totals are the sum of causes.
+  -- Every witness's total against the change of its votes.
+  CREATE TEMP TABLE recon_totals AS
+    SELECT c.witness_id, c.vests
+    FROM hafbe_app.witness_votes_change_by_cause_of(_window) c
+    WHERE c.cause = 'total';
+  PERFORM pg_temp.reconcile('reconciliation of the scenario''s window', _window, _exact);
+
+  -- The refresh over the synced chain and the scenario, with the witness vote cache
+  -- holding the same block as single_processing() leaves it.
+  PERFORM hafbe_app.process_witness_votes_cache();
   PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_head);
   SELECT count(*)
   INTO _mismatches
@@ -301,11 +701,89 @@ BEGIN
   IF _mismatches <> 0 THEN
     RAISE EXCEPTION 'refresh: % witness windows have a total other than the sum of their causes', _mismatches;
   END IF;
-  IF (SELECT s.as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s) IS DISTINCT FROM _head THEN
-    RAISE EXCEPTION 'refresh: the state does not hold block %', _head;
+  SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
+  IF _state.as_of_block IS DISTINCT FROM _head
+     OR _state.week_first_block IS DISTINCT FROM _week_start
+     OR _state.today_first_block IS DISTINCT FROM hafbe_app.witness_votes_change_today_start() THEN
+    RAISE EXCEPTION 'refresh: the state % does not hold block % and its windows', _state, _head;
   END IF;
-  RAISE NOTICE 'refresh: % rows, every total is the sum of its causes',
-    (SELECT count(*) FROM hafbe_app.witness_votes_change_by_cause);
+  -- Each window starts at its first block after the boundary, not the one before it.
+  IF (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _week_start - 1)
+       >= (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _head) - INTERVAL '7 days'
+     OR (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _week_start)
+       < (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _head) - INTERVAL '7 days' THEN
+    RAISE EXCEPTION 'refresh: the 7-day window does not start at the first block of the last 7 days (%)', _week_start;
+  END IF;
+  RAISE NOTICE 'refresh: % rows, every total is the sum of its causes; windows from block % (7d) and % (today)',
+    (SELECT count(*) FROM hafbe_app.witness_votes_change_by_cause), _state.week_first_block, _state.today_first_block;
+
+  DROP TABLE recon_totals;
+  CREATE TEMP TABLE recon_totals AS
+    SELECT c.witness_id, c.vests
+    FROM hafbe_app.witness_votes_change_by_cause c
+    WHERE c.time_window = '7d' AND c.cause = 'total';
+  PERFORM pg_temp.reconcile('reconciliation of the stored 7d window', _state.week_first_block, _exact);
+  IF _state.today_first_block IS NOT NULL THEN
+    DROP TABLE recon_totals;
+    CREATE TEMP TABLE recon_totals AS
+      SELECT c.witness_id, c.vests
+      FROM hafbe_app.witness_votes_change_by_cause c
+      WHERE c.time_window = 'today' AND c.cause = 'total';
+    PERFORM pg_temp.reconcile('reconciliation of the stored today window', _state.today_first_block, ARRAY[]::INT[]);
+  ELSE
+    RAISE NOTICE 'reconciliation of the stored today window: no block since 00:00 UTC, the window is empty';
+  END IF;
+
+  -- rank_start ranks the votes at the window's start of the refresh's own block:
+  -- the cache's votes then minus the total.
+  SELECT count(*)
+  INTO _mismatches
+  FROM (
+    SELECT
+      s.witness_id,
+      s.time_window,
+      s.votes,
+      s.rank_start,
+      COALESCE(wv.votes, 0) - COALESCE(t.vests, 0) AS expected_votes,
+      (RANK() OVER (PARTITION BY s.time_window ORDER BY COALESCE(wv.votes, 0) - COALESCE(t.vests, 0) DESC))::INT AS expected_rank
+    FROM hafbe_app.witness_votes_change_by_cause_start s
+    LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = s.witness_id
+    LEFT JOIN hafbe_app.witness_votes_change_by_cause t
+      ON t.witness_id = s.witness_id AND t.time_window = s.time_window AND t.cause = 'total'
+  ) r
+  WHERE (r.votes, r.rank_start) IS DISTINCT FROM (r.expected_votes, r.expected_rank);
+  _mismatches := _mismatches + (
+    SELECT count(*)
+    FROM hafbe_app.witness_votes_cache wv
+    CROSS JOIN (VALUES ('today'), ('7d')) AS w (time_window)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM hafbe_app.witness_votes_change_by_cause_start s
+      WHERE s.witness_id = wv.witness_id AND s.time_window = w.time_window
+    )
+  );
+  IF _mismatches <> 0 THEN
+    RAISE EXCEPTION 'rank_start: % rows do not rank the votes at the window start of block %', _mismatches, _head;
+  END IF;
+  IF (SELECT s.votes FROM hafbe_app.witness_votes_change_by_cause_start s
+      WHERE s.witness_id = pg_temp.account('X') AND s.time_window = '7d')
+     IS DISTINCT FROM (CASE WHEN _write_ops THEN 1670 ELSE 1685 END) THEN
+    RAISE EXCEPTION 'rank_start: X''s votes at the 7-day window start are not the scenario''s';
+  END IF;
+
+  -- After the refresh the cache moves on with later blocks; rank_start stays with
+  -- the refresh's block. X jumps to the top of the cache.
+  SELECT (b.votes_change_breakdown -> '7d' ->> 'rank_start')::INT INTO _rank
+  FROM hafbe_backend.witness_votes_change_breakdown(ARRAY[pg_temp.account('X')]) b;
+  UPDATE hafbe_app.witness_votes_cache SET votes = votes + (SELECT max(v.votes) FROM hafbe_app.witness_votes_cache v)
+  WHERE witness_id = pg_temp.account('X');
+  SELECT (b.votes_change_breakdown -> '7d' ->> 'rank_start')::INT INTO _moved
+  FROM hafbe_backend.witness_votes_change_breakdown(ARRAY[pg_temp.account('X')]) b;
+  IF _rank IS NULL OR _moved IS DISTINCT FROM _rank
+     OR _rank IS DISTINCT FROM (SELECT s.rank_start FROM hafbe_app.witness_votes_change_by_cause_start s
+                                WHERE s.witness_id = pg_temp.account('X') AND s.time_window = '7d') THEN
+    RAISE EXCEPTION 'rank_start: X ranked % at the refresh and % after the cache moved', _rank, _moved;
+  END IF;
+  RAISE NOTICE 'rank_start: X ranks % at the 7-day window start of block %, also after the cache moved', _rank, _head;
 
   -- The 7-day window reaches back past the scenario's window: X's breakdown holds it.
   SELECT b.votes_change_breakdown INTO _breakdown
@@ -314,13 +792,47 @@ BEGIN
      OR _breakdown -> '7d' ->> 'total' IS DISTINCT FROM (CASE WHEN _write_ops THEN '190' ELSE '235' END)
      OR _breakdown -> '7d' ->> 'votes_cast' IS DISTINCT FROM '600'
      OR _breakdown -> '7d' ->> 'power_down' IS DISTINCT FROM '-100'
-     OR json_typeof(_breakdown -> '7d' -> 'rank_start') IS DISTINCT FROM 'number'
      OR (SELECT count(*) FROM json_object_keys(_breakdown -> '7d')) <> 12
      OR (SELECT count(*) FROM json_object_keys(_breakdown -> 'today')) <> 12 THEN
     RAISE EXCEPTION 'votes_change_breakdown of X is not the scenario: %', _breakdown;
   END IF;
   RAISE NOTICE 'votes_change_breakdown: %', _breakdown;
+
+  INSERT INTO saved_breakdown SELECT * FROM hafbe_app.witness_votes_change_by_cause;
+  INSERT INTO saved_start SELECT * FROM hafbe_app.witness_votes_change_by_cause_start;
+  INSERT INTO saved_state SELECT * FROM hafbe_app.witness_votes_change_by_cause_state;
 END
 $$;
+
+-- A refresh that fails. process_witness_votes_change_by_cause() refreshes for a block
+-- at or below the last refreshed one (a fork); the 7-day window's start is replaced
+-- by a function that fails, which the rollback below restores.
+SELECT s.as_of_block AS as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s \gset
+
+SET ROLE hafbe_owner;
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
+RETURNS INT
+LANGUAGE sql STABLE
+AS $$
+  SELECT 0 FROM pg_sleep(60)
+$$;
+RESET ROLE;
+SET LOCAL statement_timeout = '2s';
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
+SET LOCAL statement_timeout = 0;
+SELECT pg_temp.expect_breakdown_kept('a refresh past the statement timeout');
+
+SET ROLE hafbe_owner;
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
+RETURNS INT
+LANGUAGE plpgsql STABLE
+AS $$
+BEGIN
+  RAISE EXCEPTION 'a failure of the refresh';
+END
+$$;
+RESET ROLE;
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
+SELECT pg_temp.expect_breakdown_kept('a refresh that raises');
 
 ROLLBACK;
