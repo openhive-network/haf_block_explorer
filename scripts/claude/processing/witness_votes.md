@@ -158,7 +158,7 @@ It takes the full recompute (`refresh_witness_votes_cache_full()`) when:
 | Trigger | Why |
 |---------|-----|
 | `_block` is not `witness_votes_cache_state.block_num + 1` | The caches are not HAF-registered: a fork reverts the source tables but not them (next block is at or below the last). Also the first LIVE block and any restart / MASSIVE catch-up gap |
-| the daily-change window (`witness_votes_cache_window_start()`) differs from the stored one | Midnight: Cache 1's account set and Cache 4 must share the window (#142) |
+| the daily-change window (`witness_votes_cache_window_start(_block)`) differs from the stored one | The first block of a UTC day: Cache 1's account set and Cache 4 must share the window (#142) |
 | the block has `account_witness_vote`, `account_witness_proxy`, `proxy_cleared`, `declined_voting_rights`, `expired_account_notification`, `update_proposal_votes` or `remove_proposal` | They change votes, proxies, proposal voters or today's vote history, i.e. the tracked set |
 | an impacted account has a `current_witnesses` row but no `witness_rank_cache` row | A new witness takes a rank and shifts the zero-voter remainder |
 
@@ -166,9 +166,11 @@ It takes the full recompute (`refresh_witness_votes_cache_full()`) when:
 refreshed block and its window, written in the block's transaction. The no-argument
 full recompute leaves it alone.
 
-`witness_votes_cache_window_start()` finds the last block at or before midnight through
-`hive_blocks_created_at_idx` (`ORDER BY created_at DESC`) in one descent; ordered by
-`num` it walked `pk_hive_blocks` back over the whole day.
+`witness_votes_cache_window_start(_block)` is the first block at or after 00:00 UTC of
+`_block`'s own `created_at` day, found through `hive_blocks_created_at_idx` in one
+descent. It follows the block's time, not the clock: the session's TimeZone does not
+move it, and a block processed late still counts in its own day. The no-argument full
+recompute uses the window of the context's current block.
 
 Every cache is written only where values change (`MERGE ... WHEN MATCHED AND
 <values differ>`, PostgreSQL 17+ for `WHEN NOT MATCHED BY SOURCE`, or `UPDATE`s of

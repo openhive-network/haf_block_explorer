@@ -126,8 +126,9 @@ back, printing `block <n>: match`, `DIFFERS <cache>: <rows>, ...` or `skipped (.
 It compares only when `witness_votes_cache_state.block_num` equals
 `hive.app_get_current_block_num('hafbe_app')`: MASSIVE catch-up moves the registered
 tables but no cache, and a fork revert commits before the next LIVE block refreshes
-the caches, so either would differ legitimately. It also skips when the window moved
-at midnight or on a conflict with a block commit. A matching check writes nothing.
+the caches, so either would differ legitimately. It also skips when the stored window
+is not that block's (`witness_votes_cache_window_start(block)`) or on a conflict with a
+block commit. A matching check writes nothing.
 When the checks end it prints `matched=M skipped=S differs=D errors=E`. Exits 1 if
 any check differed or failed with an error, otherwise 2 (`no comparison was made:
 every check skipped`) if no check matched, so a run whose caches never caught up with

@@ -137,7 +137,7 @@
       }}
     },
     {
-      "_comment": "issue #142: cvk removes its ONLY witness vote. The daily-change window collapses onto the head block, so this un-vote is inside it while the approve at 91000001 is outside. cvk holds no other governance state, so it leaves the current-voter set entirely -- the case that Cache 4 used to drop with its INNER JOIN. NOTE: no apostrophes in this file; install_mock_data.sh interpolates it into a single-quoted SQL string.",
+      "_comment": "issue #142: cvk removes its ONLY witness vote. The daily-change window starts at the first block of the head UTC day, and only this block is dated 2025-06-01, so this un-vote is inside it while the approve at 91000001 is outside. cvk holds no other governance state, so it leaves the current-voter set entirely -- the case that Cache 4 used to drop with its INNER JOIN. NOTE: no apostrophes in this file; install_mock_data.sh interpolates it into a single-quoted SQL string.",
       "block_num": 91000006, "op_name": "hive::protocol::account_witness_vote_operation", "op_pos": 2, "trx_in_block": 1,
       "body": {"type": "account_witness_vote_operation", "value": {
         "account": "cvk", "witness": "gtg", "approve": false

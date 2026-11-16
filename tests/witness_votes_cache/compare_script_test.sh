@@ -63,7 +63,8 @@ trap restore EXIT
 set_state() {
     sql "SET ROLE hafbe_owner;
          INSERT INTO hafbe_app.witness_votes_cache_state (singleton, block_num, first_block_num)
-         VALUES (TRUE, hive.app_get_current_block_num('hafbe_app') + $1, hafbe_app.witness_votes_cache_window_start())
+         VALUES (TRUE, hive.app_get_current_block_num('hafbe_app') + $1,
+                 hafbe_app.witness_votes_cache_window_start(hive.app_get_current_block_num('hafbe_app')))
          ON CONFLICT (singleton) DO UPDATE SET
            block_num = EXCLUDED.block_num, first_block_num = EXCLUDED.first_block_num;" > /dev/null
 }

@@ -52,7 +52,7 @@ that motivated the unified row-by-row processor design:
 | `91000005`  | `create_proposal` + `proposal_fee` | proposal **9003** (gtg→blocktrades, 80k, active at block time) |
 | `91000005`  | `account_witness_proxy`            | **dan** sets a governance proxy to **blocktrades** (so dan's proposal-vote history rows report `voter_vests=0` / `proxy=blocktrades`, with `direct_vests` preserved) |
 | `91000006`  | `create_proposal` + `proposal_fee` | proposal **9004** (blocktrades→gtg, 30k, expired at block time) |
-| `91000006`  | `account_witness_vote`             | **cvk** removes its ONLY witness vote on **gtg** → leaves the current-voter set entirely. Load-bearing: every CI dataset is past-dated, so the daily-change window collapses onto the HEAD block, and this op must stay in the HIGHEST block for `get_witness/daily_change_lost_vote` to see it (issue #142) |
+| `91000006`  | `account_witness_vote`             | **cvk** removes its ONLY witness vote on **gtg** → leaves the current-voter set entirely. Load-bearing: the daily-change window starts at the first block of the head's UTC day, and only this block is dated 2025-06-01 (91000001..91000005 are 2025-05-31), so this op must stay in the HIGHEST block for `get_witness/daily_change_lost_vote` to see it (issue #142) |
 
 Status at block time 2025-06-01T00:00:15 (block 91000006):
 - 9002: start=2025-07-01 > now → **inactive**

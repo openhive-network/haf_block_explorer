@@ -36,13 +36,13 @@
       "claimed_reward": "0",
       "declined": "0",
       "expired": "0",
-      "power_down": "0",
+      "power_down": "-63378778611181",
       "power_up": "0",
-      "producer_reward": "0",
+      "producer_reward": "24453630805509",
       "proxy": "0",
       "rank_start": 29,
-      "total": "0",
-      "voters": 0,
+      "total": "-38925147805672",
+      "voters": 22,
       "votes_cast": "0",
       "votes_removed": "0"
     }

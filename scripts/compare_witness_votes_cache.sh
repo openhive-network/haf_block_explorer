@@ -23,9 +23,9 @@
 # blocks (catch-up after a restart) move the HAF-registered tables but no cache, and a
 # fork revert commits on its own, before the next LIVE block refreshes the caches. So
 # the check compares only when the caches' state row names the context's current
-# block, and is skipped when it does not, when the daily-change window has moved since
-# that block (the first check after midnight, before the next block) or when it
-# conflicts with a block commit.
+# block, and is skipped when it does not, when the window it stores is not that block's
+# daily-change window (a state row written before the window was derived from the
+# block) or when it conflicts with a block commit.
 #
 # Usage:
 #   ./compare_witness_votes_cache.sh [OPTIONS]
@@ -112,8 +112,8 @@ BEGIN
     RAISE NOTICE 'RESULT block %: skipped (the context is at block %, the caches were not refreshed for it)', _block, _current;
     RETURN;
   END IF;
-  IF _first IS DISTINCT FROM hafbe_app.witness_votes_cache_window_start() THEN
-    RAISE NOTICE 'RESULT block %: skipped (the daily-change window moved since that block)', _block;
+  IF _first IS DISTINCT FROM hafbe_app.witness_votes_cache_window_start(_block) THEN
+    RAISE NOTICE 'RESULT block %: skipped (the stored daily-change window is not that block''s)', _block;
     RETURN;
   END IF;
 
