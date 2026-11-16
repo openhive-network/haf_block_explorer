@@ -663,6 +663,78 @@ declare
           "$ref": "#/components/schemas/hafbe_backend.wallet_stats"
         }
       },
+      "hafbe_backend.witness_votes_change_window": {
+        "type": "object",
+        "x-sql-datatype": "JSON",
+        "properties": {
+          "total": {
+            "type": "string",
+            "description": "the change in the witness''s votes over the window, in VESTS: the sum of the cause fields below"
+          },
+          "voters": {
+            "type": "integer",
+            "description": "the number of the witness''s voters whose events moved its votes"
+          },
+          "rank_start": {
+            "type": "integer",
+            "description": "the witness''s rank at the window start, ranking every witness by its votes minus this total"
+          },
+          "votes_cast": {
+            "type": "string",
+            "description": "votes cast, each at the voter''s weight when it voted, in VESTS"
+          },
+          "votes_removed": {
+            "type": "string",
+            "description": "votes removed, each at the voter''s weight then, in VESTS"
+          },
+          "power_down": {
+            "type": "string",
+            "description": "power-down withdrawals of the voters and their proxies, in VESTS"
+          },
+          "power_up": {
+            "type": "string",
+            "description": "power-ups finishing their 30-day voting delay, in VESTS"
+          },
+          "producer_reward": {
+            "type": "string",
+            "description": "block producer rewards paid in VESTS"
+          },
+          "claimed_reward": {
+            "type": "string",
+            "description": "author and curation rewards claimed in VESTS"
+          },
+          "proxy": {
+            "type": "string",
+            "description": "weight moved by proxies being set, changed or cleared, and votes removed by setting a proxy, in VESTS"
+          },
+          "expired": {
+            "type": "string",
+            "description": "votes and proxies removed after a year without governance activity, in VESTS"
+          },
+          "declined": {
+            "type": "string",
+            "description": "votes and proxies removed by declining voting rights, in VESTS"
+          }
+        }
+      },
+      "hafbe_backend.witness_votes_change_breakdown": {
+        "type": "object",
+        "x-sql-datatype": "JSON",
+        "properties": {
+          "as_of_block": {
+            "type": "integer",
+            "description": "the last block processed when the breakdown was refreshed (every 100 blocks)"
+          },
+          "today": {
+            "$ref": "#/components/schemas/hafbe_backend.witness_votes_change_window",
+            "description": "the change since 00:00 UTC"
+          },
+          "7d": {
+            "$ref": "#/components/schemas/hafbe_backend.witness_votes_change_window",
+            "description": "the change over the 7 days up to as_of_block"
+          }
+        }
+      },
       "hafbe_backend.witness": {
         "type": "object",
         "properties": {
@@ -684,7 +756,7 @@ declare
           },
           "votes_daily_change": {
             "type": "string",
-            "description": "the increase or decrease in votes for this witness over the last 24 hours, expressed in vests"
+            "description": "the increase or decrease in votes for this witness since 00:00 UTC from votes cast and removed today, each valued at the voter''s current weight, expressed in vests"
           },
           "voters_num": {
             "type": "integer",
@@ -692,7 +764,7 @@ declare
           },
           "voters_num_daily_change": {
             "type": "integer",
-            "description": "the increase or decrease in the number of voters voting for this witness over the last 24 hours"
+            "description": "the increase or decrease in the number of voters voting for this witness since 00:00 UTC"
           },
           "price_feed": {
             "type": "number",
@@ -735,6 +807,11 @@ declare
           "account_creation_fee": {
             "type": "integer",
             "description": "the cost of creating an account."
+          },
+          "votes_change_breakdown": {
+            "$ref": "#/components/schemas/hafbe_backend.witness_votes_change_breakdown",
+            "x-sql-datatype": "JSON",
+            "description": "the change in the witness''s votes broken down by cause, today and over 7 days; null until the first refresh"
           }
         }
       },
@@ -1335,7 +1412,7 @@ declare
               "$ref": "#/components/schemas/hafbe_backend.order_by_witness",
               "default": "votes"
             },
-            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` in the last 24 hours\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` in the last 24 hours\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `feed_updated_at` - feed update timestamp\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
+            "description": "Sort key:\n\n * `witness` - the witness name\n\n * `rank` - their current rank (highest weight of votes => lowest rank)\n\n * `url` - the witness url\n\n * `votes` - total number of votes\n\n * `votes_daily_change` - change in `votes` since 00:00 UTC\n\n * `voters_num` - total number of voters approving the witness\n\n * `voters_num_daily_change` - change in `voters_num` since 00:00 UTC\n\n * `price_feed` - their current published value for the HIVE/HBD price feed\n\n * `feed_updated_at` - feed update timestamp\n\n * `bias` - if HBD is trading at only 0.90 USD on exchanges, the witness might set:\n        base: 0.250 HBD\n        quote: 1.100 HIVE\n      In this case, the bias is 10%%\n\n * `block_size` - the block size they are voting for\n\n * `signing_key` - the witness'' block-signing public key\n\n * `version` - the version of hived the witness is running\n"
           },
           {
             "in": "query",

@@ -15,5 +15,36 @@
   "missed_blocks": 935,
   "hbd_interest_rate": 1000,
   "last_confirmed_block_num": 4999992,
-  "account_creation_fee": 9000
+  "account_creation_fee": 9000,
+  "votes_change_breakdown": {
+    "7d": {
+      "claimed_reward": "0",
+      "declined": "0",
+      "expired": "0",
+      "power_down": "-572779767642846",
+      "power_up": "0",
+      "producer_reward": "360180221481135",
+      "proxy": "-422464598317499",
+      "rank_start": 8,
+      "total": "201224261683980",
+      "voters": 109,
+      "votes_cast": "902892664775408",
+      "votes_removed": "-66604258612218"
+    },
+    "as_of_block": 5000000,
+    "today": {
+      "claimed_reward": "0",
+      "declined": "0",
+      "expired": "0",
+      "power_down": "0",
+      "power_up": "0",
+      "producer_reward": "0",
+      "proxy": "0",
+      "rank_start": 8,
+      "total": "0",
+      "voters": 0,
+      "votes_cast": "0",
+      "votes_removed": "0"
+    }
+  }
 }

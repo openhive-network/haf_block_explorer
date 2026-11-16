@@ -25,9 +25,9 @@ List all witnesses (active and standby) with pagination and sorting.
 - `rank` - Current rank
 - `url` - Witness URL
 - `votes` - Total vote weight
-- `votes_daily_change` - 24h vote change
+- `votes_daily_change` - vote change since 00:00 UTC
 - `voters_num` - Number of voters
-- `voters_num_daily_change` - 24h voter count change
+- `voters_num_daily_change` - voter count change since 00:00 UTC
 - `price_feed` - Current price feed
 - `feed_updated_at` - Feed timestamp
 - `bias` - Price feed bias
@@ -65,6 +65,29 @@ Returns `hafbe_backend.witnesses_return`:
   ]
 }
 ```
+
+#### votes_change_breakdown
+
+Every row of `/witnesses` and `/witnesses/{account-name}` carries `votes_change_breakdown`
+(`null` before the first refresh): each witness's vote change by cause over **today**
+(since 00:00 UTC, the window of `votes_daily_change`) and **7d**, read from
+`hafbe_app.witness_votes_change_by_cause` (refreshed every 100 LIVE blocks, see
+[processing/witness_votes_change_by_cause.md](../processing/witness_votes_change_by_cause.md)).
+Amounts are VESTS strings:
+
+```json
+"votes_change_breakdown": {
+  "as_of_block": 111720000,
+  "today": { "total": "…", "voters": 3, "rank_start": 21,
+             "votes_cast": "…", "votes_removed": "…", "power_down": "…", "power_up": "…",
+             "producer_reward": "…", "claimed_reward": "…", "proxy": "…", "expired": "…", "declined": "…" },
+  "7d":    { … same keys … }
+}
+```
+
+`total` is the sum of the cause fields; `voters` the witness's voters whose events moved it;
+`rank_start` the rank by `vests - total`. `votes_daily_change` stays as it was (votes cast and
+removed today at the voters' current weight). Sorting by a cause is left to the frontend.
 
 #### Example
 
@@ -280,6 +303,7 @@ Located in `backend/endpoint_helpers/witness.sql`:
 | `get_witness()` | Retrieve witness data by ID |
 | `get_witness_id()` | Convert name to witness ID |
 | `get_witnesses()` | Paginated witness list |
+| `witness_votes_change_breakdown(INT[])` | `votes_change_breakdown` of the given witnesses (`rank_start` ranks only witnesses with votes or a change; the rest share the next rank) |
 | `get_witnesses_count()` | Total witness count |
 | `get_witness_voters()` | Voters for a witness |
 | `get_witness_votes_history()` | Historical votes |
@@ -292,7 +316,8 @@ Witness endpoints use cache tables for performance (updated in LIVE mode):
 |-------|---------|
 | `hafbe_app.witness_votes_cache` | Total votes per witness |
 | `hafbe_app.witness_rank_cache` | Witness rankings |
-| `hafbe_app.witness_votes_change_cache` | 24h vote changes |
+| `hafbe_app.witness_votes_change_cache` | Vote changes since 00:00 UTC |
+| `hafbe_app.witness_votes_change_by_cause` | Vote change by cause, today and 7 days (`votes_change_breakdown`) |
 | `hafbe_app.account_vest_stats_cache` | Voter vesting power — current voters/proxies/proposal voters, **plus** accounts with a witness-vote event in the daily-change window, which is what makes `votes_daily_change` / `voters_num_daily_change` count lost votes (issue #142) |
 
 ## Related Processing
@@ -301,6 +326,7 @@ Witness data is populated by:
 - `process_witness_stats()` - Witness properties
 - `process_witness_votes()` - Votes and proxies
 - `process_witness_votes_cache()` - Cache updates (LIVE mode)
+- `process_witness_votes_change_by_cause()` - Vote change by cause (LIVE mode, every 100 blocks)
 
 See [processing/witnesses.md](../processing/witnesses.md) and [processing/witness_votes.md](../processing/witness_votes.md).
 

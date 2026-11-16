@@ -466,7 +466,7 @@ sync:
     else
       echo -e "\e[0Ksection_start:$(date +%s):wait[collapsed=true]\r\e[0KWaiting for HAF BE startup..."
       "${CI_PROJECT_DIR}/scripts/ci-helpers/wait-for-haf-be-startup.sh"
-      psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache();"
+      psql "$POSTGRES_ACCESS" -c "SET search_path to 'hafbe_bal','hafbe_rep'; SELECT hafbe_app.process_witness_votes_cache(); SELECT hive.app_restore_indexes('hafbe_bal'); SELECT hafbe_app.process_witness_votes_change_by_cause();"
       echo -e "\e[0Ksection_end:$(date +%s):wait\r\e[0K"
     fi
   - |
@@ -869,6 +869,8 @@ regression-test:
     cd ../post_sync_freeze
     ./run_test.sh --host=${HAF_HOST}
     cd ../witness_votes_cache
+    ./run_test.sh --host=${HAF_HOST}
+    cd ../witness_votes_change_by_cause
     ./run_test.sh --host=${HAF_HOST}
 
     echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"

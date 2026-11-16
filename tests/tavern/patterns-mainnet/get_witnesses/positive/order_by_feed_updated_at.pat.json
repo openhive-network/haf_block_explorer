@@ -19,7 +19,38 @@
       "missed_blocks": 856,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999897,
-      "account_creation_fee": 1500
+      "account_creation_fee": 1500,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-281883891543891",
+          "power_up": "0",
+          "producer_reward": "234857435891212",
+          "proxy": "-394340623102972",
+          "rank_start": 17,
+          "total": "-6787438880335021",
+          "voters": 47,
+          "votes_cast": "23363290775701229",
+          "votes_removed": "-29709362577280599"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 28,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "delegate.lafona",
@@ -38,7 +69,38 @@
       "missed_blocks": 274,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999977,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-257993215931677",
+          "power_up": "0",
+          "producer_reward": "321767095437285",
+          "proxy": "-394340623102972",
+          "rank_start": 20,
+          "total": "9346730287772981",
+          "voters": 51,
+          "votes_cast": "9679581346621980",
+          "votes_removed": "-2284315251635"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 19,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "arhag",
@@ -57,7 +119,38 @@
       "missed_blocks": 61,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999993,
-      "account_creation_fee": 7000
+      "account_creation_fee": 7000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-586686814474631",
+          "power_up": "0",
+          "producer_reward": "505851373178083",
+          "proxy": "20054000810171",
+          "rank_start": 2,
+          "total": "188603969314675",
+          "voters": 125,
+          "votes_cast": "250292023111533",
+          "votes_removed": "-906613310481"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 2,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "complexring",
@@ -76,7 +169,38 @@
       "missed_blocks": 373,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999982,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-554700600611618",
+          "power_up": "0",
+          "producer_reward": "504177695163043",
+          "proxy": "-394340623102972",
+          "rank_start": 7,
+          "total": "409121045878040",
+          "voters": 105,
+          "votes_cast": "867573709155135",
+          "votes_removed": "-13589134725548"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 5,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "royaltiffany",
@@ -95,7 +219,38 @@
       "missed_blocks": 9,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4998774,
-      "account_creation_fee": 1
+      "account_creation_fee": 1,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-94049025434030",
+          "power_up": "0",
+          "producer_reward": "32309005546278",
+          "proxy": "0",
+          "rank_start": 51,
+          "total": "1079947906519663",
+          "voters": 30,
+          "votes_cast": "1141687926407415",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 52,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "fubar-bdhr",
@@ -114,7 +269,38 @@
       "missed_blocks": 5,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4992524,
-      "account_creation_fee": 1
+      "account_creation_fee": 1,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-304626367479",
+          "power_up": "0",
+          "producer_reward": "223267801008",
+          "proxy": "0",
+          "rank_start": 87,
+          "total": "-81358566471",
+          "voters": 7,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 88,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "ihashfury",
@@ -133,7 +319,38 @@
       "missed_blocks": 49,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 5000000,
-      "account_creation_fee": 1000
+      "account_creation_fee": 1000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-298368745634896",
+          "power_up": "0",
+          "producer_reward": "260531486649058",
+          "proxy": "-422464598317499",
+          "rank_start": 21,
+          "total": "9707560684664948",
+          "voters": 40,
+          "votes_cast": "10167862541968285",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 18,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "someguy123",
@@ -152,7 +369,38 @@
       "missed_blocks": 3,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999757,
-      "account_creation_fee": 3000
+      "account_creation_fee": 3000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-8042464150222",
+          "power_up": "0",
+          "producer_reward": "115153771064805",
+          "proxy": "28123975214527",
+          "rank_start": 44,
+          "total": "15500309871657239",
+          "voters": 76,
+          "votes_cast": "15482040929479469",
+          "votes_removed": "-116966339951340"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 39,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "anyx",
@@ -171,7 +419,38 @@
       "missed_blocks": 19,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999728,
-      "account_creation_fee": 18440
+      "account_creation_fee": 18440,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-294693116460215",
+          "power_up": "0",
+          "producer_reward": "332732495287077",
+          "proxy": "28123975214527",
+          "rank_start": 31,
+          "total": "354964689482492",
+          "voters": 72,
+          "votes_cast": "288801335441103",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 32,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "bhuz",
@@ -190,7 +469,38 @@
       "missed_blocks": 93,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999623,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-208275991453528",
+          "power_up": "0",
+          "producer_reward": "330212958307690",
+          "proxy": "-422464598317499",
+          "rank_start": 28,
+          "total": "2130537292770589",
+          "voters": 56,
+          "votes_cast": "2434095580855424",
+          "votes_removed": "-3030656621498"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 25,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "pharesim",
@@ -209,7 +519,38 @@
       "missed_blocks": 549,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999991,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-424055894876549",
+          "power_up": "0",
+          "producer_reward": "495752615640503",
+          "proxy": "-394340623102972",
+          "rank_start": 5,
+          "total": "-12856306866861529",
+          "voters": 117,
+          "votes_cast": "2321671638568839",
+          "votes_removed": "-14855334603091350"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 14,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "okay",
@@ -228,7 +569,38 @@
       "missed_blocks": 1,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4894116,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-400970870262",
+          "power_up": "0",
+          "producer_reward": "932631372316",
+          "proxy": "0",
+          "rank_start": 81,
+          "total": "531660502054",
+          "voters": 4,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 81,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "clayop",
@@ -247,7 +619,38 @@
       "missed_blocks": 689,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999997,
-      "account_creation_fee": 7000
+      "account_creation_fee": 7000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-401542523871536",
+          "power_up": "0",
+          "producer_reward": "482334634752062",
+          "proxy": "-394340623102972",
+          "rank_start": 14,
+          "total": "9619917755242285",
+          "voters": 125,
+          "votes_cast": "32481207014359856",
+          "votes_removed": "-22547740746895125"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 7,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "abit",
@@ -266,7 +669,38 @@
       "missed_blocks": 164,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999978,
-      "account_creation_fee": 6000
+      "account_creation_fee": 6000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-521511729587165",
+          "power_up": "0",
+          "producer_reward": "484218474124491",
+          "proxy": "20054000810171",
+          "rank_start": 9,
+          "total": "341156600046826",
+          "voters": 115,
+          "votes_cast": "428796502075657",
+          "votes_removed": "-70400647376328"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 9,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "furion",
@@ -285,7 +719,38 @@
       "missed_blocks": 0,
       "hbd_interest_rate": 500,
       "last_confirmed_block_num": 0,
-      "account_creation_fee": 12000
+      "account_creation_fee": 12000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 236,
+          "total": "6624378606352",
+          "voters": 1,
+          "votes_cast": "6624378606352",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 112,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "jocelyn",
@@ -304,7 +769,38 @@
       "missed_blocks": 8,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4950015,
-      "account_creation_fee": 1
+      "account_creation_fee": 1,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-3869615719089",
+          "power_up": "0",
+          "producer_reward": "18547163180324",
+          "proxy": "-422464598317499",
+          "rank_start": 67,
+          "total": "14683747993738",
+          "voters": 3,
+          "votes_cast": "422470798850002",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 68,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "error",
@@ -323,7 +819,38 @@
       "missed_blocks": 4,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4149770,
-      "account_creation_fee": 1
+      "account_creation_fee": 1,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 173,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 174,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "idol",
@@ -342,7 +869,38 @@
       "missed_blocks": 11,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4120113,
-      "account_creation_fee": 1
+      "account_creation_fee": 1,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-1367116727593",
+          "power_up": "0",
+          "producer_reward": "949133537882",
+          "proxy": "0",
+          "rank_start": 72,
+          "total": "-417983189711",
+          "voters": 3,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 72,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "joseph",
@@ -361,7 +919,38 @@
       "missed_blocks": 279,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999980,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-483281042430792",
+          "power_up": "0",
+          "producer_reward": "382870811652665",
+          "proxy": "-422464598317499",
+          "rank_start": 22,
+          "total": "12324738225664100",
+          "voters": 74,
+          "votes_cast": "50162568310069116",
+          "votes_removed": "-37314955255309390"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "3003845513",
+          "proxy": "0",
+          "rank_start": 12,
+          "total": "3003845513",
+          "voters": 1,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     },
     {
       "witness_name": "steem-id",
@@ -380,7 +969,38 @@
       "missed_blocks": 58,
       "hbd_interest_rate": 1000,
       "last_confirmed_block_num": 4999306,
-      "account_creation_fee": 10000
+      "account_creation_fee": 10000,
+      "votes_change_breakdown": {
+        "7d": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "-240229917593800",
+          "power_up": "0",
+          "producer_reward": "243201169779904",
+          "proxy": "28123975214527",
+          "rank_start": 40,
+          "total": "-8612428225079194",
+          "voters": 34,
+          "votes_cast": "357170139686",
+          "votes_removed": "-8643880622619511"
+        },
+        "as_of_block": 5000000,
+        "today": {
+          "claimed_reward": "0",
+          "declined": "0",
+          "expired": "0",
+          "power_down": "0",
+          "power_up": "0",
+          "producer_reward": "0",
+          "proxy": "0",
+          "rank_start": 44,
+          "total": "0",
+          "voters": 0,
+          "votes_cast": "0",
+          "votes_removed": "0"
+        }
+      }
     }
   ]
 }

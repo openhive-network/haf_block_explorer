@@ -30,7 +30,9 @@
 #   - sync            the block processors of haf_block_explorer (with balance tracker),
 #                     reputation tracker and l2_framework to block 5000000 in the clone, then what CI's
 #                     sync job and wait-for-haf-be-startup.sh do after it: the witness
-#                     votes cache, hafbe's indexes and the HAF indexes it registered
+#                     votes cache, hafbe's indexes and the HAF indexes it registered,
+#                     then the balance tracker's registered indexes and the witness
+#                     vote change by cause
 #   - regression      tests/regression against the synced clone (.aidev/hafbe_regression.py)
 #   - tavern          tests/tavern/patterns-mainnet against PostgREST over the synced clone
 #                     (.aidev/hafbe_tavern.py); one junit case per test
@@ -366,6 +368,11 @@ sync_apps() {
         -c "SET search_path TO hafbe_bal, reptracker_app" -c "SELECT hafbe_app.process_witness_votes_cache()" \
         -c "SELECT hafbe_app.create_hafbe_indexes()" -c "RESET ROLE" \
         -c "SELECT hive.app_restore_indexes('hafbe_app')" || return 1
+    # The witness vote change by cause probes the balance tracker's history through its
+    # registered indexes, which production has from the switch to LIVE.
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "SELECT hive.app_restore_indexes('hafbe_bal')" \
+        -c "SET ROLE hafbe_owner" -c "SET search_path TO hafbe_bal, reptracker_app" \
+        -c "SELECT hafbe_app.process_witness_votes_change_by_cause()" || return 1
     [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select hive.check_if_registered_indexes_created('hafbe_app')")" = t ] \
         || { echo "hafbe's registered HAF indexes are not created"; return 1; }
     psql "$HAFBE_TEST_DB_URL" -c "select name, current_block_num from hafd.contexts order by name"
