@@ -21,9 +21,14 @@ SET ROLE hafbe_owner;
  *   claimed_reward   account_balance_history, claim_reward_balance    +
  *   proxy            account_proxies_history (set, changed, cleared)
  *                    and the vote removals setting a proxy cascades   +/-
- *   expired          expired_account_notification's vote and proxy
- *                    removals                                         -
- *   declined         declined_voting_rights' vote and proxy removals  -
+ *   expired          expired_account_notification's vote removals,
+ *                    and the proxy removal in its block               -
+ *   declined         declined_voting_rights' vote removals, and the
+ *                    proxy removal in its block                       -
+ *
+ * An account's proxy at any point is the one its last set named, unless a later
+ * row cleared that same proxy: the proxy_cleared hived pushes for the replaced
+ * proxy after a switch is not a removal.
  *
  * Plain power-ups (their VESTS are delayed, so the weight does not move until
  * delayed_voting) and delegations (not governance weight) are not causes.
@@ -44,6 +49,10 @@ SET ROLE hafbe_owner;
  *     own later changes; changes of accounts proxying to it are not subtracted.
  *   - A power-down is valued at its full VESTS. When it also cancels delayed
  *     VESTS (a power-up still in its 30-day delay) the weight moves by less.
+ *   - VESTS changes by other operations are not causes. Since HF24 power-ups and
+ *     routed withdrawals reach the weight through delayed_voting, and since HF19
+ *     rewards through claim_reward_balance; in older history (CI's 5M-block chain)
+ *     they moved it directly and are missing from the totals.
  *
  * Not registered with HAF, like the witness vote caches: a fork reverts the
  * tables this is computed from, and the next block at or below as_of_block
@@ -51,25 +60,40 @@ SET ROLE hafbe_owner;
  */
 
 /*
- * witness_votes_change_week_start: lower bound of the 7-day window ending at _block.
+ * witness_votes_change_today_start: first block of the today window, the first
+ * block at or after 00:00 UTC. NULL when no block was produced since.
  *
- * The last block at or before _block's timestamp minus 7 days, the same shape of
- * bound witness_votes_cache_window_start() gives the today window. 0 (the whole
- * chain) when the chain is younger than 7 days.
+ * Not witness_votes_cache_window_start(), which keeps votes_daily_change's last
+ * block before midnight. CURRENT_DATE, not 'today'::DATE, for the reason given
+ * there.
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_today_start()
+RETURNS INT
+LANGUAGE sql STABLE
+AS $$
+  SELECT b.num
+  FROM hive.blocks_view b
+  WHERE b.created_at >= CURRENT_DATE
+  ORDER BY b.created_at
+  LIMIT 1
+$$;
+
+
+/*
+ * witness_votes_change_week_start: first block of the 7-day window ending at
+ * _block, the first block at or after _block's timestamp minus 7 days.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
 RETURNS INT
 LANGUAGE sql STABLE
 AS $$
-  SELECT COALESCE((
-    SELECT b.num
-    FROM hive.blocks_view b
-    WHERE b.created_at <= (
-      SELECT h.created_at FROM hive.blocks_view h WHERE h.num = _block
-    ) - INTERVAL '7 days'
-    ORDER BY b.created_at DESC
-    LIMIT 1
-  ), 0)
+  SELECT b.num
+  FROM hive.blocks_view b
+  WHERE b.created_at >= (
+    SELECT h.created_at FROM hive.blocks_view h WHERE h.num = _block
+  ) - INTERVAL '7 days'
+  ORDER BY b.created_at
+  LIMIT 1
 $$;
 
 
@@ -140,46 +164,109 @@ BEGIN
     FROM hafbe_app.witness_votes_history h
     WHERE h.source_op >= _first_op
   ),
-  -- Every proxy change of the window, with the proxy it replaced: the previous row
-  -- of the account, or for its first row in the window the last row before it.
-  link_rows AS MATERIALIZED (
-    SELECT
-      p.account_id,
-      p.source_op,
-      CASE WHEN p.proxy THEN p.proxy_id END AS new_proxy,
-      LAG(CASE WHEN p.proxy THEN p.proxy_id END) OVER w AS previous_proxy,
-      ROW_NUMBER() OVER w AS rn,
-      COALESCE((
-        SELECT
-          CASE o.op_type_id
-            WHEN _op_expired  THEN 'expired'
-            WHEN _op_declined THEN 'declined'
-          END
-        FROM hafbe_app.operations_view o
-        WHERE o.id = p.source_op
-      ), 'proxy') AS cause
+  -- The accounts with a proxy row in the window, and their rows from the last one
+  -- before the window that set a proxy on (no such row: no proxy at the window
+  -- start). set_no numbers each row by the sets so far.
+  window_proxy_accounts AS MATERIALIZED (
+    SELECT DISTINCT p.account_id
     FROM hafbe_app.account_proxies_history p
     WHERE p.source_op >= _first_op
-    WINDOW w AS (PARTITION BY p.account_id ORDER BY p.source_op)
   ),
+  proxy_rows AS MATERIALIZED (
+    SELECT
+      r.account_id,
+      r.proxy_id,
+      r.proxy,
+      r.source_op,
+      COUNT(*) FILTER (WHERE r.proxy) OVER (PARTITION BY r.account_id ORDER BY r.source_op) AS set_no
+    FROM window_proxy_accounts a
+    CROSS JOIN LATERAL (
+      SELECT q.account_id, q.proxy_id, q.proxy, q.source_op
+      FROM hafbe_app.account_proxies_history q
+      WHERE q.account_id = a.account_id
+        AND q.source_op >= COALESCE((
+          SELECT s.source_op
+          FROM hafbe_app.account_proxies_history s
+          WHERE s.account_id = a.account_id
+            AND s.proxy
+            AND s.source_op < _first_op
+          ORDER BY s.source_op DESC
+          LIMIT 1
+        ), _first_op)
+    ) r
+  ),
+  -- The proxy an account has after each row: the one its last set named, unless a
+  -- row since cleared that same proxy. Clearing another one changes nothing: hived
+  -- pushes proxy_cleared for the replaced proxy after the account_witness_proxy that
+  -- switched to a new one, as process_proxy_ops records it.
+  proxy_states AS MATERIALIZED (
+    SELECT
+      c.account_id,
+      c.proxy,
+      c.source_op,
+      CASE WHEN NOT c.cleared THEN c.set_proxy END AS state
+    FROM (
+      SELECT
+        f.account_id,
+        f.proxy,
+        f.source_op,
+        f.set_proxy,
+        BOOL_OR(NOT f.proxy AND f.proxy_id = f.set_proxy) OVER (
+          PARTITION BY f.account_id, f.set_no ORDER BY f.source_op
+        ) AS cleared
+      FROM (
+        SELECT
+          pr.account_id,
+          pr.proxy_id,
+          pr.proxy,
+          pr.source_op,
+          pr.set_no,
+          FIRST_VALUE(CASE WHEN pr.proxy THEN pr.proxy_id END) OVER (
+            PARTITION BY pr.account_id, pr.set_no ORDER BY pr.source_op
+          ) AS set_proxy
+        FROM proxy_rows pr
+      ) f
+    ) c
+  ),
+  -- Every proxy change of the window, with the proxy it replaced. A removal is
+  -- classified by an expiry or decline of the account at or after it in its block:
+  -- hived pushes proxy_cleared before expired_account_notification /
+  -- declined_voting_rights (process_expired_accounts records its own removals at
+  -- the expiry itself).
   links AS MATERIALIZED (
     SELECT
       l.account_id,
       l.source_op,
-      l.cause,
       l.new_proxy,
+      l.old_proxy,
       CASE
-        WHEN l.rn > 1 THEN l.previous_proxy
-        ELSE (
-          SELECT CASE WHEN q.proxy THEN q.proxy_id END
-          FROM hafbe_app.account_proxies_history q
-          WHERE q.account_id = l.account_id
-            AND q.source_op < _first_op
-          ORDER BY q.source_op DESC
+        WHEN l.proxy THEN 'proxy'
+        ELSE COALESCE((
+          SELECT
+            CASE o.op_type_id
+              WHEN _op_expired  THEN 'expired'
+              WHEN _op_declined THEN 'declined'
+            END
+          FROM hafbe_app.operations_view o
+          WHERE o.id >= l.source_op
+            AND o.id < hafd.operation_id(hafd.operation_id_to_block_num(l.source_op) + 1, 0)
+            AND o.op_type_id IN (_op_expired, _op_declined)
+            AND o.body_value ->> 'account' = (SELECT av.name FROM hafbe_app.accounts_view av WHERE av.id = l.account_id)
+          ORDER BY o.id
           LIMIT 1
-        )
-      END AS old_proxy
-    FROM link_rows l
+        ), 'proxy')
+      END AS cause
+    FROM (
+      SELECT
+        ps.account_id,
+        ps.source_op,
+        ps.proxy,
+        ps.state AS new_proxy,
+        LAG(ps.state) OVER (PARTITION BY ps.account_id ORDER BY ps.source_op) AS old_proxy
+      FROM proxy_states ps
+    ) l
+    WHERE l.source_op >= _first_op
+      AND l.old_proxy IS DISTINCT FROM l.new_proxy
   ),
   link_accounts AS MATERIALIZED (
     SELECT DISTINCT l.account_id FROM links l
@@ -328,7 +415,6 @@ BEGIN
     LEFT JOIN hafbe_backend.account_vest_stats_of(ARRAY(SELECT la.account_id FROM link_accounts la)) w
       ON w.account_id = l.account_id
     LEFT JOIN own_events e ON e.account_id = l.account_id AND e.source_op > l.source_op
-    WHERE l.old_proxy IS DISTINCT FROM l.new_proxy
     GROUP BY l.account_id, l.source_op, l.cause, l.old_proxy, l.new_proxy
   ),
   -- Every change of a voter's weight, at the voter it reached. backs = FALSE marks
@@ -521,10 +607,11 @@ $$;
 
 /*
  * refresh_witness_votes_change_by_cause: both windows recomputed for _block, the
- * last processed block, and written where they changed.
+ * last processed block, and written where they changed, with each witness's votes
+ * and rank at each window's start (witness_votes_change_by_cause_start).
  *
- * The today window is the daily-change window of votes_daily_change
- * (witness_votes_cache_window_start()), the 7-day one ends at _block.
+ * The start votes are witness_votes_cache.votes minus the window's total, so the
+ * cache must hold _block: single_processing() refreshes it for the block first.
  *
  * Raises when witness_votes_change_by_cause_indexes_ready() is false.
  */
@@ -533,7 +620,7 @@ RETURNS VOID
 LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
-  _today_first_block INT := hafbe_app.witness_votes_cache_window_start();
+  _today_first_block INT := hafbe_app.witness_votes_change_today_start();
   _week_first_block  INT := hafbe_app.witness_votes_change_week_start(_block);
 BEGIN
   IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
@@ -555,6 +642,35 @@ BEGIN
     VALUES (s.witness_id, s.time_window, s.cause, s.vests, s.voters)
   WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
+  MERGE INTO hafbe_app.witness_votes_change_by_cause_start t
+  USING (
+    SELECT
+      x.witness_id,
+      x.time_window,
+      x.votes,
+      (RANK() OVER (PARTITION BY x.time_window ORDER BY x.votes DESC))::INT AS rank_start
+    FROM (
+      SELECT wv.witness_id, w.time_window, wv.votes - COALESCE(c.vests, 0) AS votes
+      FROM (VALUES ('today'), ('7d')) AS w (time_window)
+      CROSS JOIN hafbe_app.witness_votes_cache wv
+      LEFT JOIN hafbe_app.witness_votes_change_by_cause c
+        ON c.witness_id = wv.witness_id
+        AND c.time_window = w.time_window
+        AND c.cause = 'total'
+      UNION ALL
+      SELECT c.witness_id, c.time_window, -c.vests
+      FROM hafbe_app.witness_votes_change_by_cause c
+      WHERE c.cause = 'total'
+        AND NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_cache wv WHERE wv.witness_id = c.witness_id)
+    ) x
+  ) s ON t.witness_id = s.witness_id AND t.time_window = s.time_window
+  WHEN MATCHED AND (t.votes, t.rank_start) IS DISTINCT FROM (s.votes, s.rank_start) THEN
+    UPDATE SET votes = s.votes, rank_start = s.rank_start
+  WHEN NOT MATCHED THEN
+    INSERT (witness_id, time_window, votes, rank_start)
+    VALUES (s.witness_id, s.time_window, s.votes, s.rank_start)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
+
   INSERT INTO hafbe_app.witness_votes_change_by_cause_state (singleton, as_of_block, today_first_block, week_first_block)
   VALUES (TRUE, _block, _today_first_block, _week_first_block)
   ON CONFLICT ON CONSTRAINT pk_witness_votes_change_by_cause_state DO UPDATE SET
@@ -571,8 +687,13 @@ $$;
  *
  * Refreshes every 100 blocks (~5 minutes), and right away when nothing was
  * refreshed yet or the last refresh is at or above _block (a fork reverted it).
- * Skips, with a NOTICE, while the balance tracker's indexes are not built yet (the
- * first LIVE blocks), rather than scan its history once per account.
+ * Skips while the balance tracker's indexes are not built yet (the first LIVE
+ * blocks), rather than scan its history once per account, with a NOTICE the first
+ * time in the session.
+ *
+ * The breakdown is a display cache: a refresh that fails, a statement timeout
+ * included, is rolled back with a WARNING naming the block and leaves the previous
+ * breakdown in place, so that the block is still processed.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_change_by_cause(_block INT)
 RETURNS VOID
@@ -583,10 +704,19 @@ DECLARE
 BEGIN
   IF _block % 100 = 0 OR _as_of_block IS NULL OR _as_of_block >= _block THEN
     IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
-      RAISE NOTICE 'witness_votes_change_by_cause: not refreshed at block %, the balance tracker''s indexes are not built yet', _block;
+      IF current_setting('hafbe_app.witness_votes_change_by_cause_skip_noticed', TRUE) IS DISTINCT FROM 'on' THEN
+        RAISE NOTICE 'witness_votes_change_by_cause: not refreshed from block % on until the balance tracker''s indexes are built', _block;
+        PERFORM set_config('hafbe_app.witness_votes_change_by_cause_skip_noticed', 'on', FALSE);
+      END IF;
       RETURN;
     END IF;
-    PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_block);
+    BEGIN
+      PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_block);
+    -- OTHERS does not cover query_canceled, which a statement timeout raises.
+    EXCEPTION WHEN OTHERS OR query_canceled THEN
+      RAISE WARNING 'witness_votes_change_by_cause: refresh at block % failed, the previous breakdown (block %) stays: % (SQLSTATE %)',
+        _block, _as_of_block, SQLERRM, SQLSTATE;
+    END;
   END IF;
 END
 $$;

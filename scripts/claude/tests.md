@@ -165,18 +165,38 @@ recomputes the caches and restores the state row. The role must be a member of `
 
 ### Witness Vote Change by Cause Test
 `tests/witness_votes_change_by_cause/run_test.sh` (CI job `regression-test`, as `haf_admin`;
-AIDEV's `regression` step as its `witness_votes_change_by_cause` case) picks 13 accounts no
-vote, proxy or recent VESTS change of the synced chain touches, writes a prior state and a
-window of synthetic events (hafbe's vote and proxy tables, the balance tracker's
-`account_balance_history` / `current_account_balances` / `account_withdraws`) and checks
-`hafbe_app.witness_votes_change_by_cause_of()` against hand-derived values: votes cast and
-removed, a power-down after a vote in the same window (the ordering rule: counted once),
-producer and claimed rewards, a claim reaching the witness through a two-level proxy chain,
-a proxy set and cleared, and, when the role may write `hafd.operations` (CI's `haf_admin`),
-a matured power-up (`delayed_voting`), a proxy cascade, two expiries and a decline; otherwise
-those print `SKIPPED` and the expected totals leave them out. Then it refreshes the table
-over the whole chain, requires every `total` row to be the sum of its causes in both windows,
-and checks one witness's `votes_change_breakdown` JSON. Everything is rolled back.
+AIDEV's `regression` step as its `witness_votes_change_by_cause` case) picks 27 accounts no
+vote, proxy or recent VESTS change of the synced chain touches and gives them a prior state and
+a window of synthetic events. Votes, proxy sets and clears, expiries and declines go through
+hafbe's parsers (`process_vote_op`, `process_proxy_ops`, `process_expired_accounts`) in hived's
+operation order (a switch is `account_witness_proxy` then `proxy_cleared` of the old proxy; an
+expiry or decline of a proxying account is `proxy_cleared` then the expiry); VESTS changes are
+written to the balance tracker's `account_balance_history` / `current_account_balances` /
+`account_withdraws`. It checks `hafbe_app.witness_votes_change_by_cause_of()` against
+hand-derived values for four witnesses: votes cast and removed, a power-down after a vote in the
+same window (counted once), producer and claimed rewards, claims through two- and four-level
+chains (and none from five levels), a proxy set and cleared, a P→Q switch in the window, a switch
+before the window followed by a clear in it, a set into a four-level chain, and, when the role may
+write `hafd.operations` (CI's `haf_admin`), a matured power-up (`delayed_voting`), a proxy cascade,
+expiries and declines of voters and of proxying accounts; otherwise those print `SKIPPED` and the
+expected totals leave them out.
+
+Then it reconciles every witness's total with the change of its votes, recomputed independently
+from the same history (votes, proxies replayed row by row, balances and delayed VESTS before the
+window's first block and after the head): the scenario's witnesses must match exactly; any other
+witness may differ only where a documented approximation applies to an account whose weight
+reached it (a proxy change of an account with proxiers or under a changed proxy, a power-down with
+delayed VESTS, a VESTS change by an operation the breakdown does not read, which the 2016 chain is
+full of), and the output counts and names them. It does so for the scenario's window, then after
+`process_witness_votes_cache()` and a refresh over the whole chain for the stored 7d (and today,
+when a block was produced since 00:00 UTC) windows. It requires every `total` row to be the sum of
+its causes, the 7-day window to start at the first block of the last 7 days, the stored start
+votes and `rank_start` to rank `witness_votes_cache.votes - total` of the refresh's block and to
+stay put when the cache moves after it, and checks one witness's `votes_change_breakdown` JSON.
+Last, it makes `process_witness_votes_change_by_cause()` refresh with a 7-day window start that
+sleeps past a 2 s statement timeout, then one that raises: both print a WARNING and leave the
+breakdown, its start votes and its state as they were. Everything is rolled back; the role must
+be a member of `hafbe_owner` (it replaces that function inside the transaction).
 
 ### Performance Tests
 JMeter-based load testing to measure endpoint throughput and identify bottlenecks.

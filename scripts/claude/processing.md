@@ -259,7 +259,7 @@ For implementation details of each processor:
 | `hafbe_app.witness_rank_cache` | Witness rankings |
 | `hafbe_app.witness_votes_change_cache` | Vote changes since 00:00 UTC |
 | `hafbe_app.proposal_vote_stats_cache` | Stake-weighted proposal totals + voters_num |
-| `hafbe_app.witness_votes_change_by_cause` | Witness vote change by cause, today and 7 days (+ `_state`: `as_of_block`) |
+| `hafbe_app.witness_votes_change_by_cause` | Witness vote change by cause, today and 7 days (+ `_state`: `as_of_block`; + `_start`: votes and `rank_start` at each window's start) |
 
 ## Expansion Rules
 
