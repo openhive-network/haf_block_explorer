@@ -28,8 +28,10 @@ before its boundary.
 ## Schedule
 
 `single_processing()` calls `process_witness_votes_change_by_cause(_block)` last. It refreshes
-when `_block % 100 = 0`, when there is no state row yet, or when the state's `as_of_block` is
-at or above `_block` (a fork reverted the blocks it was computed from). Never during
+when `_block % 100 = 0`, when `witness_votes_change_today_start(_block)` is not the state's
+`today_first_block` (the first block of a new UTC day, so `today` resets with
+`votes_daily_change` instead of up to 99 blocks later), when there is no state row yet, or when
+the state's `as_of_block` is at or above `_block` (a fork reverted the blocks it was computed from). Never during
 MASSIVE_PROCESSING, and outside `process_witness_votes_cache` (#189's per-block budget).
 While the balance tracker's registered `account_balance_history` indexes (`(account, nai, block)`,
 `(account, nai, balance_seq_no)`) are missing or invalid (`witness_votes_change_by_cause_indexes_ready()`),
@@ -92,6 +94,9 @@ witness.
   proxy mid-window can be attributed to the wrong voter for the time before the change.
 - The weight a proxy change moves subtracts only the account's own later changes, not those
   of accounts proxying to it.
+- An account that had votes and sets a proxy in the window: later events of accounts proxying
+  to it reach its new chain top, while its removed votes are valued at its current weight, which
+  already includes them; `proxy` is off by their sum.
 - A power-down is its full VESTS; when it also cancels delayed VESTS (power-up still in its
   30-day delay) the weight moves by less.
 - VESTS changes by other operations are not causes. On today's chain they do not move the
@@ -104,21 +109,34 @@ witness.
 The breakdown is a display cache. `process_witness_votes_change_by_cause(_block)` runs the
 refresh in a subtransaction: any error, a statement timeout (`query_canceled`) included, is
 logged as a WARNING naming the block, the refresh is rolled back and the previous breakdown
-stays; the block is processed. The failed block is kept in the session setting
+stays; the block is processed. A cancel by request (`pg_cancel_backend`, same SQLSTATE 57014,
+told apart by the message `canceling statement due to statement timeout`) is raised on and
+stops the block; with a translated `lc_messages` a timeout does too. The failed block is kept in the session setting
 `hafbe_app.witness_votes_change_by_cause_failed_block`, and no refresh is attempted until 100
 blocks after it (or a fork takes the chain back to it), also when there is no state row yet or
 it is ahead: a refresh that keeps failing (a timeout) is not paid for on every block. A restart
 forgets it, so the first due block after one tries again. The NOTICE for missing balance
 tracker indexes is raised once per session.
 
+**No time limit of its own.** PostgreSQL arms `statement_timeout` when a top-level statement
+starts: a `SET` on the function, or `set_config()`/`SET LOCAL` inside it, does not bound a
+refresh already running inside the block's statement (checked on PostgreSQL 17: a function with
+`SET statement_timeout = '1s'` sleeping 3 s completes), and a session-wide `set_config()` would
+bound the following blocks instead. The refresh runs under the timeout of the statement that
+processes the block, if any. A refresh that takes longer than 10 s prints a WARNING with its
+duration.
+
 ## Endpoint
 
 `hafbe_backend.witness_votes_change_breakdown(INT[])` builds the JSON (see
 [endpoints/witnesses.md](../endpoints/witnesses.md)). `rank_start` is stored by the refresh in
-`witness_votes_change_by_cause_start`: `RANK()` by `witness_votes_cache.votes - total` over
-the witnesses with a cache or `total` row, both for `as_of_block` (`single_processing()`
-refreshes the cache for the block first). A witness without a row there shares the rank after
-every stored witness with more than zero.
+`witness_votes_change_by_cause_start`: one row per current witness and window, ranked like
+`rank` (`refresh_witness_rank_cache()`: `ROW_NUMBER()` over `current_witnesses` by votes, voters_num,
+witness_id, all DESC) on the start values: `witness_votes_cache.votes - total`, and
+`voters_num` minus the window's net approvals in `witness_votes_history` (as `voters_num_daily_change`
+counts them), both for `as_of_block` (`single_processing()` refreshes the cache for the block first).
+A witness nothing moved and nothing passed has `rank_start = rank`. A witness without a row
+(registered after `as_of_block`) gets its current `rank`.
 
 ## Testing
 

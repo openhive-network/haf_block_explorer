@@ -86,7 +86,7 @@ Amounts are VESTS strings:
 ```
 
 `total` is the sum of the cause fields; `voters` the witness's voters whose events moved it;
-`rank_start` the rank by `vests - total`, both as of `as_of_block` (stored by the refresh). `votes_daily_change` stays as it was (votes cast and
+`rank_start` the rank at the window start, ranked like `rank` (votes, voters, id) on `vests - total` and the voters then, both as of `as_of_block` (stored by the refresh). `votes_daily_change` stays as it was (votes cast and
 removed today at the voters' current weight). Sorting by a cause is left to the frontend.
 
 #### Example
@@ -303,7 +303,7 @@ Located in `backend/endpoint_helpers/witness.sql`:
 | `get_witness()` | Retrieve witness data by ID |
 | `get_witness_id()` | Convert name to witness ID |
 | `get_witnesses()` | Paginated witness list |
-| `witness_votes_change_breakdown(INT[])` | `votes_change_breakdown` of the given witnesses (`rank_start` from `witness_votes_change_by_cause_start`, stored at refresh; a witness without a row shares the next rank) |
+| `witness_votes_change_breakdown(INT[])` | `votes_change_breakdown` of the given witnesses (`rank_start` from `witness_votes_change_by_cause_start`, stored at refresh, ranked like `rank`; a witness without a row gets its `rank`) |
 | `get_witnesses_count()` | Total witness count |
 | `get_witness_voters()` | Voters for a witness |
 | `get_witness_votes_history()` | Historical votes |

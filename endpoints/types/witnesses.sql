@@ -20,8 +20,8 @@ hafbe_backend.witness_votes_change_window:
     rank_start:
       type: integer
       description: >-
-        the witness''s rank at the window start, ranking every witness by its
-        votes minus this total
+        the witness''s rank at the window start, ranked like rank (votes, then
+        voters, then id) on its votes minus this total and its voters then
     votes_cast:
       type: string
       description: votes cast, each at the voter''s weight when it voted, in VESTS

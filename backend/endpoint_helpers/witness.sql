@@ -338,10 +338,9 @@ $$;
  * voters from the 'total' row, a VESTS string per cause (0 for a cause without a
  * row), and rank_start.
  *
- * rank_start is the witness's rank by votes at the window's start, as the refresh
- * stored it for as_of_block (hafbe_app.witness_votes_change_by_cause_start). A
- * witness without a row there had zero votes then and shares the rank after every
- * witness that had more.
+ * rank_start is the witness's rank at the window's start, as the refresh stored it
+ * for as_of_block (hafbe_app.witness_votes_change_by_cause_start), ranked like rank.
+ * A witness without a row there (registered after as_of_block) gets its rank.
  */
 CREATE OR REPLACE FUNCTION hafbe_backend.witness_votes_change_breakdown(_witness_ids INT[])
 RETURNS TABLE (
@@ -353,12 +352,6 @@ AS
 $$
   WITH windows AS (
     SELECT w.time_window FROM (VALUES ('today'), ('7d')) AS w (time_window)
-  ),
-  zero_ranks AS (
-    SELECT
-      (1 + COUNT(*) FILTER (WHERE s.time_window = 'today' AND s.votes > 0))::INT AS today,
-      (1 + COUNT(*) FILTER (WHERE s.time_window = '7d' AND s.votes > 0))::INT    AS week
-    FROM hafbe_app.witness_votes_change_by_cause_start s
   ),
   -- One row per witness: joined on the witness alone, so the join key is selective.
   ranks AS (
@@ -381,8 +374,8 @@ $$
         'total',           COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'total'), 0)::TEXT,
         'voters',          COALESCE(SUM(c.voters) FILTER (WHERE c.cause = 'total'), 0)::INT,
         'rank_start',      MAX(CASE w.time_window
-                             WHEN 'today' THEN COALESCE(r.today, z.today)
-                             ELSE COALESCE(r.week, z.week)
+                             WHEN 'today' THEN COALESCE(r.today, rc.rank)
+                             ELSE COALESCE(r.week, rc.rank)
                            END),
         'votes_cast',      COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_cast'), 0)::TEXT,
         'votes_removed',   COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_removed'), 0)::TEXT,
@@ -396,8 +389,8 @@ $$
       ) AS window_object
     FROM ids i
     CROSS JOIN windows w
-    CROSS JOIN zero_ranks z
     LEFT JOIN ranks r ON r.witness_id = i.witness_id
+    LEFT JOIN hafbe_app.witness_rank_cache rc ON rc.witness_id = i.witness_id
     LEFT JOIN hafbe_app.witness_votes_change_by_cause c
       ON c.witness_id = i.witness_id
       AND c.time_window = w.time_window
@@ -547,12 +540,6 @@ BEGIN
         (CASE WHEN "direction" = 'asc'                                         THEN cw.witness_id                                                  ELSE NULL END) ASC
       OFFSET (CASE WHEN "sort" = 'witness' THEN 0 ELSE __offset END)
       LIMIT "page-size"
-    ),
-    -- The page's position of each row, read back in the order limited_set stored
-    -- them: the join below need not keep it.
-    numbered_set AS (
-      SELECT ls.*, ROW_NUMBER() OVER () AS position
-      FROM limited_set ls
     )
     SELECT
       wav.name::TEXT,
@@ -573,7 +560,7 @@ BEGIN
       ls.last_created_block_num,
       ls.account_creation_fee,
       vcb.votes_change_breakdown
-    FROM numbered_set ls
+    FROM limited_set ls
     CROSS JOIN LATERAL (
       SELECT av.name
       FROM hive.accounts_view av
@@ -582,7 +569,37 @@ BEGIN
     ) wav
     LEFT JOIN hafbe_backend.witness_votes_change_breakdown(ARRAY(SELECT l.witness_id FROM limited_set l)) vcb
       ON vcb.witness_id = ls.witness_id
-    ORDER BY ls.position
+    -- Re-apply limited_set's sort: the joins above need not keep it.
+    -- Keys MUST match limited_set's exactly; wav.name is wn.name (the same account).
+    ORDER BY
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'witness'                 THEN wav.name                   ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'witness'                 THEN wav.name                   ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'rank'                    THEN ls.rank                    ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'rank'                    THEN ls.rank                    ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'url'                     THEN ls.url                     ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'url'                     THEN ls.url                     ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'votes'                   THEN ls.rank                    ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'votes'                   THEN ls.rank                    ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'votes_daily_change'      THEN ls.votes_daily_change      ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'votes_daily_change'      THEN ls.votes_daily_change      ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'voters_num'              THEN ls.voters_num              ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'voters_num'              THEN ls.voters_num              ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'voters_num_daily_change' THEN ls.voters_num_daily_change ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'voters_num_daily_change' THEN ls.voters_num_daily_change ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'price_feed'              THEN ls.price_feed              ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'price_feed'              THEN ls.price_feed              ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'bias'                    THEN ls.bias                    ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'bias'                    THEN ls.bias                    ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'block_size'              THEN ls.block_size              ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'block_size'              THEN ls.block_size              ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'signing_key'             THEN ls.signing_key             ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'signing_key'             THEN ls.signing_key             ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'version'                 THEN ls.version                 ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'version'                 THEN ls.version                 ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc' AND "sort" = 'feed_updated_at'         THEN ls.feed_updated_at         ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'  AND "sort" = 'feed_updated_at'         THEN ls.feed_updated_at         ELSE NULL END) ASC,
+      (CASE WHEN "direction" = 'desc'                                        THEN ls.witness_id              ELSE NULL END) DESC,
+      (CASE WHEN "direction" = 'asc'                                         THEN ls.witness_id              ELSE NULL END) ASC
   );
 END
 $$;
