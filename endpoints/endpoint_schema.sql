@@ -677,7 +677,7 @@ declare
           },
           "rank_start": {
             "type": "integer",
-            "description": "the witness''s rank at the window start, ranking every witness by its votes minus this total"
+            "description": "the witness''s rank at the window start, ranked like rank (votes, then voters, then id) on its votes minus this total and its voters then"
           },
           "votes_cast": {
             "type": "string",

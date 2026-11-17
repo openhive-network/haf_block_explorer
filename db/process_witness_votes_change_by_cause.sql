@@ -47,6 +47,10 @@ SET ROLE hafbe_owner;
  *     proxy is taken as it was at the event (account_proxies_history).
  *   - The weight a proxy change moves is the account's current weight minus its
  *     own later changes; changes of accounts proxying to it are not subtracted.
+ *   - An account that had votes and sets a proxy in the window: the later events
+ *     of accounts proxying to it go to its new chain top, while its removed votes
+ *     are valued at its current weight, which already includes those events. Its
+ *     witnesses' proxy cause is off by their sum.
  *   - A power-down is valued at its full VESTS. When it also cancels delayed
  *     VESTS (a power-up still in its 30-day delay) the weight moves by less.
  *   - VESTS changes by other operations are not causes. Since HF24 power-ups and
@@ -606,6 +610,11 @@ $$;
  *
  * The start votes are witness_votes_cache.votes minus the window's total, so the
  * cache must hold _block: single_processing() refreshes it for the block first.
+ * rank_start ranks every current witness as refresh_witness_rank_cache() ranks it
+ * for rank, on the start values: votes, then voters_num (the cache's minus the
+ * window's net approvals in witness_votes_history), then witness_id, all DESC. A
+ * witness nothing moved in the window differs from its rank at _block only by the
+ * moved witnesses that passed it.
  *
  * Raises when witness_votes_change_by_cause_indexes_ready() is false.
  */
@@ -642,20 +651,38 @@ BEGIN
       x.witness_id,
       x.time_window,
       x.votes,
-      (RANK() OVER (PARTITION BY x.time_window ORDER BY x.votes DESC))::INT AS rank_start
+      (ROW_NUMBER() OVER (
+        PARTITION BY x.time_window
+        ORDER BY x.votes DESC, x.voters_num DESC, x.witness_id DESC
+      ))::INT AS rank_start
     FROM (
-      SELECT wv.witness_id, w.time_window, wv.votes - COALESCE(c.vests, 0) AS votes
+      SELECT
+        cw.witness_id,
+        w.time_window,
+        COALESCE(wv.votes, 0) - COALESCE(c.vests, 0) AS votes,
+        COALESCE(wv.voters_num, 0)
+          - COALESCE(CASE w.time_window WHEN 'today' THEN n.today ELSE n.week END, 0) AS voters_num
       FROM (VALUES ('today'), ('7d')) AS w (time_window)
-      CROSS JOIN hafbe_app.witness_votes_cache wv
+      CROSS JOIN hafbe_app.current_witnesses cw
+      LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id
       LEFT JOIN hafbe_app.witness_votes_change_by_cause c
-        ON c.witness_id = wv.witness_id
+        ON c.witness_id = cw.witness_id
         AND c.time_window = w.time_window
         AND c.cause = 'total'
-      UNION ALL
-      SELECT c.witness_id, c.time_window, -c.vests
-      FROM hafbe_app.witness_votes_change_by_cause c
-      WHERE c.cause = 'total'
-        AND NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_cache wv WHERE wv.witness_id = c.witness_id)
+      -- The witness's net voters of each window, as voters_num_daily_change counts
+      -- them. One scan from the 7-day window's start, which today's never precedes.
+      LEFT JOIN (
+        SELECT
+          h.witness_id,
+          SUM(CASE WHEN h.approve THEN 1 ELSE -1 END) FILTER (
+            WHERE _today_first_block IS NOT NULL AND h.source_op >= hafd.operation_id(_today_first_block, 0)
+          )::INT AS today,
+          SUM(CASE WHEN h.approve THEN 1 ELSE -1 END)::INT AS week
+        FROM hafbe_app.witness_votes_history h
+        WHERE _week_first_block IS NOT NULL
+          AND h.source_op >= hafd.operation_id(_week_first_block, 0)
+        GROUP BY h.witness_id
+      ) n ON n.witness_id = cw.witness_id
     ) x
   ) s ON t.witness_id = s.witness_id AND t.time_window = s.time_window
   WHEN MATCHED AND (t.votes, t.rank_start) IS DISTINCT FROM (s.votes, s.rank_start) THEN
@@ -679,29 +706,43 @@ $$;
  * process_witness_votes_change_by_cause(_block): what single_processing() runs for
  * LIVE block _block, after the witness vote caches.
  *
- * Refreshes every 100 blocks (~5 minutes), and right away when nothing was
- * refreshed yet or the last refresh is at or above _block (a fork reverted it).
- * Skips while the balance tracker's indexes are not built yet (the first LIVE
- * blocks), rather than scan its history once per account, with a NOTICE the first
- * time in the session.
+ * Refreshes every 100 blocks (~5 minutes), at the first block of a new UTC day
+ * (_block's today window is not the stored one, so today follows
+ * votes_daily_change's reset), and right away when nothing was refreshed yet or the
+ * last refresh is at or above _block (a fork reverted it). Skips while the balance
+ * tracker's indexes are not built yet (the first LIVE blocks), rather than scan its
+ * history once per account, with a NOTICE the first time in the session.
  *
  * The breakdown is a display cache: a refresh that fails, a statement timeout
  * included, is rolled back with a WARNING naming the block and leaves the previous
- * breakdown in place, so that the block is still processed. The failed block is
- * kept for the session, and no refresh is attempted again until 100 blocks after
- * it (or a fork takes the chain back to it): a refresh that keeps failing would
- * otherwise be retried, and paid for, on every block while as_of_block stays NULL
- * or ahead.
+ * breakdown in place, so that the block is still processed. A cancel by request
+ * (pg_cancel_backend) is raised on: it stops the block. The two share SQLSTATE
+ * 57014 and are told apart by the server's message, so with a translated
+ * lc_messages a statement timeout stops the block too. The failed block is kept for
+ * the session, and no refresh is attempted again until 100 blocks after it (or a
+ * fork takes the chain back to it), whichever trigger asked: a refresh that keeps
+ * failing would otherwise be retried, and paid for, on every block while as_of_block
+ * stays NULL or ahead.
+ *
+ * NO TIME LIMIT of its own: PostgreSQL arms statement_timeout when a top-level
+ * statement starts, so neither SET on this function or the refresh nor set_config()
+ * inside them bounds a refresh already running in the block's statement (and a
+ * session-wide set_config would bound the next blocks instead). The refresh runs
+ * under whatever timeout the statement that processes the block has. A refresh that
+ * takes longer than 10 s is logged with a WARNING naming its duration.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_change_by_cause(_block INT)
 RETURNS VOID
 LANGUAGE plpgsql VOLATILE
 AS $$
 DECLARE
-  _as_of_block  INT := (SELECT s.as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s);
+  _state        hafbe_app.witness_votes_change_by_cause_state;
   _failed_block INT := NULLIF(current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE), '')::INT;
+  _started      TIMESTAMPTZ;
 BEGIN
-  IF _block % 100 = 0 OR _as_of_block IS NULL OR _as_of_block >= _block THEN
+  SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
+  IF _block % 100 = 0 OR _state.as_of_block IS NULL OR _state.as_of_block >= _block
+     OR _state.today_first_block IS DISTINCT FROM hafbe_app.witness_votes_change_today_start(_block) THEN
     IF _failed_block < _block AND _block - _failed_block < 100 THEN
       RETURN;
     END IF;
@@ -712,15 +753,24 @@ BEGIN
       END IF;
       RETURN;
     END IF;
+    _started := clock_timestamp();
     BEGIN
       PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_block);
       PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
     -- OTHERS does not cover query_canceled, which a statement timeout raises.
     EXCEPTION WHEN OTHERS OR query_canceled THEN
+      IF SQLSTATE = '57014' AND SQLERRM <> 'canceling statement due to statement timeout' THEN
+        RAISE;
+      END IF;
       RAISE WARNING 'witness_votes_change_by_cause: refresh at block % failed, the previous breakdown (block %) stays, next attempt at block %: % (SQLSTATE %)',
-        _block, _as_of_block, _block + 100, SQLERRM, SQLSTATE;
+        _block, _state.as_of_block, _block + 100, SQLERRM, SQLSTATE;
       PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', _block::TEXT, FALSE);
+      RETURN;
     END;
+    IF clock_timestamp() - _started > INTERVAL '10 seconds' THEN
+      RAISE WARNING 'witness_votes_change_by_cause: refresh at block % took % s',
+        _block, round(extract(epoch FROM clock_timestamp() - _started)::NUMERIC, 1);
+    END IF;
   END IF;
 END
 $$;

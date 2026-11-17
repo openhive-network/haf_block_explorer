@@ -664,8 +664,8 @@ CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_state (
  * --------------------------------------------------------------------------------
  * Written with witness_votes_change_by_cause, for the same as_of_block: votes is
  * witness_votes_cache.votes (refreshed for that block just before) minus the
- * window's total, rank_start its rank among these rows (ties share a rank). One row
- * per witness with votes or a total row; any other witness had zero votes.
+ * window's total, rank_start its rank then, ranked like witness_rank_cache.rank
+ * (votes, voters_num, witness_id). One row per current witness and window.
  */
 CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_start (
   witness_id  INT    NOT NULL,  -- Witness account ID

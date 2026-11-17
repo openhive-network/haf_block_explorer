@@ -59,14 +59,19 @@
 --     witnesses must match exactly, any other witness may differ only where an
 --     approximation of the file header applies, and the output names each;
 --   - refresh_witness_votes_change_by_cause() over the whole chain: every total is
---     the sum of its causes, the stored windows reconcile like the scenario's,
---     rank_start ranks the votes at the window start of the refresh's block and
---     does not follow the witness vote cache after it, and X's 7-day breakdown is
+--     the sum of its causes (a sanity check: true by construction), the stored
+--     windows reconcile like the scenario's, rank_start ranks every current witness
+--     like rank, on its votes and voters at the window start of the refresh's block,
+--     an unmoved witness differs from its rank only by the moved witnesses that
+--     passed it (one without votes has rank_start = rank), rank_start does not
+--     follow the witness vote cache after the refresh, and X's 7-day breakdown is
 --     what hafbe_backend.witness_votes_change_breakdown() returns;
 --   - the today window is votes_daily_change's, in UTC and America/New_York;
 --   - a refresh that fails, by a statement timeout or an error, leaves the previous
 --     breakdown in place and does not fail process_witness_votes_change_by_cause(),
---     which does not attempt it again until 100 blocks later.
+--     which does not attempt it again until 100 blocks later; a cancel by request
+--     during it is raised on;
+--   - a new UTC day triggers a refresh before the next 100th block.
 --
 -- Needs a synced hafbe, the balance tracker's schema first on the search path and a
 -- member of hafbe_owner. Everything is rolled back.
@@ -596,7 +601,9 @@ BEGIN
     _exact := _exact || pg_temp.account('Y');
   END IF;
 
-  -- The prior state.
+  -- The prior state. X, Y, Z and W are registered witnesses, ranked with the others.
+  INSERT INTO hafbe_app.current_witnesses (witness_id)
+  SELECT pg_temp.account(w.part) FROM unnest(ARRAY['X', 'Y', 'Z', 'W']) AS w (part);
   PERFORM pg_temp.set_vests(p.part, p.vests, _other, pg_temp.next_op(_before))
   FROM (VALUES ('A', 980), ('B', 600), ('C', 250), ('D', 45), ('E', 200), ('F', 30), ('G', 70),
                ('H', 80), ('I', 400), ('K', 60), ('L', 90), ('P', 500), ('Q', 700), ('S', 300),
@@ -732,36 +739,80 @@ BEGIN
     WHERE c.time_window = 'today' AND c.cause = 'total';
   PERFORM pg_temp.reconcile('reconciliation of the stored today window', _state.today_first_block, ARRAY[]::INT[]);
 
-  -- rank_start ranks the votes at the window's start of the refresh's own block:
-  -- the cache's votes then minus the total.
+  -- rank_start ranks every current witness, like rank, by its votes and voters at
+  -- the window's start of the refresh's own block: the cache's then minus the
+  -- window's total and net approvals.
+  CREATE TEMP TABLE rank_keys AS
+    SELECT
+      cw.witness_id,
+      w.time_window,
+      s.votes,
+      s.rank_start,
+      a.rank,
+      COALESCE(wv.votes, 0) - COALESCE(t.vests, 0) AS start_votes,
+      COALESCE(wv.voters_num, 0) - COALESCE((
+        SELECT SUM(CASE WHEN h.approve THEN 1 ELSE -1 END)
+        FROM hafbe_app.witness_votes_history h
+        WHERE h.witness_id = cw.witness_id
+          AND h.source_op >= hafd.operation_id(CASE w.time_window WHEN 'today' THEN _state.today_first_block ELSE _state.week_first_block END, 0)
+      ), 0) AS start_voters,
+      COALESCE(wv.votes, 0) AS votes_now,
+      COALESCE(wv.voters_num, 0) AS voters_now
+    FROM hafbe_app.current_witnesses cw
+    CROSS JOIN (VALUES ('today'), ('7d')) AS w (time_window)
+    JOIN hafbe_app.witness_rank_cache a ON a.witness_id = cw.witness_id
+    LEFT JOIN hafbe_app.witness_votes_change_by_cause_start s
+      ON s.witness_id = cw.witness_id AND s.time_window = w.time_window
+    LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = cw.witness_id
+    LEFT JOIN hafbe_app.witness_votes_change_by_cause t
+      ON t.witness_id = cw.witness_id AND t.time_window = w.time_window AND t.cause = 'total';
   SELECT count(*)
   INTO _mismatches
   FROM (
     SELECT
-      s.witness_id,
-      s.time_window,
-      s.votes,
-      s.rank_start,
-      COALESCE(wv.votes, 0) - COALESCE(t.vests, 0) AS expected_votes,
-      (RANK() OVER (PARTITION BY s.time_window ORDER BY COALESCE(wv.votes, 0) - COALESCE(t.vests, 0) DESC))::INT AS expected_rank
-    FROM hafbe_app.witness_votes_change_by_cause_start s
-    LEFT JOIN hafbe_app.witness_votes_cache wv ON wv.witness_id = s.witness_id
-    LEFT JOIN hafbe_app.witness_votes_change_by_cause t
-      ON t.witness_id = s.witness_id AND t.time_window = s.time_window AND t.cause = 'total'
+      k.votes,
+      k.rank_start,
+      k.start_votes,
+      (ROW_NUMBER() OVER (PARTITION BY k.time_window ORDER BY k.start_votes DESC, k.start_voters DESC, k.witness_id DESC))::INT AS expected_rank
+    FROM rank_keys k
   ) r
-  WHERE (r.votes, r.rank_start) IS DISTINCT FROM (r.expected_votes, r.expected_rank);
+  WHERE (r.votes, r.rank_start) IS DISTINCT FROM (r.start_votes, r.expected_rank);
   _mismatches := _mismatches + (
     SELECT count(*)
-    FROM hafbe_app.witness_votes_cache wv
-    CROSS JOIN (VALUES ('today'), ('7d')) AS w (time_window)
-    WHERE NOT EXISTS (
-      SELECT 1 FROM hafbe_app.witness_votes_change_by_cause_start s
-      WHERE s.witness_id = wv.witness_id AND s.time_window = w.time_window
-    )
+    FROM hafbe_app.witness_votes_change_by_cause_start s
+    WHERE NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses cw WHERE cw.witness_id = s.witness_id)
   );
   IF _mismatches <> 0 THEN
-    RAISE EXCEPTION 'rank_start: % rows do not rank the votes at the window start of block %', _mismatches, _head;
+    RAISE EXCEPTION 'rank_start: % rows do not rank the witnesses at the window start of block %', _mismatches, _head;
   END IF;
+  -- A witness the window did not move keeps its place: its rank_start differs from
+  -- its rank only by the moved witnesses that passed it, either way. With none, a
+  -- witness with no votes, before and after, has rank_start = rank.
+  SELECT count(*)
+  INTO _mismatches
+  FROM rank_keys k
+  WHERE (k.start_votes, k.start_voters) = (k.votes_now, k.voters_now)
+    AND k.rank_start - k.rank IS DISTINCT FROM (
+      SELECT
+        count(*) FILTER (WHERE (m.start_votes, m.start_voters, m.witness_id) > (k.votes_now, k.voters_now, k.witness_id))
+        - count(*) FILTER (WHERE (m.votes_now, m.voters_now, m.witness_id) > (k.votes_now, k.voters_now, k.witness_id))
+      FROM rank_keys m
+      WHERE m.time_window = k.time_window
+        AND (m.start_votes, m.start_voters) <> (m.votes_now, m.voters_now)
+    );
+  IF _mismatches <> 0 THEN
+    RAISE EXCEPTION 'rank_start: % unmoved witnesses are not at their rank shifted by the moved ones', _mismatches;
+  END IF;
+  SELECT count(*)
+  INTO _mismatches
+  FROM rank_keys k
+  WHERE k.votes_now = 0 AND k.start_votes = 0 AND k.voters_now = 0 AND k.start_voters = 0
+    AND k.rank_start = k.rank;
+  IF _mismatches = 0 THEN
+    RAISE EXCEPTION 'rank_start: no witness without votes has rank_start = rank';
+  END IF;
+  RAISE NOTICE 'rank_start: % rows rank the witnesses like rank; % witness windows without votes have rank_start = rank',
+    (SELECT count(*) FROM rank_keys), _mismatches;
   IF (SELECT s.votes FROM hafbe_app.witness_votes_change_by_cause_start s
       WHERE s.witness_id = pg_temp.account('X') AND s.time_window = '7d')
      IS DISTINCT FROM (CASE WHEN _write_ops THEN 1670 ELSE 1685 END) THEN
@@ -862,6 +913,38 @@ RESET ROLE;
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
 SELECT pg_temp.expect_breakdown_kept('a refresh that raises');
 
+-- A cancel by request (pg_cancel_backend) during the refresh is not a failure of the
+-- refresh: it stops the block, like a cancel anywhere else in it.
+SET ROLE hafbe_owner;
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
+RETURNS INT
+LANGUAGE plpgsql VOLATILE
+AS $$
+BEGIN
+  PERFORM pg_cancel_backend(pg_backend_pid());
+  PERFORM pg_sleep(5);
+  RETURN 0;
+END
+$$;
+RESET ROLE;
+
+CREATE FUNCTION pg_temp.expect_cancel_raised(_block INT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    PERFORM hafbe_app.process_witness_votes_change_by_cause(_block);
+  EXCEPTION WHEN query_canceled THEN
+    RAISE NOTICE 'a cancel by request during the refresh: raised on (%)', SQLERRM;
+    RETURN;
+  END;
+  RAISE EXCEPTION 'a cancel by request during the refresh did not stop process_witness_votes_change_by_cause()';
+END
+$$;
+SELECT pg_temp.expect_cancel_raised(:as_of_block);
+SELECT pg_temp.expect_breakdown_kept('a cancel by request');
+
 -- A failed refresh is attempted again 100 blocks after the failure, not on each block
 -- in between. With no state row every block asks for a refresh; the failing 7-day
 -- window start counts the attempts.
@@ -901,5 +984,21 @@ SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
 SELECT pg_temp.expect_attempts('100 blocks after the failed refresh', 1);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 101);
 SELECT pg_temp.expect_attempts('the block after that failed again', 1);
+
+-- A new UTC day refreshes at its first block, not at the next 100th: a block whose
+-- today window is not the stored one asks for a refresh, one whose window is does not.
+SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
+SELECT :as_of_block - 1 - ((:as_of_block - 1) % 100 = 0)::INT AS day_block \gset
+SET ROLE hafbe_owner;
+INSERT INTO hafbe_app.witness_votes_change_by_cause_state (as_of_block, today_first_block, week_first_block)
+VALUES (:day_block - 1, hafbe_app.witness_votes_change_today_start(:day_block), 0);
+RESET ROLE;
+SELECT hafbe_app.process_witness_votes_change_by_cause(:day_block);
+SELECT pg_temp.expect_attempts('a block of the stored today window', 1);
+SET ROLE hafbe_owner;
+UPDATE hafbe_app.witness_votes_change_by_cause_state SET today_first_block = today_first_block - 1;
+RESET ROLE;
+SELECT hafbe_app.process_witness_votes_change_by_cause(:day_block);
+SELECT pg_temp.expect_attempts('the first block of a new UTC day', 2);
 
 ROLLBACK;

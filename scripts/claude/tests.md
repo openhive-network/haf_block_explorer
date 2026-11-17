@@ -193,13 +193,20 @@ delayed VESTS, a VESTS change by an operation the breakdown does not read, which
 full of), and the output counts and names them. It does so for the scenario's window, then after
 `process_witness_votes_cache()` and a refresh over the whole chain for the stored 7d (and today,
 the head's UTC day) windows. It requires every `total` row to be the sum of
-its causes, the 7-day window to start at the first block of the last 7 days, the stored start
-votes and `rank_start` to rank `witness_votes_cache.votes - total` of the refresh's block and to
-stay put when the cache moves after it, and checks one witness's `votes_change_breakdown` JSON.
+its causes (a sanity check, true by construction; the reconciliation is the real check), the
+7-day window to start at the first block of the last 7 days, the stored start votes and
+`rank_start` to rank every current witness like `rank` (votes, voters, id) on its
+`witness_votes_cache` values minus the window's total and net approvals, an unmoved witness's
+`rank_start - rank` to be the moved witnesses that passed it (and at least one witness without
+votes to have `rank_start = rank`), `rank_start` to stay put when the cache moves after the
+refresh, and checks one witness's `votes_change_breakdown` JSON. The scenario's witnesses X, Y,
+Z and W are added to `current_witnesses` for that.
 Last, it makes `process_witness_votes_change_by_cause()` refresh with a 7-day window start that
 sleeps past a 2 s statement timeout, then one that raises: both print a WARNING and leave the
-breakdown, its start votes and its state as they were. With no state row, it then counts the
-attempts: none on the 99 blocks after the failed one, one 100 blocks after it. It also checks
+breakdown, its start votes and its state as they were; then one that cancels its own backend
+(`pg_cancel_backend`), which must be raised on. With no state row, it then counts the
+attempts: none on the 99 blocks after the failed one, one 100 blocks after it; and with a state
+row, none on a block of the stored today window and one when the stored window is another day's. It also checks
 that `witness_votes_change_today_start()` equals `witness_votes_cache_window_start()` in UTC and
 `America/New_York`. Everything is rolled back; the role must be a member of `hafbe_owner` (it
 replaces that function inside the transaction).
