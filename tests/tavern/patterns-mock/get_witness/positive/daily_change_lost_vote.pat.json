@@ -14,7 +14,37 @@
   "vests": "57548658449068633",
   "voters_num": 65,
   "voters_num_daily_change": -1,
-  "votes_change_breakdown": null,
+  "votes_change_breakdown": {
+    "7d": {
+      "claimed_reward": "0",
+      "declined": "0",
+      "expired": "0",
+      "power_down": "-292371640065880",
+      "power_up": "0",
+      "producer_reward": "189487041521706",
+      "proxy": "-422464598317499",
+      "rank_start": 29,
+      "total": "30694697154299",
+      "voters": 35,
+      "votes_cast": "556043894015972",
+      "votes_removed": "0"
+    },
+    "as_of_block": 5000000,
+    "today": {
+      "claimed_reward": "0",
+      "declined": "0",
+      "expired": "0",
+      "power_down": "-63378778611181",
+      "power_up": "0",
+      "producer_reward": "24453630805509",
+      "proxy": "0",
+      "rank_start": 29,
+      "total": "-38925147805672",
+      "voters": 22,
+      "votes_cast": "0",
+      "votes_removed": "0"
+    }
+  },
   "votes_daily_change": "-121206758926",
   "witness_name": "gtg"
 }
