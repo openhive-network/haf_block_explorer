@@ -46,13 +46,22 @@
 #                     legacy main() through it. The consumer may not rename HAF's objects,
 #                     so the cases of a HAF without the registry or the lock helpers are
 #                     skipped here (CI's process-blocks-selection-test runs them as
-#                     haf_admin). It changes the registry, so it runs last, and a suite
-#                     that runs tavern runs it after all its steps without naming it
+#                     haf_admin). It changes the registry, so a suite that runs
+#                     tavern runs it after its other steps, but before tavern-mock, without naming it
+#   - tavern-mock     CI's sync_with_mock_data on the synced clone (the mock blocks
+#                     91000001+ of tests/mocks, haf_block_explorer's and l2_framework's
+#                     processors over them, the index steps, scripts/prepare_mock_cache.sh),
+#                     then tests/tavern/patterns-mock as CI's pattern-test-with-mock-data
+#                     runs it (.aidev/hafbe_tavern.py); one junit case per test. It moves
+#                     the clone past block 5000000, so a suite that runs tavern runs it
+#                     after every other step without naming it. SKIP, naming them, when
+#                     the clone does not let the consumer write the HAF tables the mock
+#                     data goes into
 #
-# install, reinstall, sync, regression, tavern, rewriter and selection need the shared HAF (sandbox.external
-# haf, provider haf/haf); the clone is dropped when the script exits, pass or fail.
-# Reports go to test-results/<suite>/: junit.xml (one case per step) plus regression.xml,
-# tavern.xml and rewriter.xml.
+# install, reinstall, sync, regression, tavern, rewriter, selection and tavern-mock need the
+# shared HAF (sandbox.external haf, provider haf/haf); the clone is dropped when the script
+# exits, pass or fail. Reports go to test-results/<suite>/: junit.xml (one case per step)
+# plus regression.xml, tavern.xml, rewriter.xml and tavern-mock.xml.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -73,10 +82,15 @@ clone=""; clone_id=""
 exec 3>&2
 
 status=0
+# A step's exit status when the shared HAF lacks something it needs; its log's last line
+# names what.
+SKIP_RC=77
 # record CASES_FILE NAME RC SECONDS LOG
 record() {
     if [ "$3" -eq 0 ]; then
         printf 'case\t%s\tpass\t%s\t\n' "$2" "$4" >> "$1"
+    elif [ "$3" -eq "$SKIP_RC" ]; then
+        printf 'case\t%s\tskip\t%s\t%s\n' "$2" "$4" "$(tail -n 1 "$5")" >> "$1"
     else
         printf 'case\t%s\tfail\t%s\texit %s\t%s\n' "$2" "$4" "$3" "$5" >> "$1"
     fi
@@ -87,7 +101,11 @@ step() {
     local log="$out/$name.log" t0=$SECONDS rc=0
     echo "== $name" >&2
     "$@" > "$log" 2>&1 < /dev/null || rc=$?
-    [ "$rc" -eq 0 ] || { status=1; tail -40 "$log" >&2; }
+    if [ "$rc" -eq "$SKIP_RC" ]; then
+        echo "SKIP: $(tail -n 1 "$log")" >&2
+    elif [ "$rc" -ne 0 ]; then
+        status=1; tail -40 "$log" >&2
+    fi
     record "$cases" "$name" "$rc" "$((SECONDS - t0))" "$log"
 }
 
@@ -319,44 +337,70 @@ context_blocks() {
 # as its owner role. The reptracker's and l2_framework's main() return at the target.
 # hafbe's main() does not return at its limit (it waits for the next block), so it is
 # stopped with hafbe_app.stopProcessing() once both of its contexts reach the target.
+processor_pid=""
+# start_processor APPLICATION_NAME LOG SQL...: a block processor's statements in the
+# background; its pid in processor_pid. statement_timeout bounds it on the server too:
+# a run killed from outside (a gate's wall) cannot stop it, and it would go on syncing
+# a clone nobody reads until the provider reaps it.
+start_processor() {
+    local name="$1" log="$2" sql args=()
+    shift 2
+    for sql in "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" "$@"; do args+=(-c "$sql"); done
+    psql "$HAFBE_TEST_DB_URL?application_name=$name" -v ON_ERROR_STOP=on "${args[@]}" > "$log" 2>&1 &
+    processor_pid=$!; sync_pids+=("$processor_pid")
+}
+
+# start_hafbe TARGET LOG / start_l2 TARGET LOG / start_reptracker TARGET LOG
+start_hafbe() {
+    start_processor block_explorer_block_processing "$2" "SET ROLE hafbe_owner" "SET temp_buffers = '16MB'" \
+        "SET SEARCH_PATH TO hafbe_bal" "CALL hafbe_app.main('hafbe_app', 'hafbe_bal', $1)"
+}
+start_l2() {
+    start_processor l2_framework_processing "$2" "SET ROLE l2_framework_owner" "SET SEARCH_PATH TO l2" \
+        "CALL l2.main('l2', $1)"
+}
+start_reptracker() {
+    start_processor reptracker_block_processing "$2" "SET ROLE reptracker_owner" "SET SEARCH_PATH TO reptracker_app" \
+        "CALL reptracker_app.main('reptracker_app', $1)"
+}
+
+# stop_hafbe_at TARGET PID LOG T0: wait for both of hafbe's contexts to reach TARGET,
+# then stop its main(), which does not return at its limit.
+stop_hafbe_at() {
+    local target="$1" pid="$2" log="$3" t0="$4"
+    while [ "$(context_blocks "'hafbe_app', 'hafbe_bal'")" -lt "$target" ]; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            echo "hafbe block processing exited before block $target:"; tail -30 "$log"; return 1
+        fi
+        if [ $((SECONDS - t0)) -ge "$SYNC_TIMEOUT_S" ]; then
+            echo "hafbe not at block $target after ${SYNC_TIMEOUT_S}s"; return 1
+        fi
+        sleep 10
+    done
+    echo "hafbe_app and hafbe_bal at $target after $((SECONDS - t0))s; stopping hafbe"
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "SET ROLE hafbe_owner" -c "SELECT hafbe_app.stopProcessing()" || return 1
+    wait "$pid" || { echo "hafbe block processing failed:"; tail -30 "$log"; return 1; }
+}
+
+# await_processor LABEL PID LOG CONTEXT TARGET T0: a processor whose main() returns at TARGET
+await_processor() {
+    local label="$1" pid="$2" log="$3" context="$4" target="$5" t0="$6"
+    while kill -0 "$pid" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
+    wait "$pid" || { echo "$label block processing failed:"; tail -30 "$log"; return 1; }
+    [ "$(context_blocks "'$context'")" -ge "$target" ] || { echo "$context short of $target"; return 1; }
+}
+
 sync_apps() {
     local head t0=$SECONDS rep l2 hafbe
     head="$(psql "$HAFBE_TEST_DB_URL" -Atc "select hive.app_get_irreversible_block()")" || return 1
     echo "shared HAF irreversible head: $head, target: $SYNC_TARGET"
     [ "$head" -ge "$SYNC_TARGET" ] || { echo "the shared HAF is not replayed to $SYNC_TARGET"; return 1; }
-    # statement_timeout bounds each processor on the server too: a run killed from
-    # outside (a gate's wall) cannot stop them, and they would go on syncing a clone
-    # nobody reads until the provider reaps it.
-    psql "$HAFBE_TEST_DB_URL?application_name=reptracker_block_processing" -v ON_ERROR_STOP=on \
-        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE reptracker_owner" -c "SET SEARCH_PATH TO reptracker_app" \
-        -c "CALL reptracker_app.main('reptracker_app', $SYNC_TARGET)" > "$out/sync-reptracker.log" 2>&1 &
-    rep=$!; sync_pids+=("$rep")
-    psql "$HAFBE_TEST_DB_URL?application_name=l2_framework_processing" -v ON_ERROR_STOP=on \
-        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE l2_framework_owner" -c "SET SEARCH_PATH TO l2" \
-        -c "CALL l2.main('l2', $SYNC_TARGET)" > "$out/sync-l2.log" 2>&1 &
-    l2=$!; sync_pids+=("$l2")
-    psql "$HAFBE_TEST_DB_URL?application_name=block_explorer_block_processing" -v ON_ERROR_STOP=on \
-        -c "SET statement_timeout = '${SYNC_TIMEOUT_S}s'" -c "SET ROLE hafbe_owner" -c "SET temp_buffers = '16MB'" -c "SET SEARCH_PATH TO hafbe_bal" \
-        -c "CALL hafbe_app.main('hafbe_app', 'hafbe_bal', $SYNC_TARGET)" > "$out/sync-hafbe.log" 2>&1 &
-    hafbe=$!; sync_pids+=("$hafbe")
-    while [ "$(context_blocks "'hafbe_app', 'hafbe_bal'")" -lt "$SYNC_TARGET" ]; do
-        if ! kill -0 "$hafbe" 2>/dev/null; then
-            echo "hafbe block processing exited before block $SYNC_TARGET:"; tail -30 "$out/sync-hafbe.log"; return 1
-        fi
-        if [ $((SECONDS - t0)) -ge "$SYNC_TIMEOUT_S" ]; then
-            echo "hafbe not at block $SYNC_TARGET after ${SYNC_TIMEOUT_S}s"; return 1
-        fi
-        sleep 10
-    done
-    echo "hafbe_app and hafbe_bal at $SYNC_TARGET after $((SECONDS - t0))s; stopping hafbe"
-    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "SET ROLE hafbe_owner" -c "SELECT hafbe_app.stopProcessing()" || return 1
-    wait "$hafbe" || { echo "hafbe block processing failed:"; tail -30 "$out/sync-hafbe.log"; return 1; }
-    while kill -0 "$rep" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
-    wait "$rep" || { echo "reptracker block processing failed:"; tail -30 "$out/sync-reptracker.log"; return 1; }
-    [ "$(context_blocks "'reptracker_app'")" -ge "$SYNC_TARGET" ] || { echo "reptracker_app short of $SYNC_TARGET"; return 1; }
-    while kill -0 "$l2" 2>/dev/null && [ $((SECONDS - t0)) -lt "$SYNC_TIMEOUT_S" ]; do sleep 5; done
-    wait "$l2" || { echo "l2_framework block processing failed:"; tail -30 "$out/sync-l2.log"; return 1; }
-    [ "$(context_blocks "'l2'")" -ge "$SYNC_TARGET" ] || { echo "l2 short of $SYNC_TARGET"; return 1; }
+    start_reptracker "$SYNC_TARGET" "$out/sync-reptracker.log"; rep=$processor_pid
+    start_l2 "$SYNC_TARGET" "$out/sync-l2.log"; l2=$processor_pid
+    start_hafbe "$SYNC_TARGET" "$out/sync-hafbe.log"; hafbe=$processor_pid
+    stop_hafbe_at "$SYNC_TARGET" "$hafbe" "$out/sync-hafbe.log" "$t0" || return 1
+    await_processor reptracker "$rep" "$out/sync-reptracker.log" reptracker_app "$SYNC_TARGET" "$t0" || return 1
+    await_processor l2_framework "$l2" "$out/sync-l2.log" l2 "$SYNC_TARGET" "$t0" || return 1
     # haf_block_explorer reads l2 as production does: through l2_framework_user, not as its owner.
     [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select count(*) from pg_tables where schemaname = 'l2' and tableowner <> 'l2_framework_owner'")" = 0 ] \
         && [ "$(psql "$HAFBE_TEST_DB_URL" -Atc "select pg_get_userbyid(nspowner) = 'l2_framework_owner' and has_table_privilege('hafbe_user', 'l2.authority_key', 'SELECT') from pg_namespace where nspname = 'l2'")" = t ] \
@@ -387,6 +431,42 @@ process_blocks_selection() {
         --processor-user=haf_shared_consumer
 }
 
+# The HAF tables tests/mocks/install_mock_data.sh writes (CI's fill-db-with-mock-data
+# writes them as haf_admin) that the run's role may not write, comma-separated.
+mock_writes_missing() {
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "
+        SELECT coalesce(string_agg(p || ' on ' || t, ', '), '') FROM (VALUES
+            ('hafd.blocks', 'INSERT'), ('hafd.operations', 'INSERT'),
+            ('hafd.hive_state', 'UPDATE'), ('hafd.contexts', 'UPDATE')) AS w(t, p)
+        WHERE NOT has_table_privilege(t, p)"
+}
+
+# What CI's sync_with_mock_data does over its 5M sync cache, on the synced clone:
+# install_mock_data.sh (the mock blocks, and hafbe_app, hafbe_bal and l2 rewound to the
+# block before them), haf_block_explorer's and l2_framework's processors over the mock
+# range, wait-for-haf-be-startup.sh's index steps and prepare_mock_cache.sh; then
+# pattern-test-with-mock-data.
+tavern_mock() {
+    local missing end t0=$SECONDS hafbe l2
+    missing="$(mock_writes_missing)" || return 1
+    if [ -n "$missing" ]; then
+        echo "the shared HAF does not let haf_shared_consumer write the HAF tables CI's mock fill writes as haf_admin ($missing): hive/haf's .aidev/shared-haf/app-grants/hafbe.sql has to grant them in haf_template (provider haf/haf)"
+        return "$SKIP_RC"
+    fi
+    bash tests/mocks/install_mock_data.sh --url="$HAFBE_TEST_DB_URL" || return 1
+    end="$(psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -Atc "select max_block from hafbe_backend.get_mock_block_range()")" || return 1
+    start_l2 "$end" "$out/mock-l2.log"; l2=$processor_pid
+    start_hafbe "$end" "$out/mock-hafbe.log"; hafbe=$processor_pid
+    stop_hafbe_at "$end" "$hafbe" "$out/mock-hafbe.log" "$t0" || return 1
+    await_processor l2_framework "$l2" "$out/mock-l2.log" l2 "$end" "$t0" || return 1
+    psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "SET ROLE hafbe_owner" -c "SELECT hafbe_app.create_hafbe_indexes()" \
+        -c "RESET ROLE" -c "SELECT hive.app_restore_indexes('hafbe_app')" || return 1
+    bash scripts/prepare_mock_cache.sh --url="$HAFBE_TEST_DB_URL" || return 1
+    psql "$HAFBE_TEST_DB_URL" -c "select name, current_block_num from hafd.contexts order by name"
+    echo "mock data ready in $((SECONDS - t0))s"
+    python3 .aidev/hafbe_tavern.py "$out" patterns-mock
+}
+
 for s in "$@"; do
     case "$s" in
         shellcheck) step shellcheck run_shellcheck ;;
@@ -399,6 +479,7 @@ for s in "$@"; do
         tavern) step tavern on_clone python3 .aidev/hafbe_tavern.py "$out" ;;
         rewriter) step rewriter on_clone python3 .aidev/hafbe_rewriter.py "$out" ;;
         selection) step selection on_clone process_blocks_selection ;;
+        tavern-mock) step tavern-mock on_clone tavern_mock ;;
         *) echo "unknown step: $s" >&2; exit 2 ;;
     esac
 done
@@ -407,6 +488,9 @@ if [[ " $* " == *" tavern "* && " $* " != *" rewriter "* ]]; then
 fi
 if [[ " $* " == *" tavern "* && " $* " != *" selection "* ]]; then
     step selection on_clone process_blocks_selection
+fi
+if [[ " $* " == *" tavern "* && " $* " != *" tavern-mock "* ]]; then
+    step tavern-mock on_clone tavern_mock
 fi
 python3 .aidev/junit_cases.py "$out/junit.xml" "$suite" "$cases"
 exit "$status"

@@ -13,7 +13,9 @@ fork from that branch.
 `.aidev/run-checks.sh <suite> <step>...` runs the named steps and writes
 `test-results/<suite>/junit.xml`, one test case per step, with the step's log tail as
 the failure body. `regression` also writes one case per comparison
-(`regression.xml`), `tavern` and `rewriter` one per test (`tavern.xml`, `rewriter.xml`).
+(`regression.xml`), `tavern`, `rewriter` and `tavern-mock` one per test (`tavern.xml`,
+`rewriter.xml`, `tavern-mock.xml`). A step that reports SKIP (`tavern-mock` when the shared
+HAF lacks a grant it needs) is a skipped case whose message names what is missing.
 
 | Step | What | CI job it stands for |
 |---|---|---|
@@ -26,13 +28,14 @@ the failure body. `regression` also writes one case per comparison
 | `regression` | `.aidev/hafbe_regression.py`: `tests/regression` against the synced clone, every account and witness compared with hived's snapshot at block 5000000, and `hafbe_app.wallet_stats_by_day` with the aggregate over `account_parameters` it caches | `regression-test` |
 | `tavern` | `.aidev/hafbe_tavern.py`: `tests/tavern/patterns-mainnet` against PostgREST over the synced clone (`postgrest.py`, as `docker/docker-compose-test.yml` starts it), 4 xdist workers, run from a copy in `test-results/<suite>/tavern/` (the comparator writes each answer, `.out.json`, beside its test) | `pattern-test` |
 | `rewriter` | `.aidev/hafbe_rewriter.py`: `tests/rewriter` through the postgrest-rewriter in front of PostgREST over the synced clone. No docker: the runtime image carries the OpenResty of `Dockerfile.rewriter`'s base image (with `hive.rpc_form`), which runs `docker/haf_block_explorer_nginx.conf.template` rendered as `docker/rewriter_entrypoint.sh` does, with `endpoints/rewrite_rules.conf` and `endpoints/rpc_arguments.lua`; only the listen ports and the upstream are changed. Operator-prefixed values (`not.`, `eq.`, ...) reaching every TEXT argument, column filters and PostgREST's own parameters, HEAD then GET on one connection, and the argument map against the endpoint signatures. Runs after `tavern` in every suite that runs `tavern` (the slots do not name it) | `rewriter-test` |
-| `selection` | `tests/process_blocks_selection/run_test.sh` on the synced clone: which loop `scripts/process_blocks.sh` starts in each state of the HAF application registry (stubbed loops), then the real legacy `main()` through it. The consumer may not rename HAF's objects, so the cases of a HAF without the registry or the lock helpers report SKIP here. Runs last, after `tavern`, in every suite that runs `tavern` (the slots do not name it): it changes (and restores) the registry | `process-blocks-selection-test` |
+| `selection` | `tests/process_blocks_selection/run_test.sh` on the synced clone: which loop `scripts/process_blocks.sh` starts in each state of the HAF application registry (stubbed loops), then the real legacy `main()` through it. The consumer may not rename HAF's objects, so the cases of a HAF without the registry or the lock helpers report SKIP here. Runs after `tavern` and `rewriter`, before `tavern-mock`, in every suite that runs `tavern` (the slots do not name it): it changes (and restores) the registry | `process-blocks-selection-test` |
+| `tavern-mock` | CI's mock data on the synced clone, then `tests/tavern/patterns-mock` through PostgREST (`hafbe_tavern.py patterns-mock`; answers in `test-results/<suite>/tavern/patterns-mock/`). The mock data is built as `sync_with_mock_data` builds it over its 5M sync cache: `tests/mocks/install_mock_data.sh` (blocks 91000001+ and their operations into `hafd.blocks`/`hafd.operations`, `hafd.hive_state`'s consistent block moved to the last of them, `hafbe_app`, `hafbe_bal` and `l2` rewound to the block before them), haf_block_explorer's and l2_framework's processors over the mock range (the reputation tracker is not run, as in CI's compose), `wait-for-haf-be-startup.sh`'s index steps and `scripts/prepare_mock_cache.sh`. Runs last in every suite that runs `tavern` (the slots do not name it): it moves the clone past block 5000000. Reports SKIP when the clone does not let the consumer write those HAF tables (below) | `sync_with_mock_data` + `pattern-test-with-mock-data` |
 
 | Slot | Steps | Shared HAF |
 |---|---|---|
 | quick, coverage | shellcheck, sqlfluff, sql-registered | no |
-| full, canary | those plus install, reinstall, sync, regression, tavern (and rewriter and selection after it) | yes |
-| baseline | install, reinstall, sync, regression, tavern (and rewriter and selection after it) | yes |
+| full, canary | those plus install, reinstall, sync, regression, tavern (and rewriter, selection and tavern-mock after it) | yes |
+| baseline | install, reinstall, sync, regression, tavern (and rewriter, selection and tavern-mock after it) | yes |
 
 `static` and `system` are unbound: AIDEV runs neither for a project.
 
@@ -109,10 +112,23 @@ the entry when that is settled.
 
 ### Not covered, and tests that need data the gates do not have
 
-- `tests/tavern/patterns-mock` (CI's `pattern-test-with-mock-data`) needs CI's mock
-  data (`sync_with_mock_data`: `docker/docker-compose-mocks.yml` fills the database
-  with mock blocks and the processors sync over them). The shared HAF has the real
-  chain to block 5000000 only, so these tests run in GitLab CI alone.
+- `tests/tavern/patterns-mock` until the shared HAF grants the mock fill's writes.
+  CI's `fill-db-with-mock-data` writes HAF's own tables as `haf_admin`; in a clone,
+  `haf_shared_consumer` (and `hafbe_owner`) may write `hafd.contexts` but not
+  `hafd.blocks`, `hafd.operations` or `hafd.hive_state` (owned by `hived_group`), and
+  HAF has no SECURITY DEFINER path into them. So `tavern-mock` reports SKIP, naming the
+  missing privileges, and covers nothing, until hive/haf adds
+  `.aidev/shared-haf/app-grants/hafbe.sql` (applied in `haf_template` by its `serve.sh`,
+  which already lists `hafbe` in `app_roles`; clones made after the shared HAF's restart
+  carry it):
+
+  ```sql
+  grant insert on hafd.blocks, hafd.operations to haf_shared_consumer;
+  grant update on hafd.hive_state to haf_shared_consumer;
+  ```
+
+  Each clone is its own database, so the writes stay in the run's clone. Until then
+  `patterns-mock` runs in GitLab CI alone.
 - `tests/performance` (JMeter), the Python API client jobs and the advisory-lock
   skip test in CI's `sync` job stay in GitLab CI.
 
@@ -122,8 +138,9 @@ the entry when that is settled.
 from `test-results/full/tavern/patterns-mainnet/<endpoint>/<test>.out.json`, check it
 against independent data (hived's API, a block explorer) and copy it over the
 `.pat.json`. An unchecked `.out.json` records whatever bug the change has as the
-expected value. A pattern for `patterns-mock` can only come from CI's
-`pattern-test-with-mock-data` artefacts.
+expected value. A pattern for `patterns-mock` comes the same way from
+`test-results/full/tavern/patterns-mock/` once `tavern-mock` runs (not SKIP), and
+otherwise only from CI's `pattern-test-with-mock-data` artefacts.
 
 ## The shared HAF (`sandbox.external`)
 

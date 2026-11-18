@@ -267,7 +267,7 @@ mock suite below — there is no separate SQL verifier. DB-internal invariants
 dedicated DB integration-test suite if ever needed, not alongside the API tests.
 
 **Tavern HTTP tests against mock data** (`tests/tavern/patterns-mock/`):
-57 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. Organised by endpoint:
+57 HTTP-level Tavern cases that run in CI against the mock cache (via `pattern-test-with-mock-data` job), each with a matching `.pat.json` response pattern. AIDEV's gate builds the same mock data on its clone of the shared HAF and runs them in `.aidev/run-checks.sh`'s `tavern-mock` step, which reports SKIP while the shared HAF does not grant the writes the mock fill needs (`.aidev/README.md`). Organised by endpoint:
 - `get_proposals/` — 19 positive (status×5, sort×8, pagination) + 5 negative
 - `get_proposal_votes/` — 11 positive + 5 negative
 - `get_proposal_votes_history/` — 12 positive + 3 negative (`filter_voter_*` pin the cache-hit and expired-view fallback stake branches; `tie_break_*` pin the same-block vote/un-vote ordering at the `page-size=1` pagination boundary; `proxied_voter` pins proxy zeroing)
