@@ -1254,15 +1254,16 @@ $$;
  * Register indexes on HAF tables (hafd.operations, hafd.blocks)
  * that are needed by hafbe's API endpoints.
  *
- * These indexes are deferred until after hafbe finishes its MASSIVE sync,
- * rather than being registered at install time. This prevents hived's
- * enable_indexes_of_irreversible() from building them during replay,
- * which would block all apps from starting their own sync.
- *
- * Only registers the indexes (status='missing' in hafd.indexes_constraints).
- * The actual creation is handled by hived's poll_and_create_indexes() background
- * thread, which builds them with CREATE INDEX CONCURRENTLY to avoid blocking
- * hived's writes or other apps.
+ * Only registers the indexes (status='missing' in hafd.indexes_constraints,
+ * 'created' for one that already exists); hived builds them. Who builds them
+ * depends on when this runs:
+ * - before HAF's index phase (register_haf_indexes_before_index_phase() at
+ *   install): hive.restore_indexes, with a plain CREATE INDEX alongside HAF's
+ *   own indexes, while early-start apps keep processing blocks;
+ * - after it (create_hafbe_indexes() at hafbe's MASSIVE->LIVE switch): hived's
+ *   poll_and_create_indexes() thread, with CREATE INDEX CONCURRENTLY, which
+ *   holds back the xmin horizon of every other app for the whole build.
+ * Registering an already registered command is a no-op, so both may run.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.register_haf_indexes()
 RETURNS VOID
@@ -1360,7 +1361,35 @@ BEGIN
     RAISE NOTICE 'Skipping block search indexes (blocksearch_indexes is false).';
   END IF;
 
-  RAISE NOTICE 'HAF indexes registered. hived will create them concurrently in the background.';
+  RAISE NOTICE 'HAF indexes registered.';
+END
+$$;
+
+/**
+ * register_haf_indexes_before_index_phase()
+ * -----------------------------------------
+ * Install-time registration of the HAF table indexes: registers them only while
+ * HAF has not finished its index phase (hive.is_instance_ready() is false: hived
+ * not started yet, or still replaying), so that hive.restore_indexes builds them
+ * in that phase. Onto a HAF that is already ready it registers nothing and leaves
+ * them to create_hafbe_indexes() at hafbe's MASSIVE->LIVE switch, as an install
+ * onto a live HAF would otherwise start concurrent builds on hafd.operations
+ * before hafbe has synced at all.
+ *
+ * Reads app_status.blocksearch_indexes, so it must run after install_app.sh sets it.
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.register_haf_indexes_before_index_phase()
+RETURNS VOID
+LANGUAGE plpgsql VOLATILE
+AS
+$$
+BEGIN
+  IF hive.is_instance_ready() THEN
+    RAISE NOTICE 'HAF has finished its index phase: HAF indexes are registered when haf_block_explorer goes LIVE.';
+    RETURN;
+  END IF;
+
+  PERFORM hafbe_app.register_haf_indexes();
 END
 $$;
 
@@ -1455,8 +1484,8 @@ BEGIN
   -- prevents the planner from using a btree index. Revisit if the cache is
   -- made dense.
 
-  -- Register indexes on HAF tables (deferred from install time).
-  -- hived's poll_and_create_indexes() will build them concurrently in the background.
+  -- Register indexes on HAF tables an install onto a ready HAF left out (see
+  -- register_haf_indexes_before_index_phase()); a no-op for the ones it registered.
   PERFORM hafbe_app.register_haf_indexes();
 
   -- For a database whose massive sync is finished from outside the main loop

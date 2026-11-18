@@ -105,10 +105,11 @@ never print, so it does not fail. Rules `.sqlfluff` lists under `warnings` are p
 elsewhere. Drop a file from the list once it is clean; when a base update brings new
 findings, fix them or regenerate the list under the new version.
 
-**`db/indexes.sql`** is not applied by `install_app.sh`: since 5b7b588 the HAF
-indexes are registered by `hafbe_app.register_haf_indexes()` at the MASSIVE→LIVE
-switch. `sql-unregistered` names it so `sql-registered` passes; delete the file or
-the entry when that is settled.
+**HAF table indexes.** The `install` step installs onto the shared HAF, which is
+past its index phase, so `register_haf_indexes_before_index_phase()` registers
+nothing and the indexes are registered at the MASSIVE→LIVE switch, as in production
+onto a live HAF. The from-scratch path (registered at install, built by
+`hive.restore_indexes`) is not exercised by any step.
 
 ### Not covered, and tests that need data the gates do not have
 

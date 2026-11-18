@@ -119,6 +119,32 @@ policy nothing changes.
   forking) runs on the first LIVE iteration.
 - **Test**: `tests/early_block_processing/run_test.sh` (see `tests.md`).
 
+### HAF table indexes (`hafd.operations`, `hafd.blocks`)
+
+`register_haf_indexes()` registers `uq_blocks_hash`, the three
+`hive_operations_comment_search_*` indexes and, when `app_status.blocksearch_indexes`
+is set, the block search indexes, with `hive.app_register_index_dependency`.
+hived builds them; when it registers decides how:
+
+- **Install, HAF not ready** (`install_app.sh` calls
+  `register_haf_indexes_before_index_phase()`, which registers only while
+  `hive.is_instance_ready()` is false): hived's index phase (`hive.restore_indexes`
+  at the end of its replay) builds every `missing` index of the table, these
+  included, with a plain `CREATE INDEX`. Early-start apps keep processing blocks
+  meanwhile (they read only `keep` indexes).
+- **Install onto a ready HAF**: nothing at install. `create_hafbe_indexes()`
+  registers them at hafbe's first LIVE iteration and hived's
+  `poll_and_create_indexes()` builds them with `CREATE INDEX CONCURRENTLY`, whose
+  long builds (expression/partial indexes) hold back the xmin horizon of every
+  other app until they finish.
+
+`create_hafbe_indexes()` always calls `register_haf_indexes()`; re-registering is a
+no-op. `isIndexesCreated()` probes a hafbe_app index, never one of these, so the
+LIVE gate does not depend on when they were built. Nothing in block processing
+reads them (see the bullets above), so their presence during the massive sync does
+not change its plans. An install that lands while `hive.restore_indexes` is already
+past `hafd.operations` leaves them to the poller.
+
 ## Processing Functions Inventory
 
 All processing functions are in `db/process_*.sql` files.

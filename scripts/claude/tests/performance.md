@@ -163,7 +163,7 @@ python3 generate_db.py \
 
 2. Look for sequential scans on large tables
 
-3. Verify indexes exist (check `db/indexes.sql`)
+3. Verify indexes exist (`create_hafbe_indexes()` and `register_haf_indexes()` in `db/hafbe_app.sql`; the HAF ones in `hafd.indexes_constraints`)
 
 ### High Error Rate
 1. Check PostgREST logs for errors

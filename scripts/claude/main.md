@@ -21,8 +21,7 @@ backend/                 SQL backend logic
 db/                      Core database layer
 ├── hafbe_app.sql        Main app setup, context creation, main loop
 ├── process_*.sql        Block processing functions
-├── builtin_roles.sql    Database roles setup
-└── indexes.sql          Table indexes
+└── builtin_roles.sql    Database roles setup
 
 endpoints/               PostgREST API definitions
 ├── endpoint_schema.sql  Main endpoint definitions (generated via openapi_rewrite.sh)

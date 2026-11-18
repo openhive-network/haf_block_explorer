@@ -269,6 +269,9 @@ setup_api() {
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "ALTER TABLE hafbe_app.app_status ADD COLUMN IF NOT EXISTS blocksearch_indexes BOOLEAN NOT NULL DEFAULT FALSE;"
   psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "UPDATE hafbe_app.app_status SET blocksearch_indexes = '${BLOCKSEARCH_INDEXES}';"
 
+  echo "Registering HAF table indexes if HAF has not finished its index phase..."
+  psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "SET ROLE hafbe_owner;SELECT hafbe_app.register_haf_indexes_before_index_phase();"
+
   echo "Installation complete."
 }
 
