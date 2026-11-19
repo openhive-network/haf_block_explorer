@@ -75,7 +75,15 @@ RESET ROLE;
 CALL hafbe_app.refresh_witness_votes_change_by_cause_in_background();
 SELECT pg_temp.expect_as_of_block('the caches hold the current block', :head);
 
--- A second check at the same block: nothing is due, so nothing is written
+-- A second check at the same block: nothing is due, so nothing is written. The bump below
+-- shows a rewrite only if the refresh wrote rows.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_change_by_cause) THEN
+    RAISE EXCEPTION 'the refresh at the current block wrote no breakdown rows, so a second refresh could not be told apart';
+  END IF;
+END
+$$;
 SET ROLE hafbe_owner;
 UPDATE hafbe_app.witness_votes_change_by_cause SET vests = vests + 1;
 RESET ROLE;

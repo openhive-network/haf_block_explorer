@@ -59,7 +59,7 @@ SET ROLE hafbe_owner;
  *     they moved it directly and are missing from the totals.
  *
  * Not registered with HAF, like the witness vote caches: a fork reverts the
- * tables this is computed from, and the next block at or below as_of_block
+ * tables this is computed from, and a check at a block below as_of_block
  * triggers a refresh (process_witness_votes_change_by_cause).
  */
 

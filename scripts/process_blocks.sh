@@ -87,7 +87,8 @@ VOTES_BY_CAUSE_TIMEOUT=${VOTES_BY_CAUSE_TIMEOUT:-5min}
 case "$VOTES_BY_CAUSE_CHECK_SECONDS" in
     ''|*[!0-9]*) echo "ERROR: VOTES_BY_CAUSE_CHECK_SECONDS must be a number (0 turns the refresher off)"; exit 1 ;;
 esac
-if ! [[ "$VOTES_BY_CAUSE_TIMEOUT" =~ ^[0-9]+(ms|s|min|h)?$ ]]; then
+if [ "$VOTES_BY_CAUSE_CHECK_SECONDS" -ne 0 ] \
+    && ! [[ "$VOTES_BY_CAUSE_TIMEOUT" =~ ^[0-9]+(\.[0-9]+)?[[:space:]]*(us|ms|s|min|h|d)?$ ]]; then
     echo "ERROR: VOTES_BY_CAUSE_TIMEOUT must be a PostgreSQL duration such as 300s or 5min"; exit 1
 fi
 
@@ -117,7 +118,7 @@ votes_by_cause_log() {
 votes_by_cause_refresher() {
     local parent=$$ log_file="$1"
     set +e +o pipefail
-    trap - EXIT TERM INT QUIT
+    trap - EXIT TERM
     while kill -0 "$parent" 2>/dev/null; do
         {
             echo '\set ON_ERROR_STOP on'
@@ -143,7 +144,8 @@ votes_by_cause_refresher() {
 # is off or the run is bounded by --stop-at-block (a test or CI run, which refreshes
 # the breakdown itself if it needs it).
 start_votes_by_cause_refresher() {
-    if [ "$VOTES_BY_CAUSE_CHECK_SECONDS" -eq 0 ] || [ "$1" != "null" ]; then
+    # --stop-at-block=0 means no limit
+    if [ "$VOTES_BY_CAUSE_CHECK_SECONDS" -eq 0 ] || { [ "$1" != "null" ] && [ "$1" != "0" ]; }; then
         return
     fi
     echo "Starting the witness vote change by cause refresher (a check every ${VOTES_BY_CAUSE_CHECK_SECONDS} s, statement_timeout ${VOTES_BY_CAUSE_TIMEOUT})"

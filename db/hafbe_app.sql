@@ -936,8 +936,10 @@ BEGIN
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'proposal_vote_stats_cache',  interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause', interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause_start', interval '10 minutes');
+  -- Not witness_votes_change_by_cause and _start: the refresher session writes them
+  -- (#211), about every 100 blocks, and a VACUUM FULL requested from here could queue
+  -- behind its MERGE, stalling HAF's vacuum and the /witnesses readers; autovacuum
+  -- keeps them small.
 END
 $$;
 

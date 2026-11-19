@@ -325,7 +325,7 @@ The breakdown of each witness's vote change by cause (`votes_change_breakdown` i
 - It does nothing until the witness vote caches hold the block it would refresh for, which they do only in LIVE.
 - The session holds the shared `haf_block_explorer` application lock (on a HAF with the lock helpers), like block processing, so an install does not run under it. A session that cannot take the lock or set its timeout ends and is retried 30 s later.
 - It logs each refresh with its duration, to stdout and to the block processor's log file.
-- It ends when the block processor exits, and is not started for a run bounded by `--stop-at-block`.
+- It ends when the block processor exits, and is not started for a run bounded by `--stop-at-block`. In a container it goes with the container. Run outside one, it notices the exit at its next check, and a refresh in progress first runs to completion or its timeout: before installing, wait for the `block_explorer_votes_by_cause` session to disappear, or the install skips under its lock.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

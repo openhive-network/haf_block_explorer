@@ -952,6 +952,16 @@ SELECT pg_temp.expect_breakdown_kept('a cancel by request');
 -- seconds, and a stalled chain must not refresh on each check.
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
 SELECT pg_temp.expect_breakdown_kept('a check at the last refresh''s block');
+-- The failing 7-day window start is still in place: an attempt would have recorded a failure
+DO $$
+BEGIN
+  IF COALESCE(current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE), '') <> '' THEN
+    RAISE EXCEPTION 'a check at the last refresh''s block attempted a refresh (failure recorded at block %)',
+      current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE);
+  END IF;
+  RAISE NOTICE 'a check at the last refresh''s block: no refresh attempted';
+END
+$$;
 
 -- A failed refresh is attempted again 100 blocks after the failure, not on each block
 -- in between. With no state row every block asks for a refresh; the failing 7-day
@@ -994,6 +1004,9 @@ SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
 SELECT pg_temp.expect_attempts('100 blocks after the failed refresh', 1);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 101);
 SELECT pg_temp.expect_attempts('the block after that failed again', 1);
+-- A chain stalled at the failed block: the refresher's next checks find the same block
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
+SELECT pg_temp.expect_attempts('the failed block checked again (a stalled chain)', 1);
 
 -- A new UTC day refreshes at its first block, not at the next 100th: a block whose
 -- today window is not the stored one asks for a refresh, one whose window is does not.
