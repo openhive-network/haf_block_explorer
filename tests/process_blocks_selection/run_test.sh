@@ -141,10 +141,11 @@ chmod +x "$stubs"/* "$no_driver"/* "$work_dir"/flaky/psql "$work_dir"/failing/ps
 failures=0
 fail() { echo "FAIL  $1"; [ -n "${2:-}" ] && printf '%s\n' "$2" | sed 's/^/      /'; failures=$((failures + 1)); }
 
-# Runs process_blocks.sh as hafbe_owner, with PATH_FIRST before the stubs: "$@" its arguments
+# Runs process_blocks.sh as hafbe_owner, with PATH_FIRST before the stubs: "$@" its arguments.
+# The witness vote change by cause refresher is off unless REFRESHER_CHECK_SECONDS is set.
 run_process_blocks() {
     PATH="${PATH_FIRST:+$PATH_FIRST:}$stubs:$PATH" PGOPTIONS="-c role=hafbe_owner" \
-    REGISTRY_PROBE_ATTEMPTS=2 REGISTRY_PROBE_RETRY_SECONDS=0 \
+    REGISTRY_PROBE_ATTEMPTS=2 REGISTRY_PROBE_RETRY_SECONDS=0 VOTES_BY_CAUSE_CHECK_SECONDS="${REFRESHER_CHECK_SECONDS:-0}" \
         timeout ${RUN_FOREGROUND:+--foreground} -k 10 "${RUN_TIMEOUT:-60}" bash "$SCRIPTS/process_blocks.sh" \
         --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --user="$PROCESSOR_USER" --btracker-schema="$BTRACKER_SCHEMA" --log-file=STDOUT "$@" 2>&1
 }
@@ -227,6 +228,52 @@ registry_row() { sql "SELECT name, contexts::text, process_procedure FROM hafd.a
 
 expect "registered with its entry procedure" DRIVER
 expect "--stop-at-block reaches the driver" DRIVER "--stop-at-block=5" -- --stop-at-block=5
+
+# The witness vote change by cause refresher (#211). Beside a driver that runs a few
+# seconds, its session holds the shared haf_block_explorer lock (as block processing
+# does) and checks without errors; once the driver has exited, the session ends. A run
+# bounded by --stop-at-block starts no refresher.
+refresher_locks() {
+    sql "SELECT count(*) FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+         WHERE a.application_name = 'block_explorer_votes_by_cause'
+           AND l.locktype = 'advisory' AND l.mode = 'ShareLock' AND l.granted
+           AND l.classid = hashtext('hive_fork_manager_app_lock')::oid AND l.objid = hashtext('haf_block_explorer')::oid"
+}
+refresher_sessions() { sql "SELECT count(*) FROM pg_stat_activity WHERE application_name = 'block_explorer_votes_by_cause'"; }
+mkdir -p "$work_dir/slow_driver"
+printf '#!/bin/bash\necho STUB-DRIVER "$@"\nsleep 20\n' > "$work_dir/slow_driver/haf_app_driver.py"
+chmod +x "$work_dir/slow_driver/haf_app_driver.py"
+PATH_FIRST="$work_dir/slow_driver" REFRESHER_CHECK_SECONDS=1 run_process_blocks > "$work_dir/refresher.out" &
+refresher_run=$!
+held=0
+while kill -0 "$refresher_run" 2>/dev/null; do
+    [ "$(refresher_locks)" = 1 ] && { held=1; break; }
+    sleep 0.25
+done
+wait "$refresher_run" || true
+gone=0
+for _ in $(seq 1 40); do
+    [ "$(refresher_sessions)" = 0 ] && { gone=1; break; }
+    sleep 0.5
+done
+out="$(cat "$work_dir/refresher.out")"
+if [ "$held" != 1 ]; then
+    fail "refresher: no block_explorer_votes_by_cause session held the shared haf_block_explorer lock" "$out"
+elif [ "$gone" != 1 ]; then
+    fail "refresher: its session outlived the driver by 20 s" "$out"
+elif ! grep -q "Starting the witness vote change by cause refresher" <<<"$out"; then
+    fail "refresher: process_blocks.sh did not say it started it" "$out"
+elif grep -q "ERROR" <<<"$out"; then
+    fail "refresher: errors in its output" "$out"
+else
+    echo "PASS  refresher: holds the shared lock beside the driver, ends with it"
+fi
+out="$(REFRESHER_CHECK_SECONDS=1 run_process_blocks --stop-at-block=5)" || true
+if grep -q "Starting the witness vote change by cause refresher" <<<"$out"; then
+    fail "refresher: started for a run bounded by --stop-at-block" "$out"
+else
+    echo "PASS  refresher: not started with --stop-at-block"
+fi
 PATH_FIRST="$work_dir/flaky" expect "database down at the first attempt" DRIVER \
     "attempt 1 of 2\): psql: error: connection refused \(test\); retrying"
 PATH_FIRST="$work_dir/failing" expect "registry query fails" NONE \

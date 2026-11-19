@@ -16,8 +16,9 @@
 # votes_change_breakdown is the one CI's sync job seeds at the 5M head (as_of_block 5000000,
 # equal to patterns-mainnet/get_witness/gtg's): the mock blocks do not refresh it. HAF stages
 # them by the head it estimates from the wall clock, millions of blocks past the 2025-dated
-# mock head, so they run in MASSIVE_PROCESSING, and single_processing() -- the only caller of
-# the per-block refresh -- never sees them. Update it together with gtg's mainnet pattern.
+# mock head, so they run in MASSIVE_PROCESSING, which refreshes no witness vote cache, and the
+# refresher session refreshes the breakdown only once the caches hold the context's current
+# block. Update it together with gtg's mainnet pattern.
 
   test_name: Hafbe PostgREST
 

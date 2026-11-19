@@ -67,6 +67,8 @@ while [ $# -gt 0 ]; do
 done
 
 POSTGRES_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_block_processing"
+# keepalives: a server gone without a reset must end the refresher's session, so it reconnects
+VOTES_BY_CAUSE_ACCESS="postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/haf_block_log?application_name=block_explorer_votes_by_cause&connect_timeout=10&keepalives_idle=60&keepalives_interval=10&keepalives_count=3"
 BLOCK_PROCESSING_JOB_PID=0
 
 REGISTRY_PROBE_ATTEMPTS=${REGISTRY_PROBE_ATTEMPTS:-12}
@@ -75,6 +77,78 @@ REGISTRY_PROBE_RETRY_SECONDS=${REGISTRY_PROBE_RETRY_SECONDS:-5}
 case "$REGISTRY_PROBE_ATTEMPTS" in
     ''|*[!0-9]*|0) echo "ERROR: REGISTRY_PROBE_ATTEMPTS must be a positive number"; exit 1 ;;
 esac
+
+# The witness vote change by cause refresher (#211): how often it checks whether a
+# refresh is due (one is due about every 100 blocks and at each new UTC day; 0 turns
+# the refresher off), and the statement_timeout of each check.
+VOTES_BY_CAUSE_CHECK_SECONDS=${VOTES_BY_CAUSE_CHECK_SECONDS:-10}
+VOTES_BY_CAUSE_TIMEOUT=${VOTES_BY_CAUSE_TIMEOUT:-5min}
+
+case "$VOTES_BY_CAUSE_CHECK_SECONDS" in
+    ''|*[!0-9]*) echo "ERROR: VOTES_BY_CAUSE_CHECK_SECONDS must be a number (0 turns the refresher off)"; exit 1 ;;
+esac
+if ! [[ "$VOTES_BY_CAUSE_TIMEOUT" =~ ^[0-9]+(ms|s|min|h)?$ ]]; then
+    echo "ERROR: VOTES_BY_CAUSE_TIMEOUT must be a PostgreSQL duration such as 300s or 5min"; exit 1
+fi
+
+# Prefixes each line with the time and the refresher's name, on stdout and, unless it
+# is STDOUT, appended to the log file (which the driver or the legacy loop writes too).
+votes_by_cause_log() {
+    local log_file="$1" line
+    while IFS= read -r line; do
+        line="$(date -u '+%Y-%m-%d %H:%M:%S') votes-by-cause refresher: $line"
+        echo "$line"
+        [ "$log_file" = STDOUT ] || echo "$line" >> "$log_file"
+    done
+}
+
+# The witness vote change by cause refresher: one psql session beside block processing
+# that asks every VOTES_BY_CAUSE_CHECK_SECONDS whether a refresh is due and makes it
+# (hafbe_app.refresh_witness_votes_change_by_cause_in_background), so that a slow
+# refresh never holds up a block. Each check is a top-level statement in a REPEATABLE
+# READ transaction of its own, under VOTES_BY_CAUSE_TIMEOUT. The session holds the
+# shared haf_block_explorer lock, as block processing does, so an install does not run
+# under it; client_connection_check_interval ends its backend soon after the container
+# is gone. The setup runs with ON_ERROR_STOP: a session that could not take the lock
+# (HAF refuses it while it reports the application broken) or set its timeout ends,
+# and is retried. It reconnects after a lost connection, and stops once this script's
+# process (the driver after the exec) has exited. Checks are written on a clock, so a
+# long refresh queues a few; one that is not due costs a lookup.
+votes_by_cause_refresher() {
+    local parent=$$ log_file="$1"
+    set +e +o pipefail
+    trap - EXIT TERM INT QUIT
+    while kill -0 "$parent" 2>/dev/null; do
+        {
+            echo '\set ON_ERROR_STOP on'
+            echo "SET search_path TO ${BTRACKER_SCHEMA};"
+            echo "SET client_connection_check_interval = '10s';"
+            echo "DO \$\$ BEGIN IF to_regprocedure('hive.acquire_app_block_processor_locks(text[])') IS NOT NULL THEN PERFORM hive.acquire_app_block_processor_locks(ARRAY['haf_block_explorer']); END IF; END \$\$;"
+            echo "SET statement_timeout = '${VOTES_BY_CAUSE_TIMEOUT}';"
+            echo '\set ON_ERROR_STOP off'
+            while kill -0 "$parent" 2>/dev/null; do
+                # A write that fails (psql gone) ends the session, as SIGPIPE would
+                printf '%s\n' "BEGIN ISOLATION LEVEL REPEATABLE READ;" \
+                    "CALL hafbe_app.refresh_witness_votes_change_by_cause_in_background();" "COMMIT;" || break
+                sleep "$VOTES_BY_CAUSE_CHECK_SECONDS"
+            done
+        } | psql "$VOTES_BY_CAUSE_ACCESS" -X -w -q -o /dev/null 2>&1 | votes_by_cause_log "$log_file"
+        kill -0 "$parent" 2>/dev/null || break
+        echo "the session ended; reconnecting in 30 s" | votes_by_cause_log "$log_file"
+        sleep 30
+    done
+}
+
+# start_votes_by_cause_refresher <n_blocks> <log_file>: in the background, unless it
+# is off or the run is bounded by --stop-at-block (a test or CI run, which refreshes
+# the breakdown itself if it needs it).
+start_votes_by_cause_refresher() {
+    if [ "$VOTES_BY_CAUSE_CHECK_SECONDS" -eq 0 ] || [ "$1" != "null" ]; then
+        return
+    fi
+    echo "Starting the witness vote change by cause refresher (a check every ${VOTES_BY_CAUSE_CHECK_SECONDS} s, statement_timeout ${VOTES_BY_CAUSE_TIMEOUT})"
+    votes_by_cause_refresher "$2" &
+}
 
 # Asks the HAF application registry who should process the hafbe_app context's blocks.
 # The application is registered as haf_block_explorer, the name it locks. Prints one of:
@@ -170,6 +244,7 @@ run_driver() {
     local limit_arg=()
     [ "$n_blocks" != "null" ] && limit_arg=(--stop-at-block="$n_blocks")
     date -uIseconds > /tmp/block_processing_startup_time.txt
+    start_votes_by_cause_refresher "$n_blocks" "$log_file"
     # the driver appends to the log file itself (STDOUT = none)
     exec haf_app_driver.py --app=haf_block_explorer --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}"
 }
@@ -270,7 +345,7 @@ process_blocks() {
     if [[ "$log_file" == "STDOUT" ]]; then
         run_with_reconnect.sh -- psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET temp_buffers = '16MB';" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', $n_blocks);"
     else
-        run_with_reconnect.sh -- psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET temp_buffers = '16MB';" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" > "$log_file")
+        run_with_reconnect.sh -- psql "$POSTGRES_ACCESS" -v "ON_ERROR_STOP=on" -c "\timing" -c "SET temp_buffers = '16MB';" -c "SET SEARCH_PATH TO ${BTRACKER_SCHEMA};" -c "CALL hafbe_app.main('hafbe_app', '${BTRACKER_SCHEMA}', $n_blocks);" 2>&1 | tee -i >(eval "$timestamper" >> "$log_file")
     fi
 
 } &
@@ -282,5 +357,6 @@ wait $BLOCK_PROCESSING_JOB_PID || status=$?
 return ${status}
 }
 
+start_votes_by_cause_refresher "$PROCESS_BLOCK_LIMIT" "$LOG_FILE"
 process_blocks "$PROCESS_BLOCK_LIMIT" "$LOG_FILE"
 
