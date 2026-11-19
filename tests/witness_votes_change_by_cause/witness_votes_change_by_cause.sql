@@ -985,6 +985,8 @@ $$;
 DELETE FROM hafbe_app.witness_votes_change_by_cause_state;
 RESET ROLE;
 
+-- A refresh failed at as_of_block
+SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', :'as_of_block', FALSE);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 1);
 SELECT hafbe_app.process_witness_votes_change_by_cause(b) FROM generate_series(:as_of_block + 2, :as_of_block + 99) b;
 SELECT pg_temp.expect_attempts('the 99 blocks after a failed refresh', 0);
@@ -1015,9 +1017,10 @@ SELECT pg_temp.expect_attempts('the first block of a new UTC day', 2);
 -- The last refresh is at block x with x % 100 = 1, in one UTC day with x + 100: x + 99
 -- (a multiple of 100) is not due, x + 100 is.
 SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
-SELECT max(x) AS x
+SELECT x
 FROM generate_series(((:as_of_block - 200) / 100) * 100 + 1, 1, -100) x
-WHERE hafbe_app.witness_votes_change_today_start(x) = hafbe_app.witness_votes_change_today_start(x + 100) \gset
+WHERE hafbe_app.witness_votes_change_today_start(x) = hafbe_app.witness_votes_change_today_start(x + 100)
+LIMIT 1 \gset
 SET ROLE hafbe_owner;
 UPDATE hafbe_app.witness_votes_change_by_cause_state
 SET as_of_block = :x, today_first_block = hafbe_app.witness_votes_change_today_start(:x);
