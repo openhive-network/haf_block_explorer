@@ -28,7 +28,9 @@
 #   - reinstall       what CI's setup-scripts-test does: install_app.sh over the installed
 #                     apps, scripts/uninstall_app.sh, then install_app.sh again
 #   - sync            the block processors of haf_block_explorer (with balance tracker),
-#                     reputation tracker and l2_framework to block 5000000 in the clone, then what CI's
+#                     reputation tracker and l2_framework to block 5000000 in the clone, with
+#                     hafbe_bal's account_balance_history and account_vesting_history
+#                     LOGGED at every poll of it and after it, then what CI's
 #                     sync job and wait-for-haf-be-startup.sh do after it: the witness
 #                     votes cache, hafbe's indexes and the HAF indexes it registered,
 #                     then the balance tracker's registered indexes and the witness
@@ -364,14 +366,28 @@ start_reptracker() {
         "CALL reptracker_app.main('reptracker_app', $1)"
 }
 
+# history_logged WHEN: crash recovery empties UNLOGGED tables, so the balance
+# tracker's history must stay LOGGED through the massive sync, not only once it is
+# finalized (balance_tracker#137).
+history_logged() {
+    local unlogged
+    unlogged="$(psql "$HAFBE_TEST_DB_URL" -Atc "select string_agg(relname || ':' || relpersistence::text, ' ' order by relname)
+              from pg_class where relnamespace = 'hafbe_bal'::regnamespace
+              and relname in ('account_balance_history', 'account_vesting_history') and relpersistence <> 'p'")" || return 1
+    [ -z "$unlogged" ] || { echo "hafbe_bal history not LOGGED $1: $unlogged"; return 1; }
+}
+
 # stop_hafbe_at TARGET PID LOG T0: wait for both of hafbe's contexts to reach TARGET,
-# then stop its main(), which does not return at its limit.
+# then stop its main(), which does not return at its limit. Samples history_logged
+# at every poll while the massive sync runs.
 stop_hafbe_at() {
-    local target="$1" pid="$2" log="$3" t0="$4"
-    while [ "$(context_blocks "'hafbe_app', 'hafbe_bal'")" -lt "$target" ]; do
+    local target="$1" pid="$2" log="$3" t0="$4" block samples=0
+    while block="$(context_blocks "'hafbe_app', 'hafbe_bal'")" && [ "$block" -lt "$target" ]; do
         if ! kill -0 "$pid" 2>/dev/null; then
             echo "hafbe block processing exited before block $target:"; tail -30 "$log"; return 1
         fi
+        history_logged "at block $block of the massive sync" || return 1
+        samples=$((samples + 1))
         if [ $((SECONDS - t0)) -ge "$SYNC_TIMEOUT_S" ]; then
             echo "hafbe not at block $target after ${SYNC_TIMEOUT_S}s"; return 1
         fi
@@ -380,6 +396,8 @@ stop_hafbe_at() {
     echo "hafbe_app and hafbe_bal at $target after $((SECONDS - t0))s; stopping hafbe"
     psql "$HAFBE_TEST_DB_URL" -v ON_ERROR_STOP=on -c "SET ROLE hafbe_owner" -c "SELECT hafbe_app.stopProcessing()" || return 1
     wait "$pid" || { echo "hafbe block processing failed:"; tail -30 "$log"; return 1; }
+    history_logged "after the massive sync" || return 1
+    echo "hafbe_bal history LOGGED in $samples samples during the massive sync and after it"
 }
 
 # await_processor LABEL PID LOG CONTEXT TARGET T0: a processor whose main() returns at TARGET
