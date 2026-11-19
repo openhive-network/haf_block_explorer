@@ -82,8 +82,7 @@ haf_block_explorer/
 │   └── utilities/           Shared utilities (validation, constants)
 ├── db/                      Core database layer
 │   ├── hafbe_app.sql        Main app setup and processing loop
-│   ├── process_*.sql        Block processing functions
-│   └── indexes.sql          Database indexes
+│   └── process_*.sql        Block processing functions
 ├── endpoints/               PostgREST API definitions
 │   ├── endpoint_schema.sql  All endpoint definitions
 │   ├── accounts/            Account endpoints
