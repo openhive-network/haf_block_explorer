@@ -317,6 +317,21 @@ process_blocks.sh → hafbe_app.main()
 | `process_witness_stats()` | `db/process_witness_stats.sql` | Witness metadata |
 | `process_witness_votes()` | `db/process_witness_votes.sql` | Votes and proxies |
 
+### Witness Vote Change by Cause Refresher
+
+The breakdown of each witness's vote change by cause (`votes_change_breakdown` in `/witnesses`) takes seconds to recompute, and minutes on a cold cache, so it is not refreshed inside block processing. `scripts/process_blocks.sh` starts a refresher beside the block processor: one database session (`application_name=block_explorer_votes_by_cause`) that checks every few seconds whether a refresh is due and makes it. A refresh is due about every 100 blocks and at the first block of each UTC day.
+
+- Each check runs in a REPEATABLE READ transaction of its own, so a refresh sees one processed block's state, and under its own `statement_timeout`. A refresh that fails or times out keeps the previous breakdown, logs a WARNING and is tried again 100 blocks later.
+- It does nothing until the witness vote caches hold the block it would refresh for, which they do only in LIVE.
+- The session holds the shared `haf_block_explorer` application lock (on a HAF with the lock helpers), like block processing, so an install does not run under it. A session that cannot take the lock or set its timeout ends and is retried 30 s later.
+- It logs each refresh with its duration, to stdout and to the block processor's log file.
+- It ends when the block processor exits, and is not started for a run bounded by `--stop-at-block`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VOTES_BY_CAUSE_CHECK_SECONDS` | `10` | Seconds between checks; `0` turns the refresher off |
+| `VOTES_BY_CAUSE_TIMEOUT` | `5min` | `statement_timeout` of each check |
+
 ### Stopping Processing
 
 To gracefully stop block processing:

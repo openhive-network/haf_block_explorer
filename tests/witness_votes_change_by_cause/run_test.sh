@@ -83,11 +83,13 @@ done
 POSTGRES_ACCESS="${POSTGRES_URL:-postgresql://$POSTGRES_USER@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DATABASE}"
 
 # The vest queries read the balance tracker's tables unqualified, as in production.
-if ! output="$(PGOPTIONS="-c search_path=${BTRACKER_SCHEMA},public" \
-        psql "$POSTGRES_ACCESS" -v ON_ERROR_STOP=on -f "$SCRIPT_DIR/witness_votes_change_by_cause.sql" 2>&1)"; then
+for test_file in witness_votes_change_by_cause.sql witness_votes_change_by_cause_background.sql; do
+    if ! output="$(PGOPTIONS="-c search_path=${BTRACKER_SCHEMA},public" \
+            psql "$POSTGRES_ACCESS" -v ON_ERROR_STOP=on -f "$SCRIPT_DIR/$test_file" 2>&1)"; then
+        echo "$output"
+        echo "FAILED: $test_file"
+        exit 1
+    fi
     echo "$output"
-    echo "FAILED"
-    exit 1
-fi
-echo "$output"
+done
 echo "PASSED"
