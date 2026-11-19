@@ -205,14 +205,15 @@ Last, it makes `process_witness_votes_change_by_cause()` refresh with a 7-day wi
 sleeps past a 2 s statement timeout, then one that raises: both print a WARNING and leave the
 breakdown, its start votes and its state as they were; then one that cancels its own backend
 (`pg_cancel_backend`), contained the same way; each must record its failed block. A check at
-`as_of_block` itself must not refresh. With no state row, it then counts the
-attempts: none on the 99 blocks after the failed one, one 100 blocks after it; with a state
+`as_of_block` itself must not attempt a refresh. With no state row, it then counts the
+attempts: none on the 99 blocks after the failed one, one 100 blocks after it, none when the
+failed block is checked again (a stalled chain); with a state
 row, none on a block of the stored today window and one when the stored window is another day's;
 and with the last refresh at a block x with x % 100 = 1, none at x + 99 (a multiple of 100) and
 one at x + 100. `witness_votes_change_by_cause_background.sql` then checks that
 `single_processing()` no longer calls the refresh, and the refresher's check:
 refused outside REPEATABLE READ, nothing while `witness_votes_cache_state` does not hold the
-context's current block, a refresh for that block once it does, none on a second check. It also checks
+context's current block, a refresh for that block once it does, none on a second check. The main file also checks
 that `witness_votes_change_today_start()` equals `witness_votes_cache_window_start()` in UTC and
 `America/New_York`. Everything is rolled back; the role must be a member of `hafbe_owner` (it
 replaces that function inside the transaction).
