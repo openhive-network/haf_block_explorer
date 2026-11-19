@@ -5,6 +5,8 @@
     {
       "voter_name": "gtg",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "48426226672214",
       "account_vests": "17579100476774",
       "proxied_vests": "30847126195440",
@@ -13,6 +15,8 @@
     {
       "voter_name": "anyx",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "70193209868308",
       "account_vests": "37817782673251",
       "proxied_vests": "32375427195057",
@@ -21,6 +25,8 @@
     {
       "voter_name": "blocktrades",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "13155953611548185",
       "account_vests": "8172549681941451",
       "proxied_vests": "4983403929606734",
@@ -29,6 +35,8 @@
     {
       "voter_name": "inertia",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "18758459852198",
       "account_vests": "18758459852198",
       "proxied_vests": "0",
@@ -37,6 +45,8 @@
     {
       "voter_name": "felixxx",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "3279632347882",
       "account_vests": "3279632347882",
       "proxied_vests": "0",
@@ -45,6 +55,8 @@
     {
       "voter_name": "chitty",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "63201787839311",
       "account_vests": "63201787839311",
       "proxied_vests": "0",
@@ -53,6 +65,8 @@
     {
       "voter_name": "dave-mohican",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "83917894524",
       "account_vests": "83917894524",
       "proxied_vests": "0",
@@ -61,6 +75,8 @@
     {
       "voter_name": "keung0109",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "11541779719",
       "account_vests": "11541779719",
       "proxied_vests": "0",
@@ -69,6 +85,8 @@
     {
       "voter_name": "thebluepanda",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "4497613578719",
       "account_vests": "4497613578719",
       "proxied_vests": "0",
@@ -77,6 +95,8 @@
     {
       "voter_name": "fydel",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "28902840081400",
       "account_vests": "586820362495",
       "proxied_vests": "28316019718905",
@@ -85,6 +105,8 @@
     {
       "voter_name": "heimindanger",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "3822489985610",
       "account_vests": "3822489985610",
       "proxied_vests": "0",
@@ -93,6 +115,8 @@
     {
       "voter_name": "geoffrey",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "30847126195440",
       "account_vests": "30348411941678",
       "proxied_vests": "498714253762",
@@ -101,6 +125,8 @@
     {
       "voter_name": "steems",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "153297548326929",
       "account_vests": "153297548326929",
       "proxied_vests": "0",
@@ -109,6 +135,8 @@
     {
       "voter_name": "jesus2",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "11969890395",
       "account_vests": "11969890395",
       "proxied_vests": "0",
@@ -117,6 +145,8 @@
     {
       "voter_name": "myheadhurts",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "11818428644",
       "account_vests": "11818428644",
       "proxied_vests": "0",
@@ -125,6 +155,8 @@
     {
       "voter_name": "spaninv",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "1226498142000",
       "account_vests": "1226498142000",
       "proxied_vests": "0",
@@ -133,6 +165,8 @@
     {
       "voter_name": "geoffrey",
       "approve": false,
+      "cause": "proxy",
+      "proxy_name": "gtg",
       "vests": "30847126195440",
       "account_vests": "30348411941678",
       "proxied_vests": "498714253762",
@@ -141,6 +175,8 @@
     {
       "voter_name": "dave-hughes",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "2293850525738",
       "account_vests": "2293850525738",
       "proxied_vests": "0",
@@ -149,6 +185,8 @@
     {
       "voter_name": "dan",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "9928811304950768",
       "account_vests": "9928811304950768",
       "proxied_vests": "0",
@@ -157,6 +195,8 @@
     {
       "voter_name": "dantheman",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "5562852785102706",
       "account_vests": "5562852785102706",
       "proxied_vests": "0",
@@ -165,6 +205,8 @@
     {
       "voter_name": "dashpaymag",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "32250429178469",
       "account_vests": "32250429178469",
       "proxied_vests": "0",

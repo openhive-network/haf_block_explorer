@@ -142,6 +142,17 @@ $$;
  * Handles cases where voters no longer have current stats by falling
  * back to expired voter stats.
  *
+ * Each row carries its cause, from the operation behind it (source_op), with the
+ * names of the witness vote change breakdown (#214): votes_cast for an approval
+ * (always account_witness_vote); for a removal votes_removed (account_witness_vote),
+ * proxy (account_witness_proxy: setting a proxy removes all the voter's witness
+ * votes), expired (expired_account_notification) or declined
+ * (declined_voting_rights); NULL if the operation is not found. A proxy removal
+ * also carries proxy_name, the proxy that operation set (account_proxies_history at
+ * the same account and source_op). The operation is read through
+ * hafbe_app.operations_view, which covers reversible blocks too (not
+ * witness_votes_history_view.op_type_id, which reads hafd.operations only).
+ *
  * PARAMETERS:
  *   witness        - Witness account ID
  *   filter_account - Optional: filter to specific voter
@@ -169,7 +180,11 @@ SET plan_cache_mode = force_custom_plan
 AS
 $$
 DECLARE
-  __offset INT := ((("page" - 1) * "page-size"));
+  __offset      INT := ((("page" - 1) * "page-size"));
+  __op_vote     INT := hafbe_backend.op_account_witness_vote();
+  __op_proxy    INT := hafbe_backend.op_account_witness_proxy();
+  __op_expired  INT := hafbe_backend.op_expired_account_notification();
+  __op_declined INT := hafbe_backend.op_declined_voting_rights();
 BEGIN
   RETURN QUERY (
     /*
@@ -179,8 +194,8 @@ BEGIN
      * WHY MATERIALIZED: Pagination must happen before the per-row lookups.
      *
      * PURPOSE: Select the page from the vote rows alone, then fetch each page
-     * row's stats, voter name and block timestamp. Every vote has a voter
-     * account and a block, so enriching after OFFSET picks the same rows;
+     * row's stats, voter name, block timestamp, cause and proxy. Every vote has a
+     * voter account and a block, so enriching after OFFSET picks the same rows;
      * enriching first joined them for every vote the OFFSET skipped.
      *
      * NOTE: Uses LEFT JOIN to account_vest_stats_cache because voters who
@@ -224,6 +239,8 @@ BEGIN
         av.name,
         pv.voter_id,
         pv.approve,
+        c.cause,
+        px.proxy_name,
         avs.vests,
         avs.account_vests,
         avs.proxied_vests,
@@ -245,6 +262,31 @@ BEGIN
         WHERE a.id = pv.voter_id
         LIMIT 1
       ) av
+      CROSS JOIN LATERAL (
+        SELECT CASE
+          WHEN pv.approve THEN 'votes_cast'
+          ELSE (
+            SELECT CASE o.op_type_id
+              WHEN __op_vote     THEN 'votes_removed'
+              WHEN __op_proxy    THEN 'proxy'
+              WHEN __op_expired  THEN 'expired'
+              WHEN __op_declined THEN 'declined'
+            END
+            FROM hafbe_app.operations_view o
+            WHERE o.id = pv.source_op
+          )
+        END AS cause
+      ) c
+      LEFT JOIN LATERAL (
+        SELECT pa.name AS proxy_name
+        FROM hafbe_app.account_proxies_history ph
+        JOIN hive.accounts_view pa ON pa.id = ph.proxy_id
+        WHERE c.cause = 'proxy'
+          AND ph.account_id = pv.voter_id
+          AND ph.source_op = pv.source_op
+          AND ph.proxy
+        LIMIT 1
+      ) px ON TRUE
     ),
 
     /*
@@ -261,6 +303,8 @@ BEGIN
         ls.name,
         ls.voter_id,
         ls.approve,
+        ls.cause,
+        ls.proxy_name,
         evs.vests,
         evs.account_vests,
         evs.proxied_vests,
@@ -283,6 +327,8 @@ BEGIN
         ls.name,
         ls.voter_id,
         ls.approve,
+        ls.cause,
+        ls.proxy_name,
         ls.vests,
         ls.account_vests,
         ls.proxied_vests,
@@ -308,6 +354,8 @@ BEGIN
     SELECT
       ur.name::TEXT,
       ur.approve,
+      ur.cause,
+      ur.proxy_name::TEXT,
       ur.vests::TEXT,
       ur.account_vests::TEXT,
       ur.proxied_vests::TEXT,

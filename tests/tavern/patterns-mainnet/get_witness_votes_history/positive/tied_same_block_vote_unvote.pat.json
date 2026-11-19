@@ -5,6 +5,8 @@
     {
       "voter_name": "cmtzco",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "1904352835812",
       "account_vests": "1904352835812",
       "proxied_vests": "0",
@@ -13,6 +15,8 @@
     {
       "voter_name": "cmtzco",
       "approve": false,
+      "cause": "votes_removed",
+      "proxy_name": null,
       "vests": "1904352835812",
       "account_vests": "1904352835812",
       "proxied_vests": "0",
