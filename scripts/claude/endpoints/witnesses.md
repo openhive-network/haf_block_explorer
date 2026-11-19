@@ -247,6 +247,8 @@ Returns `hafbe_backend.witness_votes_history_return`:
     {
       "voter": "alice",
       "approve": true,
+      "cause": "votes_cast",
+      "proxy_name": null,
       "vests": "1000000000000",
       "account_vests": "800000000000",
       "proxied_vests": "200000000000",
@@ -255,6 +257,22 @@ Returns `hafbe_backend.witness_votes_history_return`:
   ]
 }
 ```
+
+#### Cause (#214)
+
+Each row's `cause` comes from the operation behind it (`source_op`), with the names of the witness
+vote change breakdown: `votes_cast` for an approval (always `account_witness_vote`); for a removal
+`votes_removed` (`account_witness_vote`, approve false), `proxy` (`account_witness_proxy`: setting a
+proxy removes all the voter's witness votes), `expired` (`expired_account_notification`) or
+`declined` (`declined_voting_rights`); NULL if the operation is not found. A `proxy` row's
+`proxy_name` is the proxy that operation set, from `account_proxies_history` at the same
+`(account_id, source_op)`; NULL otherwise. Clearing a proxy writes no vote rows.
+
+Both are looked up in `limited_set`, after `paged_votes` has applied OFFSET/LIMIT (one lookup per
+returned row), and through `hafbe_app.operations_view`: `witness_votes_history_view.op_type_id`
+reads `hafd.operations`, which has no reversible blocks. Whether the proxy votes for the witness is
+left to the caller (the proxy's current witness votes). The history needs no backfill: every row
+stores its `source_op`.
 
 #### Ordering
 

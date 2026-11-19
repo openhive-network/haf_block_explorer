@@ -107,6 +107,8 @@ SET ROLE hafbe_owner;
                 {
                   "voter_name": "jeremyfromwi",
                   "approve": true,
+                  "cause": "votes_cast",
+                  "proxy_name": null,
                   "vests": "441156952466",
                   "account_vests": "441156952466",
                   "proxied_vests": "0",
@@ -115,6 +117,8 @@ SET ROLE hafbe_owner;
                 {
                   "voter_name": "cryptomental",
                   "approve": true,
+                  "cause": "votes_cast",
+                  "proxy_name": null,
                   "vests": "686005633844",
                   "account_vests": "686005633844",
                   "proxied_vests": "0",
@@ -174,6 +178,8 @@ BEGIN
     SELECT 
       ba.voter_name,
       ba.approve,
+      ba.cause,
+      ba.proxy_name,
       ba.vests,
       ba.account_vests,
       ba.proxied_vests,

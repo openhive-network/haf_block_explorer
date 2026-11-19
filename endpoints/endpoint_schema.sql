@@ -892,6 +892,14 @@ declare
             "type": "boolean",
             "description": "whether the voter approved or rejected the witness"
           },
+          "cause": {
+            "type": "string",
+            "description": "what made the change: votes_cast for an approval; for a removal votes_removed (the voter unvoted), proxy (the voter set a proxy, which removes all its witness votes), expired (the voter''s governance vote expired) or declined (the voter declined its voting rights); null if the operation is not found"
+          },
+          "proxy_name": {
+            "type": "string",
+            "description": "for a proxy removal, the proxy the voter set; null otherwise"
+          },
           "vests": {
             "type": "string",
             "description": "number of vests this voter is directly voting with"
@@ -1780,6 +1788,8 @@ declare
                     {
                       "voter_name": "jeremyfromwi",
                       "approve": true,
+                      "cause": "votes_cast",
+                      "proxy_name": null,
                       "vests": "441156952466",
                       "account_vests": "441156952466",
                       "proxied_vests": "0",
@@ -1788,6 +1798,8 @@ declare
                     {
                       "voter_name": "cryptomental",
                       "approve": true,
+                      "cause": "votes_cast",
+                      "proxy_name": null,
                       "vests": "686005633844",
                       "account_vests": "686005633844",
                       "proxied_vests": "0",
