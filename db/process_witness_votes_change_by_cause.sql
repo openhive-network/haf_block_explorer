@@ -15,8 +15,7 @@ SET ROLE hafbe_owner;
  *   cause            source                                          sign
  *   votes_cast       witness_votes_history, approve, by a vote op     +
  *   votes_removed    witness_votes_history, unapprove, by a vote op   -
- *   power_down       account_balance_history, fill_vesting_withdraw,  -
- *                    and withdraw_delayed_vests
+ *   power_down       account_balance_history, fill_vesting_withdraw   -
  *   power_up         delayed_voting operations                        +
  *   producer_reward  account_balance_history, producer_reward         +
  *   claimed_reward   account_balance_history, claim_reward_balance    +
@@ -33,14 +32,6 @@ SET ROLE hafbe_owner;
  *
  * Plain power-ups (their VESTS are delayed, so the weight does not move until
  * delayed_voting) and delegations (not governance weight) are not causes.
- *
- * A power-down payout moves the withdrawer's weight by its VESTS change plus the
- * delayed VESTS it took: hived takes a payout from the delayed VESTS first
- * (delayed_voting::update_votes), and those never mature. The balance tracker
- * records what each fill_vesting_withdraw took in withdraw_delayed_vests. hived
- * emits one fill per VESTS route, then one for the rest: a route back to the
- * withdrawer is a fill with a withdrawal and a deposit row for it, whose change is
- * their sum (0).
  *
  * ORDERING RULE. A vote is valued at the voter's weight when it was cast: the
  * current weight minus the voter's later changes in the window. A weight change
@@ -60,6 +51,8 @@ SET ROLE hafbe_owner;
  *     of accounts proxying to it go to its new chain top, while its removed votes
  *     are valued at its current weight, which already includes those events. Its
  *     witnesses' proxy cause is off by their sum.
+ *   - A power-down is valued at its full VESTS. When it also cancels delayed
+ *     VESTS (a power-up still in its 30-day delay) the weight moves by less.
  *   - VESTS changes by other operations are not causes. Since HF24 power-ups and
  *     routed withdrawals reach the weight through delayed_voting, and since HF19
  *     rewards through claim_reward_balance; in older history (CI's 5M-block chain)
@@ -323,36 +316,22 @@ BEGIN
         AND hafd.operation_id_to_block_num(h.source_op) >= _first_block
     ) b
   ),
-  -- Changes of an account's own weight. A payout's: its VESTS change (all its rows
-  -- for the account) plus the delayed VESTS it took, when that lowers the weight. A
-  -- payout routed to another account credits the recipient delayed VESTS, which
-  -- move no weight until delayed_voting: its net change is positive.
+  -- Changes of an account's own weight. A routed fill_vesting_withdraw also credits
+  -- VESTS to its recipient, as delayed VESTS: only the withdrawer's side counts.
   own_events AS MATERIALIZED (
     SELECT
-      p.account AS account_id,
-      p.source_op,
-      p.delta + COALESCE(t.delayed_vests, 0) AS delta,
-      'power_down' AS cause
-    FROM (
-      SELECT b.account, b.source_op, SUM(b.balance - b.previous_balance)::BIGINT AS delta
-      FROM balance_rows b
-      WHERE b.op_type_id = _op_fill_withdraw
-      GROUP BY b.account, b.source_op
-    ) p
-    LEFT JOIN withdraw_delayed_vests t ON t.account = p.account AND t.source_op = p.source_op
-    WHERE p.delta + COALESCE(t.delayed_vests, 0) < 0
-    UNION ALL
-    SELECT
-      b.account,
+      b.account AS account_id,
       b.source_op,
-      b.balance - b.previous_balance,
+      b.balance - b.previous_balance AS delta,
       CASE b.op_type_id
+        WHEN _op_fill_withdraw   THEN 'power_down'
         WHEN _op_producer_reward THEN 'producer_reward'
         ELSE 'claimed_reward'
-      END
+      END AS cause
     FROM balance_rows b
-    WHERE b.op_type_id IN (_op_producer_reward, _op_claim_reward)
+    WHERE b.op_type_id IN (_op_fill_withdraw, _op_producer_reward, _op_claim_reward)
       AND b.balance <> b.previous_balance
+      AND (b.op_type_id <> _op_fill_withdraw OR b.balance < b.previous_balance)
     UNION ALL
     SELECT
       d.account_id,
