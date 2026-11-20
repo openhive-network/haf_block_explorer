@@ -6,17 +6,17 @@
 -- the scenario below. Votes, proxies, expiries and declines go through hafbe's own
 -- parsers (process_vote_op, process_proxy_ops, process_expired_accounts) in the
 -- order hived emits their operations; VESTS changes are written to the balance
--- tracker's tables. Five witnesses, X, Y, Z, W and V:
+-- tracker's tables. Six witnesses, X, Y, Z, W, V and V2:
 --
 --   before the window   A, C and H vote for X; I and L vote for Y; P for Z; Q for W;
---                       O, J and O2 for V.
+--                       O, J and O2 for V; O3 for V2.
 --                       D -> E -> A, G -> E, K -> A, S -> P, M -> P, N -> Q and
 --                       R0 -> R1 -> R2 -> R3 -> R4 -> Q proxy. U proxies to P, then
 --                       switches to Q. Base VESTS: A 980 (15 of them still delayed),
 --                       B 600, C 250, D 45, E 200, F 30, G 70, H 80, I 400, K 60,
 --                       L 90, P 500, Q 700, S 300, U 200, M 120, N 130, R0 40,
 --                       R1 60, R2 35, R3 45, R4 55, T 15, O 500 (100 delayed),
---                       J 400, O2 300 (200 delayed).
+--                       J 400, O2 300 (200 delayed), O3 100.
 --   t1   C claims 40 VESTS                            X claimed_reward  +40
 --   t2   B votes for X, at 600 VESTS                  X votes_cast     +600
 --   t3   B powers down 100 VESTS                      X power_down     -100
@@ -43,17 +43,22 @@
 --   t21  R0 claims 7 VESTS: five levels, reaches no   -
 --        voter
 --   t22  T sets its proxy to R2: four levels to Q     W proxy           +15
---   t23  O powers down 150 VESTS, 100 of them taken   V power_down      -50
---        from its delayed VESTS
---   t24  J powers down 100 VESTS and routes 40 of     V power_down      -60
---        them back to itself
+--   t23  O's payout of 150 VESTS, 100 of them taken   V power_down      -50
+--        from its delayed VESTS: 30 routed to O3 as
+--        VESTS (O3's delayed VESTS, no weight), then
+--        the rest, each its own fill_vesting_withdraw
+--   t24  J's payout of 100 VESTS: 40 routed back to   V power_down      -60
+--        J as VESTS (a fill netting 0), then the
+--        rest
 --   t25  O2 powers down 80 VESTS, all taken from its  -
 --        delayed VESTS
 --
 -- X totals +190 (from A 1340 + C 250 + H 80 to A 1360 + B 500), Y -490, Z -420
 -- (from P 920 to 500), W +20 (from Q 1225 to 1245), V -110 (from O 400 + J 400 +
--- O2 100 to 350 + 340 + 100). B's vote and power-down in one window are counted
--- once: its vote at the weight it had then.
+-- O2 100 to 350 + 340 + 100), V2 none. B's vote and power-down in one window are
+-- counted once: its vote at the weight it had then. The reconciliation below does not
+-- undo the delayed VESTS a route added to O3, so V2 differs there, by its 'other
+-- VESTS' approximation.
 --
 -- t7, t11, t12, t13, t14, t18 and t19 need operations of their type in
 -- hafd.operations (the cause of a removal is read from them); when the role may not
@@ -450,7 +455,22 @@ BEGIN
             y.op_type_id,
             SUM(y.balance - y.previous_balance) OVER (PARTITION BY y.source_op) AS op_change
           FROM (
-            SELECT h.op_type_id, h.balance, LAG(h.balance) OVER (ORDER BY h.balance_seq_no) AS previous_balance, h.source_op
+            SELECT
+              h.op_type_id,
+              h.balance,
+              COALESCE(
+                LAG(h.balance) OVER (ORDER BY h.balance_seq_no),
+                (
+                  SELECT p.balance
+                  FROM account_balance_history p
+                  WHERE p.account = a.account_id AND p.nai = btracker_backend.nai_vests()
+                    AND p.balance_seq_no < h.balance_seq_no
+                  ORDER BY p.balance_seq_no DESC
+                  LIMIT 1
+                ),
+                0
+              ) AS previous_balance,
+              h.source_op
             FROM account_balance_history h
             WHERE h.account = a.account_id AND h.nai = btracker_backend.nai_vests()
               AND h.source_op >= _start_op AND h.source_op < _end_op
@@ -560,7 +580,7 @@ DECLARE
   _other       INT  := btracker_backend.op_transfer_to_vesting();
   _parts       TEXT[] := ARRAY['X', 'Y', 'Z', 'W', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
                                'P', 'Q', 'S', 'U', 'M', 'N', 'R0', 'R1', 'R2', 'R3', 'R4', 'T',
-                               'V', 'O', 'J', 'O2'];
+                               'V', 'O', 'J', 'O2', 'V2', 'O3'];
   _exact       INT[];
   _picked      INT;
   _op          BIGINT;
@@ -614,17 +634,17 @@ BEGIN
     _exact := _exact || pg_temp.account('Y');
   END IF;
 
-  -- The prior state. X, Y, Z, W and V are registered witnesses, ranked with the others.
+  -- The prior state. X, Y, Z, W, V and V2 are registered witnesses, ranked with the others.
   INSERT INTO hafbe_app.current_witnesses (witness_id)
-  SELECT pg_temp.account(w.part) FROM unnest(ARRAY['X', 'Y', 'Z', 'W', 'V']) AS w (part);
+  SELECT pg_temp.account(w.part) FROM unnest(ARRAY['X', 'Y', 'Z', 'W', 'V', 'V2']) AS w (part);
   PERFORM pg_temp.set_vests(p.part, p.vests, _other, pg_temp.next_op(_before))
   FROM (VALUES ('A', 980), ('B', 600), ('C', 250), ('D', 45), ('E', 200), ('F', 30), ('G', 70),
                ('H', 80), ('I', 400), ('K', 60), ('L', 90), ('P', 500), ('Q', 700), ('S', 300),
                ('U', 200), ('M', 120), ('N', 130), ('R0', 40), ('R1', 60), ('R2', 35), ('R3', 45),
-               ('R4', 55), ('T', 15), ('O', 500), ('J', 400), ('O2', 300)) AS p (part, vests);
+               ('R4', 55), ('T', 15), ('O', 500), ('J', 400), ('O2', 300), ('O3', 100)) AS p (part, vests);
   PERFORM pg_temp.op_vote(_before, v.voter, v.witness, TRUE)
   FROM (VALUES ('A', 'X'), ('C', 'X'), ('H', 'X'), ('I', 'Y'), ('L', 'Y'), ('P', 'Z'), ('Q', 'W'),
-               ('O', 'V'), ('J', 'V'), ('O2', 'V')) AS v (voter, witness);
+               ('O', 'V'), ('J', 'V'), ('O2', 'V'), ('O3', 'V2')) AS v (voter, witness);
   PERFORM pg_temp.op_proxy(_before, p.account, p.proxy)
   FROM (VALUES ('D', 'E'), ('E', 'A'), ('G', 'E'), ('K', 'A'), ('S', 'P'), ('M', 'P'), ('N', 'Q'),
                ('U', 'P'), ('R0', 'R1'), ('R1', 'R2'), ('R2', 'R3'), ('R3', 'R4'), ('R4', 'Q')) AS p (account, proxy);
@@ -673,15 +693,23 @@ BEGIN
   PERFORM pg_temp.set_vests('R1', 85, _claim, pg_temp.next_op(_window + 20));
   PERFORM pg_temp.set_vests('R0', 47, _claim, pg_temp.next_op(_window + 21));
   PERFORM pg_temp.op_proxy(_window + 22, 'T', 'R2');
-  -- The payouts as the balance tracker records them: the VESTS rows (two for J's,
-  -- whose route returns 40 to J under the same operation), the delayed VESTS each
-  -- took and what is left of them.
+  -- The payouts as hived emits them and the balance tracker records them: one
+  -- fill_vesting_withdraw per VESTS route, then one for the rest; each fill's rows
+  -- (withdrawal and deposit), the delayed VESTS each took (newest first, so O's
+  -- route takes 30 of its 100 and the rest 70) and what is left of them. A route
+  -- to another account adds the VESTS to the recipient's delayed VESTS.
+  _op := pg_temp.next_op(_window + 23);
+  PERFORM pg_temp.set_vests('O', 470, _fill, _op);
+  PERFORM pg_temp.set_vests('O3', 130, _fill, _op);
+  INSERT INTO withdraw_delayed_vests (account, source_op, delayed_vests) VALUES (pg_temp.account('O'), _op, 30);
+  INSERT INTO account_withdraws (account, delayed_vests) VALUES (pg_temp.account('O3'), 30);
   _op := pg_temp.next_op(_window + 23);
   PERFORM pg_temp.set_vests('O', 350, _fill, _op);
-  INSERT INTO withdraw_delayed_vests (account, source_op, delayed_vests) VALUES (pg_temp.account('O'), _op, 100);
+  INSERT INTO withdraw_delayed_vests (account, source_op, delayed_vests) VALUES (pg_temp.account('O'), _op, 70);
   _op := pg_temp.next_op(_window + 24);
-  PERFORM pg_temp.set_vests('J', 300, _fill, _op);
-  PERFORM pg_temp.set_vests('J', 340, _fill, _op);
+  PERFORM pg_temp.set_vests('J', 360, _fill, _op);
+  PERFORM pg_temp.set_vests('J', 400, _fill, _op);
+  PERFORM pg_temp.set_vests('J', 340, _fill, pg_temp.next_op(_window + 24));
   _op := pg_temp.next_op(_window + 25);
   PERFORM pg_temp.set_vests('O2', 220, _fill, _op);
   INSERT INTO withdraw_delayed_vests (account, source_op, delayed_vests) VALUES (pg_temp.account('O2'), _op, 80);
@@ -712,6 +740,7 @@ BEGIN
   END IF;
   PERFORM pg_temp.expect('the window', _window, 'V', '{
     "power_down": [-110, 2], "total": [-110, 2]}');
+  PERFORM pg_temp.expect('the window', _window, 'V2', '{}');
 
   -- A window starting after the events sees none of them.
   PERFORM pg_temp.expect('a window after the events', _window + 30, 'X', '{}');
