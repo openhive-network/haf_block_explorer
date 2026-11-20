@@ -64,10 +64,11 @@ reach a witness (current voters, proxy setters, and the window's vote and proxy 
 A power-down payout moves the withdrawer's weight by less than its VESTS when the account has
 delayed VESTS: hived takes the payout from them first (`delayed_voting::update_votes`), and the
 VESTS it takes never mature. The balance tracker records them per payout in
-`withdraw_delayed_vests`, so the cause is the payout's VESTS change plus that. A payout that
-routes VESTS back to its withdrawer has two rows under one operation (withdrawal and deposit):
-its change is their sum. A payout routed to another account credits the recipient delayed
-VESTS, so the recipient's positive change is not a cause.
+`withdraw_delayed_vests`, so the cause is each fill's VESTS change plus that. hived emits one
+`fill_vesting_withdraw` per VESTS route, then one for the rest. A route back to the withdrawer
+is a fill with two rows for it (withdrawal and deposit): its change is their sum, 0. A route
+to another account credits the recipient delayed VESTS, so the recipient's positive change is
+not a cause.
 
 ## How a pass works
 

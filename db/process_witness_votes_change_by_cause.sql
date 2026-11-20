@@ -37,9 +37,10 @@ SET ROLE hafbe_owner;
  * A power-down payout moves the withdrawer's weight by its VESTS change plus the
  * delayed VESTS it took: hived takes a payout from the delayed VESTS first
  * (delayed_voting::update_votes), and those never mature. The balance tracker
- * records what each payout took in withdraw_delayed_vests. A payout routing VESTS
- * back to its withdrawer has two balance rows under one operation, the withdrawal
- * and the deposit: its change is their sum.
+ * records what each fill_vesting_withdraw took in withdraw_delayed_vests. hived
+ * emits one fill per VESTS route, then one for the rest: a route back to the
+ * withdrawer is a fill with a withdrawal and a deposit row for it, whose change is
+ * their sum (0).
  *
  * ORDERING RULE. A vote is valued at the voter's weight when it was cast: the
  * current weight minus the voter's later changes in the window. A weight change

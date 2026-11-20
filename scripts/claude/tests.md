@@ -176,9 +176,10 @@ operation order (a switch is `account_witness_proxy` then `proxy_cleared` of the
 expiry or decline of a proxying account is `proxy_cleared` then the expiry); VESTS changes are
 written to the balance tracker's `account_balance_history` / `current_account_balances` /
 `account_withdraws`. It checks `hafbe_app.witness_votes_change_by_cause_of()` against
-hand-derived values for five witnesses: votes cast and removed, a power-down after a vote in the
-same window (counted once), power-downs that take part or all of the payout from delayed VESTS
-(`withdraw_delayed_vests`) or route part of it back to the withdrawer, producer and claimed rewards, claims through two- and four-level
+hand-derived values for six witnesses: votes cast and removed, a power-down after a vote in the
+same window (counted once), payouts taken partly or wholly from delayed VESTS
+(`withdraw_delayed_vests`, two fills of one payout for one of them), a route back to the
+withdrawer, a route to another witness's voter (no cause), producer and claimed rewards, claims through two- and four-level
 chains (and none from five levels), a proxy set and cleared, a P→Q switch in the window, a switch
 before the window followed by a clear in it, a set into a four-level chain, and, when the role may
 write `hafd.operations` (CI's `haf_admin`), a matured power-up (`delayed_voting`), a proxy cascade,
