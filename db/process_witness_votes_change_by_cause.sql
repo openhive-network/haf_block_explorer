@@ -339,7 +339,7 @@ BEGIN
       WHERE b.op_type_id = _op_fill_withdraw
       GROUP BY b.account, b.source_op
     ) p
-    LEFT JOIN withdraw_delayed_vests t ON t.account = p.account AND t.source_op = p.source_op
+    LEFT JOIN (SELECT NULL::INT AS account, NULL::BIGINT AS source_op, NULL::BIGINT AS delayed_vests) t ON t.account = p.account AND t.source_op = p.source_op
     WHERE p.delta + COALESCE(t.delayed_vests, 0) < 0
     UNION ALL
     SELECT
