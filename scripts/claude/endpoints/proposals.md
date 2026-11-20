@@ -242,7 +242,7 @@ withdrawal rows always agree):
 
 **Naming diverges from the witness endpoint, deliberately.** `get_witness_votes_history` returns
 `vests` / `account_vests` / `proxied_vests`, does not zero under a proxy, and has no `proxy` field
-(its `proxy_name` names the proxy a removal row set, see witnesses.md).
+(its `proxy_name` names the proxy a proxy removal row set, see witnesses.md).
 The proposals family uses `voter_vests` / `direct_vests` and *does* zero. That is not an oversight:
 setting a proxy deletes witness votes, so the proxied case is unreachable there, while proposal votes
 survive a proxy and must be excluded from the proposal's total.

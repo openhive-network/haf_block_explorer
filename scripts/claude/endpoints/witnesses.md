@@ -217,7 +217,7 @@ Returns `INT`:
 
 ---
 
-### GET /witnesses/{account-name}/votes-history
+### GET /witnesses/{account-name}/votes/history
 
 **Function:** `hafbe_endpoints.get_witness_votes_history`
 **File:** `endpoints/witnesses/get_witness_votes_history.sql`
@@ -245,7 +245,7 @@ Returns `hafbe_backend.witness_votes_history_return`:
   "total_pages": 15,
   "votes_history": [
     {
-      "voter": "alice",
+      "voter_name": "alice",
       "approve": true,
       "cause": "votes_cast",
       "proxy_name": null,

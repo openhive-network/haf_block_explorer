@@ -82,7 +82,7 @@ CREATE OR REPLACE FUNCTION hafbe_endpoints.get_account(...)
 | `GET /witnesses/{account-name}` | `get_witness` | Single witness info |
 | `GET /witnesses/{account-name}/voters` | `get_witness_voters` | Accounts voting for witness |
 | `GET /witnesses/{account-name}/voters/num` | `get_witness_voters_num` | Count of witness voters |
-| `GET /witnesses/{account-name}/votes-history` | `get_witness_votes_history` | Historical vote changes |
+| `GET /witnesses/{account-name}/votes/history` | `get_witness_votes_history` | Historical vote changes, each with its `cause` (votes_cast / votes_removed / proxy / expired / declined) and, for a proxy removal, `proxy_name` |
 
 ### Proposal Endpoints
 
