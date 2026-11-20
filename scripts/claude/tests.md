@@ -176,8 +176,9 @@ operation order (a switch is `account_witness_proxy` then `proxy_cleared` of the
 expiry or decline of a proxying account is `proxy_cleared` then the expiry); VESTS changes are
 written to the balance tracker's `account_balance_history` / `current_account_balances` /
 `account_withdraws`. It checks `hafbe_app.witness_votes_change_by_cause_of()` against
-hand-derived values for four witnesses: votes cast and removed, a power-down after a vote in the
-same window (counted once), producer and claimed rewards, claims through two- and four-level
+hand-derived values for five witnesses: votes cast and removed, a power-down after a vote in the
+same window (counted once), power-downs that take part or all of the payout from delayed VESTS
+(`withdraw_delayed_vests`) or route part of it back to the withdrawer, producer and claimed rewards, claims through two- and four-level
 chains (and none from five levels), a proxy set and cleared, a P→Q switch in the window, a switch
 before the window followed by a clear in it, a set into a four-level chain, and, when the role may
 write `hafd.operations` (CI's `haf_admin`), a matured power-up (`delayed_voting`), a proxy cascade,
@@ -188,9 +189,9 @@ Then it reconciles every witness's total with the change of its votes, recompute
 from the same history (votes, proxies replayed row by row, balances and delayed VESTS before the
 window's first block and after the head): the scenario's witnesses must match exactly; any other
 witness may differ only where a documented approximation applies to an account whose weight
-reached it (a proxy change of an account with proxiers or under a changed proxy, a power-down with
-delayed VESTS, a VESTS change by an operation the breakdown does not read, which the 2016 chain is
-full of), and the output counts and names them. It does so for the scenario's window, then after
+reached it (a proxy change of an account with proxiers or under a changed proxy, a VESTS change by
+an operation the breakdown does not read or a payout routed to the account by another one, which
+the 2016 chain is full of), and the output counts and names them. It does so for the scenario's window, then after
 `process_witness_votes_cache()` and a refresh over the whole chain for the stored 7d (and today,
 the head's UTC day) windows. It requires every `total` row to be the sum of
 its causes (a sanity check, true by construction; the reconciliation is the real check), the

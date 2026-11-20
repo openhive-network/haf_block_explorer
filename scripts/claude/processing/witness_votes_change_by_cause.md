@@ -51,7 +51,7 @@ proxied up to 4 levels.
 | cause | events |
 |---|---|
 | `votes_cast` / `votes_removed` | `witness_votes_history` rows of `account_witness_vote` |
-| `power_down` | `account_balance_history` VESTS decreases of `fill_vesting_withdraw` (the routed recipient's credit is delayed VESTS: not counted) |
+| `power_down` | per `fill_vesting_withdraw` and account: the sum of its `account_balance_history` VESTS changes plus the delayed VESTS it took (`withdraw_delayed_vests`), when negative (see below) |
 | `power_up` | `delayed_voting` operations (`votes`) |
 | `producer_reward` / `claimed_reward` | `account_balance_history` VESTS changes of `producer_reward` / `claim_reward_balance` |
 | `proxy` | proxy changes derived from `account_proxies_history` (see below), and the vote removals `account_witness_proxy` cascades |
@@ -60,6 +60,14 @@ proxied up to 4 levels.
 A balance change is `balance` minus the account's previous row (same account and nai), so
 `account_balance_history` is read by `(account, nai, block)` for the accounts whose weight can
 reach a witness (current voters, proxy setters, and the window's vote and proxy accounts).
+
+A power-down payout moves the withdrawer's weight by less than its VESTS when the account has
+delayed VESTS: hived takes the payout from them first (`delayed_voting::update_votes`), and the
+VESTS it takes never mature. The balance tracker records them per payout in
+`withdraw_delayed_vests`, so the cause is the payout's VESTS change plus that. A payout that
+routes VESTS back to its withdrawer has two rows under one operation (withdrawal and deposit):
+its change is their sum. A payout routed to another account credits the recipient delayed
+VESTS, so the recipient's positive change is not a cause.
 
 ## How a pass works
 
@@ -97,8 +105,6 @@ witness.
 - An account that had votes and sets a proxy in the window: later events of accounts proxying
   to it reach its new chain top, while its removed votes are valued at its current weight, which
   already includes them; `proxy` is off by their sum.
-- A power-down is its full VESTS; when it also cancels delayed VESTS (power-up still in its
-  30-day delay) the weight moves by less.
 - VESTS changes by other operations are not causes. On today's chain they do not move the
   weight directly (power-ups and routed withdrawals are delayed since HF24, rewards are
   claimed since HF19); in older history, such as CI's 5M-block chain, they did, and the
