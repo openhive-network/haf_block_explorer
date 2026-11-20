@@ -147,7 +147,8 @@ $$;
  * (always account_witness_vote); for a removal votes_removed (account_witness_vote),
  * proxy (account_witness_proxy: setting a proxy removes all the voter's witness
  * votes), expired (expired_account_notification) or declined
- * (declined_voting_rights); NULL if the operation is not found. A proxy removal
+ * (declined_voting_rights); NULL if the operation is not found (the breakdown counts
+ * such a removal as votes_removed instead). A proxy removal
  * also carries proxy_name, the proxy that operation set (account_proxies_history at
  * the same account and source_op). The operation is read through
  * hafbe_app.operations_view, which covers reversible blocks too (not
@@ -262,26 +263,31 @@ BEGIN
         WHERE a.id = pv.voter_id
         LIMIT 1
       ) av
+      -- A removal's operation, read once: an approval is always a vote. LIMIT 1 is
+      -- required: without it the planner pulls the subquery up into a hash join over
+      -- the whole operations_view (a scan of every operation), instead of one
+      -- primary-key lookup per page row.
+      LEFT JOIN LATERAL (
+        SELECT o.op_type_id
+        FROM hafbe_app.operations_view o
+        WHERE NOT pv.approve
+          AND o.id = pv.source_op
+        LIMIT 1
+      ) op ON TRUE
       CROSS JOIN LATERAL (
         SELECT CASE
-          WHEN pv.approve THEN 'votes_cast'
-          ELSE (
-            SELECT CASE o.op_type_id
-              WHEN __op_vote     THEN 'votes_removed'
-              WHEN __op_proxy    THEN 'proxy'
-              WHEN __op_expired  THEN 'expired'
-              WHEN __op_declined THEN 'declined'
-            END
-            FROM hafbe_app.operations_view o
-            WHERE o.id = pv.source_op
-          )
+          WHEN pv.approve                   THEN 'votes_cast'
+          WHEN op.op_type_id = __op_vote     THEN 'votes_removed'
+          WHEN op.op_type_id = __op_proxy    THEN 'proxy'
+          WHEN op.op_type_id = __op_expired  THEN 'expired'
+          WHEN op.op_type_id = __op_declined THEN 'declined'
         END AS cause
       ) c
       LEFT JOIN LATERAL (
         SELECT pa.name AS proxy_name
         FROM hafbe_app.account_proxies_history ph
         JOIN hive.accounts_view pa ON pa.id = ph.proxy_id
-        WHERE c.cause = 'proxy'
+        WHERE op.op_type_id = __op_proxy
           AND ph.account_id = pv.voter_id
           AND ph.source_op = pv.source_op
           AND ph.proxy

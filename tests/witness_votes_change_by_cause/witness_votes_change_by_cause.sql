@@ -71,7 +71,10 @@
 --     breakdown in place and does not fail process_witness_votes_change_by_cause(),
 --     which does not attempt it again until 100 blocks later; a cancel by request
 --     during it is raised on;
---   - a new UTC day triggers a refresh before the next 100th block.
+--   - a new UTC day triggers a refresh before the next 100th block;
+--   - the witness votes history endpoint gives each kind of row its cause (#214):
+--     votes_cast, votes_removed, proxy with the proxy's name, expired and declined,
+--     and NULL for a removal with no operation behind it.
 --
 -- Needs a synced hafbe, the balance tracker's schema first on the search path and a
 -- member of hafbe_owner. Everything is rolled back.
@@ -193,6 +196,29 @@ DECLARE
   _body JSONB := jsonb_build_object('account', pg_temp.account_name(_account));
 BEGIN
   PERFORM hafbe_backend.process_expired_accounts(_body, pg_temp.next_op(_block, _op_name, _body));
+END
+$$;
+
+-- The witness votes history endpoint's row (#214) for _voter's vote change on _witness,
+-- the _nth newest, against the expected approve, cause and proxy.
+CREATE FUNCTION pg_temp.expect_history_cause(_voter TEXT, _witness TEXT, _nth INT,
+  _approve BOOLEAN, _cause TEXT, _proxy TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _row hafbe_backend.witness_votes_history_record;
+BEGIN
+  SELECT * INTO _row
+  FROM hafbe_backend.get_witness_votes_history(
+    pg_temp.account(_witness), pg_temp.account(_voter), _nth, 1, 'desc', NULL, NULL);
+  IF _row.approve IS DISTINCT FROM _approve OR _row.cause IS DISTINCT FROM _cause
+     OR _row.proxy_name IS DISTINCT FROM pg_temp.account_name(_proxy) THEN
+    RAISE EXCEPTION 'votes history, % on %: approve %, cause %, proxy %; expected %, %, %',
+      _voter, _witness, _row.approve, _row.cause, _row.proxy_name, _approve, _cause, pg_temp.account_name(_proxy);
+  END IF;
+  RAISE NOTICE 'votes history, % on %: approve %, cause %, proxy %',
+    _voter, _witness, _row.approve, _row.cause, COALESCE(_row.proxy_name, '-');
 END
 $$;
 
@@ -682,6 +708,19 @@ BEGIN
       "proxy": [-300, 1], "total": [-300, 1]}');
     PERFORM pg_temp.expect('the window', _window, 'W', '{
       "proxy": [115, 1], "claimed_reward": [35, 1], "total": [150, 1]}');
+  END IF;
+
+  -- The witness votes history endpoint's cause of each kind of row (#214). C's
+  -- approval, then its removal: with no operation behind the removal (the role may not
+  -- write them) its cause is NULL, not an unvote.
+  PERFORM pg_temp.expect_history_cause('C', 'X', 2, TRUE, 'votes_cast', NULL);
+  IF _write_ops THEN
+    PERFORM pg_temp.expect_history_cause('C', 'X', 1, FALSE, 'votes_removed', NULL);
+    PERFORM pg_temp.expect_history_cause('H', 'X', 1, FALSE, 'proxy', 'A');
+    PERFORM pg_temp.expect_history_cause('I', 'Y', 1, FALSE, 'expired', NULL);
+    PERFORM pg_temp.expect_history_cause('L', 'Y', 1, FALSE, 'declined', NULL);
+  ELSE
+    PERFORM pg_temp.expect_history_cause('C', 'X', 1, FALSE, NULL, NULL);
   END IF;
 
   -- A window starting after the events sees none of them.
