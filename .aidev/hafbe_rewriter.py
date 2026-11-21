@@ -27,6 +27,7 @@ from postgrest import serving
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 OPENRESTY = "/usr/local/openresty/nginx/sbin/nginx"
 TEMPLATE_UPSTREAM = "http://block-explorer-postgrest:3000"
+DEFAULT_RESOLVER = "127.0.0.11"
 STARTUP_TIMEOUT_S = 30
 WORKERS = os.environ.get("HAFBE_REWRITER_WORKERS", "4")
 
@@ -49,9 +50,11 @@ def render_config(conf_dir: str, postgrest: str, port: int, health_port: int) ->
         conf = f.read()
     # rewriter_entrypoint.sh's sed replaces every occurrence, the template's comment included
     conf = conf.replace("${REWRITE_LOG}", "rewrite_log on;")
+    # the upstream is a loopback address, so the resolver is never asked; it only has to parse
+    conf = conf.replace("${RESOLVER}", DEFAULT_RESOLVER)
     conf = _replace_once(conf, "listen 0.0.0.0:80 default_server;", f"listen 127.0.0.1:{port} default_server;")
     conf = _replace_once(conf, "listen 0.0.0.0:81;", f"listen 127.0.0.1:{health_port};")
-    conf = _replace_once(conf, f"proxy_pass {TEMPLATE_UPSTREAM};", f"proxy_pass {postgrest};")
+    conf = _replace_once(conf, f"set $postgrest_upstream {TEMPLATE_UPSTREAM};", f"set $postgrest_upstream {postgrest};")
     with open(os.path.join(conf_dir, "nginx.conf"), "w", encoding="utf-8") as f:
         f.write(conf)
     for name in ("rewrite_rules.conf", "rpc_arguments.lua"):

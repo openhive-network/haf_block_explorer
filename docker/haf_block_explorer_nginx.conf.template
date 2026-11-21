@@ -11,6 +11,10 @@ events {
 
 http {
     access_log /dev/stdout;
+    # ${RESOLVER} will be replaced by the docker entrypoint script (default: Docker's
+    # embedded DNS). proxy_pass through a variable resolves the upstream at request
+    # time, so a recreated PostgREST container is found at its new address.
+    resolver ${RESOLVER} valid=10s;
     # Initialize Lua and load functions here
     init_by_lua_block {
         -- Base64 encoding function
@@ -58,6 +62,8 @@ http {
         listen 0.0.0.0:80 default_server;
         server_name _;
 
+        set $postgrest_upstream http://block-explorer-postgrest:3000;
+
         location / {
             # Set the path_filters variable
             set_by_lua_block $path_filters {
@@ -87,7 +93,7 @@ http {
                 rpc_form.restore_head()
             }
 
-            proxy_pass http://block-explorer-postgrest:3000;
+            proxy_pass $postgrest_upstream;
 
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;

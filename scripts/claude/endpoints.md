@@ -227,6 +227,11 @@ filter when its value looks like one (`tests/rewriter/test_postgrest_parameters.
 stale map). PostgREST runs a POST READ WRITE when the function is VOLATILE, so every
 `hafbe_endpoints` function must stay STABLE or IMMUTABLE (the install refuses otherwise).
 
+The rewriter proxies to `$postgrest_upstream` (`http://block-explorer-postgrest:3000`) through
+`resolver ${RESOLVER} valid=10s;`, so nginx re-resolves the PostgREST's name at request time and
+follows a PostgREST container recreated on its own. `docker/rewriter_entrypoint.sh` renders
+`RESOLVER` from the environment, defaulting to Docker's embedded DNS `127.0.0.11`.
+
 ## Common Patterns
 
 ### Pagination
