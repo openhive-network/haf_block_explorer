@@ -6,14 +6,17 @@
 - `hafbe_app.process_witness_votes_change_by_cause(_block INT)` (the due test and the contained refresh, for the last processed LIVE block)
 - `hafbe_app.process_witness_votes_change_by_cause()` (refresh at the context's block: CI's sync, `.aidev/run-checks.sh`; the first LIVE block refreshes through `(_block)`, having no state row)
 - `hafbe_app.refresh_witness_votes_change_by_cause(_block INT)`
-- `hafbe_app.witness_votes_change_by_cause_of(_first_block INT)` (one window, one set-based pass)
+- `hafbe_app.votes_change_by_cause_of(_first_block INT)` (one window, one set-based pass, witnesses and proposals: `target_kind`, `target_id`)
+- `hafbe_app.witness_votes_change_by_cause_of(_first_block INT)` (its witness rows)
 - `hafbe_app.witness_votes_change_today_start(_block INT)`, `hafbe_app.witness_votes_change_week_start(_block INT)`
 - `hafbe_app.witness_votes_change_by_cause_indexes_ready()`
 
 **Tables**: `hafbe_app.witness_votes_change_by_cause (witness_id, time_window, cause, vests, voters)`,
 `hafbe_app.witness_votes_change_by_cause_start (witness_id, time_window, votes, rank_start)`,
-`hafbe_app.witness_votes_change_by_cause_state (as_of_block, today_first_block, week_first_block)`.
-None is registered with HAF (like the witness vote caches).
+`hafbe_app.witness_votes_change_by_cause_state (as_of_block, today_first_block, week_first_block)`,
+`hafbe_app.proposal_votes_change_by_cause (proposal_id, time_window, cause, vests, voters)`,
+`hafbe_app.proposal_votes_change_by_cause_start (proposal_id, time_window, votes, funded_start, gap_start)`.
+None is registered with HAF (like the witness vote caches). The state row covers both.
 
 ## Purpose
 
@@ -142,6 +145,38 @@ tracker indexes is raised once per session.
 could not be bounded inside block processing.) Each refresh logs its duration: a NOTICE, or a
 WARNING past 10 s.
 
+## Proposals (#209)
+
+A proposal's votes (`proposal_vote_stats_cache.total_votes`, hived's
+`dhf_processor::calculate_votes`) are the governance weight of its approvers that have no proxy.
+The same pass attributes the same voter events to proposals, with the same causes and ordering
+rule, and the refresh writes `proposal_votes_change_by_cause` beside the witness table, for the
+same `as_of_block`. Differences from witnesses:
+
+- **Votes**: `proposal_votes_history`. hived accepts an `update_proposal_votes` that names a
+  proposal the voter already approves (or does not) and `process_proposals` logs a row for each
+  named proposal, so only a row that changes the pair's approval (from its previous row, also
+  before the window) is a vote change. A removal by `expired_account_notification` /
+  `declined_voting_rights` (`process_proposal_expired_account`) is `expired` / `declined`; by
+  `remove_proposal`, `votes_removed`.
+- **Proxy**: setting a proxy removes an account's witness votes (the cascade), but hived keeps its
+  proposal votes and ignores them while the proxy is set. So a vote change of an account with a
+  proxy at the time moves nothing, and a proxy set (clear) stops (starts) each proposal the account
+  approves counting its weight, as `proxy` (or `expired` / `declined` in an expiry's block). A
+  switch from one proxy to another changes nothing. The account's weight reaches proposals through
+  its chain top, like witnesses.
+- **Fan-out**: an account backs up to 30 witnesses, but any number of proposals (mainnet
+  2026-11-24: 64,676 approvals by 7,160 voters over 335 proposals, up to 251 per voter). The
+  feeders add every proposal voter (about 3.7k accounts that vote for no witness).
+- **Funding line**: `proposal_votes_change_by_cause_start` holds each proposal's votes at each
+  window's start (`total_votes - total`) and its place against the return proposal (id 0) then.
+  hived pays the active proposals by `total_votes`, then `proposal_id`, from the top, and the
+  return proposal takes the budget left (`dhf_processor::sort_by_votes`, `transfer_payments`):
+  `funded_start` is votes above the return proposal's (a tie orders proposal 0 first) and above 0;
+  `gap_start` is votes minus the return proposal's. Both are NULL for the return proposal and for
+  a proposal that has ended by `as_of_block`; a proposal not started yet gets them, as where it
+  would stand. Whether the budget reaches a proposal above the line is not modelled.
+
 ## Endpoint
 
 `hafbe_backend.witness_votes_change_breakdown(INT[])` builds the JSON (see
@@ -153,6 +188,11 @@ witness_id, all DESC) on the start values: `witness_votes_cache.votes - total`, 
 counts them), both for `as_of_block` (the refresher only refreshes once the caches hold that block).
 A witness nothing moved and nothing passed has `rank_start = rank`. A witness without a row
 (registered after `as_of_block`) gets its current `rank`.
+
+`hafbe_backend.proposal_votes_change_breakdown(INT[])` builds the proposals' JSON, with
+`funded_start` / `gap_start` from `proposal_votes_change_by_cause_start` in place of `rank_start`
+(see [endpoints/proposals.md](../endpoints/proposals.md)), for `/proposals` and the proposal
+objects of `/proposals/votes`.
 
 ## Testing
 

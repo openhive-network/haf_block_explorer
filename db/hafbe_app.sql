@@ -57,6 +57,8 @@
  *    - proposal_vote_stats_cache: Cached stake-weighted proposal vote totals
  *    - witness_votes_change_by_cause: Witness vote change by cause, today and 7 days
  *    - witness_votes_change_by_cause_start: Witness votes and rank at each window's start
+ *    - proposal_votes_change_by_cause: Proposal vote change by cause, today and 7 days
+ *    - proposal_votes_change_by_cause_start: Proposal votes and funding line at each window's start
  *
  * HAF Synchronization Stages:
  * ---------------------------
@@ -676,6 +678,54 @@ CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_change_by_cause_start (
 
   CONSTRAINT pk_witness_votes_change_by_cause_start PRIMARY KEY (witness_id, time_window),
   CONSTRAINT witness_votes_change_by_cause_start_time_window CHECK (time_window IN ('today', '7d'))
+);
+
+------------- PROPOSAL VOTE CHANGE BY CAUSE ----------------
+
+/*
+ * proposal_votes_change_by_cause: Each proposal's vote change by cause, per window
+ * --------------------------------------------------------------------------------
+ * Written by the same refresh as witness_votes_change_by_cause, for the same
+ * as_of_block (witness_votes_change_by_cause_state), from the same pass over the
+ * voters' events (votes_change_by_cause_of). One row per proposal, window and cause
+ * that moved it, plus a 'total' row per proposal and window. Not registered with HAF,
+ * like the witness tables.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_change_by_cause (
+  proposal_id INT    NOT NULL,  -- Proposal ID
+  time_window TEXT   NOT NULL,  -- 'today' (since 00:00 UTC) or '7d'
+  cause       TEXT   NOT NULL,  -- What moved the votes, or 'total'
+  vests       BIGINT NOT NULL,  -- Change in the proposal's votes, in VESTS
+  voters      INT    NOT NULL,  -- Distinct voters of the proposal whose events moved it
+
+  CONSTRAINT pk_proposal_votes_change_by_cause PRIMARY KEY (proposal_id, time_window, cause),
+  CONSTRAINT proposal_votes_change_by_cause_time_window CHECK (time_window IN ('today', '7d')),
+  CONSTRAINT proposal_votes_change_by_cause_cause CHECK (cause IN (
+    'total', 'votes_cast', 'votes_removed', 'power_down', 'power_up', 'producer_reward',
+    'claimed_reward', 'proxy', 'expired', 'declined'
+  ))
+);
+
+/*
+ * proposal_votes_change_by_cause_start: Each proposal's votes at each window's start
+ * ----------------------------------------------------------------------------------
+ * Written with proposal_votes_change_by_cause: votes is proposal_vote_stats_cache's
+ * total_votes for as_of_block minus the window's total. funded_start is whether the
+ * proposal then ranked above the return proposal (id 0), which takes the budget left
+ * after the proposals above it; gap_start its votes minus the return proposal's.
+ * Both NULL for the return proposal and for a proposal that had ended by as_of_block;
+ * set for one not started yet, as where it would stand. One row per proposal not
+ * removed and window.
+ */
+CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_change_by_cause_start (
+  proposal_id  INT     NOT NULL,  -- Proposal ID
+  time_window  TEXT    NOT NULL,  -- 'today' or '7d'
+  votes        BIGINT  NOT NULL,  -- The proposal's votes at the window's start, in VESTS
+  funded_start BOOLEAN NULL,      -- Above the return proposal then
+  gap_start    BIGINT  NULL,      -- Its votes minus the return proposal's then, in VESTS
+
+  CONSTRAINT pk_proposal_votes_change_by_cause_start PRIMARY KEY (proposal_id, time_window),
+  CONSTRAINT proposal_votes_change_by_cause_start_time_window CHECK (time_window IN ('today', '7d'))
 );
 
 ------------- WALLET STATISTICS ----------------

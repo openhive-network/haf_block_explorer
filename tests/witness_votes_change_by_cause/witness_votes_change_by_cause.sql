@@ -60,6 +60,26 @@
 -- undo the delayed VESTS a route added to O3, so V2 differs there, by its 'other
 -- VESTS' approximation.
 --
+-- Proposals (#209), through process_proposals' parsers: PA, PB and the return
+-- proposal R (id 0, created unless the chain has one) active, PC not started yet,
+-- PD ended. Before the window A, C, F and K (proxied: not counting) approve PA; O
+-- and J PB; U (proxied) and I PC; P approves R. The same events then move them:
+--   PA   claimed_reward +55 (C's t1 and t5, D's t8 through A), producer_reward +20,
+--        power_up +15, proxy +10 (through A: F +30, G -70, H +80; F's own approval
+--        stops counting at t9, -30), expired -60 (K's proxy to A expires: A loses
+--        its 60 VESTS, K's approval counts and is removed at once, 0). C approving
+--        PA again at t26 changes nothing. Total +40 (1620 to 1660).
+--   PB   B approves it at t2 (votes_cast +600, its weight then), then B, O and J
+--        power down (power_down -210). Total +390 (800 to 1190).
+--   PC   U clears its proxy at t17: its approval starts counting (proxy +200); I's
+--        expire at t12 (expired -400); J approves it at t27 (votes_cast +340, after
+--        its payout). Total +140 (400 to 540).
+--   R    P loses S (proxy -300) and M (expired -120). Total -420 (920 to 500).
+-- At the 7-day window's start PA was above the line (gap +700), PB and PC below it
+-- (-120, -520); PB ends above it. PD and R have no funding line. Without the
+-- operations only haf_admin may write: PA +5 (claimed +55, producer +20, proxy -70;
+-- 1635 to 1640, gap +715), PC +540, R -300.
+--
 -- t7, t11, t12, t13, t14, t18 and t19 need operations of their type in
 -- hafd.operations (the cause of a removal is read from them); when the role may not
 -- write it (only haf_admin may), they are left out, the scenario loses them (X +235:
@@ -198,15 +218,78 @@ BEGIN
 END
 $$;
 
--- expired_account_notification_operation or declined_voting_rights_operation.
+-- expired_account_notification_operation or declined_voting_rights_operation, which
+-- removes the account's witness votes (process_witness_votes) and its proposal votes
+-- (process_proposals).
 CREATE FUNCTION pg_temp.op_voting_rights_lost(_block INT, _account TEXT, _op_name TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 DECLARE
   _body JSONB := jsonb_build_object('account', pg_temp.account_name(_account));
+  _id   BIGINT := pg_temp.next_op(_block, _op_name, _body);
 BEGIN
-  PERFORM hafbe_backend.process_expired_accounts(_body, pg_temp.next_op(_block, _op_name, _body));
+  PERFORM hafbe_backend.process_expired_accounts(_body, _id);
+  PERFORM hafbe_backend.process_proposal_expired_account(_body, _id);
+END
+$$;
+
+CREATE TEMP TABLE scenario_proposals (part TEXT PRIMARY KEY, id INT NOT NULL);
+
+CREATE FUNCTION pg_temp.proposal(_part TEXT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT s.id FROM scenario_proposals s WHERE s.part = _part;
+$$;
+
+-- update_proposal_votes, as process_proposals applies it.
+CREATE FUNCTION pg_temp.op_proposal_vote(_block INT, _voter TEXT, _proposals TEXT[], _approve BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _body JSONB := jsonb_build_object(
+    'voter', pg_temp.account_name(_voter),
+    'proposal_ids', (SELECT jsonb_agg(pg_temp.proposal(p.part)) FROM unnest(_proposals) AS p (part)),
+    'approve', _approve,
+    'extensions', '[]'::JSONB);
+BEGIN
+  PERFORM hafbe_backend.process_proposal_vote_op(_body, pg_temp.next_op(_block, 'update_proposal_votes_operation', _body));
+END
+$$;
+
+-- The function's rows for one proposal against the expected (cause, vests, voters).
+CREATE FUNCTION pg_temp.expect_proposal(_case TEXT, _first_block INT, _proposal TEXT, _expected JSONB)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _diff TEXT;
+BEGIN
+  WITH actual AS (
+    SELECT c.cause, c.vests, c.voters
+    FROM hafbe_app.votes_change_by_cause_of(_first_block) c
+    WHERE c.target_kind = 'proposal'
+      AND c.target_id = pg_temp.proposal(_proposal)
+  ),
+  expected AS (
+    SELECT e.key AS cause, (e.value ->> 0)::BIGINT AS vests, (e.value ->> 1)::INT AS voters
+    FROM jsonb_each(_expected) e
+  )
+  SELECT string_agg(format('%s: expected %s, got %s', COALESCE(e.cause, a.cause),
+                           COALESCE(format('%s VESTS / %s voters', e.vests, e.voters), 'no row'),
+                           COALESCE(format('%s VESTS / %s voters', a.vests, a.voters), 'no row')), '; ')
+  INTO _diff
+  FROM expected e
+  FULL JOIN actual a ON a.cause = e.cause
+  WHERE (e.vests, e.voters) IS DISTINCT FROM (a.vests, a.voters);
+
+  IF _diff IS NOT NULL THEN
+    RAISE EXCEPTION '%, proposal %: %', _case, _proposal, _diff;
+  END IF;
+  RAISE NOTICE '%, proposal %: every cause matches', _case, _proposal;
 END
 $$;
 
@@ -327,6 +410,33 @@ AS $$
   SELECT v.witness_id, v.voter_id FROM voters v
   UNION
   SELECT v.witness_id, t.account_id
+  FROM voters v
+  JOIN pg_temp.tops_at(_op) t ON t.voter_id = v.voter_id;
+$$;
+
+-- Each proposal's counting voters before _op (approving it, without a proxy then),
+-- and every account whose weight reaches one.
+CREATE FUNCTION pg_temp.proposal_members_at(_op BIGINT)
+RETURNS TABLE (proposal_id INT, account_id INT)
+LANGUAGE sql
+AS $$
+  WITH proxies AS MATERIALIZED (
+    SELECT p.account_id FROM pg_temp.proxies_at(_op) p
+  ),
+  voters AS MATERIALIZED (
+    SELECT v.voter_id, v.proposal_id
+    FROM (
+      SELECT DISTINCT ON (h.voter_id, h.proposal_id) h.voter_id, h.proposal_id, h.approve
+      FROM hafbe_app.proposal_votes_history h
+      WHERE h.source_op < _op
+      ORDER BY h.voter_id, h.proposal_id, h.source_op DESC
+    ) v
+    WHERE v.approve
+      AND NOT EXISTS (SELECT 1 FROM proxies p WHERE p.account_id = v.voter_id)
+  )
+  SELECT v.proposal_id, v.voter_id FROM voters v
+  UNION
+  SELECT v.proposal_id, t.account_id
   FROM voters v
   JOIN pg_temp.tops_at(_op) t ON t.voter_id = v.voter_id;
 $$;
@@ -539,6 +649,54 @@ BEGIN
 END
 $$;
 
+-- Each of _proposals' totals for a window starting at _first_block against its votes
+-- after the last processed block minus its votes before _first_block, recomputed
+-- from the history. They must match exactly.
+CREATE FUNCTION pg_temp.reconcile_proposals(_label TEXT, _first_block INT, _proposals TEXT[])
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _start_op BIGINT := hafd.operation_id(_first_block, 0);
+  _end_op   BIGINT := hafd.operation_id((SELECT s.head FROM scenario_settings s) + 1, 0);
+  _failures TEXT;
+BEGIN
+  WITH ids AS (
+    SELECT p.part, pg_temp.proposal(p.part) AS proposal_id FROM unnest(_proposals) AS p (part)
+  ),
+  members AS (
+    SELECT 'start'::TEXT AS at, m.proposal_id, m.account_id FROM pg_temp.proposal_members_at(_start_op) m
+    UNION ALL
+    SELECT 'end', m.proposal_id, m.account_id FROM pg_temp.proposal_members_at(_end_op) m
+  ),
+  changes AS (
+    SELECT
+      i.part,
+      COALESCE(SUM(CASE m.at
+        WHEN 'end' THEN pg_temp.own_at(m.account_id, _end_op)
+        ELSE -pg_temp.own_at(m.account_id, _start_op)
+      END), 0)::BIGINT AS change
+    FROM ids i
+    LEFT JOIN members m ON m.proposal_id = i.proposal_id
+    GROUP BY i.part
+  )
+  SELECT string_agg(format('%s total %s, votes changed by %s', c.part, COALESCE(t.vests, 0), c.change), '; ')
+  INTO _failures
+  FROM changes c
+  JOIN ids i ON i.part = c.part
+  LEFT JOIN hafbe_app.votes_change_by_cause_of(_first_block) t
+    ON t.target_kind = 'proposal'
+    AND t.target_id = i.proposal_id
+    AND t.cause = 'total'
+  WHERE COALESCE(t.vests, 0) <> c.change;
+
+  IF _failures IS NOT NULL THEN
+    RAISE EXCEPTION '%: proposals whose total differs from the change of their votes: %', _label, _failures;
+  END IF;
+  RAISE NOTICE '%: proposals % match the change of their votes exactly', _label, _proposals;
+END
+$$;
+
 -- The stored breakdown, its start votes and state, as they were before a failing refresh.
 CREATE TEMP TABLE saved_breakdown AS SELECT * FROM hafbe_app.witness_votes_change_by_cause WITH NO DATA;
 CREATE TEMP TABLE saved_start AS SELECT * FROM hafbe_app.witness_votes_change_by_cause_start WITH NO DATA;
@@ -589,6 +747,8 @@ DECLARE
   _breakdown   JSON;
   _rank        INT;
   _moved       INT;
+  _now         TIMESTAMP;
+  _with_return BOOLEAN;   -- the scenario creates the return proposal (id 0)
 BEGIN
   IF _head IS NULL THEN
     RAISE EXCEPTION 'hafbe_app has processed no block: sync it first';
@@ -614,6 +774,8 @@ BEGIN
         AND NOT EXISTS (SELECT 1 FROM hafbe_app.current_witnesses cw WHERE cw.witness_id = av.id)
         AND NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_history h WHERE h.voter_id = av.id OR h.witness_id = av.id)
         AND NOT EXISTS (SELECT 1 FROM hafbe_app.account_proxies_history p WHERE p.account_id = av.id OR p.proxy_id = av.id)
+        AND NOT EXISTS (SELECT 1 FROM hafbe_app.proposal_votes_history v WHERE v.voter_id = av.id)
+        AND NOT EXISTS (SELECT 1 FROM hafbe_app.current_proposals cp WHERE cp.creator_id = av.id OR cp.receiver_id = av.id)
         AND NOT EXISTS (
           SELECT 1 FROM account_balance_history b
           WHERE b.account = av.id
@@ -652,12 +814,44 @@ BEGIN
   PERFORM pg_temp.op_proxy(_before + 1, 'U', 'Q');
   PERFORM pg_temp.op_proxy_cleared(_before + 1, 'U', 'P');
 
+  -- Proposals: PA, PB and the return proposal R (id 0, when the chain has none)
+  -- active, PC not started yet, PD ended. Their approvals before the window: A, C,
+  -- F and K (proxied, so not counting) approve PA; O and J PB; U (proxied) and I PC;
+  -- P approves R.
+  _now := (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _head);
+  _with_return := NOT EXISTS (SELECT 1 FROM hafbe_app.current_proposals cp WHERE cp.proposal_id = 0);
+  INSERT INTO scenario_proposals (part, id)
+  SELECT x.part, COALESCE((SELECT max(cp.proposal_id) FROM hafbe_app.current_proposals cp), 0) + x.n
+  FROM (VALUES ('PA', 1), ('PB', 2), ('PC', 3), ('PD', 4)) AS x (part, n);
+  IF _with_return THEN
+    INSERT INTO scenario_proposals (part, id) VALUES ('R', 0);
+  ELSE
+    RAISE NOTICE 'SKIPPED the return proposal''s breakdown and the funding line: the chain has a proposal 0';
+  END IF;
+  INSERT INTO hafbe_app.current_proposals (proposal_id, creator_id, receiver_id, start_date, end_date, daily_pay, subject, permlink, source_op)
+  SELECT s.id, pg_temp.account('X'), pg_temp.account('X'), x.start_date, x.end_date, 1000, s.part, lower(s.part), pg_temp.next_op(_before)
+  FROM scenario_proposals s
+  JOIN (VALUES
+    ('PA', _now - INTERVAL '30 days', _now + INTERVAL '30 days'),
+    ('PB', _now - INTERVAL '30 days', _now + INTERVAL '30 days'),
+    ('PC', _now + INTERVAL '5 days',  _now + INTERVAL '60 days'),
+    ('PD', _now - INTERVAL '60 days', _now - INTERVAL '1 day'),
+    ('R',  _now - INTERVAL '90 days', _now + INTERVAL '900 days')
+  ) AS x (part, start_date, end_date) ON x.part = s.part;
+  PERFORM pg_temp.op_proposal_vote(_before + 1, v.voter, v.proposals, TRUE)
+  FROM (VALUES ('A', ARRAY['PA']), ('C', ARRAY['PA']), ('F', ARRAY['PA']), ('K', ARRAY['PA']),
+               ('O', ARRAY['PB']), ('J', ARRAY['PB']), ('U', ARRAY['PC']), ('I', ARRAY['PC'])) AS v (voter, proposals);
+  IF _with_return THEN
+    PERFORM pg_temp.op_proposal_vote(_before + 1, 'P', ARRAY['R'], TRUE);
+  END IF;
+
   -- The window, one event per block. A's 15 delayed VESTS are delayed until t7.
   IF _write_ops THEN
     INSERT INTO account_withdraws (account, delayed_vests) VALUES (pg_temp.account('A'), 15);
   END IF;
   PERFORM pg_temp.set_vests('C', 290, _claim, pg_temp.next_op(_window + 1));
   PERFORM pg_temp.op_vote(_window + 2, 'B', 'X', TRUE);
+  PERFORM pg_temp.op_proposal_vote(_window + 2, 'B', ARRAY['PB'], TRUE);
   PERFORM pg_temp.set_vests('B', 500, _fill, pg_temp.next_op(_window + 3));
   -- An approval made before the window, removed in it.
   PERFORM pg_temp.op_vote(_window + 4, 'C', 'X', FALSE);
@@ -714,6 +908,9 @@ BEGIN
   PERFORM pg_temp.set_vests('O2', 220, _fill, _op);
   INSERT INTO withdraw_delayed_vests (account, source_op, delayed_vests) VALUES (pg_temp.account('O2'), _op, 80);
   INSERT INTO account_withdraws (account, delayed_vests) VALUES (pg_temp.account('O2'), 120);
+  -- C approves PA again (hived accepts it, process_proposals logs it): no change.
+  PERFORM pg_temp.op_proposal_vote(_window + 26, 'C', ARRAY['PA'], TRUE);
+  PERFORM pg_temp.op_proposal_vote(_window + 27, 'J', ARRAY['PC'], TRUE);
 
   IF _write_ops THEN
     PERFORM pg_temp.expect('the window', _window, 'X', '{
@@ -742,6 +939,33 @@ BEGIN
     "power_down": [-110, 2], "total": [-110, 2]}');
   PERFORM pg_temp.expect('the window', _window, 'V2', '{}');
 
+  -- The proposals: the same voters' events, on every proposal they backed then.
+  IF _write_ops THEN
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PA', '{
+      "claimed_reward": [55, 2], "producer_reward": [20, 1], "power_up": [15, 1],
+      "proxy": [10, 2], "expired": [-60, 1], "total": [40, 3]}');
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PC', '{
+      "votes_cast": [340, 1], "proxy": [200, 1], "expired": [-400, 1], "total": [140, 3]}');
+    IF _with_return THEN
+      PERFORM pg_temp.expect_proposal('the window', _window, 'R', '{
+        "proxy": [-300, 1], "expired": [-120, 1], "total": [-420, 1]}');
+    END IF;
+  ELSE
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PA', '{
+      "claimed_reward": [55, 2], "producer_reward": [20, 1], "proxy": [-70, 2], "total": [5, 3]}');
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PC', '{
+      "votes_cast": [340, 1], "proxy": [200, 1], "total": [540, 2]}');
+    IF _with_return THEN
+      PERFORM pg_temp.expect_proposal('the window', _window, 'R', '{
+        "proxy": [-300, 1], "total": [-300, 1]}');
+    END IF;
+  END IF;
+  PERFORM pg_temp.expect_proposal('the window', _window, 'PB', '{
+    "votes_cast": [600, 1], "power_down": [-210, 3], "total": [390, 3]}');
+  PERFORM pg_temp.expect_proposal('the window', _window, 'PD', '{}');
+  PERFORM pg_temp.reconcile_proposals('reconciliation of the scenario''s window', _window,
+    CASE WHEN _with_return THEN ARRAY['PA', 'PB', 'PC', 'PD', 'R'] ELSE ARRAY['PA', 'PB', 'PC', 'PD'] END);
+
   -- A window starting after the events sees none of them.
   PERFORM pg_temp.expect('a window after the events', _window + 30, 'X', '{}');
   PERFORM pg_temp.expect('a window after the events', _window + 30, 'W', '{}');
@@ -753,9 +977,10 @@ BEGIN
     WHERE c.cause = 'total';
   PERFORM pg_temp.reconcile('reconciliation of the scenario''s window', _window, _exact);
 
-  -- The refresh over the synced chain and the scenario, with the witness vote cache
-  -- holding the same block as single_processing() leaves it.
+  -- The refresh over the synced chain and the scenario, with the witness and proposal
+  -- vote caches holding the same block as single_processing() leaves them.
   PERFORM hafbe_app.process_witness_votes_cache();
+  PERFORM hafbe_app.process_proposal_vote_stats_cache();
   PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_head);
   SELECT count(*)
   INTO _mismatches
@@ -768,6 +993,63 @@ BEGIN
   IF _mismatches <> 0 THEN
     RAISE EXCEPTION 'refresh: % witness windows have a total other than the sum of their causes', _mismatches;
   END IF;
+  SELECT count(*)
+  INTO _mismatches
+  FROM (
+    SELECT c.proposal_id, c.time_window
+    FROM hafbe_app.proposal_votes_change_by_cause c
+    GROUP BY c.proposal_id, c.time_window
+    HAVING SUM(c.vests) FILTER (WHERE c.cause = 'total') IS DISTINCT FROM SUM(c.vests) FILTER (WHERE c.cause <> 'total')
+  ) m;
+  IF _mismatches <> 0 THEN
+    RAISE EXCEPTION 'refresh: % proposal windows have a total other than the sum of their causes', _mismatches;
+  END IF;
+
+  -- Each proposal's votes at the 7-day window's start and its place against the
+  -- return proposal then. PB was below the line (800 against 920) and is above it
+  -- now (1190 against 500 or 620); PD has ended; R is the line.
+  WITH expected (part, votes, funded_start, gap_start) AS (
+    SELECT * FROM (VALUES
+      ('PA', CASE WHEN _write_ops THEN 1620 ELSE 1635 END, TRUE, CASE WHEN _write_ops THEN 700 ELSE 715 END),
+      ('PB', 800,  FALSE, -120),
+      ('PC', 400,  FALSE, -520),
+      ('PD', 0,    NULL,  NULL),
+      ('R',  920,  NULL,  NULL)
+    ) AS v (part, votes, funded_start, gap_start)
+    WHERE _with_return
+  )
+  SELECT count(*)
+  INTO _mismatches
+  FROM expected e
+  LEFT JOIN hafbe_app.proposal_votes_change_by_cause_start s
+    ON s.proposal_id = pg_temp.proposal(e.part)
+    AND s.time_window = '7d'
+  WHERE (s.votes, s.funded_start, s.gap_start) IS DISTINCT FROM (e.votes::BIGINT, e.funded_start, e.gap_start::BIGINT);
+  IF _mismatches <> 0 THEN
+    RAISE EXCEPTION 'refresh: % proposals'' 7-day start votes or funding line are not the scenario''s: %', _mismatches,
+      (SELECT json_agg(s) FROM hafbe_app.proposal_votes_change_by_cause_start s
+       WHERE s.time_window = '7d' AND s.proposal_id IN (SELECT p.id FROM scenario_proposals p));
+  END IF;
+  IF _with_return AND (
+       SELECT ps.total_votes FROM hafbe_app.proposal_vote_stats_cache ps WHERE ps.proposal_id = pg_temp.proposal('PB')
+     ) <= (
+       SELECT ps.total_votes FROM hafbe_app.proposal_vote_stats_cache ps WHERE ps.proposal_id = 0
+     ) THEN
+    RAISE EXCEPTION 'refresh: PB does not end above the return proposal';
+  END IF;
+  SELECT b.votes_change_breakdown INTO _breakdown
+  FROM hafbe_backend.proposal_votes_change_breakdown(ARRAY[pg_temp.proposal('PB')]) b;
+  IF (_breakdown ->> 'as_of_block')::INT IS DISTINCT FROM _head
+     OR _breakdown -> '7d' ->> 'total' IS DISTINCT FROM '390'
+     OR _breakdown -> '7d' ->> 'votes_cast' IS DISTINCT FROM '600'
+     OR _breakdown -> '7d' ->> 'power_down' IS DISTINCT FROM '-210'
+     OR (_with_return AND (_breakdown -> '7d' ->> 'funded_start' IS DISTINCT FROM 'false'
+                           OR _breakdown -> '7d' ->> 'gap_start' IS DISTINCT FROM '-120'))
+     OR (SELECT count(*) FROM json_object_keys(_breakdown -> '7d')) <> 13
+     OR (SELECT count(*) FROM json_object_keys(_breakdown -> 'today')) <> 13 THEN
+    RAISE EXCEPTION 'proposal votes_change_breakdown of PB is not the scenario: %', _breakdown;
+  END IF;
+  RAISE NOTICE 'proposal votes_change_breakdown: %', _breakdown;
   SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
   IF _state.as_of_block IS DISTINCT FROM _head
      OR _state.week_first_block IS DISTINCT FROM _week_start

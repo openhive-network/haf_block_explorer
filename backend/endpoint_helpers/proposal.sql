@@ -267,6 +267,71 @@ BEGIN
 END $$;
 
 /*
+ * proposal_votes_change_breakdown: votes_change_breakdown of the given proposals.
+ *
+ * One row per distinct proposal in _proposal_ids, none before the first refresh of
+ * hafbe_app.proposal_votes_change_by_cause. Per window ('today', '7d'): total and
+ * voters from the 'total' row, a VESTS string per cause (0 for a cause without a
+ * row), and funded_start / gap_start as the refresh stored them for as_of_block
+ * (hafbe_app.proposal_votes_change_by_cause_start); NULL for a proposal without a
+ * row there (created after as_of_block), the return proposal or one ended.
+ */
+CREATE OR REPLACE FUNCTION hafbe_backend.proposal_votes_change_breakdown(_proposal_ids INT[])
+RETURNS TABLE (
+    proposal_id            INT,
+    votes_change_breakdown JSON
+)
+LANGUAGE sql STABLE
+AS
+$$
+  WITH windows AS (
+    SELECT w.time_window FROM (VALUES ('today'), ('7d')) AS w (time_window)
+  ),
+  ids AS (
+    SELECT DISTINCT u.proposal_id FROM unnest(_proposal_ids) AS u (proposal_id)
+  ),
+  objects AS (
+    SELECT
+      i.proposal_id,
+      w.time_window,
+      json_build_object(
+        'total',           COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'total'), 0)::TEXT,
+        'voters',          COALESCE(SUM(c.voters) FILTER (WHERE c.cause = 'total'), 0)::INT,
+        'funded_start',    bool_or(s.funded_start),
+        'gap_start',       MAX(s.gap_start)::TEXT,
+        'votes_cast',      COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_cast'), 0)::TEXT,
+        'votes_removed',   COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'votes_removed'), 0)::TEXT,
+        'power_down',      COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'power_down'), 0)::TEXT,
+        'power_up',        COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'power_up'), 0)::TEXT,
+        'producer_reward', COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'producer_reward'), 0)::TEXT,
+        'claimed_reward',  COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'claimed_reward'), 0)::TEXT,
+        'proxy',           COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'proxy'), 0)::TEXT,
+        'expired',         COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'expired'), 0)::TEXT,
+        'declined',        COALESCE(SUM(c.vests) FILTER (WHERE c.cause = 'declined'), 0)::TEXT
+      ) AS window_object
+    FROM ids i
+    CROSS JOIN windows w
+    LEFT JOIN hafbe_app.proposal_votes_change_by_cause_start s
+      ON s.proposal_id = i.proposal_id
+      AND s.time_window = w.time_window
+    LEFT JOIN hafbe_app.proposal_votes_change_by_cause c
+      ON c.proposal_id = i.proposal_id
+      AND c.time_window = w.time_window
+    GROUP BY i.proposal_id, w.time_window
+  )
+  SELECT
+    o.proposal_id,
+    json_build_object(
+      'as_of_block', st.as_of_block,
+      'today', (array_agg(o.window_object) FILTER (WHERE o.time_window = 'today'))[1],
+      '7d',    (array_agg(o.window_object) FILTER (WHERE o.time_window = '7d'))[1]
+    )
+  FROM objects o
+  CROSS JOIN hafbe_app.witness_votes_change_by_cause_state st
+  GROUP BY o.proposal_id, st.as_of_block
+$$;
+
+/*
  * Select the proposal page, collect its account IDs, then resolve display names.
  * Creator names and vote totals participate in selection because they are sort
  * keys. The inner creator lookup also determines eligibility for every sort mode;
@@ -388,10 +453,13 @@ BEGIN
         WHEN _now > p.end_date   THEN 'expired'
         WHEN _now < p.start_date THEN 'inactive'
         ELSE                         'active'
-      END)::TEXT AS status
+      END)::TEXT AS status,
+      vcb.votes_change_breakdown
     FROM unnest(__page_proposals) p
     JOIN account_names cav ON cav.id = p.creator_id
     JOIN account_names rav ON rav.id = p.receiver_id
+    LEFT JOIN hafbe_backend.proposal_votes_change_breakdown(ARRAY(SELECT pp.proposal_id FROM unnest(__page_proposals) pp)) vcb
+      ON vcb.proposal_id = p.proposal_id
     -- Resolve creators again as before: multiple visible names multiply results.
     -- Page ordinality alone cannot order those names across proposals, so retain
     -- the listing's final sort, including the proposal ID tie-break in both orders.
@@ -540,7 +608,8 @@ BEGIN
         WHEN _now > pv.end_date   THEN 'expired'
         WHEN _now < pv.start_date THEN 'inactive'
         ELSE                          'active'
-      END)::TEXT
+      END)::TEXT,
+      vcb.votes_change_breakdown
     )::hafbe_backend.proposal AS proposal,
     -- Proxy presence zeroes voting power even if its name is not visible.
     (CASE
@@ -557,6 +626,8 @@ BEGIN
   JOIN account_names rav ON rav.id = pv.receiver_id
   LEFT JOIN account_names pav ON pav.id = pv.proxy_id
   LEFT JOIN hafbe_app.proposal_vote_stats_cache vsc ON vsc.proposal_id = pv.proposal_id
+  LEFT JOIN hafbe_backend.proposal_votes_change_breakdown(ARRAY(SELECT DISTINCT pp.proposal_id FROM page_votes pp)) vcb
+    ON vcb.proposal_id = pv.proposal_id
   LEFT JOIN hafbe_app.account_vest_stats_cache avs ON avs.account_id = pv.voter_id
   JOIN hive.blocks_view bv ON bv.num = hafd.operation_id_to_block_num(pv.source_op)
   ORDER BY pv.ordinality;

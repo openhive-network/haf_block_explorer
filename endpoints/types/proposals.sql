@@ -5,6 +5,85 @@ SET ROLE hafbe_owner;
 ----------------------------------------------------------------------
 
 /** openapi:components:schemas
+hafbe_backend.proposal_votes_change_window:
+  type: object
+  x-sql-datatype: JSON
+  properties:
+    total:
+      type: string
+      description: >-
+        the change in the proposal''s votes over the window, in VESTS: the sum
+        of the cause fields below
+    voters:
+      type: integer
+      description: the number of the proposal''s voters whose events moved its votes
+    funded_start:
+      type: boolean
+      nullable: true
+      description: >-
+        whether the proposal ranked above the return proposal (id 0) at the
+        window start, with more votes than it: hived pays the proposals above
+        it, as far as the budget goes. For a proposal not started yet, where it
+        would have stood. null for the return proposal itself and for a
+        proposal that has ended
+    gap_start:
+      type: string
+      nullable: true
+      description: >-
+        the proposal''s votes minus the return proposal''s at the window start,
+        in VESTS (the current gap is this plus total minus the return proposal''s
+        total); null where funded_start is
+    votes_cast:
+      type: string
+      description: votes cast, each at the voter''s weight when it voted, in VESTS
+    votes_removed:
+      type: string
+      description: votes removed, each at the voter''s weight then, in VESTS
+    power_down:
+      type: string
+      description: power-down withdrawals of the voters and their proxies, in VESTS
+    power_up:
+      type: string
+      description: power-ups finishing their 30-day voting delay, in VESTS
+    producer_reward:
+      type: string
+      description: block producer rewards paid in VESTS
+    claimed_reward:
+      type: string
+      description: author and curation rewards claimed in VESTS
+    proxy:
+      type: string
+      description: >-
+        weight moved by proxies being set, changed or cleared: a voter that
+        sets a proxy stops counting for its proposals until it clears it, in
+        VESTS
+    expired:
+      type: string
+      description: >-
+        votes and proxies removed after a year without governance activity,
+        in VESTS
+    declined:
+      type: string
+      description: votes and proxies removed by declining voting rights, in VESTS
+*/
+
+/** openapi:components:schemas
+hafbe_backend.proposal_votes_change_breakdown:
+  type: object
+  x-sql-datatype: JSON
+  properties:
+    as_of_block:
+      type: integer
+      description: the last block processed when the breakdown was refreshed (about every 100 blocks, and at the first block of each UTC day)
+    today:
+      $ref: '#/components/schemas/hafbe_backend.proposal_votes_change_window'
+      description: the change since 00:00 UTC
+    7d:
+      $ref: '#/components/schemas/hafbe_backend.proposal_votes_change_window'
+      description: the change over the 7 days up to as_of_block
+*/
+
+/** openapi:components:schemas
 hafbe_backend.proposal:
   type: object
   properties:
@@ -54,6 +133,13 @@ hafbe_backend.proposal:
         the HAFBE processed head block. Removed proposals are filtered out
         upstream by every status filter (including `all`) and never appear in
         the response, so this enum has only the three live states.
+    votes_change_breakdown:
+      $ref: '#/components/schemas/hafbe_backend.proposal_votes_change_breakdown'
+      x-sql-datatype: JSON
+      description: >-
+        the change in the proposal''s votes broken down by cause, and its gap
+        to the return proposal at each window start, today and over 7 days;
+        null until the first refresh
  */
 -- openapi-generated-code-begin
 DROP TYPE IF EXISTS hafbe_backend.proposal CASCADE;
@@ -70,7 +156,8 @@ CREATE TYPE hafbe_backend.proposal AS (
     "total_votes" TEXT,
     "voters_num" INT,
     "paid_amount" TEXT,
-    "status" TEXT
+    "status" TEXT,
+    "votes_change_breakdown" JSON
 );
 -- openapi-generated-code-end
 

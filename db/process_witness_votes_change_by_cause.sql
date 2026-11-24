@@ -5,7 +5,9 @@ SET ROLE hafbe_owner;
  * Witness vote change by cause
  * ===================================================================================
  * PURPOSE: Break each witness's vote change over a window (today, 7 days) down by
- * what moved it, for the votes_change_breakdown field of /witnesses.
+ * what moved it, for the votes_change_breakdown field of /witnesses; and each
+ * proposal's, with its place against the return proposal, for /proposals (#209:
+ * the same pass, see votes_change_by_cause_of()).
  *
  * A witness's votes are the sum of its voters' governance weight (own VESTS minus
  * delayed VESTS, plus the VESTS proxied to the voter up to 4 levels deep: the
@@ -103,23 +105,35 @@ $$;
 
 
 /*
- * witness_votes_change_by_cause_of: each witness's vote change since _first_block
- * (inclusive, to the last processed block), by cause, in one set-based pass.
+ * votes_change_by_cause_of: each witness's and each proposal's vote change since
+ * _first_block (inclusive, to the last processed block), by cause, in one set-based
+ * pass over the voters' events (#209).
  *
- * Returns one row per witness and cause that some voter's event moved, and one
- * 'total' row per such witness: vests is the sum of the cause rows' vests, voters
- * the number of distinct voters (the accounts that vote for the witness directly)
- * whose events moved it. No rows for a NULL window.
+ * Returns one row per target (target_kind 'witness' or 'proposal', target_id the
+ * witness's account id or the proposal id) and cause that some voter's event moved,
+ * and one 'total' row per such target: vests is the sum of the cause rows' vests,
+ * voters the number of distinct voters (the accounts that vote for the target
+ * directly) whose events moved it. No rows for a NULL window.
+ *
+ * A proposal's votes are the governance weight of its approvers without a proxy
+ * (dhf_processor::calculate_votes, proposal_vote_stats_cache): an approver's weight
+ * counts for a proposal while it approves it and has no proxy. Unlike witness votes,
+ * which setting a proxy removes (process_proxy_ops' cascade), hived keeps the
+ * proposal votes of an account that sets a proxy and ignores them until it clears it:
+ * the set and the clear start and stop them counting, as the proxy cause. A proxied
+ * account's weight reaches a proposal only through the voter at the end of its chain,
+ * as for witnesses.
  *
  * Reads the balance tracker's tables unqualified: the caller's search_path must
  * name its schema, as for every vest query (see account_vest_stats()).
  */
-CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_by_cause_of(_first_block INT)
+CREATE OR REPLACE FUNCTION hafbe_app.votes_change_by_cause_of(_first_block INT)
 RETURNS TABLE (
-    witness_id INT,
-    cause      TEXT,
-    vests      BIGINT,
-    voters     INT
+    target_kind TEXT,
+    target_id   INT,
+    cause       TEXT,
+    vests       BIGINT,
+    voters      INT
 )
 LANGUAGE plpgsql STABLE
 SET from_collapse_limit = 16
@@ -144,10 +158,10 @@ BEGIN
 
   RETURN QUERY
   WITH
-  -- Every vote change of the window. An approval is always a vote; a removal is
-  -- classified by the operation that made it (process_vote_op, process_proxy_ops'
-  -- cascade or process_expired_accounts).
-  vote_rows AS MATERIALIZED (
+  -- Every witness vote change of the window. An approval is always a vote; a
+  -- removal is classified by the operation that made it (process_vote_op,
+  -- process_proxy_ops' cascade or process_expired_accounts).
+  witness_vote_rows AS MATERIALIZED (
     SELECT
       h.voter_id,
       h.witness_id,
@@ -276,10 +290,106 @@ BEGIN
   link_accounts AS MATERIALIZED (
     SELECT DISTINCT l.account_id FROM links l
   ),
-  -- The accounts whose weight can reach a witness: voters, proxy setters, and
-  -- anyone with a vote or proxy change in the window.
+  -- Every proposal approval change of the window. hived accepts an
+  -- update_proposal_votes that names a proposal the voter already approves (or does
+  -- not), and process_proposals logs a row for each: only a row that changes the
+  -- pair's approval, from the pair's previous row (before the window too), is one.
+  -- A removal is classified by its operation (process_proposal_expired_account), a
+  -- proposal's removal by remove_proposal as votes_removed.
+  proposal_history_rows AS MATERIALIZED (
+    SELECT
+      h.voter_id,
+      h.proposal_id,
+      h.approve,
+      h.source_op,
+      COALESCE(
+        LAG(h.approve) OVER (PARTITION BY h.voter_id, h.proposal_id ORDER BY h.source_op),
+        (
+          SELECT q.approve
+          FROM hafbe_app.proposal_votes_history q
+          WHERE q.proposal_id = h.proposal_id
+            AND q.voter_id = h.voter_id
+            AND q.source_op < _first_op
+          ORDER BY q.source_op DESC
+          LIMIT 1
+        ),
+        FALSE
+      ) AS was_approved
+    FROM hafbe_app.proposal_votes_history h
+    WHERE h.source_op >= _first_op
+  ),
+  -- The proposal vote changes that moved a proposal's votes: those of a voter
+  -- without a proxy at the time (as routed_own takes it), and each proposal its
+  -- voter approved when a proxy set or clear stopped or started them counting. A
+  -- switch from one proxy to another changes nothing.
+  proposal_vote_rows AS MATERIALIZED (
+    SELECT
+      p.voter_id,
+      p.proposal_id,
+      p.approve,
+      p.source_op,
+      CASE
+        WHEN p.approve THEN 'votes_cast'
+        ELSE COALESCE((
+          SELECT
+            CASE o.op_type_id
+              WHEN _op_expired  THEN 'expired'
+              WHEN _op_declined THEN 'declined'
+            END
+          FROM hafbe_app.operations_view o
+          WHERE o.id = p.source_op
+        ), 'votes_removed')
+      END AS cause
+    FROM proposal_history_rows p
+    LEFT JOIN link_accounts la ON la.account_id = p.voter_id
+    LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = p.voter_id
+    WHERE p.approve <> p.was_approved
+      AND CASE
+            WHEN la.account_id IS NULL THEN cap.proxy_id
+            ELSE (
+              SELECT CASE WHEN l.source_op < p.source_op THEN l.new_proxy ELSE l.old_proxy END
+              FROM links l
+              WHERE l.account_id = p.voter_id
+              ORDER BY
+                (l.source_op < p.source_op) DESC,
+                CASE WHEN l.source_op < p.source_op THEN -l.source_op ELSE l.source_op END
+              LIMIT 1
+            )
+          END IS NULL
+    UNION ALL
+    SELECT s.account_id, s.proposal_id, s.new_proxy IS NULL, s.source_op, s.cause
+    FROM (
+      SELECT
+        l.account_id,
+        l.source_op,
+        l.new_proxy,
+        l.cause,
+        h.proposal_id,
+        h.approve,
+        ROW_NUMBER() OVER (PARTITION BY l.account_id, l.source_op, h.proposal_id ORDER BY h.source_op DESC) AS n
+      FROM links l
+      JOIN hafbe_app.proposal_votes_history h
+        ON h.voter_id = l.account_id
+        AND h.source_op < l.source_op
+      WHERE (l.old_proxy IS NULL) <> (l.new_proxy IS NULL)
+    ) s
+    WHERE s.n = 1
+      AND s.approve
+  ),
+  -- Every vote change of the window, of a witness or a proposal.
+  vote_rows AS MATERIALIZED (
+    SELECT w.voter_id, 'witness'::TEXT AS target_kind, w.witness_id AS target_id, w.approve, w.source_op, w.cause
+    FROM witness_vote_rows w
+    UNION ALL
+    SELECT p.voter_id, 'proposal', p.proposal_id, p.approve, p.source_op, p.cause
+    FROM proposal_vote_rows p
+  ),
+  -- The accounts whose weight can reach a witness or a proposal: voters, proxy
+  -- setters, and anyone with a vote or proxy change in the window.
   feeders AS MATERIALIZED (
     SELECT cwv.voter_id AS account_id FROM hafbe_app.current_witness_votes cwv
+    UNION
+    SELECT cpv.voter_id FROM hafbe_app.current_proposal_votes cpv
     UNION
     SELECT cap.account_id FROM hafbe_app.current_account_proxies cap
     UNION
@@ -508,7 +618,7 @@ BEGIN
     GROUP BY s.voter_id, s.seg
   ),
   vote_marks AS MATERIALIZED (
-    SELECT vr.voter_id, vr.witness_id, vr.approve, vr.source_op, vr.cause, m.mark
+    SELECT vr.voter_id, vr.target_kind, vr.target_id, vr.approve, vr.source_op, vr.cause, m.mark
     FROM vote_rows vr
     JOIN marks m ON m.voter_id = vr.voter_id AND m.source_op = vr.source_op
   ),
@@ -517,43 +627,55 @@ BEGIN
     FROM marks m
     GROUP BY m.voter_id
   ),
-  -- The segments in which a voter backed a witness, as [seg_from, seg_to].
+  -- The votes in force now: a witness vote, or a proposal vote of a voter without a
+  -- proxy (one with a proxy counts for no proposal).
+  current_votes AS MATERIALIZED (
+    SELECT cwv.voter_id, 'witness'::TEXT AS target_kind, cwv.witness_id AS target_id
+    FROM hafbe_app.current_witness_votes cwv
+    UNION ALL
+    SELECT cpv.voter_id, 'proposal', cpv.proposal_id
+    FROM hafbe_app.current_proposal_votes cpv
+    WHERE NOT EXISTS (SELECT 1 FROM hafbe_app.current_account_proxies cap WHERE cap.account_id = cpv.voter_id)
+  ),
+  -- The segments in which a voter backed a target, as [seg_from, seg_to].
   backing AS (
     -- after an approval, until the pair's next vote change
-    SELECT x.voter_id, x.witness_id, x.seg_from, x.seg_to
+    SELECT x.voter_id, x.target_kind, x.target_id, x.seg_from, x.seg_to
     FROM (
       SELECT
         vm.voter_id,
-        vm.witness_id,
+        vm.target_kind,
+        vm.target_id,
         vm.approve,
         vm.mark AS seg_from,
-        COALESCE(LEAD(vm.mark) OVER (PARTITION BY vm.voter_id, vm.witness_id ORDER BY vm.source_op) - 1, mc.last_mark) AS seg_to
+        COALESCE(LEAD(vm.mark) OVER (PARTITION BY vm.voter_id, vm.target_kind, vm.target_id ORDER BY vm.source_op) - 1, mc.last_mark) AS seg_to
       FROM vote_marks vm
       JOIN mark_counts mc ON mc.voter_id = vm.voter_id
     ) x
     WHERE x.approve
     UNION ALL
     -- from the window start, when the pair's first change in it is a removal
-    SELECT f.voter_id, f.witness_id, 0, f.mark - 1
+    SELECT f.voter_id, f.target_kind, f.target_id, 0, f.mark - 1
     FROM (
-      SELECT DISTINCT ON (vm.voter_id, vm.witness_id) vm.voter_id, vm.witness_id, vm.approve, vm.mark
+      SELECT DISTINCT ON (vm.voter_id, vm.target_kind, vm.target_id) vm.voter_id, vm.target_kind, vm.target_id, vm.approve, vm.mark
       FROM vote_marks vm
-      ORDER BY vm.voter_id, vm.witness_id, vm.source_op
+      ORDER BY vm.voter_id, vm.target_kind, vm.target_id, vm.source_op
     ) f
     WHERE NOT f.approve
     UNION ALL
     -- a current vote the window did not touch, of a voter with other vote changes
-    SELECT cwv.voter_id, cwv.witness_id, 0, mc.last_mark
-    FROM hafbe_app.current_witness_votes cwv
-    JOIN mark_counts mc ON mc.voter_id = cwv.voter_id
+    SELECT cv.voter_id, cv.target_kind, cv.target_id, 0, mc.last_mark
+    FROM current_votes cv
+    JOIN mark_counts mc ON mc.voter_id = cv.voter_id
     WHERE NOT EXISTS (
-      SELECT 1 FROM vote_marks vm WHERE vm.voter_id = cwv.voter_id AND vm.witness_id = cwv.witness_id
+      SELECT 1 FROM vote_marks vm
+      WHERE vm.voter_id = cv.voter_id AND vm.target_kind = cv.target_kind AND vm.target_id = cv.target_id
     )
     UNION ALL
     -- the votes of a voter without vote changes in the window
-    SELECT cwv.voter_id, cwv.witness_id, 0, 0
-    FROM hafbe_app.current_witness_votes cwv
-    WHERE NOT EXISTS (SELECT 1 FROM mark_counts mc WHERE mc.voter_id = cwv.voter_id)
+    SELECT cv.voter_id, cv.target_kind, cv.target_id, 0, 0
+    FROM current_votes cv
+    WHERE NOT EXISTS (SELECT 1 FROM mark_counts mc WHERE mc.voter_id = cv.voter_id)
   ),
   voter_weights AS MATERIALIZED (
     SELECT w.account_id, w.vests
@@ -563,7 +685,8 @@ BEGIN
   -- it after the vote (segments from the vote's own on).
   vote_values AS (
     SELECT
-      vm.witness_id,
+      vm.target_kind,
+      vm.target_id,
       vm.voter_id,
       vm.cause,
       vm.approve,
@@ -571,34 +694,54 @@ BEGIN
     FROM vote_marks vm
     LEFT JOIN voter_weights vw ON vw.account_id = vm.voter_id
     LEFT JOIN segment_totals st ON st.voter_id = vm.voter_id AND st.seg >= vm.mark
-    GROUP BY vm.witness_id, vm.voter_id, vm.cause, vm.approve, vm.source_op
+    GROUP BY vm.target_kind, vm.target_id, vm.voter_id, vm.cause, vm.approve, vm.source_op
   ),
   contributions AS MATERIALIZED (
-    SELECT c.witness_id, c.cause, c.voter_id, SUM(c.delta)::BIGINT AS delta
+    SELECT c.target_kind, c.target_id, c.cause, c.voter_id, SUM(c.delta)::BIGINT AS delta
     FROM (
-      SELECT b.witness_id, ss.cause, ss.voter_id, ss.delta
+      SELECT b.target_kind, b.target_id, ss.cause, ss.voter_id, ss.delta
       FROM segment_sums ss
       JOIN backing b
         ON b.voter_id = ss.voter_id
         AND ss.seg BETWEEN b.seg_from AND b.seg_to
       UNION ALL
       SELECT
-        vv.witness_id,
+        vv.target_kind,
+        vv.target_id,
         vv.cause,
         vv.voter_id,
         CASE WHEN vv.approve THEN vv.weight ELSE -vv.weight END
       FROM vote_values vv
     ) c
-    GROUP BY c.witness_id, c.cause, c.voter_id
+    GROUP BY c.target_kind, c.target_id, c.cause, c.voter_id
   )
-  SELECT c.witness_id, c.cause, SUM(c.delta)::BIGINT, (COUNT(*) FILTER (WHERE c.delta <> 0))::INT
+  SELECT c.target_kind, c.target_id, c.cause, SUM(c.delta)::BIGINT, (COUNT(*) FILTER (WHERE c.delta <> 0))::INT
   FROM contributions c
-  GROUP BY c.witness_id, c.cause
+  GROUP BY c.target_kind, c.target_id, c.cause
   UNION ALL
-  SELECT c.witness_id, 'total', SUM(c.delta)::BIGINT, (COUNT(DISTINCT c.voter_id) FILTER (WHERE c.delta <> 0))::INT
+  SELECT c.target_kind, c.target_id, 'total', SUM(c.delta)::BIGINT, (COUNT(DISTINCT c.voter_id) FILTER (WHERE c.delta <> 0))::INT
   FROM contributions c
-  GROUP BY c.witness_id;
+  GROUP BY c.target_kind, c.target_id;
 END
+$$;
+
+
+/*
+ * witness_votes_change_by_cause_of: votes_change_by_cause_of()'s witness rows, each
+ * witness's vote change since _first_block by cause.
+ */
+CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_by_cause_of(_first_block INT)
+RETURNS TABLE (
+    witness_id INT,
+    cause      TEXT,
+    vests      BIGINT,
+    voters     INT
+)
+LANGUAGE sql STABLE
+AS $$
+  SELECT c.target_id, c.cause, c.vests, c.voters
+  FROM hafbe_app.votes_change_by_cause_of(_first_block) c
+  WHERE c.target_kind = 'witness'
 $$;
 
 
@@ -647,18 +790,32 @@ AS $$
 DECLARE
   _today_first_block INT := hafbe_app.witness_votes_change_today_start(_block);
   _week_first_block  INT := hafbe_app.witness_votes_change_week_start(_block);
+  _rows              JSONB;
 BEGIN
   IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
     RAISE EXCEPTION 'the balance tracker''s account_balance_history indexes are missing or invalid: restore its registered indexes (hive.app_restore_indexes) first';
   END IF;
 
+  -- Each window computed once, for witnesses and proposals both (a few thousand rows,
+  -- kept in a variable rather than a temporary table the session may not create).
+  _rows := (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'time_window', x.time_window, 'target_kind', x.target_kind, 'target_id', x.target_id,
+      'cause', x.cause, 'vests', x.vests, 'voters', x.voters)), '[]'::JSONB)
+    FROM (
+      SELECT 'today' AS time_window, c.target_kind, c.target_id, c.cause, c.vests, c.voters
+      FROM hafbe_app.votes_change_by_cause_of(_today_first_block) c
+      UNION ALL
+      SELECT '7d', c.target_kind, c.target_id, c.cause, c.vests, c.voters
+      FROM hafbe_app.votes_change_by_cause_of(_week_first_block) c
+    ) x
+  );
+
   MERGE INTO hafbe_app.witness_votes_change_by_cause t
   USING (
-    SELECT c.witness_id, 'today' AS time_window, c.cause, c.vests, c.voters
-    FROM hafbe_app.witness_votes_change_by_cause_of(_today_first_block) c
-    UNION ALL
-    SELECT c.witness_id, '7d', c.cause, c.vests, c.voters
-    FROM hafbe_app.witness_votes_change_by_cause_of(_week_first_block) c
+    SELECT r.target_id AS witness_id, r.time_window, r.cause, r.vests, r.voters
+    FROM jsonb_to_recordset(_rows) AS r (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
+    WHERE r.target_kind = 'witness'
   ) s ON t.witness_id = s.witness_id AND t.time_window = s.time_window AND t.cause = s.cause
   WHEN MATCHED AND (t.vests, t.voters) IS DISTINCT FROM (s.vests, s.voters) THEN
     UPDATE SET vests = s.vests, voters = s.voters
@@ -712,6 +869,72 @@ BEGIN
   WHEN NOT MATCHED THEN
     INSERT (witness_id, time_window, votes, rank_start)
     VALUES (s.witness_id, s.time_window, s.votes, s.rank_start)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
+
+  MERGE INTO hafbe_app.proposal_votes_change_by_cause t
+  USING (
+    SELECT r.target_id AS proposal_id, r.time_window, r.cause, r.vests, r.voters
+    FROM jsonb_to_recordset(_rows) AS r (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
+    WHERE r.target_kind = 'proposal'
+  ) s ON t.proposal_id = s.proposal_id AND t.time_window = s.time_window AND t.cause = s.cause
+  WHEN MATCHED AND (t.vests, t.voters) IS DISTINCT FROM (s.vests, s.voters) THEN
+    UPDATE SET vests = s.vests, voters = s.voters
+  WHEN NOT MATCHED THEN
+    INSERT (proposal_id, time_window, cause, vests, voters)
+    VALUES (s.proposal_id, s.time_window, s.cause, s.vests, s.voters)
+  WHEN NOT MATCHED BY SOURCE THEN DELETE;
+
+  -- Each proposal's votes at each window's start, and its place against the return
+  -- proposal (id 0) then. hived pays the active proposals by total_votes, then
+  -- proposal_id, both from the top, and the return proposal takes the rest of the
+  -- budget (dhf_processor::sort_by_votes, transfer_payments): a proposal is above it
+  -- with more votes, as a tie orders proposal 0 first, and one without votes is not
+  -- paid. For a proposal that has ended by _block, and for the return proposal
+  -- itself, funded_start and gap_start are NULL; one not started yet gets them too,
+  -- as where it would stand.
+  MERGE INTO hafbe_app.proposal_votes_change_by_cause_start t
+  USING (
+    SELECT
+      x.proposal_id,
+      x.time_window,
+      x.votes,
+      CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes > 0 AND x.votes > r.votes END AS funded_start,
+      CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes - r.votes END AS gap_start
+    FROM (
+      SELECT
+        cp.proposal_id,
+        w.time_window,
+        COALESCE(ps.total_votes, 0) - COALESCE(c.vests, 0) AS votes,
+        cp.end_date >= (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _block) AS open
+      FROM (VALUES ('today'), ('7d')) AS w (time_window)
+      CROSS JOIN hafbe_app.current_proposals cp
+      LEFT JOIN hafbe_app.proposal_vote_stats_cache ps ON ps.proposal_id = cp.proposal_id
+      LEFT JOIN jsonb_to_recordset(_rows) AS c (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
+        ON c.target_kind = 'proposal'
+        AND c.target_id = cp.proposal_id
+        AND c.time_window = w.time_window
+        AND c.cause = 'total'
+      WHERE NOT cp.removed
+    ) x
+    LEFT JOIN (
+      SELECT
+        w.time_window,
+        COALESCE(ps.total_votes, 0) - COALESCE(c.vests, 0) AS votes
+      FROM (VALUES ('today'), ('7d')) AS w (time_window)
+      JOIN hafbe_app.current_proposals cp ON cp.proposal_id = 0 AND NOT cp.removed
+      LEFT JOIN hafbe_app.proposal_vote_stats_cache ps ON ps.proposal_id = 0
+      LEFT JOIN jsonb_to_recordset(_rows) AS c (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
+        ON c.target_kind = 'proposal'
+        AND c.target_id = 0
+        AND c.time_window = w.time_window
+        AND c.cause = 'total'
+    ) r ON r.time_window = x.time_window
+  ) s ON t.proposal_id = s.proposal_id AND t.time_window = s.time_window
+  WHEN MATCHED AND (t.votes, t.funded_start, t.gap_start) IS DISTINCT FROM (s.votes, s.funded_start, s.gap_start) THEN
+    UPDATE SET votes = s.votes, funded_start = s.funded_start, gap_start = s.gap_start
+  WHEN NOT MATCHED THEN
+    INSERT (proposal_id, time_window, votes, funded_start, gap_start)
+    VALUES (s.proposal_id, s.time_window, s.votes, s.funded_start, s.gap_start)
   WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
   INSERT INTO hafbe_app.witness_votes_change_by_cause_state (singleton, as_of_block, today_first_block, week_first_block)

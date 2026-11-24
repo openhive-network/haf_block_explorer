@@ -59,11 +59,36 @@ Returns `hafbe_backend.proposals_return`:
       "total_votes": "1234567890",
       "voters_num": 12,
       "paid_amount": "36500000",
-      "status": "active"
+      "status": "active",
+      "votes_change_breakdown": { "as_of_block": 111720000, "today": { … }, "7d": { … } }
     }
   ]
 }
 ```
+
+#### votes_change_breakdown
+
+Every proposal object (here and in `/proposals/votes`) carries `votes_change_breakdown`
+(`null` before the first refresh): the proposal's vote change by cause over **today** (since
+00:00 UTC) and **7d**, from `hafbe_app.proposal_votes_change_by_cause`, which the refresh that
+writes the witness breakdown writes too (#209, see
+[processing/witness_votes_change_by_cause.md](../processing/witness_votes_change_by_cause.md)).
+The same shape as `/witnesses`, with `funded_start` and `gap_start` in place of `rank_start`:
+
+```json
+"today": { "total": "…", "voters": 3, "funded_start": true, "gap_start": "…",
+           "votes_cast": "…", "votes_removed": "…", "power_down": "…", "power_up": "…",
+           "producer_reward": "…", "claimed_reward": "…", "proxy": "…", "expired": "…", "declined": "…" }
+```
+
+- `funded_start`: whether the proposal ranked above the return proposal (id 0) at the window
+  start, with more votes than it (hived pays the proposals above it as far as the budget goes;
+  the budget is not modelled). `gap_start`: its votes minus the return proposal's then. The
+  current gap is `gap_start + total - (the return proposal's total)`.
+- Both `null` for the return proposal and for a proposal that has ended; a proposal not
+  started yet gets them, as where it would stand.
+- A voter with a proxy counts for no proposal: setting a proxy stops its approvals counting,
+  clearing it starts them again, under `proxy`.
 
 #### Notes
 
@@ -275,6 +300,7 @@ Its cache-miss fallback stays restricted to voters on the selected page.
 | `hafbe_app.current_proposal_votes` | `process_proposals()` | Active approvals (one row per currently-approving voter) |
 | `hafbe_app.proposal_votes_history` | `process_proposals()` | All vote events including synthetic `approve=FALSE` rows |
 | `hafbe_app.proposal_vote_stats_cache` | `process_proposal_vote_stats_cache()` | Stake-weighted totals + voter count per proposal (LIVE cache) |
+| `hafbe_app.proposal_votes_change_by_cause` (+ `_start`) | `refresh_witness_votes_change_by_cause()` | Vote change by cause, today and 7 days; votes and funding line at each window's start (`votes_change_breakdown`, `proposal_votes_change_breakdown(INT[])`) |
 
 See `scripts/claude/processing.md` for the processor detail.
 

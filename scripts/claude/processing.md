@@ -163,7 +163,7 @@ All processing functions are in `db/process_*.sql` files.
 | `process_witness_votes_cache(_block)` | `process_witness_votes.sql` | Witness vote cache refresh per LIVE block: incremental, or the full recompute when the block can change what the caches track or is not the successor of the last refreshed block |
 | `process_witness_votes_cache()` | `process_witness_votes.sql` | Full recompute of the witness vote caches (first LIVE entry, CI, mock setup) |
 | `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. `process_proposal_vote_op` only records votes for proposals that currently exist and are not removed — mirroring hived's `update_proposal_votes_evaluator`, which `continue`s past missing/removed proposal_ids. Pre-HF28 the chain accepted (and silently dropped) votes for nonexistent proposals; replaying them without this guard tripped the `current_proposal_votes -> current_proposals` FK and crashed block processing. |
-| `process_witness_votes_change_by_cause(_block)` | `process_witness_votes_change_by_cause.sql` | Each witness's vote change by cause, today and 7 days (LIVE only, about every 100 blocks, from the refresher session; `()` refreshes for the context's block: CI's sync) |
+| `process_witness_votes_change_by_cause(_block)` | `process_witness_votes_change_by_cause.sql` | Each witness's and each proposal's vote change by cause, today and 7 days (LIVE only, about every 100 blocks, from the refresher session; `()` refreshes for the context's block: CI's sync) |
 | `process_proposal_vote_stats_cache()` | `process_proposal_vote_stats_cache.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
 ### Processing Order
@@ -286,6 +286,7 @@ For implementation details of each processor:
 | `hafbe_app.witness_votes_change_cache` | Vote changes since 00:00 UTC |
 | `hafbe_app.proposal_vote_stats_cache` | Stake-weighted proposal totals + voters_num |
 | `hafbe_app.witness_votes_change_by_cause` | Witness vote change by cause, today and 7 days (+ `_state`: `as_of_block`; + `_start`: votes and `rank_start` at each window's start) |
+| `hafbe_app.proposal_votes_change_by_cause` | Proposal vote change by cause, today and 7 days, from the same refresh (+ `_start`: votes, `funded_start` and `gap_start` at each window's start) |
 
 ## Expansion Rules
 
