@@ -27,10 +27,17 @@
 #     proposal_payments ledger of installs made before it was removed, through the HAF
 #     context the shape restores without rows, and no API statement reads the table;
 #   - the balance tracker's db/order_stats_rollups.sql and db/withdraw_delayed_vests.sql
-#     (where its version has them) are empty: each creates a table and registers it
-#     in the HAF context the shape restores without rows, as the balance tracker's
-#     own .aidev/shape-apply.sh leaves them out. Only plpgsql functions read the
-#     tables, and no API statement here does;
+#     (where its version has them) are empty: they create tables (the rollups seeded
+#     from order_lifecycle, which the shape lacks too) and register them in the HAF
+#     context the shape restores without rows; the balance tracker's own
+#     .aidev/shape-apply.sh skips them too. Only plpgsql functions read the tables,
+#     and no API statement here does;
+#   - the balance tracker's install grants EXECUTE on retry_history_tables_freeze,
+#     which its (empty) db/btracker_app.sql defines and the shape (1.28.8) lacks: it
+#     is created first as an empty function with the same signature, so the grant runs;
+#   - hafbe's own install ends with register_haf_indexes_before_index_phase(), which
+#     db/hafbe_app.sql defines and the shape lacks, and which registers index
+#     dependencies in the HAF context: the copy's install_app.sh leaves that call out;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh;
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
@@ -40,8 +47,9 @@
 #     l2_framework roles (and roles are cluster-wide on the shape server, so the copy
 #     does not create them): the tables keep the applying role as owner and
 #     hafbe_user is granted their SELECT directly, not through l2_framework_user.
-# Everything else (types, views, backend and endpoint functions, grants) installs
-# as install_app.sh installs it.
+# Everything else (types, views, backend and endpoint functions, grants, and the
+# balance tracker's one-off repairs, which find nothing to repair on the empty heaps)
+# installs as install_app.sh installs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -69,6 +77,12 @@ for f in db/hafbe_app.sql submodules/btracker/db/btracker_app.sql submodules/rep
 done
 echo "-- the proposal_payments upgrade drop does not run on the shape (.aidev/shape-apply.sh)" \
     > "$stage/db/drop_proposal_payments.sql"
+# The index registration hafbe's install_app.sh ends with (see the header).
+if [ "$(grep -c 'register_haf_indexes_before_index_phase' "$stage/scripts/install_app.sh")" != 1 ]; then
+    echo "scripts/install_app.sh no longer calls register_haf_indexes_before_index_phase() once: update .aidev/shape-apply.sh" >&2
+    exit 1
+fi
+sed -i '/register_haf_indexes_before_index_phase/d' "$stage/scripts/install_app.sh"
 for f in order_stats_rollups withdraw_delayed_vests; do
     if [ -f "$stage/submodules/btracker/db/$f.sql" ]; then
         echo "-- creates and registers a table in the HAF context: not run on the shape (.aidev/shape-apply.sh)" \
@@ -171,6 +185,14 @@ ALTER TABLE hafbe_bal.account_savings_history ADD COLUMN IF NOT EXISTS op_type_i
 CREATE TABLE IF NOT EXISTS hafbe_bal.balance_totals
   (nai SMALLINT NOT NULL, holders BIGINT NOT NULL, total NUMERIC NOT NULL, CONSTRAINT pk_balance_totals PRIMARY KEY (nai));
 RESET session_replication_role;
+-- Granted by the balance tracker's install_app.sh, defined by its (empty) db/btracker_app.sql.
+DO $$
+BEGIN
+  IF to_regprocedure('hafbe_bal.retry_history_tables_freeze(hive.context_name)') IS NULL THEN
+    CREATE FUNCTION hafbe_bal.retry_history_tables_freeze(_context_name hive.context_name)
+    RETURNS VOID LANGUAGE plpgsql AS 'BEGIN END';
+  END IF;
+END $$;
 DO $$
 DECLARE
   r RECORD;
