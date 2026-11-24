@@ -375,6 +375,7 @@ BEGIN
     ) s
     WHERE s.n = 1
       AND s.approve
+      AND FALSE
   ),
   -- Every vote change of the window, of a witness or a proposal.
   vote_rows AS MATERIALIZED (
