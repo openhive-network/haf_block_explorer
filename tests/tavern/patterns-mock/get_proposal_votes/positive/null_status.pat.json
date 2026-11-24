@@ -17,7 +17,40 @@
         "total_votes": "5000000",
         "voters_num": 1,
         "paid_amount": "50000",
-        "status": "inactive"
+        "status": "inactive",
+        "votes_change_breakdown": {
+          "7d": {
+            "claimed_reward": "0",
+            "declined": "0",
+            "expired": "0",
+            "funded_start": null,
+            "gap_start": null,
+            "power_down": "0",
+            "power_up": "0",
+            "producer_reward": "0",
+            "proxy": "0",
+            "total": "0",
+            "voters": 0,
+            "votes_cast": "0",
+            "votes_removed": "0"
+          },
+          "as_of_block": 5000000,
+          "today": {
+            "claimed_reward": "0",
+            "declined": "0",
+            "expired": "0",
+            "funded_start": null,
+            "gap_start": null,
+            "power_down": "0",
+            "power_up": "0",
+            "producer_reward": "0",
+            "proxy": "0",
+            "total": "0",
+            "voters": 0,
+            "votes_cast": "0",
+            "votes_removed": "0"
+          }
+        }
       },
       "voter_vests": "5000000",
       "direct_vests": "5000000",

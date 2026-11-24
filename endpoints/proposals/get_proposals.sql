@@ -189,7 +189,8 @@ BEGIN
       ba.total_votes,
       ba.voters_num,
       ba.paid_amount,
-      ba.status
+      ba.status,
+      ba.votes_change_breakdown
     FROM hafbe_backend.get_proposals(
       _status,
       _page,
