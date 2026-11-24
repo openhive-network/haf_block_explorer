@@ -898,7 +898,7 @@ BEGIN
       x.proposal_id,
       x.time_window,
       x.votes,
-      CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes > 0 AND x.votes > r.votes END AS funded_start,
+      CASE WHEN x.proposal_id <> 0 THEN x.votes > 0 AND x.votes > r.votes END AS funded_start,
       CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes - r.votes END AS gap_start
     FROM (
       SELECT
