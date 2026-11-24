@@ -26,6 +26,11 @@
 #   - db/drop_proposal_payments.sql is empty: it unregisters and drops the
 #     proposal_payments ledger of installs made before it was removed, through the HAF
 #     context the shape restores without rows, and no API statement reads the table;
+#   - the balance tracker's db/order_stats_rollups.sql and db/withdraw_delayed_vests.sql
+#     (where its version has them) are empty: each creates a table and registers it
+#     in the HAF context the shape restores without rows, as the balance tracker's
+#     own .aidev/shape-apply.sh leaves them out. Only plpgsql functions read the
+#     tables, and no API statement here does;
 #   - the version files are written here (a workflow checkout may have no git
 #     metadata for the submodules), as in .aidev/run-checks.sh;
 #   - l2_framework's scripts/install_app.sh creates only schema l2, its role type and
@@ -64,6 +69,12 @@ for f in db/hafbe_app.sql submodules/btracker/db/btracker_app.sql submodules/rep
 done
 echo "-- the proposal_payments upgrade drop does not run on the shape (.aidev/shape-apply.sh)" \
     > "$stage/db/drop_proposal_payments.sql"
+for f in order_stats_rollups withdraw_delayed_vests; do
+    if [ -f "$stage/submodules/btracker/db/$f.sql" ]; then
+        echo "-- creates and registers a table in the HAF context: not run on the shape (.aidev/shape-apply.sh)" \
+            > "$stage/submodules/btracker/db/$f.sql"
+    fi
+done
 # The balance tracker's backend/shared/nai_types.sql checks its NAI constants against
 # asset_table, which btracker_app.sql seeds and the shape restores empty: keep the
 # seed. (The copy's heaps are restored from the shape after the install, so the rows
