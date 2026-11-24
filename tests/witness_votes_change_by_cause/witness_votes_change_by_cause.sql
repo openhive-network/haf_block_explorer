@@ -70,7 +70,8 @@
 --        its 60 VESTS, K's approval counts and is removed at once, 0). C approving
 --        PA again at t26 changes nothing. Total +40 (1620 to 1660).
 --   PB   B approves it at t2 (votes_cast +600, its weight then), then B, O and J
---        power down (power_down -210). Total +390 (800 to 1190).
+--        power down (power_down -210). D, proxied, approving it at t28 changes
+--        nothing. Total +390 (800 to 1190).
 --   PC   U clears its proxy at t17: its approval starts counting (proxy +200); I's
 --        expire at t12 (expired -400); J approves it at t27 (votes_cast +340, after
 --        its payout). Total +140 (400 to 540).
@@ -911,6 +912,8 @@ BEGIN
   -- C approves PA again (hived accepts it, process_proposals logs it): no change.
   PERFORM pg_temp.op_proposal_vote(_window + 26, 'C', ARRAY['PA'], TRUE);
   PERFORM pg_temp.op_proposal_vote(_window + 27, 'J', ARRAY['PC'], TRUE);
+  -- D, proxied (D -> E -> A), approves PB: it counts for no proposal.
+  PERFORM pg_temp.op_proposal_vote(_window + 28, 'D', ARRAY['PB'], TRUE);
 
   IF _write_ops THEN
     PERFORM pg_temp.expect('the window', _window, 'X', '{
