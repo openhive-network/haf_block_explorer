@@ -334,7 +334,7 @@ BEGIN
           SELECT
             CASE o.op_type_id
               WHEN _op_expired  THEN 'expired'
-              WHEN _op_declined THEN 'declined'
+              WHEN _op_declined THEN 'expired'
             END
           FROM hafbe_app.operations_view o
           WHERE o.id = p.source_op
