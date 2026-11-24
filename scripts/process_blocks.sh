@@ -16,6 +16,12 @@ cat <<EOF
     --user=USER             PostgreSQL username (defaults to hafbe_owner)
     --stop-at-block=LIMIT           Max number of blocks to process (0 for infinite, defaults to 0)
     --log-file              Log file location (defaults to hafbe_sync.log, set to 'STDOUT' to log to STDOUT only)
+
+  ENVIRONMENT:
+    BTRACKER_SYNC_PARALLELISM  Connections the massive sync spreads each batch's balance tracker
+                               processor groups over, under haf_app_driver.py (defaults to 1: one
+                               session, the serial path). Live sync and the legacy CALL main()
+                               loop always use one session.
 EOF
 }
 
@@ -25,6 +31,9 @@ POSTGRES_USER=${POSTGRES_USER:-"hafbe_owner"}
 PROCESS_BLOCK_LIMIT=${PROCESS_BLOCK_LIMIT:-null}
 LOG_FILE=${LOG_FILE:-"hafbe_sync.log"}
 BTRACKER_SCHEMA=${BTRACKER_SCHEMA:-"hafbe_bal"}
+BTRACKER_SYNC_PARALLELISM=${BTRACKER_SYNC_PARALLELISM:-1}
+# Holds btracker_parallel.py, the driver's range processor in parallel mode; the image ships it there
+BTRACKER_SCRIPTS_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")/../submodules/btracker/scripts"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -167,11 +176,29 @@ choose_loop() {
 # the optional log file and stamps its own timestamps.
 run_driver() {
     local n_blocks="$1" log_file="$2"
-    local limit_arg=()
+    local limit_arg=() parallel_arg=()
     [ "$n_blocks" != "null" ] && limit_arg=(--stop-at-block="$n_blocks")
+    # A value that is not a positive integer falls back to the serial path rather than
+    # stopping the container.
+    case "$BTRACKER_SYNC_PARALLELISM" in
+        ''|*[!0-9]*|0)
+            echo "WARNING: BTRACKER_SYNC_PARALLELISM='$BTRACKER_SYNC_PARALLELISM' is not a positive integer; using 1"
+            BTRACKER_SYNC_PARALLELISM=1
+            ;;
+    esac
+    if [ "$BTRACKER_SYNC_PARALLELISM" -gt 1 ]; then
+        # btracker_parallel.py reads both itself; PYTHONPATH is how the driver's
+        # --process-python import finds it. btracker_process_blocks, which
+        # hafbe_app.log_and_process_blocks still calls, skips the range the processor
+        # groups already applied in the driver's transaction.
+        export BTRACKER_SYNC_PARALLELISM BTRACKER_SCHEMA
+        export PYTHONPATH="${BTRACKER_SCRIPTS_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
+        parallel_arg=(--process-python=btracker_parallel:process_blocks)
+    fi
+    echo "Balance tracker massive-sync parallelism: $BTRACKER_SYNC_PARALLELISM"
     date -uIseconds > /tmp/block_processing_startup_time.txt
     # the driver appends to the log file itself (STDOUT = none)
-    exec haf_app_driver.py --app=haf_block_explorer --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}"
+    exec haf_app_driver.py --app=haf_block_explorer --postgres-url="$POSTGRES_ACCESS" --lock=haf_block_explorer --log-file="$log_file" "${limit_arg[@]}" "${parallel_arg[@]}"
 }
 
 # Execs the driver, exits, or returns when the legacy CALL main() loop is the one to run.

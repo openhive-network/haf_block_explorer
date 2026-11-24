@@ -122,7 +122,15 @@ work_dir="$(mktemp -d)"
 trap 'restore_haf || echo "WARNING: could not restore the registry"; rm -rf "$work_dir"' EXIT
 stubs="$work_dir/stubs"; no_driver="$work_dir/no_driver"
 mkdir -p "$stubs" "$no_driver" "$work_dir/flaky" "$work_dir/failing" "$work_dir/real_legacy"
-printf '#!/bin/bash\necho STUB-DRIVER "$@"\n' > "$stubs/haf_app_driver.py"
+# The driver stub also reports what btracker_parallel.py would read, and whether it imports
+cat > "$stubs/haf_app_driver.py" <<'EOS'
+#!/bin/bash
+echo STUB-DRIVER "$@"
+echo "STUB-ENV BTRACKER_SCHEMA=${BTRACKER_SCHEMA:-} BTRACKER_SYNC_PARALLELISM=${BTRACKER_SYNC_PARALLELISM:-}"
+if [[ " $* " == *" --process-python=btracker_parallel:process_blocks "* ]]; then
+    python3 -c 'import btracker_parallel' && echo STUB-IMPORT-OK
+fi
+EOS
 printf '#!/bin/bash\necho STUB-LEGACY "$@"\n' > "$stubs/run_with_reconnect.sh"
 cp "$stubs/run_with_reconnect.sh" "$no_driver/"
 # The image's run_with_reconnect.sh, less the reconnecting: runs the legacy loop itself
@@ -227,6 +235,38 @@ registry_row() { sql "SELECT name, contexts::text, process_procedure FROM hafd.a
 
 expect "registered with its entry procedure" DRIVER
 expect "--stop-at-block reaches the driver" DRIVER "--stop-at-block=5" -- --stop-at-block=5
+
+# BTRACKER_SYNC_PARALLELISM: the driver runs btracker_parallel's range processor only above 1
+parallelism_case() {
+    local name="$1" value="$2" want_parallel="$3" out
+    if [ "$value" = unset ]; then
+        out="$(unset BTRACKER_SYNC_PARALLELISM; run_process_blocks)" || true
+    else
+        out="$(BTRACKER_SYNC_PARALLELISM="$value" run_process_blocks)" || true
+    fi
+    if ! grep -q -- "STUB-DRIVER --app=haf_block_explorer --postgres-url=.* --lock=haf_block_explorer" <<<"$out"; then
+        fail "$name: expected the driver with --app/--lock haf_block_explorer" "$out"
+    elif [ "$want_parallel" = no ] && grep -q -- "--process-python" <<<"$out"; then
+        fail "$name: expected the serial driver, got --process-python" "$out"
+    elif [ "$want_parallel" = no ] && [ "$value" != unset ] && [ "$value" != 1 ] \
+        && ! grep -q "^WARNING: BTRACKER_SYNC_PARALLELISM='$value' is not a positive integer; using 1" <<<"$out"; then
+        fail "$name: expected a WARNING for '$value'" "$out"
+    elif [ "$want_parallel" = yes ] && ! grep -q -- " --process-python=btracker_parallel:process_blocks" <<<"$out"; then
+        fail "$name: expected --process-python=btracker_parallel:process_blocks" "$out"
+    elif [ "$want_parallel" = yes ] && ! grep -q "^STUB-ENV BTRACKER_SCHEMA=$BTRACKER_SCHEMA BTRACKER_SYNC_PARALLELISM=$value\$" <<<"$out"; then
+        fail "$name: expected BTRACKER_SCHEMA=$BTRACKER_SCHEMA and BTRACKER_SYNC_PARALLELISM=$value exported" "$out"
+    elif [ "$want_parallel" = yes ] && ! grep -q "^STUB-IMPORT-OK" <<<"$out"; then
+        fail "$name: btracker_parallel does not import with the PYTHONPATH process_blocks.sh sets" "$out"
+    else
+        echo "PASS  $name"
+    fi
+}
+parallelism_case "BTRACKER_SYNC_PARALLELISM unset: serial driver" unset no
+parallelism_case "BTRACKER_SYNC_PARALLELISM=1: serial driver" 1 no
+parallelism_case "BTRACKER_SYNC_PARALLELISM=abc: WARNING, serial driver" abc no
+parallelism_case "BTRACKER_SYNC_PARALLELISM=0: WARNING, serial driver" 0 no
+parallelism_case "BTRACKER_SYNC_PARALLELISM=4: btracker_parallel range processor" 4 yes
+
 PATH_FIRST="$work_dir/flaky" expect "database down at the first attempt" DRIVER \
     "attempt 1 of 2\): psql: error: connection refused \(test\); retrying"
 PATH_FIRST="$work_dir/failing" expect "registry query fails" NONE \

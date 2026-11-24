@@ -122,6 +122,7 @@ services:
     environment:
       POSTGRES_HOST: haf
       POSTGRES_USER: hafbe_owner
+      BTRACKER_SYNC_PARALLELISM: ${BTRACKER_SYNC_PARALLELISM:-1}
     volumes:
       - ./scripts/block-processing-healthcheck.sh:/home/hived/haf_block_explorer/block-processing-healthcheck.sh
     networks:
