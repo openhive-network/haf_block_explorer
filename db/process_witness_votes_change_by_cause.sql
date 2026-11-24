@@ -343,7 +343,7 @@ BEGIN
     FROM proposal_history_rows p
     LEFT JOIN link_accounts la ON la.account_id = p.voter_id
     LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = p.voter_id
-    WHERE p.approve <> p.was_approved
+    WHERE TRUE
       AND CASE
             WHEN la.account_id IS NULL THEN cap.proxy_id
             ELSE (
