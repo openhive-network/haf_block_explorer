@@ -345,7 +345,7 @@ BEGIN
     LEFT JOIN hafbe_app.current_account_proxies cap ON cap.account_id = p.voter_id
     WHERE p.approve <> p.was_approved
       AND CASE
-            WHEN la.account_id IS NULL THEN cap.proxy_id
+            WHEN la.account_id IS NULL THEN NULL
             ELSE (
               SELECT CASE WHEN l.source_op < p.source_op THEN l.new_proxy ELSE l.old_proxy END
               FROM links l
