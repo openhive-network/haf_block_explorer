@@ -713,9 +713,10 @@ CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_change_by_cause (
  * total_votes for as_of_block minus the window's total. funded_start is whether the
  * proposal then ranked above the return proposal (id 0), which takes the budget left
  * after the proposals above it; gap_start its votes minus the return proposal's.
- * Both NULL for the return proposal and for a proposal that had ended by as_of_block;
- * set for one not started yet, as where it would stand. One row per proposal not
- * removed and window.
+ * Both taken at the window's start: NULL for the return proposal, for a proposal that
+ * had ended by then, and when the return proposal had ended or is removed; set for
+ * one not started yet, as where it would stand. A proposal created in the window has
+ * votes 0 there. One row per proposal not removed and window.
  */
 CREATE TABLE IF NOT EXISTS hafbe_app.proposal_votes_change_by_cause_start (
   proposal_id  INT     NOT NULL,  -- Proposal ID
@@ -1465,6 +1466,8 @@ $$;
  *   - witness_votes_history_witness_voter: Efficient voter filtering
  *   - witness_votes_history_source_op_brin: Block-range suffix scans with no witness
  *     filter (the daily-change cache refresh)
+ *   - proposal_votes_history_source_op_brin, proposal_votes_history_voter_source_op:
+ *     the vote change by cause's window scan and per-account lookups (#209)
  *
  * Account Proxies:
  *   - account_proxies_history_account_id_source_op: Time-ordered history (also serves account filtering)
@@ -1522,6 +1525,11 @@ BEGIN
   CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_id_source_op ON hafbe_app.proposal_votes_history USING btree (proposal_id, hafd.operation_id_to_block_num(source_op));
   -- Proposal votes: voter-filtered lookup per proposal
   CREATE INDEX IF NOT EXISTS proposal_votes_history_proposal_voter ON hafbe_app.proposal_votes_history USING btree (proposal_id, voter_id);
+  -- The vote change by cause (#209) reads the approvals of a window, a source_op
+  -- range suffix with no proposal filter (BRIN, as for witness_votes_history), and an
+  -- account's approvals before its proxy changes.
+  CREATE INDEX IF NOT EXISTS proposal_votes_history_source_op_brin ON hafbe_app.proposal_votes_history USING brin (source_op) WITH (autosummarize = on);
+  CREATE INDEX IF NOT EXISTS proposal_votes_history_voter_source_op ON hafbe_app.proposal_votes_history USING btree (voter_id, source_op);
   -- Current proposal votes: covers by_proposal_voter sort (proposal_id, voter_id).
   -- The PK (voter_id, proposal_id) already covers by_voter_proposal.
   CREATE INDEX IF NOT EXISTS current_proposal_votes_proposal_voter ON hafbe_app.current_proposal_votes USING btree (proposal_id, voter_id);

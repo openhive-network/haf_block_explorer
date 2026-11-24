@@ -186,16 +186,18 @@ write `hafd.operations` (CI's `haf_admin`), a matured power-up (`delayed_voting`
 expiries and declines of voters and of proxying accounts; otherwise those print `SKIPPED` and the
 expected totals leave them out.
 
-The same events are checked on five proposals (#209, `votes_change_by_cause_of()`'s proposal
+The same events are checked on six proposals (#209, `votes_change_by_cause_of()`'s proposal
 rows; votes through `process_proposal_vote_op` / `process_proposal_expired_account`): one
-power-down moving several proposals, a vote then a power-down, a proxy set stopping an approval
-and a clear starting one (`proxy`), an expiry of an approver and of a proxied approver, an
-approval repeated (no change), an ended proposal and the return proposal (id 0, created unless the
-chain has one; otherwise its checks print `SKIPPED`). Each total is reconciled exactly with the
-change of the proposal's votes recomputed from `proposal_votes_history` and the proxies; after the
-refresh, every total is the sum of its causes, the 7-day `votes` / `funded_start` / `gap_start`
-are the scenario's (a proposal crossing the line) and `proposal_votes_change_breakdown()`
-returns them.
+power-down moving two proposals, a vote then a power-down, a vote then a proxy set, a proxy set
+stopping an approval and a clear starting one (`proxy`, not an approval taken back before it), a
+proxied voter's approval (no change), approvals and removals repeated (no change), a removal
+(`votes_removed`), an expiry of an approver and of a proxied approver, a decline (`declined`), an
+ended proposal, a proposal tied with the return proposal and the return proposal itself (id 0,
+created unless the chain has one; otherwise its checks print `SKIPPED`). Each total is reconciled
+exactly with the change of the proposal's votes recomputed from `proposal_votes_history` and the
+proxies; after the refresh, every total is the sum of its causes, the 7-day `votes` /
+`funded_start` / `gap_start` are the scenario's (a proposal crossing the line, a tie below it)
+and `proposal_votes_change_breakdown()` returns them.
 
 Then it reconciles every witness's total with the change of its votes, recomputed independently
 from the same history (votes, proxies replayed row by row, balances and delayed VESTS before the

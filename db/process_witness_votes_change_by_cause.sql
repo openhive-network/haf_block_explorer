@@ -888,25 +888,30 @@ BEGIN
   -- proposal (id 0) then. hived pays the active proposals by total_votes, then
   -- proposal_id, both from the top, and the return proposal takes the rest of the
   -- budget (dhf_processor::sort_by_votes, transfer_payments): a proposal is above it
-  -- with more votes, as a tie orders proposal 0 first, and one without votes is not
-  -- paid. For a proposal that has ended by _block, and for the return proposal
-  -- itself, funded_start and gap_start are NULL; one not started yet gets them too,
-  -- as where it would stand.
+  -- with more votes, as a tie orders proposal 0 first (so one without votes is not
+  -- either). Both are taken at the window's start: funded_start and gap_start are
+  -- NULL for a proposal that had ended by then, for the return proposal itself, and
+  -- when the return proposal had ended or is removed; a proposal not started yet then
+  -- gets them, as where it would stand. A proposal created in the window counts as
+  -- having had no votes at its start.
   MERGE INTO hafbe_app.proposal_votes_change_by_cause_start t
   USING (
     SELECT
       x.proposal_id,
       x.time_window,
       x.votes,
-      CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes > 0 AND x.votes > r.votes END AS funded_start,
+      CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes > r.votes END AS funded_start,
       CASE WHEN x.open AND x.proposal_id <> 0 THEN x.votes - r.votes END AS gap_start
     FROM (
       SELECT
         cp.proposal_id,
         w.time_window,
         COALESCE(ps.total_votes, 0) - COALESCE(c.vests, 0) AS votes,
-        cp.end_date >= (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = _block) AS open
-      FROM (VALUES ('today'), ('7d')) AS w (time_window)
+        cp.end_date >= w.started_at AS open
+      FROM (VALUES ('today', _today_first_block), ('7d', _week_first_block)) AS v (time_window, first_block)
+      CROSS JOIN LATERAL (
+        SELECT v.time_window, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = v.first_block) AS started_at
+      ) w
       CROSS JOIN hafbe_app.current_proposals cp
       LEFT JOIN hafbe_app.proposal_vote_stats_cache ps ON ps.proposal_id = cp.proposal_id
       LEFT JOIN jsonb_to_recordset(_rows) AS c (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
@@ -920,8 +925,14 @@ BEGIN
       SELECT
         w.time_window,
         COALESCE(ps.total_votes, 0) - COALESCE(c.vests, 0) AS votes
-      FROM (VALUES ('today'), ('7d')) AS w (time_window)
-      JOIN hafbe_app.current_proposals cp ON cp.proposal_id = 0 AND NOT cp.removed
+      FROM (VALUES ('today', _today_first_block), ('7d', _week_first_block)) AS v (time_window, first_block)
+      CROSS JOIN LATERAL (
+        SELECT v.time_window, (SELECT b.created_at FROM hive.blocks_view b WHERE b.num = v.first_block) AS started_at
+      ) w
+      JOIN hafbe_app.current_proposals cp
+        ON cp.proposal_id = 0
+        AND NOT cp.removed
+        AND cp.end_date >= w.started_at
       LEFT JOIN hafbe_app.proposal_vote_stats_cache ps ON ps.proposal_id = 0
       LEFT JOIN jsonb_to_recordset(_rows) AS c (time_window TEXT, target_kind TEXT, target_id INT, cause TEXT, vests BIGINT, voters INT)
         ON c.target_kind = 'proposal'

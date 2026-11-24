@@ -172,10 +172,12 @@ same `as_of_block`. Differences from witnesses:
   window's start (`total_votes - total`) and its place against the return proposal (id 0) then.
   hived pays the active proposals by `total_votes`, then `proposal_id`, from the top, and the
   return proposal takes the budget left (`dhf_processor::sort_by_votes`, `transfer_payments`):
-  `funded_start` is votes above the return proposal's (a tie orders proposal 0 first) and above 0;
-  `gap_start` is votes minus the return proposal's. Both are NULL for the return proposal and for
-  a proposal that has ended by `as_of_block`; a proposal not started yet gets them, as where it
-  would stand. Whether the budget reaches a proposal above the line is not modelled.
+  `funded_start` is votes above the return proposal's (a tie orders proposal 0 first, so one
+  without votes is below it); `gap_start` is votes minus the return proposal's. Both are taken at
+  the window's start: NULL for the return proposal, for a proposal that had ended by then, and
+  when the return proposal had ended or is removed; a proposal not started yet gets them, as
+  where it would stand. A proposal created in the window counts as having had no votes at its
+  start. Whether the budget reaches a proposal above the line is not modelled.
 
 ## Endpoint
 

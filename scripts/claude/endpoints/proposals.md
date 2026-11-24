@@ -85,8 +85,9 @@ The same shape as `/witnesses`, with `funded_start` and `gap_start` in place of 
   start, with more votes than it (hived pays the proposals above it as far as the budget goes;
   the budget is not modelled). `gap_start`: its votes minus the return proposal's then. The
   current gap is `gap_start + total - (the return proposal's total)`.
-- Both `null` for the return proposal and for a proposal that has ended; a proposal not
-  started yet gets them, as where it would stand.
+- Both taken at the window start: `null` for the return proposal, for a proposal that had
+  ended by then, and when the return proposal had; a proposal not started yet gets them, as
+  where it would stand. A proposal created in the window counts as having had no votes.
 - A voter with a proxy counts for no proposal: setting a proxy stops its approvals counting,
   clearing it starts them again, under `proxy`.
 

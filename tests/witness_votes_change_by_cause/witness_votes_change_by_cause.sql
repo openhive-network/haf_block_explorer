@@ -60,26 +60,31 @@
 -- undo the delayed VESTS a route added to O3, so V2 differs there, by its 'other
 -- VESTS' approximation.
 --
--- Proposals (#209), through process_proposals' parsers: PA, PB and the return
+-- Proposals (#209), through process_proposals' parsers: PA, PB, PE and the return
 -- proposal R (id 0, created unless the chain has one) active, PC not started yet,
--- PD ended. Before the window A, C, F and K (proxied: not counting) approve PA; O
--- and J PB; U (proxied) and I PC; P approves R. The same events then move them:
+-- PD ended before the 7-day window. Before the window A, C, F, K (proxied: not
+-- counting) and O approve PA; O, J and U (proxied, who takes it back) PB; U, I and
+-- L PC; P approves PE and R. The same events then move them:
 --   PA   claimed_reward +55 (C's t1 and t5, D's t8 through A), producer_reward +20,
 --        power_up +15, proxy +10 (through A: F +30, G -70, H +80; F's own approval
 --        stops counting at t9, -30), expired -60 (K's proxy to A expires: A loses
---        its 60 VESTS, K's approval counts and is removed at once, 0). C approving
---        PA again at t26 changes nothing. Total +40 (1620 to 1660).
---   PB   B approves it at t2 (votes_cast +600, its weight then), then B, O and J
---        power down (power_down -210). D, proxied, approving it at t28 changes
---        nothing. Total +390 (800 to 1190).
---   PC   U clears its proxy at t17: its approval starts counting (proxy +200); I's
---        expire at t12 (expired -400); J approves it at t27 (votes_cast +340, after
---        its payout). Total +140 (400 to 540).
---   R    P loses S (proxy -300) and M (expired -120). Total -420 (920 to 500).
--- At the 7-day window's start PA was above the line (gap +700), PB and PC below it
--- (-120, -520); PB ends above it. PD and R have no funding line. Without the
--- operations only haf_admin may write: PA +5 (claimed +55, producer +20, proxy -70;
--- 1635 to 1640, gap +715), PC +540, R -300.
+--        its 60 VESTS, K's approval counts and is removed at once, 0), power_down
+--        -50 (O's payout also moves PB), votes_removed -300 (C takes it back at t29;
+--        again at t30, and approves it again at t26: no change). Total -310 (2020
+--        to 1710).
+--   PB   B approves it at t2 (votes_cast +600, its weight then) and F at t8 (+30),
+--        then F's proxy at t9 stops F counting (proxy -30), and B, O and J power
+--        down (power_down -210). D, proxied, approving it at t28 changes nothing.
+--        Total +390 (800 to 1190).
+--   PC   U clears its proxy at t17: its approval starts counting (proxy +200; its
+--        PB approval, taken back before, does not); I's expire at t12 (expired
+--        -400); L declines at t14 (declined -90); J approves it at t27 (votes_cast
+--        +340, after its payout). Total +50 (490 to 540).
+--   PE, R  P loses S (proxy -300) and M (expired -120). Total -420 (920 to 500).
+-- At the 7-day window's start PA was above the line (gap +1100), PB, PC and PE
+-- below it (-120, -430, and 0: a tie orders proposal 0 first); PB ends above it. PD
+-- and R have no funding line. Without the operations only haf_admin may write: PA
+-- -345 (2035 to 1690, gap +1115), PC +540, PE and R -300.
 --
 -- t7, t11, t12, t13, t14, t18 and t19 need operations of their type in
 -- hafd.operations (the cause of a removal is read from them); when the role may not
@@ -823,7 +828,7 @@ BEGIN
   _with_return := NOT EXISTS (SELECT 1 FROM hafbe_app.current_proposals cp WHERE cp.proposal_id = 0);
   INSERT INTO scenario_proposals (part, id)
   SELECT x.part, COALESCE((SELECT max(cp.proposal_id) FROM hafbe_app.current_proposals cp), 0) + x.n
-  FROM (VALUES ('PA', 1), ('PB', 2), ('PC', 3), ('PD', 4)) AS x (part, n);
+  FROM (VALUES ('PA', 1), ('PB', 2), ('PC', 3), ('PD', 4), ('PE', 5)) AS x (part, n);
   IF _with_return THEN
     INSERT INTO scenario_proposals (part, id) VALUES ('R', 0);
   ELSE
@@ -836,12 +841,16 @@ BEGIN
     ('PA', _now - INTERVAL '30 days', _now + INTERVAL '30 days'),
     ('PB', _now - INTERVAL '30 days', _now + INTERVAL '30 days'),
     ('PC', _now + INTERVAL '5 days',  _now + INTERVAL '60 days'),
-    ('PD', _now - INTERVAL '60 days', _now - INTERVAL '1 day'),
+    ('PD', _now - INTERVAL '60 days', _now - INTERVAL '10 days'),
+    ('PE', _now - INTERVAL '30 days', _now + INTERVAL '30 days'),
     ('R',  _now - INTERVAL '90 days', _now + INTERVAL '900 days')
   ) AS x (part, start_date, end_date) ON x.part = s.part;
   PERFORM pg_temp.op_proposal_vote(_before + 1, v.voter, v.proposals, TRUE)
   FROM (VALUES ('A', ARRAY['PA']), ('C', ARRAY['PA']), ('F', ARRAY['PA']), ('K', ARRAY['PA']),
-               ('O', ARRAY['PB']), ('J', ARRAY['PB']), ('U', ARRAY['PC']), ('I', ARRAY['PC'])) AS v (voter, proposals);
+               ('O', ARRAY['PA', 'PB']), ('J', ARRAY['PB']), ('U', ARRAY['PC', 'PB']), ('I', ARRAY['PC']),
+               ('L', ARRAY['PC']), ('P', ARRAY['PE'])) AS v (voter, proposals);
+  -- U, proxied, takes PB back before the window: the clear at t17 starts PC only.
+  PERFORM pg_temp.op_proposal_vote(_before + 2, 'U', ARRAY['PB'], FALSE);
   IF _with_return THEN
     PERFORM pg_temp.op_proposal_vote(_before + 1, 'P', ARRAY['R'], TRUE);
   END IF;
@@ -864,6 +873,8 @@ BEGIN
     UPDATE account_withdraws SET delayed_vests = 0 WHERE account = pg_temp.account('A');
   END IF;
   PERFORM pg_temp.set_vests('D', 50, _claim, pg_temp.next_op(_window + 8));
+  -- F approves PB, a block before setting its proxy (t9) stops it counting.
+  PERFORM pg_temp.op_proposal_vote(_window + 8, 'F', ARRAY['PB'], TRUE);
   PERFORM pg_temp.op_proxy(_window + 9, 'F', 'E');
   PERFORM pg_temp.op_proxy(_window + 10, 'G', NULL);
   PERFORM pg_temp.op_proxy_cleared(_window + 10, 'G', 'E');
@@ -914,6 +925,9 @@ BEGIN
   PERFORM pg_temp.op_proposal_vote(_window + 27, 'J', ARRAY['PC'], TRUE);
   -- D, proxied (D -> E -> A), approves PB: it counts for no proposal.
   PERFORM pg_temp.op_proposal_vote(_window + 28, 'D', ARRAY['PB'], TRUE);
+  -- C takes PA back, then takes it back again (no change).
+  PERFORM pg_temp.op_proposal_vote(_window + 29, 'C', ARRAY['PA'], FALSE);
+  PERFORM pg_temp.op_proposal_vote(_window + 30, 'C', ARRAY['PA'], FALSE);
 
   IF _write_ops THEN
     PERFORM pg_temp.expect('the window', _window, 'X', '{
@@ -946,28 +960,35 @@ BEGIN
   IF _write_ops THEN
     PERFORM pg_temp.expect_proposal('the window', _window, 'PA', '{
       "claimed_reward": [55, 2], "producer_reward": [20, 1], "power_up": [15, 1],
-      "proxy": [10, 2], "expired": [-60, 1], "total": [40, 3]}');
+      "proxy": [10, 2], "expired": [-60, 1], "power_down": [-50, 1], "votes_removed": [-300, 1],
+      "total": [-310, 4]}');
     PERFORM pg_temp.expect_proposal('the window', _window, 'PC', '{
-      "votes_cast": [340, 1], "proxy": [200, 1], "expired": [-400, 1], "total": [140, 3]}');
+      "votes_cast": [340, 1], "proxy": [200, 1], "expired": [-400, 1], "declined": [-90, 1],
+      "total": [50, 4]}');
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PE', '{
+      "proxy": [-300, 1], "expired": [-120, 1], "total": [-420, 1]}');
     IF _with_return THEN
       PERFORM pg_temp.expect_proposal('the window', _window, 'R', '{
         "proxy": [-300, 1], "expired": [-120, 1], "total": [-420, 1]}');
     END IF;
   ELSE
     PERFORM pg_temp.expect_proposal('the window', _window, 'PA', '{
-      "claimed_reward": [55, 2], "producer_reward": [20, 1], "proxy": [-70, 2], "total": [5, 3]}');
+      "claimed_reward": [55, 2], "producer_reward": [20, 1], "proxy": [-70, 2],
+      "power_down": [-50, 1], "votes_removed": [-300, 1], "total": [-345, 4]}');
     PERFORM pg_temp.expect_proposal('the window', _window, 'PC', '{
       "votes_cast": [340, 1], "proxy": [200, 1], "total": [540, 2]}');
+    PERFORM pg_temp.expect_proposal('the window', _window, 'PE', '{
+      "proxy": [-300, 1], "total": [-300, 1]}');
     IF _with_return THEN
       PERFORM pg_temp.expect_proposal('the window', _window, 'R', '{
         "proxy": [-300, 1], "total": [-300, 1]}');
     END IF;
   END IF;
   PERFORM pg_temp.expect_proposal('the window', _window, 'PB', '{
-    "votes_cast": [600, 1], "power_down": [-210, 3], "total": [390, 3]}');
+    "votes_cast": [630, 2], "proxy": [-30, 1], "power_down": [-210, 3], "total": [390, 4]}');
   PERFORM pg_temp.expect_proposal('the window', _window, 'PD', '{}');
   PERFORM pg_temp.reconcile_proposals('reconciliation of the scenario''s window', _window,
-    CASE WHEN _with_return THEN ARRAY['PA', 'PB', 'PC', 'PD', 'R'] ELSE ARRAY['PA', 'PB', 'PC', 'PD'] END);
+    CASE WHEN _with_return THEN ARRAY['PA', 'PB', 'PC', 'PD', 'PE', 'R'] ELSE ARRAY['PA', 'PB', 'PC', 'PD', 'PE'] END);
 
   -- A window starting after the events sees none of them.
   PERFORM pg_temp.expect('a window after the events', _window + 30, 'X', '{}');
@@ -1010,13 +1031,15 @@ BEGIN
 
   -- Each proposal's votes at the 7-day window's start and its place against the
   -- return proposal then. PB was below the line (800 against 920) and is above it
-  -- now (1190 against 500 or 620); PD has ended; R is the line.
+  -- now (1190 against 500 or 620); PE ties with R and is below it (a tie orders
+  -- proposal 0 first); PD had ended; R is the line.
   WITH expected (part, votes, funded_start, gap_start) AS (
     SELECT * FROM (VALUES
-      ('PA', CASE WHEN _write_ops THEN 1620 ELSE 1635 END, TRUE, CASE WHEN _write_ops THEN 700 ELSE 715 END),
+      ('PA', CASE WHEN _write_ops THEN 2020 ELSE 2035 END, TRUE, CASE WHEN _write_ops THEN 1100 ELSE 1115 END),
       ('PB', 800,  FALSE, -120),
-      ('PC', 400,  FALSE, -520),
+      ('PC', 490,  FALSE, -430),
       ('PD', 0,    NULL,  NULL),
+      ('PE', 920,  FALSE, 0),
       ('R',  920,  NULL,  NULL)
     ) AS v (part, votes, funded_start, gap_start)
     WHERE _with_return
@@ -1044,8 +1067,9 @@ BEGIN
   FROM hafbe_backend.proposal_votes_change_breakdown(ARRAY[pg_temp.proposal('PB')]) b;
   IF (_breakdown ->> 'as_of_block')::INT IS DISTINCT FROM _head
      OR _breakdown -> '7d' ->> 'total' IS DISTINCT FROM '390'
-     OR _breakdown -> '7d' ->> 'votes_cast' IS DISTINCT FROM '600'
+     OR _breakdown -> '7d' ->> 'votes_cast' IS DISTINCT FROM '630'
      OR _breakdown -> '7d' ->> 'power_down' IS DISTINCT FROM '-210'
+     OR (_breakdown -> '7d' ->> 'voters')::INT IS DISTINCT FROM 4
      OR (_with_return AND (_breakdown -> '7d' ->> 'funded_start' IS DISTINCT FROM 'false'
                            OR _breakdown -> '7d' ->> 'gap_start' IS DISTINCT FROM '-120'))
      OR (SELECT count(*) FROM json_object_keys(_breakdown -> '7d')) <> 13
@@ -1053,6 +1077,20 @@ BEGIN
     RAISE EXCEPTION 'proposal votes_change_breakdown of PB is not the scenario: %', _breakdown;
   END IF;
   RAISE NOTICE 'proposal votes_change_breakdown: %', _breakdown;
+  SELECT b.votes_change_breakdown INTO _breakdown
+  FROM hafbe_backend.proposal_votes_change_breakdown(ARRAY[pg_temp.proposal('PA'), pg_temp.proposal('PD')]) b
+  WHERE b.proposal_id = pg_temp.proposal('PA');
+  IF _breakdown -> '7d' ->> 'total' IS DISTINCT FROM (CASE WHEN _write_ops THEN '-310' ELSE '-345' END)
+     OR (_breakdown -> '7d' ->> 'voters')::INT IS DISTINCT FROM 4
+     OR _breakdown -> '7d' ->> 'votes_removed' IS DISTINCT FROM '-300'
+     OR (_with_return AND (_breakdown -> '7d' ->> 'funded_start' IS DISTINCT FROM 'true'
+                           OR _breakdown -> '7d' ->> 'gap_start' IS DISTINCT FROM (CASE WHEN _write_ops THEN '1100' ELSE '1115' END))) THEN
+    RAISE EXCEPTION 'proposal votes_change_breakdown of PA is not the scenario: %', _breakdown;
+  END IF;
+  IF (SELECT b.votes_change_breakdown -> '7d' -> 'funded_start'
+      FROM hafbe_backend.proposal_votes_change_breakdown(ARRAY[pg_temp.proposal('PD')]) b)::TEXT IS DISTINCT FROM 'null' THEN
+    RAISE EXCEPTION 'proposal votes_change_breakdown of PD, ended, has a funding line';
+  END IF;
   SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
   IF _state.as_of_block IS DISTINCT FROM _head
      OR _state.week_first_block IS DISTINCT FROM _week_start

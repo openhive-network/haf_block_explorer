@@ -24,8 +24,9 @@ hafbe_backend.proposal_votes_change_window:
         whether the proposal ranked above the return proposal (id 0) at the
         window start, with more votes than it: hived pays the proposals above
         it, as far as the budget goes. For a proposal not started yet, where it
-        would have stood. null for the return proposal itself and for a
-        proposal that has ended
+        would have stood. null for the return proposal itself, for a proposal
+        that had ended by the window start, and when the return proposal had.
+        A proposal created in the window counts as having had no votes
     gap_start:
       type: string
       nullable: true
