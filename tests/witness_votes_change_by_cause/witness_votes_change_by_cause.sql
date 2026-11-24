@@ -81,11 +81,11 @@
 --     follow the witness vote cache after the refresh, and X's 7-day breakdown is
 --     what hafbe_backend.witness_votes_change_breakdown() returns;
 --   - the today window is votes_daily_change's, in UTC and America/New_York;
---   - a refresh that fails, by a statement timeout or an error, leaves the previous
---     breakdown in place and does not fail process_witness_votes_change_by_cause(),
---     which does not attempt it again until 100 blocks later; a cancel by request
---     during it is raised on;
---   - a new UTC day triggers a refresh before the next 100th block.
+--   - a refresh that fails, by a statement timeout, an error or a cancel by request,
+--     leaves the previous breakdown in place and does not fail
+--     process_witness_votes_change_by_cause(), which does not attempt it again until
+--     100 blocks later;
+--   - a new UTC day triggers a refresh before 100 blocks have passed.
 --
 -- Needs a synced hafbe, the balance tracker's schema first on the search path and a
 -- member of hafbe_owner. Everything is rolled back.
@@ -941,9 +941,23 @@ END
 $$;
 
 -- A refresh that fails. process_witness_votes_change_by_cause() refreshes for a block
--- at or below the last refreshed one (a fork); the 7-day window's start is replaced
--- by a function that fails, which the rollback below restores.
+-- below the last refreshed one (a fork); the 7-day window's start is replaced by a
+-- function that fails, which the rollback below restores. Each case starts with no
+-- failure recorded and checks that its own failure was.
 SELECT s.as_of_block AS as_of_block FROM hafbe_app.witness_votes_change_by_cause_state s \gset
+
+CREATE FUNCTION pg_temp.expect_failed_at(_case TEXT, _block INT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE) IS DISTINCT FROM _block::TEXT THEN
+    RAISE EXCEPTION '%: no failed refresh recorded at block % (recorded: %)', _case, _block,
+      current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE);
+  END IF;
+  PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
+END
+$$;
 
 SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
@@ -954,8 +968,9 @@ AS $$
 $$;
 RESET ROLE;
 SET LOCAL statement_timeout = '2s';
-SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block - 1);
 SET LOCAL statement_timeout = 0;
+SELECT pg_temp.expect_failed_at('a refresh past the statement timeout', :as_of_block - 1);
 SELECT pg_temp.expect_breakdown_kept('a refresh past the statement timeout');
 
 SET ROLE hafbe_owner;
@@ -968,11 +983,12 @@ BEGIN
 END
 $$;
 RESET ROLE;
-SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block - 1);
+SELECT pg_temp.expect_failed_at('a refresh that raises', :as_of_block - 1);
 SELECT pg_temp.expect_breakdown_kept('a refresh that raises');
 
--- A cancel by request (pg_cancel_backend) during the refresh is not a failure of the
--- refresh: it stops the block, like a cancel anywhere else in it.
+-- A cancel by request (pg_cancel_backend) during the refresh is a failure of the
+-- refresh like the others: the refresher session goes on (#211).
 SET ROLE hafbe_owner;
 CREATE OR REPLACE FUNCTION hafbe_app.witness_votes_change_week_start(_block INT)
 RETURNS INT
@@ -986,22 +1002,24 @@ END
 $$;
 RESET ROLE;
 
-CREATE FUNCTION pg_temp.expect_cancel_raised(_block INT)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block - 1);
+SELECT pg_temp.expect_failed_at('a cancel by request', :as_of_block - 1);
+SELECT pg_temp.expect_breakdown_kept('a cancel by request');
+
+-- Nothing is due at the last refresh's own block: the refresher checks every few
+-- seconds, and a stalled chain must not refresh on each check.
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block);
+SELECT pg_temp.expect_breakdown_kept('a check at the last refresh''s block');
+-- The failing 7-day window start is still in place: an attempt would have recorded a failure
+DO $$
 BEGIN
-  BEGIN
-    PERFORM hafbe_app.process_witness_votes_change_by_cause(_block);
-  EXCEPTION WHEN query_canceled THEN
-    RAISE NOTICE 'a cancel by request during the refresh: raised on (%)', SQLERRM;
-    RETURN;
-  END;
-  RAISE EXCEPTION 'a cancel by request during the refresh did not stop process_witness_votes_change_by_cause()';
+  IF COALESCE(current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE), '') <> '' THEN
+    RAISE EXCEPTION 'a check at the last refresh''s block attempted a refresh (failure recorded at block %)',
+      current_setting('hafbe_app.witness_votes_change_by_cause_failed_block', TRUE);
+  END IF;
+  RAISE NOTICE 'a check at the last refresh''s block: no refresh attempted';
 END
 $$;
-SELECT pg_temp.expect_cancel_raised(:as_of_block);
-SELECT pg_temp.expect_breakdown_kept('a cancel by request');
 
 -- A failed refresh is attempted again 100 blocks after the failure, not on each block
 -- in between. With no state row every block asks for a refresh; the failing 7-day
@@ -1035,6 +1053,8 @@ $$;
 DELETE FROM hafbe_app.witness_votes_change_by_cause_state;
 RESET ROLE;
 
+-- A refresh failed at as_of_block
+SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', :'as_of_block', FALSE);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 1);
 SELECT hafbe_app.process_witness_votes_change_by_cause(b) FROM generate_series(:as_of_block + 2, :as_of_block + 99) b;
 SELECT pg_temp.expect_attempts('the 99 blocks after a failed refresh', 0);
@@ -1042,6 +1062,9 @@ SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
 SELECT pg_temp.expect_attempts('100 blocks after the failed refresh', 1);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 101);
 SELECT pg_temp.expect_attempts('the block after that failed again', 1);
+-- A chain stalled at the failed block: the refresher's next checks find the same block
+SELECT hafbe_app.process_witness_votes_change_by_cause(:as_of_block + 100);
+SELECT pg_temp.expect_attempts('the failed block checked again (a stalled chain)', 1);
 
 -- A new UTC day refreshes at its first block, not at the next 100th: a block whose
 -- today window is not the stored one asks for a refresh, one whose window is does not.
@@ -1056,7 +1079,26 @@ SELECT pg_temp.expect_attempts('a block of the stored today window', 1);
 SET ROLE hafbe_owner;
 UPDATE hafbe_app.witness_votes_change_by_cause_state SET today_first_block = today_first_block - 1;
 RESET ROLE;
+SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
 SELECT hafbe_app.process_witness_votes_change_by_cause(:day_block);
 SELECT pg_temp.expect_attempts('the first block of a new UTC day', 2);
+
+-- Due 100 blocks after the last refresh, whatever the block number: the refresher
+-- checks every few seconds, so it would rarely see a block that is a multiple of 100.
+-- The last refresh is at block x with x % 100 = 1, in one UTC day with x + 100: x + 99
+-- (a multiple of 100) is not due, x + 100 is.
+SELECT set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
+SELECT x
+FROM generate_series(((:as_of_block - 200) / 100) * 100 + 1, 1, -100) x
+WHERE hafbe_app.witness_votes_change_today_start(x) = hafbe_app.witness_votes_change_today_start(x + 100)
+LIMIT 1 \gset
+SET ROLE hafbe_owner;
+UPDATE hafbe_app.witness_votes_change_by_cause_state
+SET as_of_block = :x, today_first_block = hafbe_app.witness_votes_change_today_start(:x);
+RESET ROLE;
+SELECT hafbe_app.process_witness_votes_change_by_cause(:x + 99);
+SELECT pg_temp.expect_attempts('99 blocks after the last refresh, a multiple of 100', 2);
+SELECT hafbe_app.process_witness_votes_change_by_cause(:x + 100);
+SELECT pg_temp.expect_attempts('100 blocks after the last refresh', 3);
 
 ROLLBACK;

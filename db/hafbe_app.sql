@@ -619,8 +619,9 @@ CREATE TABLE IF NOT EXISTS hafbe_app.witness_votes_cache_state (
 /*
  * witness_votes_change_by_cause: Each witness's vote change by cause, per window
  * ------------------------------------------------------------------------------
- * Refreshed every 100 LIVE blocks by process_witness_votes_change_by_cause(_block)
- * (db/process_witness_votes_change_by_cause.sql). One row per witness, window and
+ * Refreshed about every 100 LIVE blocks by the refresher session beside block
+ * processing (refresh_witness_votes_change_by_cause_in_background in
+ * db/process_witness_votes_change_by_cause.sql). One row per witness, window and
  * cause that moved it, plus a 'total' row per witness and window whose vests is the
  * sum of that witness's cause rows. A few thousand rows.
  *
@@ -935,8 +936,10 @@ BEGIN
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_rank_cache',         interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_cache', interval '10 minutes');
   PERFORM hive.app_request_table_vacuum('hafbe_app', 'proposal_vote_stats_cache',  interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause', interval '10 minutes');
-  PERFORM hive.app_request_table_vacuum('hafbe_app', 'witness_votes_change_by_cause_start', interval '10 minutes');
+  -- Not witness_votes_change_by_cause and _start: the refresher session writes them
+  -- (#211), about every 100 blocks, and a VACUUM FULL requested from here could queue
+  -- behind its MERGE, stalling HAF's vacuum and the /witnesses readers; autovacuum
+  -- keeps them small.
 END
 $$;
 

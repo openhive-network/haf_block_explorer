@@ -66,7 +66,7 @@ SET ROLE hafbe_owner;
  *     they moved it directly and are missing from the totals.
  *
  * Not registered with HAF, like the witness vote caches: a fork reverts the
- * tables this is computed from, and the next block at or below as_of_block
+ * tables this is computed from, and a check at a block below as_of_block
  * triggers a refresh (process_witness_votes_change_by_cause).
  */
 
@@ -630,7 +630,8 @@ $$;
  * and rank at each window's start (witness_votes_change_by_cause_start).
  *
  * The start votes are witness_votes_cache.votes minus the window's total, so the
- * cache must hold _block: single_processing() refreshes it for the block first.
+ * cache must hold _block: single_processing() refreshes it in the transaction that
+ * processes the block, so a snapshot that sees _block processed sees it too.
  * rank_start ranks every current witness as refresh_witness_rank_cache() ranks it
  * for rank, on the start values: votes, then voters_num (the cache's minus the
  * window's net approvals in witness_votes_history), then witness_id, all DESC. A
@@ -724,33 +725,33 @@ $$;
 
 
 /*
- * process_witness_votes_change_by_cause(_block): what single_processing() runs for
- * LIVE block _block, after the witness vote caches.
+ * process_witness_votes_change_by_cause(_block): refreshes the breakdown for _block,
+ * hafbe's last processed LIVE block, when one is due. The refresher session runs it
+ * through refresh_witness_votes_change_by_cause_in_background(), outside block
+ * processing (#211).
  *
- * Refreshes every 100 blocks (~5 minutes), at the first block of a new UTC day
- * (_block's today window is not the stored one, so today follows
+ * Due 100 blocks (~5 minutes) after the last refresh, at the first block of a new UTC
+ * day (_block's today window is not the stored one, so today follows
  * votes_daily_change's reset), and right away when nothing was refreshed yet or the
- * last refresh is at or above _block (a fork reverted it). Skips while the balance
+ * last refresh is above _block (a fork reverted it). Not at the last refresh's own
+ * block: the refresher checks every few seconds, and a stalled chain would refresh on
+ * each check. A fork that takes the chain back below as_of_block and returns to it
+ * between two checks is not seen; its breakdown is replaced 100 blocks later. Skips
+ * while the balance
  * tracker's indexes are not built yet (the first LIVE blocks), rather than scan its
  * history once per account, with a NOTICE the first time in the session.
  *
- * The breakdown is a display cache: a refresh that fails, a statement timeout
- * included, is rolled back with a WARNING naming the block and leaves the previous
- * breakdown in place, so that the block is still processed. A cancel by request
- * (pg_cancel_backend) is raised on: it stops the block. The two share SQLSTATE
- * 57014 and are told apart by the server's message, so with a translated
- * lc_messages a statement timeout stops the block too. The failed block is kept for
- * the session, and no refresh is attempted again until 100 blocks after it (or a
- * fork takes the chain back to it), whichever trigger asked: a refresh that keeps
- * failing would otherwise be retried, and paid for, on every block while as_of_block
- * stays NULL or ahead.
+ * The breakdown is a display cache: a refresh that fails for any reason (an error, a
+ * statement timeout, a cancel by request) is rolled back with a WARNING naming the
+ * block and leaves the previous breakdown in place. The failed block is kept for the
+ * session, and no refresh is attempted again until 100 blocks after it (or a fork
+ * takes the chain back below it), whichever trigger asked: a refresh that keeps
+ * failing would otherwise be retried, and paid for, on every check while as_of_block
+ * stays NULL or ahead, or the chain stalls at the failed block.
  *
- * NO TIME LIMIT of its own: PostgreSQL arms statement_timeout when a top-level
- * statement starts, so neither SET on this function or the refresh nor set_config()
- * inside them bounds a refresh already running in the block's statement (and a
- * session-wide set_config would bound the next blocks instead). The refresh runs
- * under whatever timeout the statement that processes the block has. A refresh that
- * takes longer than 10 s is logged with a WARNING naming its duration.
+ * Bounded by the statement_timeout of the statement that calls it: in the refresher
+ * session each check is a top-level statement of its own. Each refresh is logged with
+ * its duration: a NOTICE, or a WARNING when it took longer than 10 s.
  */
 CREATE OR REPLACE FUNCTION hafbe_app.process_witness_votes_change_by_cause(_block INT)
 RETURNS VOID
@@ -762,9 +763,9 @@ DECLARE
   _started      TIMESTAMPTZ;
 BEGIN
   SELECT * INTO _state FROM hafbe_app.witness_votes_change_by_cause_state;
-  IF _block % 100 = 0 OR _state.as_of_block IS NULL OR _state.as_of_block >= _block
+  IF _state.as_of_block IS NULL OR _state.as_of_block > _block OR _block - _state.as_of_block >= 100
      OR _state.today_first_block IS DISTINCT FROM hafbe_app.witness_votes_change_today_start(_block) THEN
-    IF _failed_block < _block AND _block - _failed_block < 100 THEN
+    IF _failed_block <= _block AND _block - _failed_block < 100 THEN
       RETURN;
     END IF;
     IF NOT hafbe_app.witness_votes_change_by_cause_indexes_ready() THEN
@@ -778,11 +779,8 @@ BEGIN
     BEGIN
       PERFORM hafbe_app.refresh_witness_votes_change_by_cause(_block);
       PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', '', FALSE);
-    -- OTHERS does not cover query_canceled, which a statement timeout raises.
+    -- OTHERS does not cover query_canceled, which a statement timeout and a cancel raise.
     EXCEPTION WHEN OTHERS OR query_canceled THEN
-      IF SQLSTATE = '57014' AND SQLERRM <> 'canceling statement due to statement timeout' THEN
-        RAISE;
-      END IF;
       RAISE WARNING 'witness_votes_change_by_cause: refresh at block % failed, the previous breakdown (block %) stays, next attempt at block %: % (SQLSTATE %)',
         _block, _state.as_of_block, _block + 100, SQLERRM, SQLSTATE;
       PERFORM set_config('hafbe_app.witness_votes_change_by_cause_failed_block', _block::TEXT, FALSE);
@@ -790,6 +788,9 @@ BEGIN
     END;
     IF clock_timestamp() - _started > INTERVAL '10 seconds' THEN
       RAISE WARNING 'witness_votes_change_by_cause: refresh at block % took % s',
+        _block, round(extract(epoch FROM clock_timestamp() - _started)::NUMERIC, 1);
+    ELSE
+      RAISE NOTICE 'witness_votes_change_by_cause: refreshed at block % in % s',
         _block, round(extract(epoch FROM clock_timestamp() - _started)::NUMERIC, 1);
     END IF;
   END IF;
@@ -809,6 +810,49 @@ BEGIN
   PERFORM hafbe_app.refresh_witness_votes_change_by_cause(
     (SELECT c.current_block_num FROM hafd.contexts c WHERE c.name = 'hafbe_app')
   );
+END
+$$;
+
+
+/*
+ * refresh_witness_votes_change_by_cause_in_background(): one check of the refresher
+ * session that scripts/process_blocks.sh runs beside block processing (#211):
+ * process_witness_votes_change_by_cause() for the last block hafbe processed, so that
+ * a slow refresh delays the breakdown, never a block.
+ *
+ * Must be called in a REPEATABLE READ transaction of its own. The refresh reads
+ * hafbe's and the balance tracker's tables in several statements, which must all see
+ * the same processed block: hive.app_next_iteration() sets the context's
+ * current_block_num in the transaction that processes the block, so one snapshot
+ * holds one block's state, the witness vote caches the start votes come from
+ * included. Each CALL is a top-level statement, so the session's statement_timeout
+ * bounds the refresh. The transaction reads hafd.contexts, so it enters HAF's contexts
+ * gate first, as an application iteration does: hived's compaction of hafd.contexts
+ * waits for it rather than queueing every application behind it.
+ *
+ * Does nothing unless the witness vote caches hold the context's current block
+ * (witness_votes_cache_state): they are refreshed per block only in LIVE, so not
+ * during the initial sync or a MASSIVE_PROCESSING catch-up, and HAF also commits a
+ * current block nothing processed (a wait for HAF after a catch-up, a fork's rewind).
+ */
+CREATE OR REPLACE PROCEDURE hafbe_app.refresh_witness_votes_change_by_cause_in_background()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  _block INT;
+BEGIN
+  IF current_setting('transaction_isolation') <> 'repeatable read' THEN
+    RAISE EXCEPTION 'refresh_witness_votes_change_by_cause_in_background() needs a REPEATABLE READ transaction of its own, not %',
+      current_setting('transaction_isolation');
+  END IF;
+  IF to_regprocedure('hive.app_enter_contexts_gate()') IS NOT NULL THEN
+    PERFORM hive.app_enter_contexts_gate();
+  END IF;
+  SELECT c.current_block_num INTO _block FROM hafd.contexts c WHERE c.name = 'hafbe_app';
+  IF NOT EXISTS (SELECT 1 FROM hafbe_app.witness_votes_cache_state s WHERE s.block_num = _block) THEN
+    RETURN;
+  END IF;
+  PERFORM hafbe_app.process_witness_votes_change_by_cause(_block);
 END
 $$;
 

@@ -163,7 +163,7 @@ All processing functions are in `db/process_*.sql` files.
 | `process_witness_votes_cache(_block)` | `process_witness_votes.sql` | Witness vote cache refresh per LIVE block: incremental, or the full recompute when the block can change what the caches track or is not the successor of the last refreshed block |
 | `process_witness_votes_cache()` | `process_witness_votes.sql` | Full recompute of the witness vote caches (first LIVE entry, CI, mock setup) |
 | `process_proposals()` | `process_proposals.sql` | UNIFIED processor for ALL proposal ops — create (paired with virtual proposal_fee for id capture) / update / remove / pay / update_proposal_votes / declined_voting_rights / expired_account. Uses an explicit FOR loop (not CTE+CASE) because operation ordering is safety-critical: remove-then-vote sequences in the same batch must not insert votes after the cascade. `process_proposal_vote_op` only records votes for proposals that currently exist and are not removed — mirroring hived's `update_proposal_votes_evaluator`, which `continue`s past missing/removed proposal_ids. Pre-HF28 the chain accepted (and silently dropped) votes for nonexistent proposals; replaying them without this guard tripped the `current_proposal_votes -> current_proposals` FK and crashed block processing. |
-| `process_witness_votes_change_by_cause(_block)` | `process_witness_votes_change_by_cause.sql` | Each witness's vote change by cause, today and 7 days (LIVE only, every 100 blocks; `()` refreshes for the context's block: CI's sync) |
+| `process_witness_votes_change_by_cause(_block)` | `process_witness_votes_change_by_cause.sql` | Each witness's vote change by cause, today and 7 days (LIVE only, about every 100 blocks, from the refresher session; `()` refreshes for the context's block: CI's sync) |
 | `process_proposal_vote_stats_cache()` | `process_proposal_vote_stats_cache.sql` | Stake-weighted proposal vote totals (LIVE only; mirrors witness cache pattern, runs after `process_witness_votes_cache` so account_vest_stats_cache is fresh) |
 
 ### Processing Order
@@ -180,7 +180,7 @@ Each block range calls processors in this order:
 In LIVE mode, cache refreshes run after the processors (in this order):
 - `process_witness_votes_cache(_block)` - updates `account_vest_stats_cache` + witness vote caches from the block's impacted accounts, or recomputes them in full (see [witness_votes.md](processing/witness_votes.md#cache-processing-live-only))
 - `process_proposal_vote_stats_cache()` - same for `proposal_vote_stats_cache` (depends on the fresh `account_vest_stats_cache`)
-- `process_witness_votes_change_by_cause(_block)` - every 100th block (and when it has no state or a fork reverted it): `witness_votes_change_by_cause`, two set-based passes (today, 7d), off the per-block path of the witness caches (see [witness_votes_change_by_cause.md](processing/witness_votes_change_by_cause.md))
+- not in `single_processing()`: the refresher session `scripts/process_blocks.sh` runs beside it calls `refresh_witness_votes_change_by_cause_in_background()`, which runs `process_witness_votes_change_by_cause(_block)` 100 blocks after the last refresh (and at a new UTC day, with no state, or when a fork reverted it), #211: `witness_votes_change_by_cause`, two set-based passes (today, 7d), off the per-block path of the witness caches (see [witness_votes_change_by_cause.md](processing/witness_votes_change_by_cause.md))
 
 ### Why process_proposals uses a FOR LOOP instead of CTE+CASE
 

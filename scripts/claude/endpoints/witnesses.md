@@ -71,7 +71,7 @@ Returns `hafbe_backend.witnesses_return`:
 Every row of `/witnesses` and `/witnesses/{account-name}` carries `votes_change_breakdown`
 (`null` before the first refresh): each witness's vote change by cause over **today**
 (since 00:00 UTC, the window of `votes_daily_change`) and **7d**, read from
-`hafbe_app.witness_votes_change_by_cause` (refreshed every 100 LIVE blocks, see
+`hafbe_app.witness_votes_change_by_cause` (refreshed about every 100 LIVE blocks by the refresher session, see
 [processing/witness_votes_change_by_cause.md](../processing/witness_votes_change_by_cause.md)).
 Amounts are VESTS strings:
 
@@ -326,7 +326,7 @@ Witness data is populated by:
 - `process_witness_stats()` - Witness properties
 - `process_witness_votes()` - Votes and proxies
 - `process_witness_votes_cache()` - Cache updates (LIVE mode)
-- `process_witness_votes_change_by_cause()` - Vote change by cause (LIVE mode, every 100 blocks)
+- `process_witness_votes_change_by_cause()` - Vote change by cause (LIVE mode, about every 100 blocks, from the refresher session beside block processing)
 
 See [processing/witnesses.md](../processing/witnesses.md) and [processing/witness_votes.md](../processing/witness_votes.md).
 

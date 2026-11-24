@@ -2,7 +2,8 @@
 
 **Source**: `db/process_witness_votes_change_by_cause.sql`
 **Functions**:
-- `hafbe_app.process_witness_votes_change_by_cause(_block INT)` (LIVE, from `single_processing()`)
+- `hafbe_app.refresh_witness_votes_change_by_cause_in_background()` (one check of the refresher session `scripts/process_blocks.sh` runs beside block processing, #211)
+- `hafbe_app.process_witness_votes_change_by_cause(_block INT)` (the due test and the contained refresh, for the last processed LIVE block)
 - `hafbe_app.process_witness_votes_change_by_cause()` (refresh at the context's block: CI's sync, `.aidev/run-checks.sh`; the first LIVE block refreshes through `(_block)`, having no state row)
 - `hafbe_app.refresh_witness_votes_change_by_cause(_block INT)`
 - `hafbe_app.witness_votes_change_by_cause_of(_first_block INT)` (one window, one set-based pass)
@@ -27,12 +28,25 @@ before its boundary.
 
 ## Schedule
 
-`single_processing()` calls `process_witness_votes_change_by_cause(_block)` last. It refreshes
-when `_block % 100 = 0`, when `witness_votes_change_today_start(_block)` is not the state's
-`today_first_block` (the first block of a new UTC day, so `today` resets with
-`votes_daily_change` instead of up to 99 blocks later), when there is no state row yet, or when
-the state's `as_of_block` is at or above `_block` (a fork reverted the blocks it was computed from). Never during
-MASSIVE_PROCESSING, and outside `process_witness_votes_cache` (#189's per-block budget).
+Not in block processing (#211): the refresh took ~5 s warm and ~2 min cold on mainnet, inside
+the block processor's one long statement, where `statement_timeout` cannot bound it.
+`scripts/process_blocks.sh` starts a refresher beside the driver or the legacy loop: one psql
+session (`application_name=block_explorer_votes_by_cause`) holding the shared
+`haf_block_explorer` lock, that every `VOTES_BY_CAUSE_CHECK_SECONDS` (10) runs
+`BEGIN ISOLATION LEVEL REPEATABLE READ; CALL hafbe_app.refresh_witness_votes_change_by_cause_in_background(); COMMIT;`
+under `statement_timeout = VOTES_BY_CAUSE_TIMEOUT` (5min). Not started for a run bounded by
+`--stop-at-block`, nor with `VOTES_BY_CAUSE_CHECK_SECONDS=0`.
+
+The check refuses outside REPEATABLE READ (one snapshot = one processed block: HAF sets
+`current_block_num` in the transaction that processes the block), enters HAF's contexts gate,
+and does nothing unless `witness_votes_cache_state.block_num` is the context's current block
+(the caches the start votes come from hold it: not during MASSIVE_PROCESSING, a wait for HAF or
+a fork's rewind). Then `process_witness_votes_change_by_cause(current block)` refreshes when
+100 blocks have passed since `as_of_block`, when `witness_votes_change_today_start(_block)` is
+not the state's `today_first_block` (the first block of a new UTC day, so `today` resets with
+`votes_daily_change`), when there is no state row yet, or when `as_of_block` is above `_block`
+(a fork reverted the blocks it was computed from). Not at `as_of_block` itself: a stalled chain
+would refresh on every check.
 While the balance tracker's registered `account_balance_history` indexes (`(account, nai, block)`,
 `(account, nai, balance_seq_no)`) are missing or invalid (`witness_votes_change_by_cause_indexes_ready()`),
 the LIVE path skips with a NOTICE and the explicit refresh raises: without them each per-account probe
@@ -114,24 +128,19 @@ witness.
 ## Failures
 
 The breakdown is a display cache. `process_witness_votes_change_by_cause(_block)` runs the
-refresh in a subtransaction: any error, a statement timeout (`query_canceled`) included, is
+refresh in a subtransaction: any failure (an error, a statement timeout, a cancel by request) is
 logged as a WARNING naming the block, the refresh is rolled back and the previous breakdown
-stays; the block is processed. A cancel by request (`pg_cancel_backend`, same SQLSTATE 57014,
-told apart by the message `canceling statement due to statement timeout`) is raised on and
-stops the block; with a translated `lc_messages` a timeout does too. The failed block is kept in the session setting
+stays. The failed block is kept in the session setting
 `hafbe_app.witness_votes_change_by_cause_failed_block`, and no refresh is attempted until 100
-blocks after it (or a fork takes the chain back to it), also when there is no state row yet or
-it is ahead: a refresh that keeps failing (a timeout) is not paid for on every block. A restart
-forgets it, so the first due block after one tries again. The NOTICE for missing balance
+blocks after it (or a fork takes the chain back below it), also when there is no state row yet,
+it is ahead or the chain stalls at the failed block: a refresh that keeps failing (a timeout) is
+not paid for on every check. A new refresher session forgets it. The NOTICE for missing balance
 tracker indexes is raised once per session.
 
-**No time limit of its own.** PostgreSQL arms `statement_timeout` when a top-level statement
-starts: a `SET` on the function, or `set_config()`/`SET LOCAL` inside it, does not bound a
-refresh already running inside the block's statement (checked on PostgreSQL 17: a function with
-`SET statement_timeout = '1s'` sleeping 3 s completes), and a session-wide `set_config()` would
-bound the following blocks instead. The refresh runs under the timeout of the statement that
-processes the block, if any. A refresh that takes longer than 10 s prints a WARNING with its
-duration.
+**Time limit:** the refresher's `statement_timeout`; each check is a top-level statement.
+(PostgreSQL arms `statement_timeout` when a top-level statement starts, which is why the refresh
+could not be bounded inside block processing.) Each refresh logs its duration: a NOTICE, or a
+WARNING past 10 s.
 
 ## Endpoint
 
@@ -141,7 +150,7 @@ duration.
 `rank` (`refresh_witness_rank_cache()`: `ROW_NUMBER()` over `current_witnesses` by votes, voters_num,
 witness_id, all DESC) on the start values: `witness_votes_cache.votes - total`, and
 `voters_num` minus the window's net approvals in `witness_votes_history` (as `voters_num_daily_change`
-counts them), both for `as_of_block` (`single_processing()` refreshes the cache for the block first).
+counts them), both for `as_of_block` (the refresher only refreshes once the caches hold that block).
 A witness nothing moved and nothing passed has `rank_start = rank`. A witness without a row
 (registered after `as_of_block`) gets its current `rank`.
 

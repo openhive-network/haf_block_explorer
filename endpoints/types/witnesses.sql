@@ -62,7 +62,7 @@ hafbe_backend.witness_votes_change_breakdown:
   properties:
     as_of_block:
       type: integer
-      description: the last block processed when the breakdown was refreshed (every 100 blocks)
+      description: the last block processed when the breakdown was refreshed (about every 100 blocks, and at the first block of each UTC day)
     today:
       $ref: '#/components/schemas/hafbe_backend.witness_votes_change_window'
       description: the change since 00:00 UTC
