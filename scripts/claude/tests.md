@@ -117,7 +117,10 @@ and registered. With stubs for `haf_app_driver.py` and `run_with_reconnect.sh` f
 PATH it checks which loop `scripts/process_blocks.sh` picks in each registry state
 (registered as `haf_block_explorer`, entry procedure NULL or renamed away, left under the
 old name `hafbe_app`, context owned by another app, not registered, database down once,
-unreachable, query error), then runs the real legacy `main()` through the script and stops
+unreachable, query error), and that `BTRACKER_SYNC_PARALLELISM` unset, 1, `abc` or 0 runs the
+serial driver (a WARNING for the last two) while 4 adds
+`--process-python=btracker_parallel:process_blocks`, exports `BTRACKER_SCHEMA` and the value,
+and lets `import btracker_parallel` succeed; then it runs the real legacy `main()` through the script and stops
 it with SIGTERM; only lines starting `ERROR:` (optionally `psql:<src>: `), less the
 cancel that stops it, fail that case. It re-runs `install_app.sh --only-hafbe` over an old-name `hafbe_app` row
 (must fail naming the remedy and leave the row) and over a paused `haf_block_explorer` row

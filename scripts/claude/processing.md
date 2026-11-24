@@ -32,6 +32,10 @@ haf_block_explorer registers in the HAF application registry (`hafd.applications
 
 The driver runs the whole group (`hafbe_app` + the embedded balance tracker context). On a HAF without the registry `db/hafbe_app.sql` skips `hive.app_register` with a WARNING, and `main()` runs without `hive.acquire_app_block_processor_locks` (WARNING) when HAF has no lock helpers. Tested by `tests/process_blocks_selection/run_test.sh` (see tests.md).
 
+### Concurrent balance tracker massive sync (`BTRACKER_SYNC_PARALLELISM`)
+
+Under the driver, `BTRACKER_SYNC_PARALLELISM` above 1 (compose passes it to `backend-block-processing`, default 1) makes `process_blocks.sh` export it with `BTRACKER_SCHEMA=hafbe_bal`, prepend `submodules/btracker/scripts` to `PYTHONPATH` and add `--process-python=btracker_parallel:process_blocks` (btracker's `scripts/btracker_parallel.py`; the image ships that one file at the same path). In massive sync the range processor spreads each batch's btracker processor groups over that many connections, each group committing on its own, then calls `hafbe_app.process_blocks` in the driver's transaction; the `btracker_process_blocks` call in `log_and_process_blocks()` then skips the range the groups applied. Live sync stays on one session. A value that is not a positive integer prints a WARNING and runs serial; the legacy `CALL main()` loop ignores it. `db/parallel_sync.sql` comes with btracker's `install_app.sh --schema=hafbe_bal`. In parallel mode the `btracker` field of `sync_time_logs` drops to about 0: measure by blocks/hour and the driver's `btracker_parallel: blocks A..B: begin/staging/groups/finish` lines.
+
 ## Processing Stages
 
 HAFBE uses two synchronization stages defined in `db/hafbe_app.sql`:

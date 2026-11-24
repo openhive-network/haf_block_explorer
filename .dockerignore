@@ -9,6 +9,7 @@ docker/srv/*
 gui/*
 misc/*
 submodules/*
+!submodules/btracker/scripts/btracker_parallel.py
 tests/*
 .dockerignore
 .gitignore

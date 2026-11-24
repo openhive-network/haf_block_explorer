@@ -64,6 +64,7 @@ RUN <<EOF
   mkdir -p /home/hived/haf_block_explorer/queries
   mkdir -p /home/hived/haf_block_explorer/postgrest
   mkdir -p /home/hived/haf_block_explorer/haf/scripts
+  mkdir -p /home/hived/haf_block_explorer/submodules/btracker/scripts
   mkdir /app
   chown -R hived:users /home/hived /app
 EOF
@@ -78,6 +79,9 @@ COPY --chown=hived:users db /home/hived/haf_block_explorer/db
 
 COPY --chown=hived:users scripts/install_app.sh /home/hived/haf_block_explorer/scripts/install_app.sh
 COPY --chown=hived:users scripts/process_blocks.sh /home/hived/haf_block_explorer/scripts/process_blocks.sh
+# process_blocks.sh's range processor when BTRACKER_SYNC_PARALLELISM > 1, where app-setup mounts
+# the balance tracker's install scripts. The rest of the submodule stays out of the image.
+COPY --chown=hived:users submodules/btracker/scripts/btracker_parallel.py /home/hived/haf_block_explorer/submodules/btracker/scripts/btracker_parallel.py
 COPY --chown=hived:users scripts/uninstall_app.sh /home/hived/haf_block_explorer/scripts/uninstall_app.sh
 COPY --chown=hived:users scripts/generate_version_sql.sh /home/hived/haf_block_explorer/scripts/generate_version_sql.sh
 COPY --chown=hived:users docker/scripts/docker_entrypoint.sh /home/hived/haf_block_explorer/scripts/docker_entrypoint.sh
