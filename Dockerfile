@@ -1,8 +1,10 @@
 # syntax=registry.gitlab.syncad.com/hive/common-ci-configuration/dockerfile:1.11
-# Pinned to the c-c-c develop SHA tag that introduces python3 + py3-psycopg2
-# + /usr/local/bin/install_with_app_lock.py (the wrapper used by install_app.sh).
-# Bump when c-c-c publishes a new semver tag that includes the wrapper.
-ARG PSQL_CLIENT_VERSION=da9ffb6003edfb5cbaf1dfcde8e1847667af7d24
+# Pinned to a c-c-c develop SHA tag: the base ships python3 + py3-psycopg2,
+# /usr/local/bin/install_with_app_lock.py (the wrapper used by install_app.sh) and
+# haf_app_driver.py, which must accept --process-python (3839feb0) for
+# process_blocks.sh's BTRACKER_SYNC_PARALLELISM > 1. tests/image_driver_options
+# checks the built image's driver against the options process_blocks.sh passes.
+ARG PSQL_CLIENT_VERSION=3839feb0c30846aa3ae262143f216a3c1a0fa20b
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/psql:$PSQL_CLIENT_VERSION AS psql
 
 FROM psql as daemontools
