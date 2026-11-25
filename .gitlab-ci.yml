@@ -917,6 +917,12 @@ setup-scripts-test:
 # as haf_admin it also covers a HAF without the registry and the lock helpers.
 process-blocks-selection-test:
   extends: .hafbe_test_base
+  variables:
+    # The BTRACKER_SYNC_PARALLELISM=4 case imports
+    # submodules/btracker/scripts/btracker_parallel.py, as process_blocks.sh does
+    GIT_SUBMODULE_STRATEGY: normal
+    GIT_SUBMODULE_PATHS: submodules/btracker
+    GIT_SUBMODULE_DEPTH: 1
   script:
   - |
     echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KRunning process_blocks.sh loop selection tests..."
