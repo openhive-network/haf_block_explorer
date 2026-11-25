@@ -134,6 +134,16 @@ start) and `hafd.applications` (`install_app.sh --only-hafbe` must warn and comp
 script must pick the legacy loop); otherwise those cases print SKIP (AIDEV's shared-HAF
 consumer). It restores the registry on exit.
 
+### Image Driver Options Test
+`tests/image_driver_options/run_test.sh IMAGE` (CI job `image-driver-options-test`, right
+after `docker-setup-docker-image-build`, on `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA`) runs
+the image's own `haf_app_driver.py --help` (from the psql base, `Dockerfile`'s
+`PSQL_CLIENT_VERSION`) and fails unless it lists every `--option=` that
+`scripts/process_blocks.sh` puts on the driver's command line (the `exec haf_app_driver.py`
+line and the `*_arg=(--…)` arrays it expands). The selection test above stubs the driver,
+so this is the only check of the shipped one; a base older than common-ci-configuration
+`3839feb0` lacks `--process-python` and fails it. Needs docker, no database.
+
 ### Witness Vote Cache Test
 `tests/witness_votes_cache/run_test.sh` (CI job `regression-test`, as `haf_admin`;
 AIDEV's `regression` step as its `witness_votes_cache` case) drives
@@ -299,6 +309,7 @@ detect → lint → build → sync → test → publish
 | `rewriter-test` | Rewriter (`tests/rewriter`, through the pipeline's postgrest-rewriter image) | JUnit XML report |
 | `performance-test` | Performance | HTML report, JUnit XML |
 | `setup-scripts-test` | Functional | - |
+| `image-driver-options-test` | The built image's `haf_app_driver.py` accepts `process_blocks.sh`'s options | - |
 
 The Python API client (`hiveio-hafbe-api`, import package `hiveio_hafbe_api`) has no project in this repository: the jobs `generate_python_api_client`, `build_python_api_client_wheel`, `test_python_api_wheel` and `deploy_python_api_packages_to_gitlab` extend the `.python_api_package_*` jobs of hive/wax-spec-generator's `templates/python_api_package.gitlab-ci.yml` (included at `ref: main`), which pins the generator and its runtime package (import package `hiveio_api_client`) and generates the pyproject (versioned by this repository's tags). `test_python_api_wheel` runs the template's check (all modules import, the version is neither the placeholder nor `dirty`, the wheel pulls no wallet library or hived API package) and then calls `/accounts/gtg` through the runtime's `AsyncRemoteHandle` against a public API node. Do not add a pyproject or lockfile for the client here: the client depends only on the template's runtime package, so Renovate opens no MRs here for wallet or hived API releases.
 

@@ -263,6 +263,36 @@ docker-setup-docker-image-build:
     NAME: ""
     TARGET: "full-ci"
 
+# The built image's own haf_app_driver.py (from the psql base, Dockerfile's
+# PSQL_CLIENT_VERSION) must accept every option scripts/process_blocks.sh passes it;
+# an older driver exits with "unrecognized arguments" and the block processor
+# crash-loops. process-blocks-selection-test stubs the driver, so only this job runs it.
+image-driver-options-test:
+  extends: .docker_image_builder_job_template
+  stage: build
+  timeout: 10 minutes
+  needs:
+  - job: docker-setup-docker-image-build
+  rules:
+  - if: $DOCS_ONLY == "true"
+    when: never
+  - when: on_success
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+    GIT_DEPTH: 1
+    HAFBE_IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+  before_script:
+  - !reference [.docker_image_builder_job_template, before_script]
+  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):tests\r\e[0KChecking haf_app_driver.py options in ${HAFBE_IMAGE}..."
+    docker pull "${HAFBE_IMAGE}"
+    ./tests/image_driver_options/run_test.sh "${HAFBE_IMAGE}"
+    echo -e "\e[0Ksection_end:$(date +%s):tests\r\e[0K"
+  tags:
+  - public-runner-docker
+
 extract-swagger-json:
   extends: .filter_out_swagger_json
   stage: build
